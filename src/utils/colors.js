@@ -1,5 +1,6 @@
 import { clamp, smooth } from './math.js';
 import { ctx } from "../game/state.js";
+export const ROBOT_COLORS = Object.freeze(['#65eeff', '#ffb36b', '#ff397b', '#b961ff']);
 export function mixColor(from, to, t) {
   return `rgb(${ctx.mixChannel(from[0], to[0], t)} ${ctx.mixChannel(from[1], to[1], t)} ${ctx.mixChannel(from[2], to[2], t)})`;
 }

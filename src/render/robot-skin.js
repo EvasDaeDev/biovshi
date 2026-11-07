@@ -3,11 +3,12 @@ import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 import { attr, el } from './svg.js';
 
-// r_01: 256×256, 4×4 cells. Body artwork occupies x=8..32;
-// limbs use the agreed joint anchors x=8..56, y=32.
-export const ROBOT_A_PARTS = {
-  head: {col:0,row:0,from:8,to:40},
-  'spine-0': {col:1,row:0,from:14,to:32},
+// r_01..r_04: 256×256, 4×4 cells. Body artwork occupies x=8..32;
+// limbs use the agreed joint anchors x=8..56, y=32. The uploaded heads
+// face LEFT and are centred at x=17; their diameter remains 32 source pixels.
+export const ROBOT_PARTS = {
+  head: {col:0,row:0,from:33,to:1},
+  'spine-0': {col:1,row:0,from:8,to:32},
   'spine-1': {col:2,row:0,from:8,to:32},
   'spine-2': {col:3,row:0,from:8,to:32},
   'spine-3': {col:0,row:1,from:8,to:32},
@@ -15,9 +16,9 @@ export const ROBOT_A_PARTS = {
   'arm--1-lower': {col:1,row:2},
   'arm-1-upper': {col:2,row:2},
   'arm-1-lower': {col:3,row:2},
-  'leg--1-upper': {col:0,row:3,to:48},
+  'leg--1-upper': {col:0,row:3},
   'leg--1-lower': {col:1,row:3},
-  'leg-1-upper': {col:2,row:3,to:48},
+  'leg-1-upper': {col:2,row:3},
   'leg-1-lower': {col:3,row:3},
 };
 
@@ -33,7 +34,7 @@ export function skinMatrix(a,b,part) {
 }
 
 function createPiece(key,url,parent) {
-  const part=ROBOT_A_PARTS[key];
+  const part=ROBOT_PARTS[key];
   if (!part) return null;
   const group=el('g',{'data-skin-segment':key,stroke:'none'},parent);
   const viewport=el('svg',{
@@ -49,13 +50,15 @@ function createPiece(key,url,parent) {
 }
 
 export function createRobotSkin(robot) {
-  const url=robot.id===0?assetUrl(ASSETS.textures.robotA):null;
+  const assetKey=['robotA','robotB','robotC','robotD'][robot.id];
+  const url=assetUrl(ASSETS.textures[assetKey]);
   if (!url) return;
   const limbs=el('g',{'data-skin-layer':'limbs',display:'none'},robot.limbG);
   const body=el('g',{'data-skin-layer':'body',display:'none'},robot.bodyG);
   const pieces=new Map();
   const vectors=[robot.torso,robot.head,robot.nose,robot.mouth,
     robot.shoulderBar,robot.pelvicBar,...robot.spineBones,...robot.spineDots,
+    ...robot.horns,...robot.spheres,
     ...[...robot.arms,...robot.legs].flatMap(l=>[l.upper,l.lower,l.joint,l.endShape])];
   const skin=robot.skin={url,limbs,body,pieces,vectors,ready:false};
   const tintId='tag7hop-skin-victory-'+robot.id;
@@ -73,7 +76,7 @@ export function createRobotSkin(robot) {
     attr(robot.actor,'data-skin-ready',ready);
   };
   // Back-to-front body order; head remains above the chest, limbs below it.
-  const keys=[...Object.keys(ROBOT_A_PARTS).filter(k=>/^(arm|leg)/.test(k)),
+  const keys=[...Object.keys(ROBOT_PARTS).filter(k=>/^(arm|leg)/.test(k)),
     'spine-3','spine-2','spine-1','spine-0','head'];
   for(const key of keys) {
     const piece=createPiece(key,url,/^(arm|leg)/.test(key)?limbs:body);
@@ -81,7 +84,7 @@ export function createRobotSkin(robot) {
     piece.image.addEventListener('error',()=>activate(false));
     pieces.set(key,piece);
   }
-  attr(robot.actor,'data-skin','r_01');
+  attr(robot.actor,'data-skin','r_0'+(robot.id+1));
 }
 
 export function paintRobotSkin(robot,strikePose=null) {
@@ -93,9 +96,7 @@ export function paintRobotSkin(robot,strikePose=null) {
       'matrix('+skinMatrix(a,b,piece.part).join(' ')+')');
   };
   for(let i=0;i<4;i++) {
-    const a=i===0?robot.local(robot.chest,3,0):robot.spine[i];
-    const b=i===3?robot.local(robot.pelvis,-5,0):robot.spine[i+1];
-    position('spine-'+i,a,b);
+    position('spine-'+i,robot.spine[i],robot.spine[i+1]);
   }
   const head=robot.headCenter;
   const offset=strikePose?.kind==='head'?{

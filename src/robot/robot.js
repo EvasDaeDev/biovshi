@@ -105,7 +105,7 @@ function createRobot(id, start) {
     'stop-color': 'black',
     'stop-opacity': opacity
   }, robotState.beamFade);
-  robotState.tintStops = [[0, .20], [.55, .10], [1, 0]].map(([offset, opacity]) => el('stop', {
+  robotState.tintStops = [[0, .10], [.55, .05], [1, 0]].map(([offset, opacity]) => el('stop', {
     offset,
     'stop-color': 'var(--night-light)',
     'stop-opacity': opacity
@@ -130,46 +130,6 @@ function createRobot(id, start) {
   robotState.nearLight = el('path', {
     fill: 'url(#' + robotState.glowId + ')'
   }, ctx.lightHoles);
-  robotState.actorOutlineFilterId = 'tag7hop-identity-outline-' + robotState.id;
-  robotState.actorOutlineFilter = el('filter', {
-    id: robotState.actorOutlineFilterId,
-    // Bound the offscreen filter surface to this robot, rather than the whole arena.
-    filterUnits: 'objectBoundingBox',
-    x: '-20%',
-    y: '-20%',
-    width: '140%',
-    height: '140%',
-    colorInterpolationFilters: 'sRGB'
-  }, ctx.lightGradients);
-  robotState.identityRim = el('feMorphology', {
-    in: 'SourceAlpha',
-    operator: 'dilate',
-    radius: 1,
-    result: 'wide'
-  }, robotState.actorOutlineFilter);
-  el('feComposite', {
-    in: 'wide',
-    in2: 'SourceAlpha',
-    operator: 'out',
-    result: 'rim'
-  }, robotState.actorOutlineFilter);
-  robotState.identityColor = el('feFlood', {
-    'flood-color': ['#65eeff', '#ffb36b', '#ff397b', '#b961ff'][robotState.id],
-    result: 'paint'
-  }, robotState.actorOutlineFilter);
-  el('feComposite', {
-    in: 'paint',
-    in2: 'rim',
-    operator: 'in',
-    result: 'coloredRim'
-  }, robotState.actorOutlineFilter);
-  robotState.outlineMerge = el('feMerge', {}, robotState.actorOutlineFilter);
-  el('feMergeNode', {
-    in: 'coloredRim'
-  }, robotState.outlineMerge);
-  el('feMergeNode', {
-    in: 'SourceGraphic'
-  }, robotState.outlineMerge);
   robotState.actor = el('g', {
     class: 'robot'
   }, ctx.actorsG);
