@@ -8,6 +8,7 @@ import { CONFIG } from "../config.js";
 import { arenaAnnounce } from "../ui/announcements.js";
 import { paint } from "../render/frame.js";
 import { random } from "../utils/random.js";
+import { resetHitEffects } from '../render/hit-effects.js';
 export function resetRound() {
   ctx.telemetryDirty = true;
   ctx.lastTelemetryAt = -Infinity;
@@ -34,6 +35,7 @@ export function resetRound() {
   ctx.game.immune.fill(0);
   ctx.game.lastPursued.fill(-99);
   resetCombatAccents();
+  resetHitEffects();
   ctx.combat.unarmedDeadline.fill(null);
   ctx.combat.finished = false;
   ctx.combat.winner = null;

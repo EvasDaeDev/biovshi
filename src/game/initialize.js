@@ -1,5 +1,6 @@
 import { createWalls } from '../render/walls.js';
 import { createObstacleLights } from '../render/ground-spots.js';
+import { initializeHitEffects } from '../render/hit-effects.js';
 import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "./state.js";
@@ -431,6 +432,7 @@ export function initializeGame() {
   }, ctx.scoreG));
   ctx.intents = [];
   ctx.brainDebt = 0;
+  initializeHitEffects();
   drawGrid();
   ctx.game.hunter = -1;
   rebuildRobots();

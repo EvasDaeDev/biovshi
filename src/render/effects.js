@@ -150,7 +150,7 @@ export function paintOil() {
       const x = origin.x + Math.cos(angle) * distance,
         y = origin.y + Math.sin(angle) * distance;
       const jitter = 1 + (random() * 2 - 1) * CONFIG.oil.sizeJitter;
-      const baseRadius = (2.8 + random() * 1.8) * jitter * 0.7;
+      const baseRadius = (2.8 + random() * 1.8) * jitter * 0.7 * CONFIG.oil.dropSizeScale;
       createOilDrop(leak.robot, x, y, baseRadius);
       leak.nextAt += CONFIG.oil.minIntervalSec + random() * (CONFIG.oil.maxIntervalSec - CONFIG.oil.minIntervalSec);
     }

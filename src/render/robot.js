@@ -188,7 +188,7 @@ export function robotPaint(robotState, hunter) {
   for (let i = 0; i < CONFIG.trails.limit; i++) {
     const sample = robotState.trail[i],
       age = sample ? ctx.game.time - sample.time : Infinity;
-    const opacity = sample ? Math.min(.65, CONFIG.trails.opacity * CONFIG.trails.neonMultiplier) * Math.max(0, 1 - age / CONFIG.trails.fadeSec) : 0;
+    const opacity = sample ? clamp(CONFIG.trails.opacity,0,1) * Math.max(0, 1 - age / CONFIG.trails.fadeSec) : 0;
     attr(robotState.trailNodes[i], 'opacity', opacity.toFixed(3));
     attr(robotState.trailNodes[i], 'fill', 'var(--night-trail)');
     if (sample) dot(robotState.trailNodes[i], sample);

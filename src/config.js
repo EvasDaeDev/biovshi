@@ -208,11 +208,10 @@ const CONFIG = {
     // Максимум отпечатков точек опоры на каждого робота.
     fadeSec: 14,
     // Полное исчезновение старого следа.
-    opacity: 0.22,
-    // Яркость обычного следа: 0…1.
-    neonMultiplier: 2.3 // Усиление следов в Geometry Wars.
+    opacity: 0.753 // Свежий след: прозрачность уменьшена вдвое, 0.494 → 0.247.
   },
   oil: {
+    dropSizeScale: 2, // Начальные радиус и диаметр капающей жидкости увеличены вдвое.
     hueSpreadDeg: 12, // Узкий разброс вокруг тёмно-красного.
     baseHue: 359,
     saturation: 81,
@@ -264,6 +263,12 @@ const CONFIG = {
     unarmedFailureMaxSec: 30 // Случайная верхняя граница времени отказа.
   },
   effects: {
+    hitEffects: true,
+    hitPoolLimit: 8,
+    hitParticles: 8,
+    severParticles: 14,
+    hitLifeSec: 0.38,
+    hitFlashSec: 0.09,
     waveSec: 0.35,
     // Длительность короткого кольца касания.
     particleCount: 32,

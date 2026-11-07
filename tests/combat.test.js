@@ -10,7 +10,8 @@ import { paint } from '../src/render/frame.js';
 import { CONFIG } from '../src/config.js';
 import { onGameEvent } from '../src/game/event-bus.js';
 import { chooseRenderProfile } from '../src/render/performance.js';
-import { createOilDrop } from '../src/render/effects.js';
+import { createOilDrop, paintOil } from '../src/render/effects.js';
+import { spawnHitEffect, paintHitEffects } from '../src/render/hit-effects.js';
 
 function setup() {
   const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
@@ -263,6 +264,63 @@ test('impacts leave the floor texture and static grid geometry unchanged',()=>{
     assert.equal(floor.outerHTML,before);
     assert.equal(ctx.svg.querySelector('#tag7hop-floor-warp'),null);
   }
+  dom.window.close();
+});
+
+test('dripping drops start twice as large without extra RNG and footprints halve their transparency',()=>{
+  const dom=setup(),original=CONFIG.oil.dropSizeScale;
+  try {
+    const sample=scale=>{
+      CONFIG.oil.dropSizeScale=scale;ctx.seed=42;
+      ctx.oilG.replaceChildren();ctx.combat.oilDrops.length=0;
+      ctx.combat.oilLeaks=[{robot:0,key:'head',nextAt:ctx.game.time}];
+      paintOil();
+      const drop=ctx.combat.oilDrops[0];
+      return {radius:drop.baseRadius,max:drop.maxRadius,seed:ctx.seed};
+    };
+    const before=sample(1),after=sample(2);
+    assert.equal(after.radius,before.radius*2);
+    assert.equal(after.max,before.max*2);
+    assert.equal(after.seed,before.seed);
+    createOilDrop(0,350,350,15);
+    assert.equal(ctx.combat.oilDrops.at(-1).baseRadius,15,'non-dripping puddles keep their size');
+    const robot=ctx.robots[0],stamp=robot.trail[0];
+    assert.ok(stamp);
+    ctx.game.time=stamp.time;robot.paint(false);
+    assert.equal(Number(robot.trailNodes[0].getAttribute('opacity')),.753);
+    assert.ok(Math.abs((1-.753)-(1-.506)/2)<1e-8);
+    ctx.game.time=stamp.time+CONFIG.trails.fadeSec+.01;robot.paint(false);
+    assert.equal(Number(robot.trailNodes[0].getAttribute('opacity')),0,'old prints still fade completely');
+  } finally {CONFIG.oil.dropSizeScale=original;dom.window.close();}
+});
+
+test('confirmed hits create bounded retro bursts, severing is stronger, and expiry/reset clear the pool',()=>{
+  const dom=setup(),robot=ctx.robots[0];
+  assert.equal(ctx.hitEffects.slots.length,0,'particle nodes are allocated lazily');
+  ctx.renderProfile=chooseRenderProfile('full',false);
+  const seed=ctx.seed;
+  hit(robot,'arm--1-upper');
+  assert.equal(ctx.seed,seed,'non-severing visual effects do not consume combat RNG');
+  assert.equal(ctx.hitEffects.serial,1);
+  const normal=ctx.hitEffects.slots.find(s=>s.effect);
+  assert.equal(normal.effect.particles.length,8);
+  assert.equal(robot.damage('arm--1-upper',1),false);
+  assert.equal(ctx.hitEffects.serial,1,'invulnerable duplicate contacts do not trigger flashes');
+  hit(robot,'arm--1-upper');hit(robot,'arm--1-upper');
+  assert.ok(ctx.hitEffects.slots.some(s=>s.effect?.severed&&s.effect.particles.length===14));
+  ctx.renderProfile=chooseRenderProfile('light',false);
+  const hp=[...robot.hp],before=ctx.seed;
+  for(let i=0;i<30;i++)spawnHitEffect(350,350,0,false);
+  assert.equal(ctx.hitEffects.slots.length,CONFIG.effects.hitPoolLimit);
+  assert.equal(ctx.hitEffects.group.children.length,CONFIG.effects.hitPoolLimit);
+  assert.ok(ctx.hitEffects.slots.every(s=>s.effect?.particles.length===4));
+  assert.equal(ctx.seed,before);
+  assert.deepEqual([...robot.hp],hp);
+  ctx.game.time+=1;paintHitEffects();
+  assert.ok(ctx.hitEffects.slots.every(s=>!s.effect&&s.node.getAttribute('display')==='none'));
+  spawnHitEffect(350,350,0,true);resetRound();
+  assert.equal(ctx.hitEffects.serial,0);
+  assert.ok(ctx.hitEffects.slots.every(s=>!s.effect&&s.node.getAttribute('display')==='none'));
   dom.window.close();
 });
 
