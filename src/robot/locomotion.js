@@ -4,6 +4,7 @@ import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
 import { coreClearBone, nearestObstaclePoint } from "../systems/collision.js";
 import { ik, segmentDistance } from "../utils/math.js";
+import { isSolidBody } from "./collision.js";
 import { note } from "../game/events.js";
 export function hasGoal(robotState) {
   return robotState.currentIntent.mode === 'chase';
@@ -53,7 +54,7 @@ export function retreatFromBoundary(robotState, dt) {
     distance = CONFIG.movement.boundaryRetreatSpeedCm * CONFIG.movement.speedMultiplier * dt;
   let best = null,
     bestScore = -Infinity;
-  const peers = robotState.peerRobots();
+  const peerBodies = robotState.peerRobots().flatMap(r => r.capsules.filter(isSolidBody));
   for (let index = 0; index < 16; index++) {
     const turn = index * Math.PI / 8;
     const dx = Math.cos(heading + turn) * distance,
@@ -67,7 +68,7 @@ export function retreatFromBoundary(robotState, dt) {
           x: c.b.x + dx * q,
           y: c.b.y + dy * q
         };
-      return coreClearBone(a, b, c.r) && peers.every(r => r.capsules.every(d => segmentDistance(a, b, d.a, d.b) > c.r + d.r + .15));
+      return coreClearBone(a, b, c.r) && (!isSolidBody(c) || peerBodies.every(d => segmentDistance(a, b, d.a, d.b) > c.r + d.r + .15));
     }));
     if (!safe) continue;
     const shifted = caps.map(c => ({

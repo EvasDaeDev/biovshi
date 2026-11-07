@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { JSDOM } from 'jsdom';
+import { coreClearBone } from '../src/systems/collision.js';
+import { strikeCandidates } from '../src/systems/combat.js';
+import { createRobot } from '../src/robot/robot.js';
+import { segmentDistance } from '../src/utils/math.js';
 import { initializeGame } from '../src/game/initialize.js';
 import { ctx } from '../src/game/state.js';
 import { advanceStartup, resetRound } from '../src/game/session.js';
@@ -413,4 +417,66 @@ test('every robot uses its own atlas; severed parts, victory tint and load fallb
   assert.equal(ctx.detachedG.children.length,0);
   dom.window.close();
  }
+});
+
+
+test('overlapping limbs do not pin a robot during close combat',()=>{
+  const dom=setup();
+  ctx.obstacles=ctx.obstacles.filter(b=>b.left>500);
+  ctx.robots=[];
+  const a=createRobot(0,{x:300,y:320,angle:0});
+  const b=createRobot(1,{x:300,y:350,angle:0});
+  ctx.robots=[a,b];
+  const core=c=>c.segment==='head'||c.segment.startsWith('spine-');
+  const gap=(xs,ys)=>Math.min(...xs.flatMap(c=>ys.map(d=>segmentDistance(c.a,c.b,d.a,d.b)-c.r-d.r)));
+  assert.ok(gap(a.capsules,b.capsules)<0,'fixture has interlocked limbs');
+  assert.ok(gap(a.capsules.filter(core),b.capsules.filter(core))>0,'bodies start apart');
+  const start={x:a.x,y:a.y};
+  for(let i=0;i<180;i++){
+    ctx.game.time+=1/60;
+    a.tick(1/60,{goal:{x:440,y:320},speed:45,mode:'chase',lookPoint:null});
+    assert.ok(gap(a.capsules.filter(core),b.capsules.filter(core))>=-.01,'bodies stay solid');
+  }
+  assert.ok(Math.hypot(a.x-start.x,a.y-start.y)>10,'robot can leave limb overlap');
+  assert.ok(a.capsules.some(c=>c.segment.startsWith('arm-')),'limb hit geometry is retained');
+  dom.window.close();
+});
+
+
+test('close-range bodies stay solid, hits remain possible and fighters can retreat',()=>{
+  const dom=setup();
+  ctx.obstacles=ctx.obstacles.filter(b=>b.left>500);
+  ctx.robots=[];
+  const a=createRobot(0,{x:280,y:250,angle:0});
+  const b=createRobot(1,{x:370,y:250,angle:Math.PI});
+  ctx.robots=[a,b];
+  const core=c=>c.segment==='head'||c.segment.startsWith('spine-');
+  for(let i=0;i<240;i++){
+    ctx.game.time+=1/60;
+    for(const [r,other] of [[a,b],[b,a]])r.tick(1/60,{goal:{x:other.x,y:other.y},speed:45,mode:'chase',lookPoint:null});
+    for(const c of a.capsules.filter(core))for(const d of b.capsules.filter(core)){
+      assert.ok(segmentDistance(c.a,c.b,d.a,d.b)>=c.r+d.r-.01,'solid bodies never pass through each other');
+    }
+  }
+  assert.ok(a.attackSources.some(s=>strikeCandidates(a,b,s).length>0)||b.attackSources.some(s=>strikeCandidates(b,a,s).length>0),'contact distance permits a strike');
+  const x=a.x;
+  for(let i=0;i<120;i++){
+    ctx.game.time+=1/60;
+    a.tick(1/60,{goal:{x:180,y:250},speed:45,mode:'chase',lookPoint:null,retreat:{x:-1,y:0}});
+  }
+  assert.ok(a.x<x-10,'body contact allows retreat');
+  dom.window.close();
+});
+
+test('limbs still stop at arena walls and obstacles',()=>{
+  const dom=setup();
+  ctx.robots=[];
+  const r=createRobot(0,{x:250,y:350,angle:0});
+  ctx.robots=[r];
+  for(let i=0;i<240;i++){
+    ctx.game.time+=1/60;
+    r.tick(1/60,{goal:{x:450,y:350},speed:45,mode:'chase',lookPoint:null});
+    assert.ok(r.capsules.every(c=>coreClearBone(c.a,c.b,c.r)),'every body and limb capsule stays outside walls');
+  }
+  dom.window.close();
 });
