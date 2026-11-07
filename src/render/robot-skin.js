@@ -9,10 +9,10 @@ import { attr, el } from './svg.js';
 export const ROBOT_PARTS = {
   head: {col:0,row:0,from:33,to:8},
   // Translate the entire chest 22 px right; preserve its 24 px anchor span.
-  'spine-0': {col:1,row:0,from:30,to:54},
+  'spine-0': {col:1,row:0,from:30,to:54,widthScale:4/3},
   'spine-1': {col:2,row:0,from:8,to:32,widthScale:4/3},
   'spine-2': {col:3,row:0,from:8,to:32,widthScale:4/3},
-  'spine-3': {col:0,row:1,from:8,to:32},
+  'spine-3': {col:0,row:1,from:8,to:32,widthScale:4/3},
   'arm--1-upper': {col:0,row:2},
   'arm--1-lower': {col:1,row:2},
   'arm-1-upper': {col:2,row:2},
@@ -27,7 +27,7 @@ export function skinMatrix(a,b,part) {
   const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
   const from=part.from??8,to=part.to??56;
   // Width changes perpendicular to the bone; its length and joint anchors stay fixed.
-  // Only the two middle spine sections request an additional width multiplier.
+  // All four torso sections widen visually; limb roots come from unchanged kinematics.
   const sx=length/(to-from),sy=sx*(part.widthScale??1);
   const ux=length?dx/length:1,uy=length?dy/length:0;
   const A=ux*sx,B=uy*sx,C=-uy*sy,D=ux*sy;

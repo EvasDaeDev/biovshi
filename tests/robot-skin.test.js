@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ROBOT_PARTS, skinMatrix } from '../src/render/robot-skin.js';
 
-test('only the middle spine widens by one third while bone lengths, anchors and girdles stay fixed',()=>{
+test('all spine sprites widen by one third while bone lengths and limb atlas anchors stay fixed',()=>{
   for(const [key,part] of Object.entries(ROBOT_PARTS))for(const angle of [0,Math.PI/2,Math.PI,-.73]) {
     const a={x:100,y:80},b={x:a.x+17*Math.cos(angle),y:a.y+17*Math.sin(angle)};
     const [A,B,C,D,E,F]=skinMatrix(a,b,part);
@@ -12,8 +12,8 @@ test('only the middle spine widens by one third while bone lengths, anchors and 
       assert.ok(Math.abs(actual.y-expected.y)<1e-8);
     }
     assert.ok(A*D-B*C>0,'handedness is preserved');
-    const widthScale=/^spine-[12]$/.test(key)?4/3:1;
-    assert.ok(Math.abs(Math.hypot(C,D)/Math.hypot(A,B)-widthScale)<1e-8,'only spine-1 and spine-2 are one third wider');
+    const widthScale=/^spine-[0-3]$/.test(key)?4/3:1;
+    assert.ok(Math.abs(Math.hypot(C,D)/Math.hypot(A,B)-widthScale)<1e-8,'only the four spine sprites are one third wider');
   }
   assert.equal(Object.keys(ROBOT_PARTS).length,13);
   for(const [key,part] of Object.entries(ROBOT_PARTS)) {

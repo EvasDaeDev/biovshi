@@ -257,6 +257,17 @@ test('every robot uses its own atlas; severed parts, victory tint and load fallb
       assert.ok(Math.abs(B*x+D*32+F-target.y)<1e-8,'body ends on its original bone');
     }
   }
+  for(const limb of a.limbs) {
+    const frame=limb.kind==='arm'?a.actualPose.chest:a.actualPose.pelvis;
+    const x=(limb.kind==='arm'?3:-5)*CONFIG.robot.scale;
+    const y=limb.side*(limb.kind==='arm'?15:12)*CONFIG.robot.scale;
+    const root={x:frame.x+Math.cos(frame.angle)*x-Math.sin(frame.angle)*y,
+      y:frame.y+Math.sin(frame.angle)*x+Math.cos(frame.angle)*y};
+    const node=actor.querySelector(`[data-skin-segment="${limb.kind}-${limb.side}-upper"]`);
+    const [A,B,C,D,E,F]=node.getAttribute('transform').match(/matrix\(([^)]+)\)/)[1].split(' ').map(Number);
+    assert.ok(Math.abs(A*8+C*32+E-root.x)<1e-8,'arm/leg root X remains at the original attachment');
+    assert.ok(Math.abs(B*8+D*32+F-root.y)<1e-8,'arm/leg root Y remains at the original attachment');
+  }
   const chest=actor.querySelector('[data-skin-segment="spine-0"]');
   const chestMatrix=chest.getAttribute('transform');
   for(let i=0;i<3;i++)hit(a,'arm--1-upper');
