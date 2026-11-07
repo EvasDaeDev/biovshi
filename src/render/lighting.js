@@ -1,3 +1,4 @@
+import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 import { path } from '../utils/math.js';
 import { nearbyLightOutline, visionOutline } from '../systems/perception.js';
@@ -7,8 +8,10 @@ import { lampBrightness } from './atmosphere.js';
 
 export function paintLighting(robotState) {
   const brightness=lampBrightness(ctx.game.time,robotState.id,robotState.reduced);
-  for(const node of [robotState.vision,robotState.pool,robotState.lightBeam,robotState.nearLight])
+  for(const node of [robotState.vision,robotState.lightBeam])
     attr(node,'opacity',brightness.toFixed(3));
+  for(const node of [robotState.pool,robotState.nearLight])
+    attr(node,'opacity',(brightness*CONFIG.light.nearbyIntensity).toFixed(3));
   const profile = renderProfile();
   const eye = robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0);
   const origin = robotState.visiblePoint(eye);

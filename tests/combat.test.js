@@ -271,7 +271,7 @@ test('impacts leave the floor texture and static grid geometry unchanged',()=>{
   dom.window.close();
 });
 
-test('dripping drops start twice as large without extra RNG and footprints halve their transparency',()=>{
+test('dripping drops keep their doubled size; footprints are three times fainter with half the capacity',()=>{
   const dom=setup(),original=CONFIG.oil.dropSizeScale;
   try {
     const sample=scale=>{
@@ -291,8 +291,8 @@ test('dripping drops start twice as large without extra RNG and footprints halve
     const robot=ctx.robots[0],stamp=robot.trail[0];
     assert.ok(stamp);
     ctx.game.time=stamp.time;robot.paint(false);
-    assert.equal(Number(robot.trailNodes[0].getAttribute('opacity')),.753);
-    assert.ok(Math.abs((1-.753)-(1-.506)/2)<1e-8);
+    assert.equal(Number(robot.trailNodes[0].getAttribute('opacity')),.753/3);
+    assert.equal(robot.trailNodes.length,10);
     ctx.game.time=stamp.time+CONFIG.trails.fadeSec+.01;robot.paint(false);
     assert.equal(Number(robot.trailNodes[0].getAttribute('opacity')),0,'old prints still fade completely');
   } finally {CONFIG.oil.dropSizeScale=original;dom.window.close();}
@@ -478,5 +478,47 @@ test('limbs still stop at arena walls and obstacles',()=>{
     r.tick(1/60,{goal:{x:450,y:350},speed:45,mode:'chase',lookPoint:null});
     assert.ok(r.capsules.every(c=>coreClearBone(c.a,c.b,c.r)),'every body and limb capsule stays outside walls');
   }
+  dom.window.close();
+});
+
+
+test('nearby light is half as bright without changing its diameter or the beam',()=>{
+  const dom=setup(),r=ctx.robots[0];
+  const gradient=document.getElementById('tag7hop-pool-0');
+  const near=r.nearLight.getAttribute('d');
+  const original=CONFIG.light.nearbyIntensity;
+  try {
+    CONFIG.light.nearbyIntensity=1;r.paint(false);
+    const pool=document.querySelector('.neon-pool');
+    const full=Number(r.nearLight.getAttribute('opacity'));
+    const beam=r.lightBeam.getAttribute('opacity');
+    const poolFull=Number(pool.getAttribute('opacity'));
+    CONFIG.light.nearbyIntensity=.5;r.paint(false);
+    assert.equal(Number(r.nearLight.getAttribute('opacity')),full/2);
+    assert.equal(Number(pool.getAttribute('opacity')),poolFull/2);
+    assert.equal(r.lightBeam.getAttribute('opacity'),beam);
+    assert.equal(r.nearLight.getAttribute('d'),near);
+    assert.equal(Number(gradient.getAttribute('r')),75);
+  } finally {CONFIG.light.nearbyIntensity=original;dom.window.close();}
+});
+
+test('all robots share a 2000-drop FIFO limit including settled puddles and their SVG nodes',()=>{
+  const dom=setup();
+  ctx.combat.oilLeaks=[];
+  const seed=ctx.seed;
+  for(let i=0;i<2000;i++)createOilDrop(i%4,200+i%100,250,4);
+  const first=ctx.combat.oilDrops[0],sixth=ctx.combat.oilDrops[5];
+  ctx.settledOilDrops.add(first);
+  for(let i=0;i<5;i++)createOilDrop(i%4,350,350,15);
+  assert.equal(ctx.combat.oilDrops.length,2000);
+  assert.equal(ctx.oilG.children.length,2000,'removed puddles leave no SVG nodes');
+  assert.equal(ctx.combat.oilDrops[0],sixth,'oldest creation order wins even with equal timestamps');
+  assert.equal(first.node.isConnected,false);
+  assert.equal(ctx.settledOilDrops.has(first),false);
+  assert.equal(ctx.combat.oilDrops.at(-1).baseRadius,15);
+  assert.equal(ctx.seed,seed,'eviction does not change combat randomness');
+  resetRound();
+  assert.equal(ctx.combat.oilDrops.length,0);
+  assert.equal(ctx.oilG.children.length,0);
   dom.window.close();
 });

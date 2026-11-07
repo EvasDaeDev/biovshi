@@ -138,6 +138,11 @@ export function createOilDrop(robotId, x, y, baseRadius) {
     maxRadius: baseRadius * CONFIG.oil.growFactor,
     baseOpacity: .92
   });
+  while (ctx.combat.oilDrops.length > CONFIG.oil.limit) {
+    const oldest = ctx.combat.oilDrops.shift();
+    oldest.node.remove();
+    ctx.settledOilDrops?.delete(oldest);
+  }
 }
 export function paintOil() {
   for (const leak of ctx.combat.oilLeaks) {
