@@ -1,3 +1,4 @@
+import { CONFIG } from '../config.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { ctx } from '../game/state.js';
 import { el } from './svg.js';
@@ -15,8 +16,8 @@ function loadImage(url) {
     image.src = url;
   });
 }
-async function tintedTexture(url, colour) {
-  const key = url + '|' + colour;
+async function tintedTexture(url, colour, strength) {
+  const key = url + '|' + colour + '|' + strength;
   if (!tintCache.has(key)) {
     const pending = (async () => {
       const image = await loadImage(url);
@@ -33,7 +34,7 @@ async function tintedTexture(url, colour) {
       drawing.clearRect(0, 0, canvas.width, canvas.height);
       drawing.drawImage(image, 0, 0, canvas.width, canvas.height);
       const pixels = drawing.getImageData(0, 0, canvas.width, canvas.height);
-      tintPixels(pixels.data, rgb);
+      tintPixels(pixels.data, rgb, strength);
       drawing.putImageData(pixels, 0, 0);
       return canvas.toDataURL('image/png');
     })();
@@ -58,7 +59,7 @@ export async function applyTextures() {
       const style = getComputedStyle(targets[0]);
       // Read the theme colour even if this floor already has a pattern (e.g. HMR).
       const colour = key === 'arenaFloor' ? style.getPropertyValue('--background').trim() || style.fill : style.fill;
-      const source = key === 'arenaFloor' ? await tintedTexture(url, colour) : url;
+      const source = key === 'arenaFloor' ? await tintedTexture(url, colour, CONFIG.rendering.floorTintStrength) : url;
       if (svg !== ctx.svg || !svg.isConnected || ctx.disposed) return;
       const id = 'texture-' + key;
       svg.querySelector('#' + id)?.remove();
