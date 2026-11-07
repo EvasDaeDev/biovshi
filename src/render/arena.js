@@ -1,6 +1,21 @@
 import { CONFIG } from '../config.js';
 import { ctx } from "../game/state.js";
 import { el } from "./svg.js";
+import { ASSETS, assetUrl } from '../assets/manifest.js';
+
+export function drawFloorDecals() {
+  ctx.arenaContent.querySelector('#tag7hop-floor-decals')?.remove();
+  const url = assetUrl(ASSETS.textures.floorDecals);
+  if (!url) return;
+  // One original image over the entire floor: no tiling, tint or collision data.
+  // The arena-content clip also trims the chamfered corners of this layer.
+  const image = el('image', {
+    id:'tag7hop-floor-decals', href:url, x:0, y:0, width:700, height:700,
+    preserveAspectRatio:'none', 'pointer-events':'none',
+  }, ctx.arenaContent);
+  ctx.arenaContent.insertBefore(image,ctx.grid);
+}
+
 export function drawGrid() {
   if (!CONFIG.rendering.coordinateGrid) return;
   const minor = [],

@@ -2,6 +2,7 @@
 export const ASSETS = {
   textures: {
     arenaFloor: 'assets/textures/arena/floor_01.webp',
+    floorDecals: 'assets/textures/arena/floor_decals.png',
     arenaWall: 'assets/textures/arena/wall_01.webp',
     obstacle: 'assets/textures/arena/wall_02.webp',
     liquids: 'assets/textures/arena/liquids.png',

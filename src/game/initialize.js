@@ -9,7 +9,7 @@ import { CONFIG } from "../config.js";
 import { obstacleVertices, polygonPlanes, rebuildRobots } from "./arena.js";
 import { attr, el } from "../render/svg.js";
 import { makeRobotCard } from "../ui/telemetry.js";
-import { drawGrid } from "../render/arena.js";
+import { drawGrid, drawFloorDecals } from "../render/arena.js";
 import { beginGame, resetRound } from "./session.js";
 import { cameraReset } from "../render/camera.js";
 import { paint } from "../render/frame.js";
@@ -438,6 +438,7 @@ export function initializeGame() {
   ctx.brainDebt = 0;
   initializeHitEffects();
   drawGrid();
+  drawFloorDecals();
   ctx.game.hunter = -1;
   rebuildRobots();
   ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = true;
