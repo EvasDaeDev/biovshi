@@ -702,3 +702,18 @@ test('reduced motion uses a stationary spawn fade and a large startup step finis
   assert.ok(ctx.robots.every(r=>r.visible&&r.actor.getAttribute('opacity')==='1.000'));
   dom.window.close();
 });
+
+test('render cap keeps 30 FPS on 75 Hz, 144 Hz and uneven 60 Hz callbacks',()=>{
+  const results=[];
+  for(const [label,intervals] of [['60 Hz',[1000/60]],['75 Hz',[1000/75]],['144 Hz',[1000/144]],['uneven 60 Hz',[15.8,17.2,16.6,17.1]]]){
+    const dom=setup();
+    ctx.last=0;ctx.paintAt=0;ctx.debt=0;
+    let paints=0,now=0,index=0;
+    const robot=ctx.robots[0],original=robot.paint;
+    robot.paint=(...args)=>{paints++;return original(...args);};
+    while(now<2000-1e-7){now=Math.min(2000,now+intervals[index++%intervals.length]);frame(now);}
+    results.push({label,fps:paints/2});
+    dom.window.close();
+  }
+  assert.ok(results.every(r=>r.fps>=29.5&&r.fps<=30.5),JSON.stringify(results));
+});

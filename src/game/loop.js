@@ -102,10 +102,17 @@ export function frame(now) {
     const n = Math.min(60, Math.floor((ctx.debt + 1e-9) * 60));
     for (let i = 0; i < n; i++) step(1 / 60);
     ctx.debt = Math.max(0, ctx.debt - n / 60);
-    if (now - ctx.paintAt >= 1000 / 30 - .1 && n) {
+    const paintInterval = 1000 / 30;
+    if (now - ctx.paintAt >= paintInterval - .1) {
       paint();
       painted = true;
-      ctx.paintAt = now;
+      // Preserve the scheduled phase instead of restarting the timer on each
+      // callback. A 75/144 Hz display or small jitter must not lower the cap.
+      // Paint even when this callback had no step: previous callbacks may have
+      // advanced the pose since the last paint.
+      ctx.paintAt = Number.isFinite(ctx.paintAt)
+        ? ctx.paintAt + Math.max(1,Math.floor((now-ctx.paintAt+.1)/paintInterval))*paintInterval
+        : now;
     }
   } else {
     ctx.debt = 0;
