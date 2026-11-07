@@ -523,8 +523,9 @@ export function jumpTick(robotState, dt, intent) {
     };
   }
 }
-export function robotSetVisible(robotState, value) {
+export function robotSetVisible(robotState, value, spawnAt = null) {
   robotState.visible = value;
+  robotState.spawnAt = value ? spawnAt : null;
   for (const node of [robotState.actor, robotState.floor, robotState.vision, robotState.pool, robotState.lightBeam, robotState.nearLight, ...robotState.trailNodes]) attr(node, 'display', value ? '' : 'none');
 }
 export function robotPerformIdle(robotState, kind) {

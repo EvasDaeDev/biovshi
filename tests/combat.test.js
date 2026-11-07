@@ -17,19 +17,19 @@ import { chooseRenderProfile } from '../src/render/performance.js';
 import { createOilDrop, paintOil, updateOilLeaks } from '../src/render/effects.js';
 import { spawnHitEffect, paintHitEffects } from '../src/render/hit-effects.js';
 
-function setup() {
+function setup({start=true,reduced=false}={}) {
   const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const dom=new JSDOM(html,{url:'https://biovshi.test/',pretendToBeVisual:true});
   for(const key of ['document','localStorage','Event'])globalThis[key]=dom.window[key];
-  globalThis.matchMedia=()=>({matches:false});
+  globalThis.matchMedia=()=>({matches:reduced});
   globalThis.ResizeObserver=class { observe(){} disconnect(){} };
   globalThis.requestAnimationFrame=()=>1;
   globalThis.cancelAnimationFrame=()=>{};
   initializeGame();
   document.querySelector('#bet-setup-form').dispatchEvent(new Event('submit',{cancelable:true}));
   document.querySelector('#bet-fight').click();
-  advanceStartup(3);
-  assert.equal(ctx.startup.phase,'running');
+  if(start)advanceStartup(3);
+  assert.equal(ctx.startup.phase,start?'running':'spawning');
   return dom;
 }
 function hit(robot,key) {ctx.game.time+=CONFIG.combat.damageInvulnerabilitySec+.01;return robot.damage(key,1);}
@@ -647,5 +647,58 @@ test('double time preserves fixed-step combat and randomness; toggling keeps fra
   const dom=setup();ctx.last=0;ctx.paintAt=0;ctx.debt=0;
   frame(10);ctx.speedButton.click();frame(20);
   assert.ok(Math.abs(ctx.game.time+ctx.debt-.03)<1e-8,'switching speed keeps the partial fixed step');
+  dom.window.close();
+});
+
+test('spawn leaps from beyond the arena, fades and lands before combat without changing physics',()=>{
+  for(const quality of ['full','light']){
+    const dom=setup({start:false});
+    ctx.renderProfile=chooseRenderProfile(quality,false);paint();
+    const first=ctx.robots[ctx.startup.order[0]];
+    const physics=JSON.stringify(ctx.robots.map(r=>({x:r.x,y:r.y,angle:r.angle,capsules:r.capsules})));
+    const seed=ctx.seed;
+    assert.equal(first.actor.getAttribute('opacity'),'0.000');
+    assert.ok(first.actor.getAttribute('transform').includes('scale(1.25)'));
+    const translated=first.actor.getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1).map(Number);
+    assert.ok(ctx.arenaPlanes.some(p=>p.nx*translated[0]+p.ny*translated[1]>p.c),'starts beyond the playable perimeter');
+    const initialLight=first.nearLight.getAttribute('d');
+    step(1/60);assert.equal(ctx.game.time,0,'no combat while spawning');
+    advanceStartup(.1);
+    assert.equal(first.actor.getAttribute('opacity'),'0.500');
+    assert.equal(first.trail.length,0,'airborne feet leave no footprints');
+    assert.notEqual(first.nearLight.getAttribute('d'),initialLight,'light follows the entry in both graphics modes');
+    assert.ok(first.actor.getAttribute('transform').includes('scale(1.03125)'));
+    advanceStartup(.1);
+    assert.equal(first.actor.getAttribute('opacity'),'1.000');
+    assert.ok(first.actor.getAttribute('transform').includes('scale(1)'));
+    assert.ok(first.trail.length>0,'landing leaves prints at the actual spawn position');
+    advanceStartup(1);
+    assert.equal(ctx.startup.nextIndex,4);
+    assert.equal(ctx.startup.phase,'spawning','last robot is still in the air');
+    assert.equal(ctx.button.disabled,true);
+    advanceStartup(.1);
+    assert.equal(ctx.startup.phase,'spawning');
+    advanceStartup(.1);
+    assert.equal(ctx.startup.phase,'running');
+    assert.equal(ctx.button.disabled,false);
+    assert.ok(ctx.robots.every(r=>r.actor.getAttribute('opacity')==='1.000'));
+    assert.equal(ctx.game.time,0);
+    assert.equal(ctx.seed,seed,'entry animation consumes no game RNG');
+    assert.equal(JSON.stringify(ctx.robots.map(r=>({x:r.x,y:r.y,angle:r.angle,capsules:r.capsules}))),physics);
+    dom.window.close();
+  }
+});
+
+test('reduced motion uses a stationary spawn fade and a large startup step finishes every landing',()=>{
+  const dom=setup({start:false,reduced:true});
+  const r=ctx.robots[ctx.startup.order[0]];
+  const transform=r.actor.getAttribute('transform');
+  assert.ok(transform.includes('scale(1)'));
+  advanceStartup(.1);
+  assert.equal(r.actor.getAttribute('opacity'),'0.500');
+  assert.equal(r.actor.getAttribute('transform'),transform,'no flight or scaling with reduced motion');
+  advanceStartup(3);
+  assert.equal(ctx.startup.phase,'running');
+  assert.ok(ctx.robots.every(r=>r.visible&&r.actor.getAttribute('opacity')==='1.000'));
   dom.window.close();
 });

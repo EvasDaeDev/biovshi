@@ -110,9 +110,11 @@ export function advanceStartup(dt) {
   if (ctx.startup.phase !== 'spawning') return;
   ctx.startup.elapsed += dt;
   while (ctx.startup.nextIndex < ctx.startup.order.length && ctx.startup.elapsed + 1e-9 >= ctx.startup.nextIndex * CONFIG.startup.spawnIntervalSec) {
-    ctx.robots[ctx.startup.order[ctx.startup.nextIndex++]].setVisible(true);
+    const index = ctx.startup.nextIndex++;
+    ctx.robots[ctx.startup.order[index]].setVisible(true,index*CONFIG.startup.spawnIntervalSec);
   }
-  if (ctx.startup.nextIndex === ctx.startup.order.length) {
+  const landedAt = Math.max(0,ctx.startup.order.length-1)*CONFIG.startup.spawnIntervalSec + CONFIG.startup.spawnDurationSec;
+  if (ctx.startup.nextIndex === ctx.startup.order.length && ctx.startup.elapsed+1e-9 >= landedAt) {
     ctx.startup.phase = 'running';
     arenaAnnounce('БОЙ', 'НАЧАЛСЯ', 1, 1.4);
     ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = false;
