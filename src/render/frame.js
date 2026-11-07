@@ -2,10 +2,12 @@ import { formatRoundTime } from "../ui/results.js";
 import { ctx } from "../game/state.js";
 import { paintCombatAccents, paintDetachedAnatomy, paintOil, paintSwings, updateNeonGrid, updatePulses, updateSparks } from "./effects.js";
 import { paintTelemetry } from '../ui/paint-telemetry.js';
+import { paintFloorWarp } from './floor-warp.js';
 export function paint() {
   const clockText = formatRoundTime(ctx.round.elapsedSec);
   if (ctx.timerOutput.textContent !== clockText) ctx.timerOutput.textContent = clockText;
   updatePulses();
+  paintFloorWarp();
   updateSparks();
   updateNeonGrid();
   paintOil();

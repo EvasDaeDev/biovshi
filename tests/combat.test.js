@@ -9,6 +9,8 @@ import { step } from '../src/game/loop.js';
 import { paint } from '../src/render/frame.js';
 import { CONFIG } from '../src/config.js';
 import { onGameEvent } from '../src/game/event-bus.js';
+import { paintFloorWarp } from '../src/render/floor-warp.js';
+import { chooseRenderProfile } from '../src/render/performance.js';
 
 function setup() {
   const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
@@ -168,10 +170,52 @@ test('warm lighting, dark footprints and inward textured obstacle walls survive 
     assert.equal(pattern.getAttribute('width'),'100');
     assert.equal(pattern.getAttribute('height'),'30');
     assert.match(pattern.querySelector('image').getAttribute('href'),/wall_02\.webp$/);
+    assert.equal(pattern.querySelector('image').getAttribute('transform'),'rotate(180 50 15)');
     assert.equal(ctx.outlineG.getAttribute('stroke'),'none');
     assert.ok([...ctx.ambientGlowG.children].every(n=>n.getAttribute('stroke')==='#ffd29a'));
     assert.ok([...ctx.trailsG.children].every(n=>n.getAttribute('fill')==='var(--night-trail)'));
+    assert.ok([...ctx.trailsG.children].every(n=>Number(n.getAttribute('r'))===1.95));
+    assert.equal(ctx.OIL_HUES[0],0);
+    assert.equal(ctx.OIL_HUES.at(-1),35);
     assert.deepEqual(ctx.obstacles.map(b=>b.points),geometry);
   }
+  dom.window.close();
+});
+
+test('impacts warp the textured floor without a grid in both graphics modes and clear on reset',()=>{
+  const dom=setup();
+  assert.equal(CONFIG.rendering.coordinateGrid,false);
+  const floor=ctx.arenaContent.querySelector(':scope > rect');
+  floor.style.fill='url(#texture-arenaFloor)';
+  const boundary=structuredClone(ctx.arenaBoundary.points);
+  const blocks=ctx.obstacles.map(b=>structuredClone(b.points));
+  for (const mode of ['full','light']) {
+    ctx.renderProfile=chooseRenderProfile(mode,false);
+    ctx.pulses=[{x:350,y:350,time:ctx.game.time-.1}];
+    paintFloorWarp();
+    const mesh=ctx.floorWarp;
+    assert.equal(mesh.group.getAttribute('fill'),floor.style.fill);
+    assert.equal(mesh.group.parentNode,ctx.arenaContent);
+    assert.equal(mesh.group.previousSibling,floor);
+    assert.equal(floor.getAttribute('opacity'),'0');
+    assert.equal(mesh.triangles.length,mode==='full'?392:98);
+    assert.ok(mesh.triangles.some(t=>t.node.getAttribute('transform')!=='matrix(1 0 0 1 0 0)'));
+    assert.ok(mesh.triangles.every(t=>!t.node.getAttribute('transform').includes('NaN')));
+    const transforms=mesh.triangles.map(t=>t.node.getAttribute('transform'));
+    ctx.game.time+=.05;
+    paintFloorWarp();
+    assert.ok(mesh.triangles.some((t,i)=>t.node.getAttribute('transform')!==transforms[i]));
+    ctx.game.time+=CONFIG.effects.waveSec;
+    paintFloorWarp();
+    assert.equal(mesh.group.getAttribute('display'),'none');
+    assert.equal(floor.getAttribute('opacity'),'1');
+  }
+  ctx.pulses=[{x:300,y:300,time:ctx.game.time}];
+  paintFloorWarp();
+  resetRound();
+  paintFloorWarp();
+  assert.equal(ctx.floorWarp.group.getAttribute('display'),'none');
+  assert.deepEqual(ctx.arenaBoundary.points,boundary);
+  assert.deepEqual(ctx.obstacles.map(b=>b.points),blocks);
   dom.window.close();
 });

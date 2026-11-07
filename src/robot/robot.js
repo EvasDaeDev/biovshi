@@ -311,7 +311,7 @@ function createRobot(id, start) {
     length: CONFIG.trails.limit
   }, () => el('circle', {
     opacity: 0,
-    r: 1.3,
+    r: CONFIG.trails.radiusCm,
     fill: 'var(--night-trail)',
     stroke: 'none'
   }, ctx.trailsG));

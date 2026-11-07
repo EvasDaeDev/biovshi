@@ -76,7 +76,7 @@ export function initializeGame() {
   ctx.WARNING_LIMB_COLOR = [255, 214, 64];
   ctx.CRITICAL_LIMB_COLOR = [255, 72, 72];
   ctx.mixChannel = (a, b, t) => Math.round(a + (b - a) * clamp(t, 0, 1));
-  ctx.OIL_HUES = [0, 20, 40, 60];
+  ctx.OIL_HUES = Array.from({length:4}, (_,i)=>i*CONFIG.oil.hueSpreadDeg/3);
   ctx.scale = CONFIG.robot.scale;
   ctx.w = 700;
   ctx.h = 700;

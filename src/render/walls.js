@@ -14,6 +14,7 @@ function createWallPattern(key, length, width) {
   },ctx.defs);
   el('image',{
     href:url,x:0,y:0,width:length,height:width,preserveAspectRatio:'none',
+    ...(key==='obstacle'?{transform:`rotate(180 ${length/2} ${width/2})`}:{}),
     style:CONFIG.rendering.texturePixelated?'image-rendering:crisp-edges;image-rendering:pixelated':'',
   },pattern);
   return true;
