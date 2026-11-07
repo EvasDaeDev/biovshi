@@ -62,13 +62,6 @@ export function createRobotSkin(robot) {
     ...robot.horns,...robot.spheres,
     ...[...robot.arms,...robot.legs].flatMap(l=>[l.upper,l.lower,l.joint,l.endShape])];
   const skin=robot.skin={url,limbs,body,pieces,vectors,ready:false};
-  const tintId='tag7hop-skin-victory-'+robot.id;
-  ctx.defs.querySelector('#'+tintId)?.remove();
-  const tint=el('filter',{id:tintId,'color-interpolation-filters':'sRGB'},ctx.defs);
-  el('feColorMatrix',{type:'saturate',values:0},tint);
-  const transfer=el('feComponentTransfer',{},tint);
-  skin.tintId=tintId;
-  skin.tintChannels=['R','G','B'].map(channel=>el('feFunc'+channel,{type:'linear',slope:1},transfer));
   const activate=ready=>{
     skin.ready=ready;
     for(const node of vectors)node.style.visibility=ready?'hidden':'';
@@ -114,16 +107,6 @@ export function paintRobotSkin(robot,strikePose=null) {
     position(key+'upper',a,stump?strikePose.tip:joint);
     position(key+'lower',joint,end);
   }
-}
-
-export function paintSkinVictory(robot,colour) {
-  if (!robot.skin) return;
-  const skin=robot.skin;
-  if (colour) {
-    const rgb=colour.match(/[\d.]+/g).map(Number);
-    skin.tintChannels.forEach((node,i)=>attr(node,'slope',rgb[i]/128));
-  }
-  for(const layer of [skin.limbs,skin.body])attr(layer,'filter',colour?'url(#'+skin.tintId+')':'none');
 }
 
 export function snapshotRobotSkin(robot,key) {

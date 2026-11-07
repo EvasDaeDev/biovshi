@@ -135,8 +135,10 @@ function createRobot(id, start) {
     class: 'robot'
   }, ctx.actorsG);
   robotState.floor = el('g', {}, ctx.groundG);
-  robotState.limbG = el('g', {}, robotState.actor);
-  robotState.bodyG = el('g', {}, robotState.actor);
+  ctx.defs.querySelector('#tag7hop-victory-glow-'+robotState.id)?.remove();
+  robotState.figure = el('g', {'data-robot-figure':robotState.id}, robotState.actor);
+  robotState.limbG = el('g', {}, robotState.figure);
+  robotState.bodyG = el('g', {}, robotState.figure);
   robotState.vision = el('path', {
     class: 'cone'
   }, ctx.conesG);

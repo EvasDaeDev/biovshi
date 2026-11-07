@@ -265,6 +265,7 @@ const CONFIG = {
     unarmedFailureMaxSec: 30 // Случайная верхняя граница времени отказа.
   },
   effects: {
+    victoryGlowRangeCm: 30, // Мягкий золотой ореол от силуэта победителя.
     hitEffects: true,
     hitPoolLimit: 8,
     hitParticles: 8,

@@ -328,7 +328,7 @@ test('confirmed hits create bounded retro bursts, severing is stronger, and expi
   dom.window.close();
 });
 
-test('every robot uses its own atlas; severed parts, victory tint and load fallback work for A through D',()=>{
+test('every robot uses its own atlas; severed parts, victory halo and load fallback work for A through D',()=>{
  for(const id of [0,1,2,3]) {
   const dom=setup();
   const a=ctx.robots[id],actor=a.actor,name='r_0'+(id+1);
@@ -399,13 +399,24 @@ test('every robot uses its own atlas; severed parts, victory tint and load fallb
   ctx.combat.finished=true;ctx.combat.winner=id;ctx.combat.finishedAt=ctx.game.time;
   paint();
   const layer=actor.querySelector('[data-skin-layer="body"]');
-  const tintSelector='#tag7hop-skin-victory-'+id;
-  assert.equal(layer.getAttribute('filter'),'url('+tintSelector+')');
+  const glowSelector='#tag7hop-victory-glow-'+id;
+  const figure=actor.querySelector('[data-robot-figure]');
+  const filter=ctx.defs.querySelector(glowSelector);
+  assert.equal(layer.getAttribute('filter'),null,'texture is not tinted');
+  assert.equal(figure.getAttribute('filter'),'url('+glowSelector+')');
+  assert.equal(label.parentNode,actor,'identity letter is outside the glowing silhouette');
   assert.equal(label.style.fill,identityFill,'winner keeps the card identity colour on its letter');
-  const slopes=[...ctx.defs.querySelectorAll(tintSelector+' feComponentTransfer > *')].map(n=>n.getAttribute('slope'));
+  assert.equal(actor.style.getPropertyValue('--robot-color'),'#b7ada1','vector fallback keeps its original colour');
+  assert.equal(filter.querySelector('feColorMatrix'),null);
+  assert.equal(filter.querySelector('feMorphology').getAttribute('radius'),'6');
+  assert.equal(filter.querySelector('feGaussianBlur').getAttribute('stdDeviation'),'8');
+  assert.equal(filter.querySelector('feComposite').getAttribute('operator'),'out');
+  assert.equal(filter.querySelector('feMergeNode:last-child').getAttribute('in'),'SourceGraphic');
+  const gold=filter.querySelector('feFlood').getAttribute('flood-color');
   ctx.game.time+=.3;
   paint();
-  assert.notDeepEqual([...ctx.defs.querySelectorAll(tintSelector+' feComponentTransfer > *')].map(n=>n.getAttribute('slope')),slopes);
+  assert.notEqual(filter.querySelector('feFlood').getAttribute('flood-color'),gold,'golden shimmer animates');
+  assert.ok(ctx.robots.filter(r=>r.id!==id).every(r=>r.actor.querySelector('[data-robot-figure]').getAttribute('filter')==='none'));
   image.dispatchEvent(new Event('error'));
   assert.equal(actor.getAttribute('data-skin-ready'),'false');
   assert.equal(actor.querySelector('ellipse.head').style.visibility,'');
@@ -413,7 +424,7 @@ test('every robot uses its own atlas; severed parts, victory tint and load fallb
   assert.ok([...actor.querySelectorAll('[data-skin-layer]')].every(n=>n.getAttribute('display')==='none'));
   resetRound();
   assert.equal(ctx.robots[id].actor.querySelectorAll('[data-skin-segment]').length,13);
-  assert.equal(ctx.defs.querySelectorAll(tintSelector).length,1);
+  assert.equal(ctx.defs.querySelectorAll(glowSelector).length,0,'new round removes victory halo');
   assert.equal(ctx.detachedG.children.length,0);
   dom.window.close();
  }
