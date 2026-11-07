@@ -1,3 +1,4 @@
+import { CONFIG } from '../config.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { ctx } from '../game/state.js';
 import { el } from './svg.js';
@@ -15,25 +16,26 @@ function loadImage(url) {
     image.src = url;
   });
 }
-async function tintedTexture(url, colour) {
-  const key = url + '|' + colour;
+async function tintedTexture(url, colour, strength) {
+  const key = [url, colour, strength, CONFIG.rendering.textureMaxSize, CONFIG.rendering.texturePixelated].join('|');
   if (!tintCache.has(key)) {
     const pending = (async () => {
       const image = await loadImage(url);
       // A fixed-size tile, independent of screen density and zoom.
-      const scale = Math.min(1, 512 / Math.max(image.naturalWidth, image.naturalHeight));
+      const scale = Math.min(1, CONFIG.rendering.textureMaxSize / Math.max(image.naturalWidth, image.naturalHeight));
       const canvas = document.createElement('canvas');
       canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
       canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
       const drawing = canvas.getContext('2d', { willReadFrequently: true });
       if (!drawing) throw new Error('Texture canvas is unavailable');
+      drawing.imageSmoothingEnabled = !CONFIG.rendering.texturePixelated;
       drawing.fillStyle = colour;
       drawing.fillRect(0, 0, 1, 1);
       const rgb = drawing.getImageData(0, 0, 1, 1).data.slice(0, 3);
       drawing.clearRect(0, 0, canvas.width, canvas.height);
       drawing.drawImage(image, 0, 0, canvas.width, canvas.height);
       const pixels = drawing.getImageData(0, 0, canvas.width, canvas.height);
-      tintPixels(pixels.data, rgb);
+      tintPixels(pixels.data, rgb, strength);
       drawing.putImageData(pixels, 0, 0);
       return canvas.toDataURL('image/png');
     })();
@@ -58,14 +60,17 @@ export async function applyTextures() {
       const style = getComputedStyle(targets[0]);
       // Read the theme colour even if this floor already has a pattern (e.g. HMR).
       const colour = key === 'arenaFloor' ? style.getPropertyValue('--background').trim() || style.fill : style.fill;
-      const source = key === 'arenaFloor' ? await tintedTexture(url, colour) : url;
+      const source = key === 'arenaFloor' ? await tintedTexture(url, colour, CONFIG.rendering.floorTintStrength) : url;
       if (svg !== ctx.svg || !svg.isConnected || ctx.disposed) return;
       const id = 'texture-' + key;
       svg.querySelector('#' + id)?.remove();
       const pattern = el('pattern', {
         id, patternUnits:'userSpaceOnUse', x:0, y:0, width:TILE_CM, height:TILE_CM,
       }, defs);
-      el('image', { href:source, width:TILE_CM, height:TILE_CM, preserveAspectRatio:'none' }, pattern);
+      el('image', {
+        href:source, width:TILE_CM, height:TILE_CM, preserveAspectRatio:'none',
+        style:CONFIG.rendering.texturePixelated ? 'image-rendering:crisp-edges;image-rendering:pixelated' : '',
+      }, pattern);
       for (const node of targets) node.style.fill = 'url(#' + id + ')';
     } catch (error) {
       // Keep the original floor if a file fails; the fight must still start.
