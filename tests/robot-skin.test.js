@@ -16,7 +16,9 @@ test('atlas anchors follow bone endpoints without reflecting or squeezing any pa
   }
   assert.equal(Object.keys(ROBOT_PARTS).length,13);
   for(const [key,part] of Object.entries(ROBOT_PARTS)) {
-    if(key.startsWith('spine-'))assert.deepEqual([part.from,part.to],[8,32]);
+    if(key==='head')assert.deepEqual([part.from,part.to],[33,8]);
+    if(key==='spine-0')assert.deepEqual([part.from,part.to],[30,32]);
+    if(/^spine-[123]$/.test(key))assert.deepEqual([part.from,part.to],[8,32]);
     if(/^(arm|leg)/.test(key))assert.deepEqual([part.from??8,part.to??56],[8,56]);
   }
 });

@@ -3,12 +3,12 @@ import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 import { attr, el } from './svg.js';
 
-// r_01..r_04: 256×256, 4×4 cells. Body artwork occupies x=8..32;
-// limbs use the agreed joint anchors x=8..56, y=32. The uploaded heads
-// face LEFT and are centred at x=17; their diameter remains 32 source pixels.
+// r_01..r_04: 256×256, 4×4 cells. All joint axes use y=32.
+// Head and chest anchors are explicitly calibrated in atlas pixels;
+// their span also controls texture scale through skinMatrix.
 export const ROBOT_PARTS = {
-  head: {col:0,row:0,from:33,to:1},
-  'spine-0': {col:1,row:0,from:8,to:32},
+  head: {col:0,row:0,from:33,to:8},
+  'spine-0': {col:1,row:0,from:30,to:32},
   'spine-1': {col:2,row:0,from:8,to:32},
   'spine-2': {col:3,row:0,from:8,to:32},
   'spine-3': {col:0,row:1,from:8,to:32},
