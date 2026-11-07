@@ -15,7 +15,7 @@ export function limbColor(limbs, total = 4) {
   if (q >= 0.5) return mixColor(ctx.WARNING_LIMB_COLOR, ctx.SAFE_LIMB_COLOR, (q - .5) / .5);
   return mixColor(ctx.CRITICAL_LIMB_COLOR, ctx.WARNING_LIMB_COLOR, q / .5);
 }
-// #800000 = HSL(0°, 100%, 25.098%); preserve the original 20° hue spacing.
+// #800000 = HSL(0°, 100%, 25.098%); hue spread is configured in CONFIG.oil.
 export function oilColor(robotId, alpha = .82, lightness = 128 / 255 * 50) {
   return `hsla(${ctx.OIL_HUES[robotId % ctx.OIL_HUES.length]} 100% ${lightness}% / ${alpha})`;
 }

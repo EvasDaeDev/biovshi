@@ -50,7 +50,6 @@ export async function applyTextures() {
   const defs = ctx.defs;
   const jobs = [
     ['arenaFloor', [ctx.arenaContent.querySelector(':scope > rect')]],
-    ['obstacle', [...ctx.blockG.children]],
   ];
   for (const [key, targets] of jobs) {
     const url = assetUrl(ASSETS.textures[key]);

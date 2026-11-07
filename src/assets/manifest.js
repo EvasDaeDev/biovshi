@@ -1,6 +1,6 @@
 // Paths are relative to public/. Use null to keep the current appearance and silence.
 export const ASSETS = {
-  textures: { arenaFloor: 'assets/textures/arena/floor_01.webp', arenaWall: 'assets/textures/arena/wall_01.webp', obstacle: null },
+  textures: { arenaFloor: 'assets/textures/arena/floor_01.webp', arenaWall: 'assets/textures/arena/wall_01.webp', obstacle: 'assets/textures/arena/wall_02.webp' },
   sounds: { hit: null, 'segment-broken': null, 'robot-immobilized': null, 'combat-end': null },
 };
 export function assetUrl(file) {

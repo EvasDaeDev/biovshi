@@ -7,6 +7,7 @@ import { path } from "../utils/math.js";
 import { strikeProgress } from "../systems/combat.js";
 import { oilColor } from "../utils/colors.js";
 import { random } from "../utils/random.js";
+import { wavePoint } from './floor-warp.js';
 export
 // Эффекты Geometry Wars используют отдельные частицы и не влияют на ИИ.
 function burst(x, y) {
@@ -91,21 +92,10 @@ export function updateNeonGrid() {
     return;
   }
   const p = ctx.pulses[ctx.pulses.length - 1],
-    age = ctx.game.time - p.time,
-    radius = age * CONFIG.effects.waveSpeedCm,
-    amp = CONFIG.effects.waveAmplitudeCm * (1 - age / CONFIG.effects.waveSec),
     minor = [],
     major = [];
   function point(x, y) {
-    const dx = x - p.x,
-      dy = y - p.y,
-      d = Math.hypot(dx, dy) || 1,
-      edge = Math.min(x, y, 700 - x, 700 - y) / 30,
-      offset = Math.exp(-Math.pow((d - radius) / CONFIG.effects.waveWidthCm, 2)) * amp * clamp(edge, 0, 1);
-    return {
-      x: x + dx / d * offset,
-      y: y + dy / d * offset
-    };
+    return wavePoint(x,y,p,ctx.game.time);
   }
   for (let n = 0; n <= 70; n++) {
     const v = n * 10,

@@ -216,7 +216,8 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
 
 #robot-tag-hops-v22 {
   --night-bg:#030610;
-  --night-light:#65eeff;
+  --night-light:#ffd29a;
+  --night-trail:#080604;
   --night-accent:#ff397b;
   --night-ink:#65eeff
 }
@@ -246,8 +247,8 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
 
 
 #robot-tag-hops-v22 #tag7hop-block polygon {
-  fill:#050918;
-  stroke:#b961ff;
+  fill:#17120e;
+  stroke:none;
   filter:none
 }
 
@@ -270,7 +271,8 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
 
 
 #robot-tag-hops-v22 #tag7hop-trails {
-  filter:drop-shadow(0 0 2px #26bfff)
+  stroke:none;
+  filter:none
 }
 
 
