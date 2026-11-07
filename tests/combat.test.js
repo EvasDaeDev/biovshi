@@ -220,18 +220,31 @@ test('impacts warp the textured floor without a grid in both graphics modes and 
   dom.window.close();
 });
 
-test('only A uses atlas sprites; severed limbs and head retain their skin; load failures restore vectors',()=>{
+test('every robot uses its own atlas; severed parts, victory tint and load fallback work for A through D',()=>{
+ for(const id of [0,1,2,3]) {
   const dom=setup();
-  const a=ctx.robots[0],actor=a.actor;
-  assert.equal(actor.getAttribute('data-skin'),'r_01');
+  const a=ctx.robots[id],actor=a.actor,name='r_0'+(id+1);
+  assert.equal(actor.getAttribute('data-skin'),name);
   assert.equal(actor.querySelectorAll('[data-skin-segment]').length,13);
-  for(const other of ctx.robots.slice(1))assert.equal(other.actor.querySelectorAll('image').length,0);
+  for(const [index,robot] of ctx.robots.entries()) {
+    assert.equal(robot.actor.querySelectorAll('image').length,13);
+    assert.ok([...robot.actor.querySelectorAll('image')].every(img=>img.getAttribute('href').endsWith('r_0'+(index+1)+'.png')));
+  }
   const image=actor.querySelector('image');
   image.dispatchEvent(new Event('load'));
   assert.equal(actor.getAttribute('data-skin-ready'),'true');
   assert.equal(actor.querySelector('ellipse.head').style.visibility,'hidden');
+  for(const decoration of actor.querySelectorAll('.robot-horn, .robot-sphere'))assert.equal(decoration.style.visibility,'hidden');
   paint();
   assert.ok([...actor.querySelectorAll('[data-skin-segment]')].every(n=>n.getAttribute('transform')&&!n.getAttribute('transform').includes('NaN')));
+  for(let i=0;i<4;i++) {
+    const node=actor.querySelector('[data-skin-segment="spine-'+i+'"]');
+    const [A,B,C,D,E,F]=node.getAttribute('transform').match(/matrix\(([^)]+)\)/)[1].split(' ').map(Number);
+    for(const [x,target] of [[8,a.actualPose.spine[i]],[32,a.actualPose.spine[i+1]]]) {
+      assert.ok(Math.abs(A*x+C*32+E-target.x)<1e-8,'body starts on its original bone');
+      assert.ok(Math.abs(B*x+D*32+F-target.y)<1e-8,'body ends on its original bone');
+    }
+  }
   const chest=actor.querySelector('[data-skin-segment="spine-0"]');
   const chestMatrix=chest.getAttribute('transform');
   for(let i=0;i<3;i++)hit(a,'arm--1-upper');
@@ -240,6 +253,7 @@ test('only A uses atlas sprites; severed limbs and head retain their skin; load 
   assert.equal(actor.querySelector('[data-skin-segment="arm--1-lower"]').getAttribute('display'),'none');
   assert.equal(chest.getAttribute('transform'),chestMatrix);
   assert.equal(ctx.detachedG.querySelectorAll('[data-skin-segment]').length,2);
+  assert.ok([...ctx.detachedG.querySelectorAll('image')].every(img=>img.getAttribute('href').endsWith(name+'.png')));
   const severed=ctx.detachedG.querySelector('[data-skin-segment="arm--1-upper"]');
   const frozen=severed.getAttribute('transform');
   for(let i=0;i<30;i++)step(1/60);
@@ -249,21 +263,24 @@ test('only A uses atlas sprites; severed limbs and head retain their skin; load 
   paint();
   assert.equal(actor.querySelector('[data-skin-segment="head"]').getAttribute('display'),'none');
   assert.ok(ctx.detachedG.querySelector('[data-skin-segment="head"]'));
-  ctx.combat.finished=true;ctx.combat.winner=0;ctx.combat.finishedAt=ctx.game.time;
+  ctx.combat.finished=true;ctx.combat.winner=id;ctx.combat.finishedAt=ctx.game.time;
   paint();
   const layer=actor.querySelector('[data-skin-layer="body"]');
-  assert.equal(layer.getAttribute('filter'),'url(#tag7hop-skin-victory-0)');
-  const slopes=[...ctx.defs.querySelectorAll('#tag7hop-skin-victory-0 feComponentTransfer > *')].map(n=>n.getAttribute('slope'));
+  const tintSelector='#tag7hop-skin-victory-'+id;
+  assert.equal(layer.getAttribute('filter'),'url('+tintSelector+')');
+  const slopes=[...ctx.defs.querySelectorAll(tintSelector+' feComponentTransfer > *')].map(n=>n.getAttribute('slope'));
   ctx.game.time+=.3;
   paint();
-  assert.notDeepEqual([...ctx.defs.querySelectorAll('#tag7hop-skin-victory-0 feComponentTransfer > *')].map(n=>n.getAttribute('slope')),slopes);
+  assert.notDeepEqual([...ctx.defs.querySelectorAll(tintSelector+' feComponentTransfer > *')].map(n=>n.getAttribute('slope')),slopes);
   image.dispatchEvent(new Event('error'));
   assert.equal(actor.getAttribute('data-skin-ready'),'false');
   assert.equal(actor.querySelector('ellipse.head').style.visibility,'');
+  for(const decoration of actor.querySelectorAll('.robot-horn, .robot-sphere'))assert.equal(decoration.style.visibility,'');
   assert.ok([...actor.querySelectorAll('[data-skin-layer]')].every(n=>n.getAttribute('display')==='none'));
   resetRound();
-  assert.equal(ctx.robots[0].actor.querySelectorAll('[data-skin-segment]').length,13);
-  assert.equal(ctx.defs.querySelectorAll('#tag7hop-skin-victory-0').length,1);
+  assert.equal(ctx.robots[id].actor.querySelectorAll('[data-skin-segment]').length,13);
+  assert.equal(ctx.defs.querySelectorAll(tintSelector).length,1);
   assert.equal(ctx.detachedG.children.length,0);
   dom.window.close();
+ }
 });
