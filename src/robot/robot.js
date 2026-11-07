@@ -312,7 +312,7 @@ function createRobot(id, start) {
   }, () => el('circle', {
     opacity: 0,
     r: 1.3,
-    fill: 'var(--night-ink)',
+    fill: 'var(--night-trail)',
     stroke: 'none'
   }, ctx.trailsG));
   robotState.lastFootTouches = new WeakMap();

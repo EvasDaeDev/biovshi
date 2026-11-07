@@ -195,7 +195,7 @@ export function robotPaint(robotState, hunter) {
       age = sample ? ctx.game.time - sample.time : Infinity;
     const opacity = sample ? Math.min(.65, CONFIG.trails.opacity * CONFIG.trails.neonMultiplier) * Math.max(0, 1 - age / CONFIG.trails.fadeSec) : 0;
     attr(robotState.trailNodes[i], 'opacity', opacity.toFixed(3));
-    attr(robotState.trailNodes[i], 'fill', sample?.shield > 0 ? `color-mix(in srgb, var(--night-protected) ${sample.shield * 100}%, var(--night-ink))` : sample?.hunter ? 'var(--night-accent)' : 'var(--night-ink)');
+    attr(robotState.trailNodes[i], 'fill', 'var(--night-trail)');
     if (sample) dot(robotState.trailNodes[i], sample);
   }
   const name = String.fromCharCode(65 + robotState.id);

@@ -198,7 +198,7 @@ export function initializeGame() {
     for (const band of ctx.ambientBands) el('polygon', {
       points,
       fill: 'none',
-      stroke: '#65eeff',
+      stroke: CONFIG.light.ambientColor,
       'stroke-opacity': band.opacity,
       'stroke-width': band.width,
       'stroke-linejoin': 'round'

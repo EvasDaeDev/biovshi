@@ -153,3 +153,25 @@ test('outer wall and clock remain outside the floor clip, with a full-size playa
   assert.equal(ctx.arenaBoundary.bottom,700);
   dom.window.close();
 });
+
+test('warm lighting, dark footprints and inward textured obstacle walls survive reinitialization',()=>{
+  const dom=setup();
+  const geometry=ctx.obstacles.map(b=>structuredClone(b.points));
+  for(let pass=0;pass<2;pass++) {
+    if(pass)initializeGame();
+    const walls=ctx.svg.querySelector('#tag7hop-obstacle-walls');
+    assert.equal(walls.parentNode,ctx.blockG);
+    assert.equal(walls.children.length,CONFIG.arena.obstacles.length);
+    assert.equal(walls.querySelectorAll('path[transform]').length,44);
+    assert.equal(ctx.svg.querySelectorAll('#texture-obstacle').length,1);
+    const pattern=ctx.svg.querySelector('#texture-obstacle');
+    assert.equal(pattern.getAttribute('width'),'100');
+    assert.equal(pattern.getAttribute('height'),'30');
+    assert.match(pattern.querySelector('image').getAttribute('href'),/wall_02\.webp$/);
+    assert.equal(ctx.outlineG.getAttribute('stroke'),'none');
+    assert.ok([...ctx.ambientGlowG.children].every(n=>n.getAttribute('stroke')==='#ffd29a'));
+    assert.ok([...ctx.trailsG.children].every(n=>n.getAttribute('fill')==='var(--night-trail)'));
+    assert.deepEqual(ctx.obstacles.map(b=>b.points),geometry);
+  }
+  dom.window.close();
+});

@@ -1,7 +1,7 @@
-/** Offset a convex arena outwards and unwrap a wall ribbon in centimetres.
+/** Offset a convex boundary outwards (or inwards) and unwrap a wall in centimetres.
  * UV y=width is the image's bottom edge, exactly on the playable boundary.
  */
-export function wallRibbon(points, width) {
+export function wallRibbon(points, width, { inward = false } = {}) {
   if (points.length < 3 || !Number.isFinite(width) || width <= 0) throw new Error('Invalid wall geometry');
   const area = points.reduce((sum,p,i) => { const q=points[(i+1)%points.length]; return sum+p.x*q.y-q.x*p.y; },0);
   if (!area) throw new Error('Degenerate arena');
@@ -12,18 +12,34 @@ export function wallRibbon(points, width) {
     if (!length) throw new Error('Zero-length arena edge');
     return { length, normal:{ x:sign*(b.y-a.y)/length, y:-sign*(b.x-a.x)/length } };
   });
-  const outer=points.map((p,i)=>{
+  const offsets=points.map((p,i)=>{
     const prev=edges[(i+edges.length-1)%edges.length].normal, next=edges[i].normal;
     const denominator=1+prev.x*next.x+prev.y*next.y;
     if (denominator < 1e-8) throw new Error('Invalid arena corner');
-    return {x:p.x+width*(prev.x+next.x)/denominator,y:p.y+width*(prev.y+next.y)/denominator};
+    return {x:(prev.x+next.x)/denominator,y:(prev.y+next.y)/denominator};
   });
+  let depth=width;
+  if (inward) {
+    // Stop before the first inset edge collapses (small triangles are <30 cm deep).
+    // Keep the 30 cm UV scale: narrow walls crop the image instead of stretching it.
+    let limit=Infinity;
+    for (let i=0;i<points.length;i++) {
+      const j=(i+1)%points.length,a=points[i],b=points[j],u=offsets[i],v=offsets[j];
+      const shrink=((v.x-u.x)*(b.x-a.x)+(v.y-u.y)*(b.y-a.y))/edges[i].length;
+      if (shrink>1e-8) limit=Math.min(limit,edges[i].length/shrink);
+    }
+    depth=Math.min(width,limit*.999);
+  }
+  const outer=points.map((p,i)=>({
+    x:p.x+(inward?-depth:depth)*offsets[i].x,
+    y:p.y+(inward?-depth:depth)*offsets[i].y,
+  }));
   let distance=0;
   const faces=points.map((p,i)=>{
     const next=(i+1)%points.length, length=edges[i].length;
     const face={
       world:[p,points[next],outer[next],outer[i]],
-      uv:[{x:distance,y:width},{x:distance+length,y:width},{x:distance+length,y:0},{x:distance,y:0}],
+      uv:[{x:distance,y:width},{x:distance+length,y:width},{x:distance+length,y:width-depth},{x:distance,y:width-depth}],
       length, normal:edges[i].normal,
     };
     distance+=length;
