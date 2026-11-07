@@ -4,7 +4,7 @@ import { initializeHitEffects } from '../render/hit-effects.js';
 import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "./state.js";
-import { fitField, togglePause } from "../ui/controls.js";
+import { fitField, togglePause, toggleSpeed, setTimeScale } from "../ui/controls.js";
 import { CONFIG } from "../config.js";
 import { obstacleVertices, polygonPlanes, rebuildRobots } from "./arena.js";
 import { attr, el } from "../render/svg.js";
@@ -24,6 +24,7 @@ export function initializeGame() {
   ctx.groundG = ctx.root.querySelector('#tag7hop-ground');
   ctx.actorsG = ctx.root.querySelector('#tag7hop-actors');
   ctx.button = ctx.root.querySelector('#tag7hop-pause');
+  ctx.speedButton = ctx.root.querySelector('#tag7hop-speed');
   ctx.resetButton = ctx.root.querySelector('#tag7hop-reset');
   ctx.timerOutput = ctx.root.querySelector('#tag7hop-timer');
   ctx.status = ctx.root.querySelector('#tag7hop-status');
@@ -66,6 +67,7 @@ export function initializeGame() {
     ctx.startButton.onclick = null;
     ctx.resultsAgain.onclick = null;
     ctx.button.onclick = null;
+    ctx.speedButton.onclick = null;
     const qualityControl = ctx.root.querySelector('#graphics-quality');
     if (qualityControl) qualityControl.onchange = null;
     ctx.svg.onclick = null;
@@ -74,6 +76,7 @@ export function initializeGame() {
     globalThis.visualViewport?.removeEventListener('resize', fitField);
   };
   ctx.cache = new WeakMap();
+  setTimeScale(1);
   ctx.liquidAtlasSources=null;
   initializePerformance();
   ctx.SAFE_LIMB_COLOR = [101, 238, 255];
@@ -437,7 +440,7 @@ export function initializeGame() {
   drawGrid();
   ctx.game.hunter = -1;
   rebuildRobots();
-  ctx.button.disabled = ctx.resetButton.disabled = true;
+  ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = true;
   ctx.startButton.onclick = beginGame;
   attr(ctx.root.querySelector('#tag7hop-darkness'), 'opacity', CONFIG.light.darknessOpacity);
   // Подпись использует те же настройки, что и симуляция.
@@ -477,6 +480,7 @@ export function initializeGame() {
   };
   ctx.resultsAgain.onclick = () => resetRound();
   ctx.button.onclick = togglePause;
+  ctx.speedButton.onclick = toggleSpeed;
   // click также обрабатывает одиночный тап; отдельный touch-обработчик удвоил бы переключение.
   ctx.svg.onclick = togglePause;
   ctx.svg.style.setProperty('touch-action', 'manipulation');

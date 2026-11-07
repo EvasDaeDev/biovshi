@@ -98,7 +98,7 @@ export function frame(now) {
   } else if (!ctx.paused && !document.hidden) {
     // Physics always advances in 1/60 s steps, independently of the paint cap.
     // Keep excess debt after a long active-frame stall instead of losing time.
-    ctx.debt += elapsed;
+    ctx.debt += elapsed * ctx.timeScale;
     const n = Math.min(60, Math.floor((ctx.debt + 1e-9) * 60));
     for (let i = 0; i < n; i++) step(1 / 60);
     ctx.debt = Math.max(0, ctx.debt - n / 60);

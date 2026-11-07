@@ -438,3 +438,8 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 #robot-tag-hops-v22.render-light #tag7hop-field .score-text { filter:none !important }
 #robot-tag-hops-v22.render-light #tag7hop-ambient-glow { display:none }
 #robot-tag-hops-v22.render-light #tag7hop-timer { mix-blend-mode:normal }
+
+/* The speed switch stays visibly latched while double time is active. */
+html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] {
+  background:#235361;color:#fff4cc;border-color:#e8c174;
+}

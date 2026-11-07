@@ -1,3 +1,4 @@
+import { setTimeScale } from "../ui/controls.js";
 import { resetFrameClock } from "./clock.js";
 import { ctx } from "./state.js";
 import { resetCombatAccents } from "../render/effects.js";
@@ -95,6 +96,7 @@ export function resetRound() {
   ctx.pulses.length = 0;
   ctx.sparks.length = 0;
   ctx.paused = false;
+  setTimeScale(1);
   ctx.button.textContent = 'Пауза';
   attr(ctx.button, 'aria-pressed', 'false');
   resetFrameClock();
@@ -113,7 +115,7 @@ export function advanceStartup(dt) {
   if (ctx.startup.nextIndex === ctx.startup.order.length) {
     ctx.startup.phase = 'running';
     arenaAnnounce('БОЙ', 'НАЧАЛСЯ', 1, 1.4);
-    ctx.button.disabled = ctx.resetButton.disabled = false;
+    ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = false;
   }
   paint();
 }
@@ -123,7 +125,7 @@ export function startSpawnSequence() {
   ctx.startup.order = ctx.robots.map(r => r.id).sort(() => random() - .5);
   ctx.startup.elapsed = 0;
   ctx.startup.nextIndex = 0;
-  ctx.button.disabled = ctx.resetButton.disabled = true;
+  ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = true;
   advanceStartup(0);
 }
 export function beginGame() {

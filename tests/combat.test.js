@@ -595,3 +595,57 @@ test('an active frame stall retains debt; pause and hidden-tab time are excluded
   assert.ok(Math.abs(ctx.game.time-visibleTime-1/60)<1e-8);
   dom.window.close();
 });
+
+test('double-time button toggles speed, respects pause and resets for a new round',()=>{
+  const dom=setup(),button=document.querySelector('#tag7hop-speed');
+  assert.equal(ctx.button.nextElementSibling,button,'speed is beside pause');
+  assert.equal(button.disabled,false);
+  assert.equal(button.getAttribute('aria-pressed'),'false');
+  ctx.last=0;ctx.paintAt=0;ctx.debt=0;
+  let now=0;
+  const advance=ms=>{const end=now+ms;while(now<end){now=Math.min(end,now+40);frame(now);}};
+  advance(1000);
+  assert.ok(Math.abs(ctx.game.time-1)<1e-8);
+  button.click();
+  assert.equal(ctx.timeScale,2);
+  assert.equal(button.getAttribute('aria-pressed'),'true');
+  advance(1000);
+  assert.ok(Math.abs(ctx.game.time-3)<1e-8,'one real second advances two game seconds');
+  button.click();advance(1000);
+  assert.equal(ctx.timeScale,1);
+  assert.ok(Math.abs(ctx.game.time-4)<1e-8,'second click restores normal time');
+  button.click();ctx.button.click();advance(2000);
+  assert.ok(Math.abs(ctx.game.time-4)<1e-8,'double time does not override pause');
+  assert.equal(ctx.timeScale,2);
+  ctx.button.click();frame(now);advance(500);
+  assert.ok(Math.abs(ctx.game.time-5)<1e-8,'double speed is retained after resuming');
+  resetRound();
+  assert.equal(ctx.timeScale,1);
+  assert.equal(button.getAttribute('aria-pressed'),'false');
+  assert.equal(button.disabled,true);
+  button.click();assert.equal(ctx.timeScale,1,'disabled before the fight starts');
+  dom.window.close();
+});
+
+test('double time preserves fixed-step combat and randomness; toggling keeps fractional time',()=>{
+  const run=double=>{
+    const original=Math.random;let dom;
+    try{Math.random=()=>.2468;dom=setup();}finally{Math.random=original;}
+    ctx.last=0;ctx.paintAt=0;ctx.debt=0;
+    ctx.combat.oilLeaks=[{robot:0,key:'head',nextAt:0}];
+    if(double)ctx.speedButton.click();
+    const frames=double?150:300;
+    for(let i=1;i<=frames;i++)frame(i*1000/60);
+    const snapshot=JSON.parse(JSON.stringify({seed:ctx.seed,time:ctx.game.time,
+      robots:ctx.robots.map(r=>({x:r.x,y:r.y,angle:r.angle,hp:[...r.hp],pose:r.actualPose})),
+      strikes:ctx.combat.strikes,hits:ctx.combat.hits,
+      drops:ctx.combat.oilDrops.map(d=>({born:d.born,x:d.x,y:d.y,r:d.baseRadius})),
+    }));
+    dom.window.close();return snapshot;
+  };
+  assert.deepEqual(run(true),run(false),'five game seconds have the same outcome at either speed');
+  const dom=setup();ctx.last=0;ctx.paintAt=0;ctx.debt=0;
+  frame(10);ctx.speedButton.click();frame(20);
+  assert.ok(Math.abs(ctx.game.time+ctx.debt-.03)<1e-8,'switching speed keeps the partial fixed step');
+  dom.window.close();
+});
