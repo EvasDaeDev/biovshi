@@ -8,7 +8,8 @@ import { attr, el } from './svg.js';
 // their span also controls texture scale through skinMatrix.
 export const ROBOT_PARTS = {
   head: {col:0,row:0,from:33,to:8},
-  'spine-0': {col:1,row:0,from:30,to:32},
+  // Translate the entire chest 22 px right; preserve its 24 px anchor span.
+  'spine-0': {col:1,row:0,from:30,to:54},
   'spine-1': {col:2,row:0,from:8,to:32},
   'spine-2': {col:3,row:0,from:8,to:32},
   'spine-3': {col:0,row:1,from:8,to:32},

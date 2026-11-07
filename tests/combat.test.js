@@ -252,7 +252,7 @@ test('every robot uses its own atlas; severed parts, victory tint and load fallb
   for(let i=0;i<4;i++) {
     const node=actor.querySelector('[data-skin-segment="spine-'+i+'"]');
     const [A,B,C,D,E,F]=node.getAttribute('transform').match(/matrix\(([^)]+)\)/)[1].split(' ').map(Number);
-    for(const [x,target] of [[i===0?30:8,a.actualPose.spine[i]],[32,a.actualPose.spine[i+1]]]) {
+    for(const [x,target] of [[i===0?30:8,a.actualPose.spine[i]],[i===0?54:32,a.actualPose.spine[i+1]]]) {
       assert.ok(Math.abs(A*x+C*32+E-target.x)<1e-8,'body starts on its original bone');
       assert.ok(Math.abs(B*x+D*32+F-target.y)<1e-8,'body ends on its original bone');
     }
