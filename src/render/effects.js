@@ -122,7 +122,7 @@ export function updatePulses() {
     }
     const q = clamp((ctx.game.time - p.time) / CONFIG.effects.waveSec, 0, 1);
     dot(ctx.pulseNodes[i], p, 5 + q * 30);
-    attr(ctx.pulseNodes[i], 'opacity', (1 - q) * .75);
+    attr(ctx.pulseNodes[i], 'opacity', (1 - q) * .28);
   }
 }
 // Неудачная атака не должна немедленно возобновляться от того же касания лап.
@@ -154,7 +154,7 @@ export function createOilDrop(robotId, x, y, baseRadius) {
     cx: x,
     cy: y,
     r: baseRadius,
-    fill: oilColor(robotId, .82),
+    fill: oilColor(robotId),
     opacity: .92
   }, ctx.oilG);
   ctx.combat.oilDrops.push({
@@ -189,9 +189,11 @@ export function paintOil() {
     const q = smooth((ctx.game.time - drop.born) / CONFIG.oil.spreadSec);
     const radius = drop.baseRadius + (drop.maxRadius - drop.baseRadius) * q;
     const opacity = drop.baseOpacity * (1 - 0.5 * q);
+    const dry=smooth((ctx.game.time-drop.born)/CONFIG.oil.drySec);
+    attr(drop.node,'fill',oilColor(drop.robot,.9,dry));
     attr(drop.node, 'r', radius.toFixed(2));
     attr(drop.node, 'opacity', opacity.toFixed(3));
-    if (q >= 1) ctx.settledOilDrops?.add(drop);
+    if (q >= 1 && dry >= 1) ctx.settledOilDrops?.add(drop);
   }
 }
 export function paintDetachedAnatomy() {
@@ -274,7 +276,7 @@ export function paintCombatAccents() {
     const text = active ? message.lines[i] : '';
     if (node.textContent !== text) node.textContent = text;
     if (text.length > 11) attr(node, 'textLength', 106);else node.removeAttribute('textLength');
-    node.style.setProperty('fill', active && message.priority === 5 ? '#ffe58a' : '#c9f6ff');
+    node.style.setProperty('fill', active && message.priority === 5 ? '#e1cf9a' : '#d2d5bf');
     attr(node, 'opacity', active ? Math.min(1, (message.until - ctx.game.time) / .25) : 0);
   });
   attr(ctx.scoreG, 'aria-label', active ? message.lines.join(' · ') : 'Объявления арены');

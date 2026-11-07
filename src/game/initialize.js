@@ -193,7 +193,11 @@ export function initializeGame() {
     opacity: .045
   }];
   ctx.ambientPolygons = [ctx.arenaBoundary.points, ...ctx.obstacles.map(b => b.points)];
+  ctx.ambientLights=[];
+  ctx.atmosphereReduced=Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
   for (const vertices of ctx.ambientPolygons) {
+    const source=el('g',{'data-ambient-light':ctx.ambientLights.length},ctx.ambientGlowG);
+    ctx.ambientLights.push(source);
     const points = vertices.map(p => p.x + ',' + p.y).join(' ');
     for (const band of ctx.ambientBands) el('polygon', {
       points,
@@ -202,7 +206,7 @@ export function initializeGame() {
       'stroke-opacity': band.opacity,
       'stroke-width': band.width,
       'stroke-linejoin': 'round'
-    }, ctx.ambientGlowG);
+    }, source);
   }
   ctx.root.querySelector('#tag7hop-guide-visuals')?.remove();
   ctx.guideG = el('g', {

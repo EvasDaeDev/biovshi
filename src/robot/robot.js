@@ -124,7 +124,7 @@ function createRobot(id, start) {
     class: 'neon-pool',
     fill: 'url(#tag7hop-pool-' + robotState.id + ')'
   }, ctx.conesG);
-  robotState.lightBeam = el('path', {
+  robotState.lightBeam = el('g', {
     fill: 'url(#' + robotState.beamId + ')'
   }, ctx.lightHoles);
   robotState.nearLight = el('path', {
@@ -136,9 +136,13 @@ function createRobot(id, start) {
   robotState.floor = el('g', {}, ctx.groundG);
   robotState.limbG = el('g', {}, robotState.actor);
   robotState.bodyG = el('g', {}, robotState.actor);
-  robotState.vision = el('path', {
+  robotState.vision = el('g', {
     class: 'cone'
   }, ctx.conesG);
+  robotState.beamLayers=Array.from({length:5},()=>({
+    vision:el('path',{},robotState.vision),
+    mask:el('path',{},robotState.lightBeam),
+  }));
   robotState.label = el('text', {
     class: 'robot-label',
     'text-anchor': 'middle'

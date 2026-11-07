@@ -14,6 +14,7 @@ function createWallPattern(key, length, width) {
   },ctx.defs);
   el('image',{
     href:url,x:0,y:0,width:length,height:width,preserveAspectRatio:'none',
+    opacity:CONFIG.rendering.wallTintStrength>0?0:1,
     ...(key==='obstacle'?{transform:`rotate(180 ${length/2} ${width/2})`}:{}),
     style:CONFIG.rendering.texturePixelated?'image-rendering:crisp-edges;image-rendering:pixelated':'',
   },pattern);
@@ -43,7 +44,7 @@ export function createWalls() {
   ctx.svg.insertBefore(group,ctx.arenaContent);
   el('path',{
     d:outline(ribbon.outer)+' '+outline([...ribbon.inner].reverse()),
-    'fill-rule':'evenodd',fill:'#303b37',
+    'fill-rule':'evenodd',fill:CONFIG.rendering.wallTintColor,
   },group);
   if (createWallPattern('arenaWall',length,width)) drawRibbon(ribbon,'arenaWall',group);
   el('path',{d:outline(ribbon.outer),fill:'none',stroke:'#352d26','stroke-width':.7},group);
