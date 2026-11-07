@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { lampBrightness } from '../src/render/atmosphere.js';
-import { featheredBeamPaths } from '../src/render/beam-feather.js';
 import { CONFIG } from '../src/config.js';
 import { ctx } from '../src/game/state.js';
 import { oilColor } from '../src/utils/colors.js';
@@ -23,22 +22,6 @@ test('lamp dips are rare, independent, bounded and respect reduced motion withou
     assert.ok(dips>0&&dips/samples<.06);
     assert.ok(different>0);
   } finally {Math.random=original;}
-});
-
-test('feathered cones reuse ray endpoints, with narrower inner layers and no geometry beyond the outer cone',()=>{
-  const origin={x:10,y:20},heading=3.1,fov=Math.PI/2;
-  const points=Array.from({length:49},(_,i)=>{
-    const angle=heading-fov/2+i*fov/48;
-    return {x:origin.x+100*Math.cos(angle),y:origin.y+100*Math.sin(angle)};
-  });
-  for(const count of [3,5]) {
-    const layers=featheredBeamPaths(origin,heading,points,fov,count,.16);
-    assert.equal(layers.length,count);
-    assert.ok(layers.every(d=>d.startsWith('M')&&d.endsWith(' Z')&&!d.includes('NaN')));
-    const vertices=layers.map(d=>(d.match(/L/g)||[]).length);
-    assert.ok(vertices[0]>vertices.at(-1));
-    assert.ok(vertices.every((n,i)=>!i||n<=vertices[i-1]));
-  }
 });
 
 test('oil has a narrow dark-red range and dries darker with lower saturation',()=>{

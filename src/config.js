@@ -16,6 +16,9 @@ const CONFIG = {
     sparks: false, // Искры были скрыты CSS; не тратим время на невидимые частицы.
   },
   startup: {
+    spawnDurationSec: 0.2, // Вылет из тени и приземление.
+    spawnScale: 1.25, // Масштаб над землёй в начале появления.
+    spawnEdgeOutsetCm: 40, // Старт анимации за ближайшей границей арены.
     spawnIntervalSec: 0.4,
     // Пауза между появлениями; водящий всегда последний.
     spawnMarginCm: 60,
@@ -138,6 +141,8 @@ const CONFIG = {
     hopDistanceCm: 18 // Длина каждого из двух прыжков вперёд.
   },
   robot: {
+    shadowOpacity: 0.5,
+    shadowPadding: 1.2,
     scale: 0.5,
     // Масштаб корпуса и конечностей.
     vertebraBaseCm: 10,
@@ -192,28 +197,35 @@ const CONFIG = {
   light: {
     ambientColor: '#8b9e91', // Холодный приглушённый больничный свет.
     ambientIntensity: 0.55,
-    beamFeather: 0.16, // Доля полуугла конуса для мягкого края.
+    obstacleLightExtraDiameterCm: 100,
+    obstacleLightOpacity: 0.12,
+    obstacleLightReveal: 0.35,
     flickerDepth: 0.2, // Краткие просадки яркости до 20%, без погасания.
+    nearbyIntensity: 0.5, // Яркость кругового пятна; направленный свет не меняется.
     nearbyRadiusCm: 75,
     // Радиус ближнего света; диаметр = 150 см.
     darknessOpacity: 0.92 // 0 — светло, 1 — полная темнота вне фонариков.
   },
   trails: {
     radiusCm: 2.925, // Радиус отпечатка: ещё в 1.5 раза больше прежних 1.95 см.
-    limit: 20,
+    limit: 10,
     // Максимум отпечатков точек опоры на каждого робота.
     fadeSec: 14,
     // Полное исчезновение старого следа.
-    opacity: 0.22,
-    // Яркость обычного следа: 0…1.
-    neonMultiplier: 2.3 // Усиление следов в Geometry Wars.
+    opacity: 0.251 // Втрое менее заметный свежий отпечаток.
   },
   oil: {
+    limit: 2000, // Общий лимит пятен всех роботов; первыми удаляются самые старые.
+    dropSizeScale: 2, // Начальные радиус и диаметр капающей жидкости увеличены вдвое.
     hueSpreadDeg: 12, // Узкий разброс вокруг тёмно-красного.
     baseHue: 359,
     saturation: 81,
     lightness: 12.2, // Приблизительно #380607.
     drySec: 18, // Старые пятна становятся буро-чёрными.
+    spriteColumns: 4,
+    spriteRows: 4,
+    spriteDryColor: '#160c09',
+    spriteDryStrength: 0.95,
     minIntervalSec: 0.5,
     // Минимальный интервал между каплями масла из раны.
     maxIntervalSec: 0.7,
@@ -256,14 +268,15 @@ const CONFIG = {
     unarmedFailureMaxSec: 30 // Случайная верхняя граница времени отказа.
   },
   effects: {
-    waveAmplitudeCm: 14,
-    // Сила искажения сетки.
-    waveSpeedCm: 640,
-    // Скорость расширения волны; больше — шире область.
-    waveWidthCm: 56,
-    // Толщина кольца искажения.
+    victoryGlowRangeCm: 30, // Мягкий золотой ореол от силуэта победителя.
+    hitEffects: true,
+    hitPoolLimit: 8,
+    hitParticles: 8,
+    severParticles: 14,
+    hitLifeSec: 0.38,
+    hitFlashSec: 0.09,
     waveSec: 0.35,
-    // Длительность волны и кольца касания.
+    // Длительность короткого кольца касания.
     particleCount: 32,
     // Частиц при одном касании.
     particleLimit: 96,

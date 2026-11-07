@@ -1,3 +1,5 @@
+import { setTimeScale } from "../ui/controls.js";
+import { resetFrameClock } from "./clock.js";
 import { ctx } from "./state.js";
 import { resetCombatAccents } from "../render/effects.js";
 import { attr } from "../render/svg.js";
@@ -8,6 +10,7 @@ import { CONFIG } from "../config.js";
 import { arenaAnnounce } from "../ui/announcements.js";
 import { paint } from "../render/frame.js";
 import { random } from "../utils/random.js";
+import { resetHitEffects } from '../render/hit-effects.js';
 export function resetRound() {
   ctx.telemetryDirty = true;
   ctx.lastTelemetryAt = -Infinity;
@@ -34,6 +37,7 @@ export function resetRound() {
   ctx.game.immune.fill(0);
   ctx.game.lastPursued.fill(-99);
   resetCombatAccents();
+  resetHitEffects();
   ctx.combat.unarmedDeadline.fill(null);
   ctx.combat.finished = false;
   ctx.combat.winner = null;
@@ -92,9 +96,10 @@ export function resetRound() {
   ctx.pulses.length = 0;
   ctx.sparks.length = 0;
   ctx.paused = false;
+  setTimeScale(1);
   ctx.button.textContent = 'Пауза';
   attr(ctx.button, 'aria-pressed', 'false');
-  ctx.debt = 0;
+  resetFrameClock();
   ctx.paintAt = -Infinity;
   rebuildRobots();
   cameraReset();
@@ -105,12 +110,14 @@ export function advanceStartup(dt) {
   if (ctx.startup.phase !== 'spawning') return;
   ctx.startup.elapsed += dt;
   while (ctx.startup.nextIndex < ctx.startup.order.length && ctx.startup.elapsed + 1e-9 >= ctx.startup.nextIndex * CONFIG.startup.spawnIntervalSec) {
-    ctx.robots[ctx.startup.order[ctx.startup.nextIndex++]].setVisible(true);
+    const index = ctx.startup.nextIndex++;
+    ctx.robots[ctx.startup.order[index]].setVisible(true,index*CONFIG.startup.spawnIntervalSec);
   }
-  if (ctx.startup.nextIndex === ctx.startup.order.length) {
+  const landedAt = Math.max(0,ctx.startup.order.length-1)*CONFIG.startup.spawnIntervalSec + CONFIG.startup.spawnDurationSec;
+  if (ctx.startup.nextIndex === ctx.startup.order.length && ctx.startup.elapsed+1e-9 >= landedAt) {
     ctx.startup.phase = 'running';
     arenaAnnounce('БОЙ', 'НАЧАЛСЯ', 1, 1.4);
-    ctx.button.disabled = ctx.resetButton.disabled = false;
+    ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = false;
   }
   paint();
 }
@@ -120,7 +127,7 @@ export function startSpawnSequence() {
   ctx.startup.order = ctx.robots.map(r => r.id).sort(() => random() - .5);
   ctx.startup.elapsed = 0;
   ctx.startup.nextIndex = 0;
-  ctx.button.disabled = ctx.resetButton.disabled = true;
+  ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = true;
   advanceStartup(0);
 }
 export function beginGame() {

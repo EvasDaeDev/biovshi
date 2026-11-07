@@ -1,3 +1,4 @@
+import { updateOilLeaks } from '../render/effects.js';
 import { recordFrame } from '../render/performance.js';
 import { ctx } from "./state.js";
 import { showResults } from "../ui/results.js";
@@ -78,6 +79,7 @@ export function step(dt) {
     };
   }
   combatAttacks();
+  updateOilLeaks();
 }
 export function frame(now) {
   if (ctx.disposed) return;
@@ -85,7 +87,7 @@ export function frame(now) {
     ctx.root.__disposeTag?.();
     return;
   }
-  const elapsed = ctx.last === null ? 1 / 60 : Math.min(.1, Math.max(0, (now - ctx.last) / 1000));
+  const elapsed = ctx.last === null ? 0 : Math.max(0, (now - ctx.last) / 1000);
   ctx.last = now;
   let painted = false;
   ctx.cameraDebt = (ctx.cameraDebt || 0) + elapsed;
@@ -94,12 +96,15 @@ export function frame(now) {
     ctx.debt = 0;
     ctx.paintAt = now;
   } else if (!ctx.paused && !document.hidden) {
-    ctx.debt = Math.min(4 / 60, ctx.debt + elapsed);
-    if (now - ctx.paintAt >= 1000 / 30 - .1) {
-      const n = Math.min(4, Math.floor((ctx.debt + 1e-9) * 60));
-      for (let i = 0; i < n; i++) step(1 / 60);
-      ctx.debt = Math.max(0, ctx.debt - n / 60);
-      if (n) { paint(); painted = true; }
+    // Physics always advances in 1/60 s steps, independently of the paint cap.
+    // Keep excess debt after a long active-frame stall instead of losing time.
+    ctx.debt += elapsed * ctx.timeScale;
+    const n = Math.min(60, Math.floor((ctx.debt + 1e-9) * 60));
+    for (let i = 0; i < n; i++) step(1 / 60);
+    ctx.debt = Math.max(0, ctx.debt - n / 60);
+    if (now - ctx.paintAt >= 1000 / 30 - .1 && n) {
+      paint();
+      painted = true;
       ctx.paintAt = now;
     }
   } else {

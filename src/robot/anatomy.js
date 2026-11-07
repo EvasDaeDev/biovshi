@@ -6,6 +6,7 @@ import { burst, createOilDrop, flashSeveredParts } from "../render/effects.js";
 import { note } from "../game/events.js";
 import { random } from "../utils/random.js";
 import { snapshotRobotSkin } from '../render/robot-skin.js';
+import { spawnHitEffect } from '../render/hit-effects.js';
 export
 // Children of a severed node detach with it, regardless of remaining HP.
 function descendants(robotState, root) {
@@ -189,6 +190,10 @@ export function robotDamage(robotState, key, by) {
     y: robotState.y
   };
   burst(pivot.x, pivot.y);
+  const attacker=ctx.robots[by];
+  const direction=attacker&&attacker.id!==robotState.id?
+    Math.atan2(pivot.y-attacker.y,pivot.x-attacker.x):robotState.angle;
+  spawnHitEffect(pivot.x,pivot.y,direction,robotState.hp.get(key)<=0);
   ctx.pulses.push({
     ...pivot,
     time: ctx.game.time

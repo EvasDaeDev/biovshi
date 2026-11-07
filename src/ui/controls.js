@@ -1,3 +1,4 @@
+import { resetFrameClock } from "../game/clock.js";
 import { ctx } from "../game/state.js";
 import { attr } from "../render/svg.js";
 export
@@ -25,6 +26,17 @@ export function sizeLabels() {
 export function togglePause() {
   if (ctx.startup.phase !== 'running') return;
   ctx.paused = !ctx.paused;
+  resetFrameClock();
   ctx.button.textContent = ctx.paused ? 'Продолжить' : 'Пауза';
   attr(ctx.button, 'aria-pressed', String(ctx.paused));
+}
+
+export function setTimeScale(value) {
+  ctx.timeScale = value;
+  attr(ctx.speedButton, 'aria-pressed', String(value === 2));
+  attr(ctx.speedButton, 'title', value === 2 ? 'Вернуть обычную скорость' : 'Ускорить бой в 2 раза');
+}
+export function toggleSpeed() {
+  if (ctx.startup.phase !== 'running') return;
+  setTimeScale(ctx.timeScale === 2 ? 1 : 2);
 }

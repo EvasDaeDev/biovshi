@@ -4,9 +4,13 @@ import { CONFIG } from "../config.js";
 import { ik, path } from "../utils/math.js";
 import { paintLighting } from './lighting.js';
 import { attr, dot } from "./svg.js";
-import { victoryBodyColor, ROBOT_COLORS } from "../utils/colors.js";
-import { paintRobotSkin, paintSkinVictory } from './robot-skin.js';
+import { ROBOT_COLORS } from "../utils/colors.js";
+import { paintRobotSkin } from './robot-skin.js';
+import { spawnAppearance } from './spawn.js';
+import { paintVictoryGlow } from './victory-glow.js';
+import { paintTorsoShadow } from './ground-spots.js';
 export function visualOffset(robotState) {
+  if (robotState.spawnVisual?.airborne) return robotState.spawnVisual;
   if (robotState.scene && (robotState.mode === 'cover' || robotState.mode === 'eat') && robotState.attackVisual) {
     const q = robotState.mode === 'eat' ? 1 : smooth((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec);
     return {
@@ -26,8 +30,8 @@ export function visualRotation(robotState) {
 export function visiblePoint(robotState, p) {
   const o = robotState.visualOffset(),
     a = robotState.visualRotation(),
-    dx = p.x - robotState.x,
-    dy = p.y - robotState.y;
+    dx = (p.x - robotState.x) * (robotState.spawnVisual?.scale ?? 1),
+    dy = (p.y - robotState.y) * (robotState.spawnVisual?.scale ?? 1);
   return {
     x: robotState.x + o.x + dx * Math.cos(a) - dy * Math.sin(a),
     y: robotState.y + o.y + dx * Math.sin(a) + dy * Math.cos(a)
@@ -130,6 +134,7 @@ export function draw(robotState, dt) {
     l.pose = [a, solved.joint, solved.end];
   }
   paintRobotSkin(robotState,strikePose);
+  paintTorsoShadow(robotState);
 }
 
 // Действия прогулки используют тот же IK; угроза прерывает их сразу.
@@ -140,27 +145,22 @@ export function visionAngle(robotState) {
 }
 export function robotPaint(robotState, hunter) {
   if (!robotState.visible) return;
+  const spawn = robotState.spawnVisual = spawnAppearance(robotState);
+  attr(robotState.actor,'opacity',spawn.opacity.toFixed(3));
+  attr(robotState.floor,'opacity',spawn.opacity.toFixed(3));
   hunter = false;
   const shield = hunter ? 0 : clamp((ctx.game.immune[robotState.id] - ctx.game.time) / Math.max(.001, CONFIG.attack.previousHunterShieldSec), 0, 1);
   const victorious = ctx.combat.finished && ctx.combat.winner === robotState.id;
-  const victoryColor = victorious ? victoryBodyColor(robotState.reduced ? 0 : ctx.game.time - (ctx.combat.finishedAt ?? ctx.game.time)) : null;
-  paintSkinVictory(robotState,victoryColor);
-  attr(robotState.actor, 'style', `--robot-color:${victoryColor ?? '#b7ada1'};filter:none`);
+  paintVictoryGlow(robotState,victorious);
+  attr(robotState.actor, 'style', '--robot-color:#b7ada1;filter:none');
   attr(robotState.label, 'style', 'fill:'+ROBOT_COLORS[robotState.id]);
   const offset = robotState.visualOffset();
   const elapsedHit = robotState.hitReaction ? ctx.game.time - robotState.hitReaction.start : Infinity;
   const hitPhase = clamp(elapsedHit / (robotState.hitReaction?.duration || 1), 0, 1);
   const recoilTilt = robotState.hitReaction && hitPhase < 1 ? robotState.hitReaction.twist * Math.sin(Math.PI * hitPhase) * (1 - hitPhase) : 0;
-  attr(robotState.actor, 'transform', `translate(${robotState.x + offset.x} ${robotState.y + offset.y}) rotate(${robotState.visualRotation() * 180 / Math.PI + recoilTilt}) translate(${-robotState.x} ${-robotState.y})`);
+  attr(robotState.actor, 'transform', `translate(${robotState.x + offset.x} ${robotState.y + offset.y}) rotate(${robotState.visualRotation() * 180 / Math.PI + recoilTilt}) scale(${spawn.scale}) translate(${-robotState.x} ${-robotState.y})`);
   const age = robotState.leap && (robotState.leap.launched || robotState.leap.kind === 'rebound') ? ctx.game.time - robotState.leap.started : 0,
     height = robotState.scene && robotState.mode === 'cover' ? robotState.coverHeightStart * (1 - smooth((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec)) + (1 - robotState.coverHeightStart) * .7 * Math.sin(Math.PI * clamp((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec, 0, 1)) : robotState.scene && robotState.mode === 'hops' ? robotState.hopHeight() : robotState.leap ? Math.sin(Math.PI * clamp(robotState.leap.kind === 'rebound' ? (age - robotState.leap.turnDuration) / CONFIG.attack.dismountSec : (age - .12) / .82, 0, 1)) : robotState.mode === 'startle' && robotState.scene ? Math.sin(Math.PI * clamp((ctx.game.time - robotState.scene.started) / CONFIG.attack.startleSec, 0, 1)) * .55 : 0;
-  dot(robotState.jumpShadow, {
-    x: robotState.api.center.x + offset.x,
-    y: robotState.api.center.y + offset.y
-  });
-  attr(robotState.jumpShadow, 'rx', (23 + height * 9) * ctx.scale);
-  attr(robotState.jumpShadow, 'ry', (17 + height * 5) * ctx.scale);
-  attr(robotState.jumpShadow, 'opacity', robotState.mode === 'hops' ? .2 - robotState.hopHeight() * .1 : robotState.leap && (robotState.leap.launched || robotState.leap.kind === 'rebound') ? String(.25 - height * .13) : '0');
   attr(robotState.limbG, 'transform', robotState.bodyTransform(height));
   attr(robotState.bodyG, 'transform', robotState.bodyTransform(height));
   attr(robotState.actor, 'class', hunter ? 'robot hunter' : shield > 0 ? 'robot protected' : 'robot');
@@ -170,7 +170,7 @@ export function robotPaint(robotState, hunter) {
   robotState.draw(0);
   // Отпечаток появляется только при постановке конечности на землю.
   for (const l of robotState.allLimbs()) {
-    const grounded = l.phase >= 1 && !robotState.lifted(l),
+    const grounded = !spawn.airborne && l.phase >= 1 && !robotState.lifted(l),
       previous = robotState.lastFootTouches.get(l);
     const p = robotState.visiblePoint(robotState.handEnd(l));
     if (grounded && !previous?.grounded && (!previous?.point || Math.hypot(p.x - previous.point.x, p.y - previous.point.y) > .25)) {
@@ -193,7 +193,7 @@ export function robotPaint(robotState, hunter) {
   for (let i = 0; i < CONFIG.trails.limit; i++) {
     const sample = robotState.trail[i],
       age = sample ? ctx.game.time - sample.time : Infinity;
-    const opacity = sample ? Math.min(.65, CONFIG.trails.opacity * CONFIG.trails.neonMultiplier) * Math.max(0, 1 - age / CONFIG.trails.fadeSec) : 0;
+    const opacity = sample ? clamp(CONFIG.trails.opacity,0,1) * Math.max(0, 1 - age / CONFIG.trails.fadeSec) : 0;
     attr(robotState.trailNodes[i], 'opacity', opacity.toFixed(3));
     attr(robotState.trailNodes[i], 'fill', 'var(--night-trail)');
     if (sample) dot(robotState.trailNodes[i], sample);

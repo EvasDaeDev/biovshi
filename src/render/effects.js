@@ -1,4 +1,3 @@
-import { renderProfile } from './performance.js';
 import { clamp, smooth } from '../utils/math.js';
 import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
@@ -7,8 +6,8 @@ import { path } from "../utils/math.js";
 import { strikeProgress } from "../systems/combat.js";
 import { oilColor } from "../utils/colors.js";
 import { random } from "../utils/random.js";
-import { wavePoint } from './floor-warp.js';
 import { drawDetachedSkin } from './robot-skin.js';
+import { createLiquidSprite, paintLiquidSprite } from './liquid-sprites.js';
 export
 // Эффекты Geometry Wars используют отдельные частицы и не влияют на ИИ.
 function burst(x, y) {
@@ -82,36 +81,6 @@ export function updateSparks() {
     attr(e, 'opacity', Math.pow(1 - q, 1.5));
   }
 }
-export function updateNeonGrid() {
-  if (!CONFIG.rendering.coordinateGrid) return;
-  if (!ctx.pulses.length || !renderProfile().warpGrid) {
-    if (ctx.gridWarped) {
-      attr(ctx.gridMinorNode, 'd', ctx.gridBaseMinor);
-      attr(ctx.gridMajorNode, 'd', ctx.gridBaseMajor);
-      ctx.gridWarped = false;
-    }
-    return;
-  }
-  const p = ctx.pulses[ctx.pulses.length - 1],
-    minor = [],
-    major = [];
-  function point(x, y) {
-    return wavePoint(x,y,p,ctx.game.time);
-  }
-  for (let n = 0; n <= 70; n++) {
-    const v = n * 10,
-      vertical = [],
-      horizontal = [];
-    for (let k = 0; k <= 14; k++) {
-      vertical.push(point(v, k * 50));
-      horizontal.push(point(k * 50, v));
-    }
-    (n % 10 ? minor : major).push(path(vertical), path(horizontal));
-  }
-  attr(ctx.gridMinorNode, 'd', minor.join(' '));
-  attr(ctx.gridMajorNode, 'd', major.join(' '));
-  ctx.gridWarped = true;
-}
 export function updatePulses() {
   for (let i = ctx.pulses.length - 1; i >= 0; i--) if (ctx.game.time - ctx.pulses[i].time > CONFIG.effects.waveSec) ctx.pulses.splice(i, 1);
   for (let i = 0; i < 6; i++) {
@@ -150,7 +119,8 @@ export function paintSwings() {
   }
 }
 export function createOilDrop(robotId, x, y, baseRadius) {
-  const node = el('circle', {
+  const sprite=createLiquidSprite(robotId,x,y,baseRadius);
+  const node = sprite?.node??el('circle', {
     cx: x,
     cy: y,
     r: baseRadius,
@@ -159,6 +129,7 @@ export function createOilDrop(robotId, x, y, baseRadius) {
   }, ctx.oilG);
   ctx.combat.oilDrops.push({
     node,
+    sprite,
     robot: robotId,
     born: ctx.game.time,
     x,
@@ -167,8 +138,14 @@ export function createOilDrop(robotId, x, y, baseRadius) {
     maxRadius: baseRadius * CONFIG.oil.growFactor,
     baseOpacity: .92
   });
+  while (ctx.combat.oilDrops.length > CONFIG.oil.limit) {
+    const oldest = ctx.combat.oilDrops.shift();
+    oldest.node.remove();
+    ctx.settledOilDrops?.delete(oldest);
+  }
 }
-export function paintOil() {
+// Emission belongs to the fixed simulation clock: it consumes combat RNG.
+export function updateOilLeaks() {
   for (const leak of ctx.combat.oilLeaks) {
     const robot = ctx.robots[leak.robot];
     if (!robot?.visible || !robot.mobile) continue;
@@ -179,19 +156,24 @@ export function paintOil() {
       const x = origin.x + Math.cos(angle) * distance,
         y = origin.y + Math.sin(angle) * distance;
       const jitter = 1 + (random() * 2 - 1) * CONFIG.oil.sizeJitter;
-      const baseRadius = (2.8 + random() * 1.8) * jitter * 0.7;
+      const baseRadius = (2.8 + random() * 1.8) * jitter * 0.7 * CONFIG.oil.dropSizeScale;
       createOilDrop(leak.robot, x, y, baseRadius);
       leak.nextAt += CONFIG.oil.minIntervalSec + random() * (CONFIG.oil.maxIntervalSec - CONFIG.oil.minIntervalSec);
     }
   }
+}
+export function paintOil() {
   for (const drop of ctx.combat.oilDrops) {
     if (ctx.settledOilDrops?.has(drop)) continue;
     const q = smooth((ctx.game.time - drop.born) / CONFIG.oil.spreadSec);
     const radius = drop.baseRadius + (drop.maxRadius - drop.baseRadius) * q;
     const opacity = drop.baseOpacity * (1 - 0.5 * q);
     const dry=smooth((ctx.game.time-drop.born)/CONFIG.oil.drySec);
-    attr(drop.node,'fill',oilColor(drop.robot,.9,dry));
-    attr(drop.node, 'r', radius.toFixed(2));
+    if(drop.sprite)paintLiquidSprite(drop,radius,dry);
+    else {
+      attr(drop.node,'fill',oilColor(drop.robot,.9,dry));
+      attr(drop.node, 'r', radius.toFixed(2));
+    }
     attr(drop.node, 'opacity', opacity.toFixed(3));
     if (q >= 1 && dry >= 1) ctx.settledOilDrops?.add(drop);
   }

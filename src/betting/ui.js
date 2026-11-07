@@ -6,7 +6,7 @@ export function bettingModal(title) {
   ctx.intro.hidden = true;
   ctx.resultsPanel.hidden = true;
   ctx.startup.phase = 'betting';
-  ctx.button.disabled = ctx.resetButton.disabled = true;
+  ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = true;
   ctx.paused = false;
   ctx.debt = 0;
   ctx.betTitle.textContent = title;

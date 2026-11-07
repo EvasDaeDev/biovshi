@@ -1,8 +1,10 @@
 import { createWalls } from '../render/walls.js';
+import { createObstacleLights } from '../render/ground-spots.js';
+import { initializeHitEffects } from '../render/hit-effects.js';
 import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "./state.js";
-import { fitField, togglePause } from "../ui/controls.js";
+import { fitField, togglePause, toggleSpeed, setTimeScale } from "../ui/controls.js";
 import { CONFIG } from "../config.js";
 import { obstacleVertices, polygonPlanes, rebuildRobots } from "./arena.js";
 import { attr, el } from "../render/svg.js";
@@ -12,6 +14,7 @@ import { beginGame, resetRound } from "./session.js";
 import { cameraReset } from "../render/camera.js";
 import { paint } from "../render/frame.js";
 import { bettingCancel, bettingInit } from "../betting/ui.js";
+import { resetFrameClock } from "./clock.js";
 import { frame } from "./loop.js";
 export function initializeGame() {
   ctx.root = document.getElementById('robot-tag-hops-v22');
@@ -21,6 +24,7 @@ export function initializeGame() {
   ctx.groundG = ctx.root.querySelector('#tag7hop-ground');
   ctx.actorsG = ctx.root.querySelector('#tag7hop-actors');
   ctx.button = ctx.root.querySelector('#tag7hop-pause');
+  ctx.speedButton = ctx.root.querySelector('#tag7hop-speed');
   ctx.resetButton = ctx.root.querySelector('#tag7hop-reset');
   ctx.timerOutput = ctx.root.querySelector('#tag7hop-timer');
   ctx.status = ctx.root.querySelector('#tag7hop-status');
@@ -63,6 +67,7 @@ export function initializeGame() {
     ctx.startButton.onclick = null;
     ctx.resultsAgain.onclick = null;
     ctx.button.onclick = null;
+    ctx.speedButton.onclick = null;
     const qualityControl = ctx.root.querySelector('#graphics-quality');
     if (qualityControl) qualityControl.onchange = null;
     ctx.svg.onclick = null;
@@ -71,6 +76,8 @@ export function initializeGame() {
     globalThis.visualViewport?.removeEventListener('resize', fitField);
   };
   ctx.cache = new WeakMap();
+  setTimeScale(1);
+  ctx.liquidAtlasSources=null;
   initializePerformance();
   ctx.SAFE_LIMB_COLOR = [101, 238, 255];
   ctx.WARNING_LIMB_COLOR = [255, 214, 64];
@@ -245,19 +252,10 @@ export function initializeGame() {
       'stroke-width': 1.5
     }, ctx.guideG);
   }
-  el('circle', {
-    cx: 350,
-    cy: 350,
-    r: 178,
-    fill: 'none',
-    stroke: 'rgba(255,48,48,0.78)',
-    'stroke-width': 4.5
-  }, ctx.guideG);
   ctx.gridMinorNode = undefined;
   ctx.gridMajorNode = undefined;
   ctx.gridBaseMinor = undefined;
   ctx.gridBaseMajor = undefined;
-  ctx.gridWarped = false;
   ctx.game = {
     time: 0,
     hunter: 0,
@@ -438,10 +436,11 @@ export function initializeGame() {
   }, ctx.scoreG));
   ctx.intents = [];
   ctx.brainDebt = 0;
+  initializeHitEffects();
   drawGrid();
   ctx.game.hunter = -1;
   rebuildRobots();
-  ctx.button.disabled = ctx.resetButton.disabled = true;
+  ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = true;
   ctx.startButton.onclick = beginGame;
   attr(ctx.root.querySelector('#tag7hop-darkness'), 'opacity', CONFIG.light.darknessOpacity);
   // Подпись использует те же настройки, что и симуляция.
@@ -457,6 +456,7 @@ export function initializeGame() {
   // Smooth group-following camera. World units are centimeters; all collision,
   // pathfinding and damage checks continue to use unchanged 0..700 coordinates.
   createWalls();
+  createObstacleLights();
   // The clock is a screen-space overlay, not part of the clipped floor.
   ctx.svg.appendChild(ctx.timerOutput);
   ctx.CAMERA_OUTSET = Math.max(0, CONFIG.arena.wallThicknessCm) + CONFIG.arena.wallViewMarginCm;
@@ -480,13 +480,20 @@ export function initializeGame() {
   };
   ctx.resultsAgain.onclick = () => resetRound();
   ctx.button.onclick = togglePause;
+  ctx.speedButton.onclick = toggleSpeed;
   // click также обрабатывает одиночный тап; отдельный touch-обработчик удвоил бы переключение.
   ctx.svg.onclick = togglePause;
   ctx.svg.style.setProperty('touch-action', 'manipulation');
   ctx.svg.style.setProperty('cursor', 'pointer');
-  ctx.last = null;
+  resetFrameClock();
+  const gameDocument = ctx.root.ownerDocument;
+  gameDocument.addEventListener('visibilitychange', resetFrameClock);
+  const disposeWithVisibility = ctx.root.__disposeTag;
+  ctx.root.__disposeTag = () => {
+    gameDocument.removeEventListener('visibilitychange', resetFrameClock);
+    disposeWithVisibility();
+  };
   ctx.paintAt = -Infinity;
-  ctx.debt = 0;
   ctx.frameId = requestAnimationFrame(frame);
   // Local pari-mutuel ledger. All values are whole virtual chips.
   ctx.BET_STORAGE = 'biovshi.local-totalizator.v1';
