@@ -49,18 +49,20 @@ export async function applyTextures() {
   const svg = ctx.svg;
   const defs = ctx.defs;
   const jobs = [
-    ['arenaFloor', [ctx.arenaContent.querySelector(':scope > rect')]],
+    ['arenaFloor', [ctx.arenaContent.querySelector(':scope > rect')], CONFIG.rendering.floorTintColor, CONFIG.rendering.floorTintStrength],
+    ['arenaWall', [...defs.querySelectorAll('#texture-arenaWall image')], CONFIG.rendering.wallTintColor, CONFIG.rendering.wallTintStrength],
+    ['obstacle', [...defs.querySelectorAll('#texture-obstacle image')], CONFIG.rendering.wallTintColor, CONFIG.rendering.wallTintStrength],
   ];
-  for (const [key, targets] of jobs) {
+  for (const [key, targets, colour, strength] of jobs) {
     const url = assetUrl(ASSETS.textures[key]);
     if (!url || !targets[0]) continue;
     try {
-      // Read the original computed fill before installing a pattern; no grey flash.
-      const style = getComputedStyle(targets[0]);
-      // Read the theme colour even if this floor already has a pattern (e.g. HMR).
-      const colour = key === 'arenaFloor' ? style.getPropertyValue('--background').trim() || style.fill : style.fill;
-      const source = key === 'arenaFloor' ? await tintedTexture(url, colour, CONFIG.rendering.floorTintStrength) : url;
+      const source = await tintedTexture(url, colour, strength);
       if (svg !== ctx.svg || !svg.isConnected || ctx.disposed) return;
+      if (key !== 'arenaFloor') {
+        for (const node of targets) { node.setAttribute('href',source); node.setAttribute('opacity','1'); }
+        continue;
+      }
       const id = 'texture-' + key;
       svg.querySelector('#' + id)?.remove();
       const pattern = el('pattern', {
@@ -72,6 +74,7 @@ export async function applyTextures() {
       }, pattern);
       for (const node of targets) node.style.fill = 'url(#' + id + ')';
     } catch (error) {
+      if (key !== 'arenaFloor') for (const node of targets) node.setAttribute('opacity','1');
       // Keep the original floor if a file fails; the fight must still start.
       console.warn('Arena texture:', error);
     }

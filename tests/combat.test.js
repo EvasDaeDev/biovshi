@@ -11,6 +11,7 @@ import { CONFIG } from '../src/config.js';
 import { onGameEvent } from '../src/game/event-bus.js';
 import { paintFloorWarp } from '../src/render/floor-warp.js';
 import { chooseRenderProfile } from '../src/render/performance.js';
+import { createOilDrop } from '../src/render/effects.js';
 
 function setup() {
   const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
@@ -157,7 +158,7 @@ test('outer wall and clock remain outside the floor clip, with a full-size playa
   dom.window.close();
 });
 
-test('warm lighting, dark footprints and inward textured obstacle walls survive reinitialization',()=>{
+test('operating-room lighting, dark footprints and inward textured obstacle walls survive reinitialization',()=>{
   const dom=setup();
   const geometry=ctx.obstacles.map(b=>structuredClone(b.points));
   for(let pass=0;pass<2;pass++) {
@@ -173,13 +174,43 @@ test('warm lighting, dark footprints and inward textured obstacle walls survive 
     assert.match(pattern.querySelector('image').getAttribute('href'),/wall_02\.webp$/);
     assert.equal(pattern.querySelector('image').getAttribute('transform'),'rotate(180 50 15)');
     assert.equal(ctx.outlineG.getAttribute('stroke'),'none');
-    assert.ok([...ctx.ambientGlowG.children].every(n=>n.getAttribute('stroke')==='#ffd29a'));
+    assert.ok([...ctx.ambientGlowG.querySelectorAll('polygon')].every(n=>n.getAttribute('stroke')==='#8b9e91'));
+    assert.equal(ctx.ambientLights.length,6);
+    assert.equal(ctx.svg.querySelector('#texture-arenaWall image').getAttribute('opacity'),'0');
     assert.ok([...ctx.trailsG.children].every(n=>n.getAttribute('fill')==='var(--night-trail)'));
     assert.ok([...ctx.trailsG.children].every(n=>Number(n.getAttribute('r'))===2.925));
     assert.equal(ctx.OIL_HUES[0],0);
-    assert.equal(ctx.OIL_HUES.at(-1),35);
+    assert.equal(ctx.OIL_HUES.at(-1),12);
     assert.deepEqual(ctx.obstacles.map(b=>b.points),geometry);
   }
+  dom.window.close();
+});
+
+test('guides disappear in battle; beam feathering switches quality and removes cones without a head; oil dries once',()=>{
+  const dom=setup();
+  assert.equal(ctx.guideG.getAttribute('display'),'none');
+  const robot=ctx.robots[0];
+  for(const mode of ['full','light','full']) {
+    ctx.renderProfile=chooseRenderProfile(mode,false);paint();
+    const count=mode==='full'?5:3;
+    const layers=[...robot.vision.children].filter(n=>n.getAttribute('display')!=='none');
+    assert.equal(layers.length,count);
+    assert.ok(layers.every(n=>n.getAttribute('d').endsWith(' Z')));
+    const masks=[...robot.lightBeam.children].filter(n=>n.getAttribute('display')!=='none');
+    assert.equal(masks.length,count);
+    assert.equal(Number(masks.at(-1).getAttribute('opacity')),1);
+  }
+  for(let i=0;i<5;i++)hit(robot,'head');
+  paint();
+  assert.ok([...robot.vision.children].every(n=>n.getAttribute('d')===''));
+  createOilDrop(0,350,350,3);
+  const drop=ctx.combat.oilDrops.at(-1),fresh=drop.node.getAttribute('fill');
+  ctx.game.time+=CONFIG.oil.drySec+1;paint();
+  assert.notEqual(drop.node.getAttribute('fill'),fresh);
+  assert.equal(ctx.settledOilDrops.has(drop),true);
+  resetRound();paint();
+  assert.equal(ctx.guideG.getAttribute('display'),'');
+  assert.equal(ctx.oilG.childNodes.length,0);
   dom.window.close();
 });
 

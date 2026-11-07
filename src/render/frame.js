@@ -3,7 +3,9 @@ import { ctx } from "../game/state.js";
 import { paintCombatAccents, paintDetachedAnatomy, paintOil, paintSwings, updateNeonGrid, updatePulses, updateSparks } from "./effects.js";
 import { paintTelemetry } from '../ui/paint-telemetry.js';
 import { paintFloorWarp } from './floor-warp.js';
+import { paintAtmosphere } from './atmosphere.js';
 export function paint() {
+  paintAtmosphere();
   const clockText = formatRoundTime(ctx.round.elapsedSec);
   if (ctx.timerOutput.textContent !== clockText) ctx.timerOutput.textContent = clockText;
   updatePulses();
