@@ -7,10 +7,10 @@ import { attr, el } from './svg.js';
 // limbs use the agreed joint anchors x=8..56, y=32.
 export const ROBOT_A_PARTS = {
   head: {col:0,row:0,from:8,to:40},
-  'spine-0': {col:1,row:0,from:14,to:32,widthCm:30},
-  'spine-1': {col:2,row:0,from:8,to:32,widthCm:24},
-  'spine-2': {col:3,row:0,from:8,to:32,widthCm:24},
-  'spine-3': {col:0,row:1,from:8,to:32,widthCm:24},
+  'spine-0': {col:1,row:0,from:14,to:32},
+  'spine-1': {col:2,row:0,from:8,to:32},
+  'spine-2': {col:3,row:0,from:8,to:32},
+  'spine-3': {col:0,row:1,from:8,to:32},
   'arm--1-upper': {col:0,row:2},
   'arm--1-lower': {col:1,row:2},
   'arm-1-upper': {col:2,row:2},
@@ -21,10 +21,12 @@ export const ROBOT_A_PARTS = {
   'leg-1-lower': {col:3,row:3},
 };
 
-export function skinMatrix(a,b,part,scale=CONFIG.robot.scale) {
+export function skinMatrix(a,b,part) {
   const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
   const from=part.from??8,to=part.to??56;
-  const sx=length/(to-from),sy=part.widthCm?part.widthCm*scale/64:sx;
+  // Use one scale for both axes: retain the atlas proportions, including the
+  // full width of the chest, spine and pelvis instead of squeezing them.
+  const sx=length/(to-from),sy=sx;
   const ux=length?dx/length:1,uy=length?dy/length:0;
   const A=ux*sx,B=uy*sx,C=-uy*sy,D=ux*sy;
   return [A,B,C,D,a.x-A*from-C*32,a.y-B*from-D*32];
@@ -88,7 +90,7 @@ export function paintRobotSkin(robot,strikePose=null) {
     const piece=robot.skin.pieces.get(key);
     attr(piece.group,'display',robot.healthy(key)?'':'none');
     if (robot.healthy(key))attr(piece.group,'transform',
-      'matrix('+skinMatrix(a,b,piece.part,ctx.scale).join(' ')+')');
+      'matrix('+skinMatrix(a,b,piece.part).join(' ')+')');
   };
   for(let i=0;i<4;i++) {
     const a=i===0?robot.local(robot.chest,3,0):robot.spine[i];
