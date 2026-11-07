@@ -1,0 +1,143 @@
+import { ASSETS, assetUrl } from '../assets/manifest.js';
+import { CONFIG } from '../config.js';
+import { ctx } from '../game/state.js';
+import { attr, el } from './svg.js';
+
+// r_01: 256×256, 4×4 cells. Body artwork occupies x=8..32;
+// limbs use the agreed joint anchors x=8..56, y=32.
+export const ROBOT_A_PARTS = {
+  head: {col:0,row:0,from:8,to:40},
+  'spine-0': {col:1,row:0,from:14,to:32,widthCm:30},
+  'spine-1': {col:2,row:0,from:8,to:32,widthCm:24},
+  'spine-2': {col:3,row:0,from:8,to:32,widthCm:24},
+  'spine-3': {col:0,row:1,from:8,to:32,widthCm:24},
+  'arm--1-upper': {col:0,row:2},
+  'arm--1-lower': {col:1,row:2},
+  'arm-1-upper': {col:2,row:2},
+  'arm-1-lower': {col:3,row:2},
+  'leg--1-upper': {col:0,row:3,to:48},
+  'leg--1-lower': {col:1,row:3},
+  'leg-1-upper': {col:2,row:3,to:48},
+  'leg-1-lower': {col:3,row:3},
+};
+
+export function skinMatrix(a,b,part,scale=CONFIG.robot.scale) {
+  const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
+  const from=part.from??8,to=part.to??56;
+  const sx=length/(to-from),sy=part.widthCm?part.widthCm*scale/64:sx;
+  const ux=length?dx/length:1,uy=length?dy/length:0;
+  const A=ux*sx,B=uy*sx,C=-uy*sy,D=ux*sy;
+  return [A,B,C,D,a.x-A*from-C*32,a.y-B*from-D*32];
+}
+
+function createPiece(key,url,parent) {
+  const part=ROBOT_A_PARTS[key];
+  if (!part) return null;
+  const group=el('g',{'data-skin-segment':key,stroke:'none'},parent);
+  const viewport=el('svg',{
+    x:0,y:0,width:64,height:64,
+    viewBox:`${part.col*64} ${part.row*64} 64 64`,
+    overflow:'hidden',preserveAspectRatio:'none',
+  },group);
+  const image=el('image',{
+    href:url,x:0,y:0,width:256,height:256,preserveAspectRatio:'none',
+    style:CONFIG.rendering.texturePixelated?'image-rendering:crisp-edges;image-rendering:pixelated':'',
+  },viewport);
+  return {group,image,part};
+}
+
+export function createRobotSkin(robot) {
+  const url=robot.id===0?assetUrl(ASSETS.textures.robotA):null;
+  if (!url) return;
+  const limbs=el('g',{'data-skin-layer':'limbs',display:'none'},robot.limbG);
+  const body=el('g',{'data-skin-layer':'body',display:'none'},robot.bodyG);
+  const pieces=new Map();
+  const vectors=[robot.torso,robot.head,robot.nose,robot.mouth,
+    robot.shoulderBar,robot.pelvicBar,...robot.spineBones,...robot.spineDots,
+    ...[...robot.arms,...robot.legs].flatMap(l=>[l.upper,l.lower,l.joint,l.endShape])];
+  const skin=robot.skin={url,limbs,body,pieces,vectors,ready:false};
+  const tintId='tag7hop-skin-victory-'+robot.id;
+  ctx.defs.querySelector('#'+tintId)?.remove();
+  const tint=el('filter',{id:tintId,'color-interpolation-filters':'sRGB'},ctx.defs);
+  el('feColorMatrix',{type:'saturate',values:0},tint);
+  const transfer=el('feComponentTransfer',{},tint);
+  skin.tintId=tintId;
+  skin.tintChannels=['R','G','B'].map(channel=>el('feFunc'+channel,{type:'linear',slope:1},transfer));
+  const activate=ready=>{
+    skin.ready=ready;
+    for(const node of vectors)node.style.visibility=ready?'hidden':'';
+    robot.neck.style.stroke=ready?'#a78a70':'';
+    for(const node of [limbs,body])attr(node,'display',ready?'':'none');
+    attr(robot.actor,'data-skin-ready',ready);
+  };
+  // Back-to-front body order; head remains above the chest, limbs below it.
+  const keys=[...Object.keys(ROBOT_A_PARTS).filter(k=>/^(arm|leg)/.test(k)),
+    'spine-3','spine-2','spine-1','spine-0','head'];
+  for(const key of keys) {
+    const piece=createPiece(key,url,/^(arm|leg)/.test(key)?limbs:body);
+    piece.image.addEventListener('load',()=>activate(true),{once:true});
+    piece.image.addEventListener('error',()=>activate(false));
+    pieces.set(key,piece);
+  }
+  attr(robot.actor,'data-skin','r_01');
+}
+
+export function paintRobotSkin(robot,strikePose=null) {
+  if (!robot.skin) return;
+  const position=(key,a,b)=>{
+    const piece=robot.skin.pieces.get(key);
+    attr(piece.group,'display',robot.healthy(key)?'':'none');
+    if (robot.healthy(key))attr(piece.group,'transform',
+      'matrix('+skinMatrix(a,b,piece.part,ctx.scale).join(' ')+')');
+  };
+  for(let i=0;i<4;i++) {
+    const a=i===0?robot.local(robot.chest,3,0):robot.spine[i];
+    const b=i===3?robot.local(robot.pelvis,-5,0):robot.spine[i+1];
+    position('spine-'+i,a,b);
+  }
+  const head=robot.headCenter;
+  const offset=strikePose?.kind==='head'?{
+    x:strikePose.tip.x-strikePose.base.x,y:strikePose.tip.y-strikePose.base.y,
+  }:{x:0,y:0};
+  const dx=Math.cos(robot.headFrame.angle)*10*ctx.scale;
+  const dy=Math.sin(robot.headFrame.angle)*10*ctx.scale;
+  position('head',{x:head.x+offset.x-dx,y:head.y+offset.y-dy},
+    {x:head.x+offset.x+dx,y:head.y+offset.y+dy});
+  for(const limb of [...robot.arms,...robot.legs]) {
+    if (!limb.pose) continue;
+    const [a,joint,end]=limb.pose,key=`${limb.kind}-${limb.side}-`;
+    const stump=strikePose?.kind==='arm'&&strikePose.limb===limb&&!strikePose.complete;
+    position(key+'upper',a,stump?strikePose.tip:joint);
+    position(key+'lower',joint,end);
+  }
+}
+
+export function paintSkinVictory(robot,colour) {
+  if (!robot.skin) return;
+  const skin=robot.skin;
+  if (colour) {
+    const rgb=colour.match(/[\d.]+/g).map(Number);
+    skin.tintChannels.forEach((node,i)=>attr(node,'slope',rgb[i]/128));
+  }
+  for(const layer of [skin.limbs,skin.body])attr(layer,'filter',colour?'url(#'+skin.tintId+')':'none');
+}
+
+export function snapshotRobotSkin(robot,key) {
+  if (!robot.skin?.ready) return null;
+  const piece=robot.skin.pieces.get(key);
+  if (!piece?.group.getAttribute('transform')) return null;
+  const transforms=[];
+  // Include jump scaling, recoil and the actor offset, but not camera/viewBox.
+  for(let node=piece.group;node&&node!==ctx.actorsG;node=node.parentNode) {
+    const transform=node.getAttribute?.('transform');
+    if (transform)transforms.unshift(transform);
+  }
+  return {key,url:robot.skin.url,transform:transforms.join(' ')};
+}
+
+export function drawDetachedSkin(snapshot,parent) {
+  const piece=createPiece(snapshot.key,snapshot.url,parent);
+  if (!piece) return false;
+  attr(piece.group,'transform',snapshot.transform);
+  return true;
+}

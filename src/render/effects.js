@@ -8,6 +8,7 @@ import { strikeProgress } from "../systems/combat.js";
 import { oilColor } from "../utils/colors.js";
 import { random } from "../utils/random.js";
 import { wavePoint } from './floor-warp.js';
+import { drawDetachedSkin } from './robot-skin.js';
 export
 // Эффекты Geometry Wars используют отдельные частицы и не влияют на ИИ.
 function burst(x, y) {
@@ -202,6 +203,7 @@ export function paintDetachedAnatomy() {
       'data-detached-by': part.cause
     }, ctx.detachedG);
     for (const piece of part.pieces) {
+      if (piece.skin&&drawDetachedSkin(piece.skin,group)) continue;
       const g = piece.geometry;
       if (g.kind === 'head') el('circle', {
         cx: g.x,

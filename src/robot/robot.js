@@ -11,6 +11,7 @@ import { ctx } from "../game/state.js";
 import { limbColor } from "../utils/colors.js";
 import { ik } from "../utils/math.js";
 import { robotCanSee } from "./perception.js";
+import { createRobotSkin } from '../render/robot-skin.js';
 export
 // Один робот: скелет, опоры, хвост, анимации и отрисовка.
 function createRobot(id, start) {
@@ -693,6 +694,7 @@ function createRobot(id, start) {
     };
   }
   robotState.api.capsules = robotState.makeCapsules();
+  createRobotSkin(robotState);
   return robotState.api;
 }
 // Слух — короткие звуковые импульсы от шагов, а не знание позиции врага.

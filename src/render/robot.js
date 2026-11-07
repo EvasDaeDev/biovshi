@@ -5,6 +5,7 @@ import { ik, path } from "../utils/math.js";
 import { paintLighting } from './lighting.js';
 import { attr, dot } from "./svg.js";
 import { victoryBodyColor } from "../utils/colors.js";
+import { paintRobotSkin, paintSkinVictory } from './robot-skin.js';
 export function visualOffset(robotState) {
   if (robotState.scene && (robotState.mode === 'cover' || robotState.mode === 'eat') && robotState.attackVisual) {
     const q = robotState.mode === 'eat' ? 1 : smooth((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec);
@@ -128,6 +129,7 @@ export function draw(robotState, dt) {
     attr(l.contact, 'opacity', !robotState.healthyLimb(l) || robotState.lifted(l) || l.phase < 1 ? '0' : '.5');
     l.pose = [a, solved.joint, solved.end];
   }
+  paintRobotSkin(robotState,strikePose);
 }
 
 // Действия прогулки используют тот же IK; угроза прерывает их сразу.
@@ -144,6 +146,7 @@ export function robotPaint(robotState, hunter) {
   const protectedColor = shield > 0 ? `color-mix(in srgb, var(--night-protected) ${shield * 100}%, ${baseColor})` : baseColor;
   const victorious = ctx.combat.finished && ctx.combat.winner === robotState.id;
   const victoryColor = victorious ? victoryBodyColor(robotState.reduced ? 0 : ctx.game.time - (ctx.combat.finishedAt ?? ctx.game.time)) : null;
+  paintSkinVictory(robotState,victoryColor);
   attr(robotState.actor, 'style', `--robot-color:${victoryColor ?? protectedColor};filter:url(#${robotState.actorOutlineFilterId})`);
   attr(robotState.identityRim, 'radius', 1);
   attr(robotState.identityColor, 'flood-color', victoryColor ?? ['#65eeff', '#ffb36b', '#ff397b', '#b961ff'][robotState.id]);

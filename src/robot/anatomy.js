@@ -5,6 +5,7 @@ import { ik } from "../utils/math.js";
 import { burst, createOilDrop, flashSeveredParts } from "../render/effects.js";
 import { note } from "../game/events.js";
 import { random } from "../utils/random.js";
+import { snapshotRobotSkin } from '../render/robot-skin.js';
 export
 // Children of a severed node detach with it, regardless of remaining HP.
 function descendants(robotState, root) {
@@ -198,9 +199,11 @@ export function robotDamage(robotState, key, by) {
     const attached = robotState.descendants(key).filter(part => robotState.healthy(part));
     flashSeveredParts([key, ...attached].map(part => robotState.segmentGeometry(part)).filter(Boolean));
     // Preserve the detached geometry in world coordinates, as a visible wreck.
-    const wreckPieces = attached.map(part => ({
+    const wreckKeys=robotState.skin?.ready?[key,...attached]:attached;
+    const wreckPieces = wreckKeys.map(part => ({
       key: part,
-      geometry: robotState.segmentGeometry(part)
+      geometry: robotState.segmentGeometry(part),
+      skin: snapshotRobotSkin(robotState,part)
     })).filter(p => p.geometry);
     if (wreckPieces.length) ctx.combat.detached.push({
       id: robotState.id,
