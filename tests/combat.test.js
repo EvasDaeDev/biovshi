@@ -9,7 +9,6 @@ import { step } from '../src/game/loop.js';
 import { paint } from '../src/render/frame.js';
 import { CONFIG } from '../src/config.js';
 import { onGameEvent } from '../src/game/event-bus.js';
-import { paintFloorWarp } from '../src/render/floor-warp.js';
 import { chooseRenderProfile } from '../src/render/performance.js';
 import { createOilDrop } from '../src/render/effects.js';
 
@@ -186,69 +185,84 @@ test('operating-room lighting, dark footprints and inward textured obstacle wall
   dom.window.close();
 });
 
-test('guides disappear in battle; beam feathering switches quality and removes cones without a head; oil dries once',()=>{
+test('vision stays sharp in both qualities; liquid sprites age and fall back cleanly; red centre circle is absent',()=>{
   const dom=setup();
   assert.equal(ctx.guideG.getAttribute('display'),'none');
   const robot=ctx.robots[0];
   for(const mode of ['full','light','full']) {
     ctx.renderProfile=chooseRenderProfile(mode,false);paint();
-    const count=mode==='full'?5:3;
-    const layers=[...robot.vision.children].filter(n=>n.getAttribute('display')!=='none');
-    assert.equal(layers.length,count);
-    assert.ok(layers.every(n=>n.getAttribute('d').endsWith(' Z')));
-    const masks=[...robot.lightBeam.children].filter(n=>n.getAttribute('display')!=='none');
-    assert.equal(masks.length,count);
-    assert.equal(Number(masks.at(-1).getAttribute('opacity')),1);
+    assert.equal(robot.vision.tagName,'path');
+    assert.ok(robot.vision.getAttribute('d').endsWith(' Z'));
+    assert.equal(robot.lightBeam.getAttribute('d'),robot.vision.getAttribute('d'));
+    assert.equal(robot.vision.children.length,0);
   }
   for(let i=0;i<5;i++)hit(robot,'head');
   paint();
-  assert.ok([...robot.vision.children].every(n=>n.getAttribute('d')===''));
+  assert.equal(robot.vision.getAttribute('d'),'');
+  ctx.liquidAtlasSources=['fresh','early','late','dry'];
+  const seed=ctx.seed;
   createOilDrop(0,350,350,3);
-  const drop=ctx.combat.oilDrops.at(-1),fresh=drop.node.getAttribute('fill');
+  assert.equal(ctx.seed,seed,'sprite selection does not advance combat RNG');
+  const drop=ctx.combat.oilDrops.at(-1);
+  assert.equal(drop.node.tagName,'g');
+  assert.equal(drop.sprite.image.getAttribute('href'),'fresh');
+  assert.equal(drop.sprite.viewport.getAttribute('overflow'),'hidden');
   ctx.game.time+=CONFIG.oil.drySec+1;paint();
-  assert.notEqual(drop.node.getAttribute('fill'),fresh);
+  assert.equal(drop.sprite.image.getAttribute('href'),'dry');
+  assert.equal(Number(drop.sprite.viewport.getAttribute('width')),9);
   assert.equal(ctx.settledOilDrops.has(drop),true);
+  drop.sprite.image.dispatchEvent(new Event('error'));
+  assert.equal(drop.sprite.fallback.getAttribute('display'),'');
+  drop.sprite.image.dispatchEvent(new Event('load'));
+  assert.equal(drop.sprite.fallback.getAttribute('display'),'none');
   resetRound();paint();
   assert.equal(ctx.guideG.getAttribute('display'),'');
   assert.equal(ctx.oilG.childNodes.length,0);
+  assert.equal(ctx.guideG.querySelector('circle[r="178"]'),null);
   dom.window.close();
 });
 
-test('impacts warp the textured floor without a grid in both graphics modes and clear on reset',()=>{
+test('torso shadows track surviving body bounds and obstacle light diameters include exactly one extra metre',()=>{
   const dom=setup();
-  assert.equal(CONFIG.rendering.coordinateGrid,false);
-  const floor=ctx.arenaContent.querySelector(':scope > rect');
+  for(const robot of ctx.robots) {
+    robot.actor.querySelector('image').dispatchEvent(new Event('load'));
+  }
+  paint();
+  for(const robot of ctx.robots) {
+    const shadow=ctx.groundG.querySelector('[data-torso-shadow="'+robot.id+'"]');
+    assert.equal(Number(shadow.getAttribute('opacity')),.5);
+    assert.ok(Number(shadow.getAttribute('rx'))>0&&Number(shadow.getAttribute('ry'))>0);
+    assert.ok(ctx.svg.querySelector('#tag7hop-torso-shadow-'+robot.id+' stop[offset="1"]'));
+  }
+  const shadow=ctx.groundG.querySelector('[data-torso-shadow="0"]');
+  const before=Number(shadow.getAttribute('rx'));
+  for(let i=0;i<3;i++)hit(ctx.robots[0],'spine-2');
+  paint();
+  assert.ok(Number(shadow.getAttribute('rx'))<before);
+  const spots=ctx.svg.querySelectorAll('#tag7hop-obstacle-lights ellipse');
+  assert.equal(spots.length,5);
+  for(const [i,spot]of [...spots].entries()) {
+    const points=ctx.obstacles[i].points;
+    const diameter=Math.max(...points.flatMap(a=>points.map(b=>Math.hypot(a.x-b.x,a.y-b.y))));
+    assert.ok(Math.abs(Number(spot.getAttribute('rx'))*2-diameter-100)<1e-8);
+  }
+  resetRound();paint();
+  assert.equal(ctx.svg.querySelectorAll('#tag7hop-obstacle-light-holes ellipse').length,5);
+  assert.equal(ctx.svg.querySelectorAll('#tag7hop-torso-shadow-0').length,1);
+  dom.window.close();
+});
+
+test('impacts leave the floor texture and static grid geometry unchanged',()=>{
+  const dom=setup(),floor=ctx.arenaContent.querySelector(':scope > rect');
   floor.style.fill='url(#texture-arenaFloor)';
-  const boundary=structuredClone(ctx.arenaBoundary.points);
-  const blocks=ctx.obstacles.map(b=>structuredClone(b.points));
-  for (const mode of ['full','light']) {
+  const before=floor.outerHTML;
+  for(const mode of ['full','light']) {
     ctx.renderProfile=chooseRenderProfile(mode,false);
     ctx.pulses=[{x:350,y:350,time:ctx.game.time-.1}];
-    paintFloorWarp();
-    const mesh=ctx.floorWarp;
-    assert.equal(mesh.group.getAttribute('fill'),floor.style.fill);
-    assert.equal(mesh.group.parentNode,ctx.arenaContent);
-    assert.equal(mesh.group.previousSibling,floor);
-    assert.equal(floor.getAttribute('opacity'),'0');
-    assert.equal(mesh.triangles.length,mode==='full'?392:98);
-    assert.ok(mesh.triangles.some(t=>t.node.getAttribute('transform')!=='matrix(1 0 0 1 0 0)'));
-    assert.ok(mesh.triangles.every(t=>!t.node.getAttribute('transform').includes('NaN')));
-    const transforms=mesh.triangles.map(t=>t.node.getAttribute('transform'));
-    ctx.game.time+=.05;
-    paintFloorWarp();
-    assert.ok(mesh.triangles.some((t,i)=>t.node.getAttribute('transform')!==transforms[i]));
-    ctx.game.time+=CONFIG.effects.waveSec;
-    paintFloorWarp();
-    assert.equal(mesh.group.getAttribute('display'),'none');
-    assert.equal(floor.getAttribute('opacity'),'1');
+    paint();
+    assert.equal(floor.outerHTML,before);
+    assert.equal(ctx.svg.querySelector('#tag7hop-floor-warp'),null);
   }
-  ctx.pulses=[{x:300,y:300,time:ctx.game.time}];
-  paintFloorWarp();
-  resetRound();
-  paintFloorWarp();
-  assert.equal(ctx.floorWarp.group.getAttribute('display'),'none');
-  assert.deepEqual(ctx.arenaBoundary.points,boundary);
-  assert.deepEqual(ctx.obstacles.map(b=>b.points),blocks);
   dom.window.close();
 });
 

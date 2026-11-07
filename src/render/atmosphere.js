@@ -23,4 +23,9 @@ export function paintAtmosphere() {
     const brightness=lampBrightness(fighting?ctx.game.time:0,i+10,ctx.atmosphereReduced);
     attr(node,'opacity',(CONFIG.light.ambientIntensity*brightness).toFixed(3));
   }
+  for(const [i,spot] of (ctx.obstacleLightSpots??[]).entries()) {
+    const brightness=lampBrightness(fighting?ctx.game.time:0,i+11,ctx.atmosphereReduced);
+    attr(spot.glow,'opacity',(CONFIG.light.obstacleLightOpacity*brightness).toFixed(3));
+    attr(spot.reveal,'opacity',(CONFIG.light.obstacleLightReveal*brightness).toFixed(3));
+  }
 }

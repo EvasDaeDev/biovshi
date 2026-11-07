@@ -12,6 +12,7 @@ import { limbColor } from "../utils/colors.js";
 import { ik } from "../utils/math.js";
 import { robotCanSee } from "./perception.js";
 import { createRobotSkin } from '../render/robot-skin.js';
+import { createTorsoShadow } from '../render/ground-spots.js';
 export
 // Один робот: скелет, опоры, хвост, анимации и отрисовка.
 function createRobot(id, start) {
@@ -124,7 +125,7 @@ function createRobot(id, start) {
     class: 'neon-pool',
     fill: 'url(#tag7hop-pool-' + robotState.id + ')'
   }, ctx.conesG);
-  robotState.lightBeam = el('g', {
+  robotState.lightBeam = el('path', {
     fill: 'url(#' + robotState.beamId + ')'
   }, ctx.lightHoles);
   robotState.nearLight = el('path', {
@@ -136,13 +137,9 @@ function createRobot(id, start) {
   robotState.floor = el('g', {}, ctx.groundG);
   robotState.limbG = el('g', {}, robotState.actor);
   robotState.bodyG = el('g', {}, robotState.actor);
-  robotState.vision = el('g', {
+  robotState.vision = el('path', {
     class: 'cone'
   }, ctx.conesG);
-  robotState.beamLayers=Array.from({length:5},()=>({
-    vision:el('path',{},robotState.vision),
-    mask:el('path',{},robotState.lightBeam),
-  }));
   robotState.label = el('text', {
     class: 'robot-label',
     'text-anchor': 'middle'
@@ -282,11 +279,7 @@ function createRobot(id, start) {
   }, ctx.trailsG));
   robotState.lastFootTouches = new WeakMap();
   robotState.visible = true;
-  robotState.jumpShadow = el('ellipse', {
-    fill: 'var(--foreground)',
-    stroke: 'none',
-    opacity: 0
-  }, robotState.floor);
+  createTorsoShadow(robotState);
   robotState.attackVisual = null;
   robotState.reboundEscape = null;
   robotState.coverHeightStart = 0;

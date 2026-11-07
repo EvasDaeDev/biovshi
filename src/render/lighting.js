@@ -3,9 +3,7 @@ import { path } from '../utils/math.js';
 import { nearbyLightOutline, visionOutline } from '../systems/perception.js';
 import { renderProfile } from './performance.js';
 import { attr } from './svg.js';
-import { CONFIG } from '../config.js';
 import { lampBrightness } from './atmosphere.js';
-import { featheredBeamPaths } from './beam-feather.js';
 
 export function paintLighting(robotState) {
   const brightness=lampBrightness(ctx.game.time,robotState.id,robotState.reduced);
@@ -22,21 +20,11 @@ export function paintLighting(robotState) {
   const moved = !previous || previous.x !== origin.x || previous.y !== origin.y ||
     previous.cx !== center.x || previous.cy !== center.y || previous.heading !== heading;
   if (!force && (!moved || ctx.game.time - previous.time + 1e-8 < profile.lightInterval)) return;
-  const count=profile.name==='light'?3:5;
-  const outline=hasHead?visionOutline(origin,heading,robotState.visionAngle(),profile.coneSamples):[];
-  const beams=hasHead?featheredBeamPaths(origin,heading,outline,robotState.visionAngle(),count,CONFIG.light.beamFeather):[];
+  const beam=hasHead?path([origin,...visionOutline(origin,heading,robotState.visionAngle(),profile.coneSamples)])+' Z':'';
   // The pool and the darkness mask use the exact same geometry: trace it once.
   const near = path(nearbyLightOutline(center, profile.nearSamples)) + ' Z';
-  robotState.beamLayers.forEach((layer,i)=>{
-    for(const node of [layer.vision,layer.mask]) {
-      attr(node,'display',i<count?'':'none');
-      attr(node,'d',beams[i]??'');
-    }
-    if(i<count) {
-      attr(layer.vision,'opacity',1/count);
-      attr(layer.mask,'opacity',1/(count-i));
-    }
-  });
+  attr(robotState.vision,'d',beam);
+  attr(robotState.lightBeam,'d',beam);
   attr(robotState.nearLight, 'd', near);
   attr(robotState.pool, 'd', near);
   for (const gradient of [robotState.gradient, robotState.poolGradient]) {

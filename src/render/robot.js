@@ -6,6 +6,7 @@ import { paintLighting } from './lighting.js';
 import { attr, dot } from "./svg.js";
 import { victoryBodyColor, ROBOT_COLORS } from "../utils/colors.js";
 import { paintRobotSkin, paintSkinVictory } from './robot-skin.js';
+import { paintTorsoShadow } from './ground-spots.js';
 export function visualOffset(robotState) {
   if (robotState.scene && (robotState.mode === 'cover' || robotState.mode === 'eat') && robotState.attackVisual) {
     const q = robotState.mode === 'eat' ? 1 : smooth((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec);
@@ -130,6 +131,7 @@ export function draw(robotState, dt) {
     l.pose = [a, solved.joint, solved.end];
   }
   paintRobotSkin(robotState,strikePose);
+  paintTorsoShadow(robotState);
 }
 
 // Действия прогулки используют тот же IK; угроза прерывает их сразу.
@@ -154,13 +156,6 @@ export function robotPaint(robotState, hunter) {
   attr(robotState.actor, 'transform', `translate(${robotState.x + offset.x} ${robotState.y + offset.y}) rotate(${robotState.visualRotation() * 180 / Math.PI + recoilTilt}) translate(${-robotState.x} ${-robotState.y})`);
   const age = robotState.leap && (robotState.leap.launched || robotState.leap.kind === 'rebound') ? ctx.game.time - robotState.leap.started : 0,
     height = robotState.scene && robotState.mode === 'cover' ? robotState.coverHeightStart * (1 - smooth((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec)) + (1 - robotState.coverHeightStart) * .7 * Math.sin(Math.PI * clamp((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec, 0, 1)) : robotState.scene && robotState.mode === 'hops' ? robotState.hopHeight() : robotState.leap ? Math.sin(Math.PI * clamp(robotState.leap.kind === 'rebound' ? (age - robotState.leap.turnDuration) / CONFIG.attack.dismountSec : (age - .12) / .82, 0, 1)) : robotState.mode === 'startle' && robotState.scene ? Math.sin(Math.PI * clamp((ctx.game.time - robotState.scene.started) / CONFIG.attack.startleSec, 0, 1)) * .55 : 0;
-  dot(robotState.jumpShadow, {
-    x: robotState.api.center.x + offset.x,
-    y: robotState.api.center.y + offset.y
-  });
-  attr(robotState.jumpShadow, 'rx', (23 + height * 9) * ctx.scale);
-  attr(robotState.jumpShadow, 'ry', (17 + height * 5) * ctx.scale);
-  attr(robotState.jumpShadow, 'opacity', robotState.mode === 'hops' ? .2 - robotState.hopHeight() * .1 : robotState.leap && (robotState.leap.launched || robotState.leap.kind === 'rebound') ? String(.25 - height * .13) : '0');
   attr(robotState.limbG, 'transform', robotState.bodyTransform(height));
   attr(robotState.bodyG, 'transform', robotState.bodyTransform(height));
   attr(robotState.actor, 'class', hunter ? 'robot hunter' : shield > 0 ? 'robot protected' : 'robot');

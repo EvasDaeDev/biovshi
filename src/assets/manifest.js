@@ -4,6 +4,7 @@ export const ASSETS = {
     arenaFloor: 'assets/textures/arena/floor_01.webp',
     arenaWall: 'assets/textures/arena/wall_01.webp',
     obstacle: 'assets/textures/arena/wall_02.webp',
+    liquids: 'assets/textures/arena/liquids.png',
     robotA: 'assets/textures/robots/r_01.png',
     robotB: 'assets/textures/robots/r_02.png',
     robotC: 'assets/textures/robots/r_03.png',

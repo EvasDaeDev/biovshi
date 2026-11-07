@@ -79,4 +79,12 @@ export async function applyTextures() {
       console.warn('Arena texture:', error);
     }
   }
+  const liquidUrl=assetUrl(ASSETS.textures.liquids);
+  if(liquidUrl)try {
+    const dry=await Promise.all([1/3,2/3,1].map(level=>
+      tintedTexture(liquidUrl,CONFIG.oil.spriteDryColor,level*CONFIG.oil.spriteDryStrength)));
+    if(svg!==ctx.svg||!svg.isConnected||ctx.disposed)return;
+    ctx.liquidAtlasSources=[liquidUrl,...dry];
+    ctx.settledOilDrops=new WeakSet();
+  } catch(error) {console.warn('Liquid texture:',error);}
 }

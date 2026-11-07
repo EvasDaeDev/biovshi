@@ -1,4 +1,5 @@
 import { createWalls } from '../render/walls.js';
+import { createObstacleLights } from '../render/ground-spots.js';
 import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "./state.js";
@@ -71,6 +72,7 @@ export function initializeGame() {
     globalThis.visualViewport?.removeEventListener('resize', fitField);
   };
   ctx.cache = new WeakMap();
+  ctx.liquidAtlasSources=null;
   initializePerformance();
   ctx.SAFE_LIMB_COLOR = [101, 238, 255];
   ctx.WARNING_LIMB_COLOR = [255, 214, 64];
@@ -245,19 +247,10 @@ export function initializeGame() {
       'stroke-width': 1.5
     }, ctx.guideG);
   }
-  el('circle', {
-    cx: 350,
-    cy: 350,
-    r: 178,
-    fill: 'none',
-    stroke: 'rgba(255,48,48,0.78)',
-    'stroke-width': 4.5
-  }, ctx.guideG);
   ctx.gridMinorNode = undefined;
   ctx.gridMajorNode = undefined;
   ctx.gridBaseMinor = undefined;
   ctx.gridBaseMajor = undefined;
-  ctx.gridWarped = false;
   ctx.game = {
     time: 0,
     hunter: 0,
@@ -457,6 +450,7 @@ export function initializeGame() {
   // Smooth group-following camera. World units are centimeters; all collision,
   // pathfinding and damage checks continue to use unchanged 0..700 coordinates.
   createWalls();
+  createObstacleLights();
   // The clock is a screen-space overlay, not part of the clipped floor.
   ctx.svg.appendChild(ctx.timerOutput);
   ctx.CAMERA_OUTSET = Math.max(0, CONFIG.arena.wallThicknessCm) + CONFIG.arena.wallViewMarginCm;

@@ -138,6 +138,8 @@ const CONFIG = {
     hopDistanceCm: 18 // Длина каждого из двух прыжков вперёд.
   },
   robot: {
+    shadowOpacity: 0.5,
+    shadowPadding: 1.2,
     scale: 0.5,
     // Масштаб корпуса и конечностей.
     vertebraBaseCm: 10,
@@ -192,7 +194,9 @@ const CONFIG = {
   light: {
     ambientColor: '#8b9e91', // Холодный приглушённый больничный свет.
     ambientIntensity: 0.55,
-    beamFeather: 0.16, // Доля полуугла конуса для мягкого края.
+    obstacleLightExtraDiameterCm: 100,
+    obstacleLightOpacity: 0.12,
+    obstacleLightReveal: 0.35,
     flickerDepth: 0.2, // Краткие просадки яркости до 20%, без погасания.
     nearbyRadiusCm: 75,
     // Радиус ближнего света; диаметр = 150 см.
@@ -214,6 +218,10 @@ const CONFIG = {
     saturation: 81,
     lightness: 12.2, // Приблизительно #380607.
     drySec: 18, // Старые пятна становятся буро-чёрными.
+    spriteColumns: 4,
+    spriteRows: 4,
+    spriteDryColor: '#160c09',
+    spriteDryStrength: 0.95,
     minIntervalSec: 0.5,
     // Минимальный интервал между каплями масла из раны.
     maxIntervalSec: 0.7,
@@ -256,14 +264,8 @@ const CONFIG = {
     unarmedFailureMaxSec: 30 // Случайная верхняя граница времени отказа.
   },
   effects: {
-    waveAmplitudeCm: 14,
-    // Сила искажения сетки.
-    waveSpeedCm: 640,
-    // Скорость расширения волны; больше — шире область.
-    waveWidthCm: 56,
-    // Толщина кольца искажения.
     waveSec: 0.35,
-    // Длительность волны и кольца касания.
+    // Длительность короткого кольца касания.
     particleCount: 32,
     // Частиц при одном касании.
     particleLimit: 96,

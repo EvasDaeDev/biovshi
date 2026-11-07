@@ -2,8 +2,8 @@ import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 
 const STORAGE_KEY = 'biovshi.graphics.v1';
-const FULL = Object.freeze({ name:'full', nearSamples:120, coneSamples:48, lightInterval:0, warpGrid:true });
-const LIGHT = Object.freeze({ name:'light', nearSamples:40, coneSamples:20, lightInterval:1/15, warpGrid:false });
+const FULL = Object.freeze({ name:'full', nearSamples:120, coneSamples:48, lightInterval:0 });
+const LIGHT = Object.freeze({ name:'light', nearSamples:40, coneSamples:20, lightInterval:1/15 });
 
 export function chooseRenderProfile(mode, touchDevice) {
   return mode === 'light' || (mode === 'auto' && touchDevice) ? LIGHT : FULL;
