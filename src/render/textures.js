@@ -17,17 +17,18 @@ function loadImage(url) {
   });
 }
 async function tintedTexture(url, colour, strength) {
-  const key = url + '|' + colour + '|' + strength;
+  const key = [url, colour, strength, CONFIG.rendering.textureMaxSize, CONFIG.rendering.texturePixelated].join('|');
   if (!tintCache.has(key)) {
     const pending = (async () => {
       const image = await loadImage(url);
       // A fixed-size tile, independent of screen density and zoom.
-      const scale = Math.min(1, 512 / Math.max(image.naturalWidth, image.naturalHeight));
+      const scale = Math.min(1, CONFIG.rendering.textureMaxSize / Math.max(image.naturalWidth, image.naturalHeight));
       const canvas = document.createElement('canvas');
       canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
       canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
       const drawing = canvas.getContext('2d', { willReadFrequently: true });
       if (!drawing) throw new Error('Texture canvas is unavailable');
+      drawing.imageSmoothingEnabled = !CONFIG.rendering.texturePixelated;
       drawing.fillStyle = colour;
       drawing.fillRect(0, 0, 1, 1);
       const rgb = drawing.getImageData(0, 0, 1, 1).data.slice(0, 3);
@@ -66,7 +67,10 @@ export async function applyTextures() {
       const pattern = el('pattern', {
         id, patternUnits:'userSpaceOnUse', x:0, y:0, width:TILE_CM, height:TILE_CM,
       }, defs);
-      el('image', { href:source, width:TILE_CM, height:TILE_CM, preserveAspectRatio:'none' }, pattern);
+      el('image', {
+        href:source, width:TILE_CM, height:TILE_CM, preserveAspectRatio:'none',
+        style:CONFIG.rendering.texturePixelated ? 'image-rendering:crisp-edges;image-rendering:pixelated' : '',
+      }, pattern);
       for (const node of targets) node.style.fill = 'url(#' + id + ')';
     } catch (error) {
       // Keep the original floor if a file fails; the fight must still start.
