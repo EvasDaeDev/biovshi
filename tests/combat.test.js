@@ -137,3 +137,19 @@ test('lighting masks reuse stationary geometry and the identity filter stays loc
   assert.equal(ctx.sparkNodes.length,0,'hidden particles do not create unused SVG nodes');
   dom.window.close();
 });
+
+test('outer wall and clock remain outside the floor clip, with a full-size playable arena',()=>{
+  const dom=setup();
+  const walls=ctx.svg.querySelector('#tag7hop-walls');
+  assert.equal(walls.parentNode,ctx.svg);
+  assert.equal(ctx.arenaContent.contains(walls),false);
+  assert.equal(ctx.timerOutput.parentNode,ctx.svg);
+  assert.equal(walls.querySelectorAll('path[transform]').length,16);
+  const tile=ctx.svg.querySelector('#texture-arenaWall');
+  assert.equal(tile.getAttribute('width'),'100');
+  assert.equal(tile.getAttribute('height'),'30');
+  assert.equal(ctx.CAMERA_FULL,776);
+  assert.equal(ctx.arenaBoundary.right,700);
+  assert.equal(ctx.arenaBoundary.bottom,700);
+  dom.window.close();
+});

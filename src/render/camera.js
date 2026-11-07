@@ -1,17 +1,20 @@
 import { clamp } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { attr } from "./svg.js";
+export function cameraBounds(size, outset = 8) {
+  return {min:-outset,max:700+outset-size};
+}
 export function cameraReset() {
-  ctx.camera.x = -8;
-  ctx.camera.y = -8;
+  ctx.camera.x = -ctx.CAMERA_OUTSET;
+  ctx.camera.y = -ctx.CAMERA_OUTSET;
   ctx.camera.size = ctx.CAMERA_FULL;
   cameraApply();
 }
 export function cameraApply() {
   const size = clamp(ctx.camera.size, ctx.CAMERA_MIN, ctx.CAMERA_FULL);
-  const min = 700 - size;
-  const x = size >= 700 ? (700 - size) / 2 : clamp(ctx.camera.x, 0, 700 - size);
-  const y = size >= 700 ? (700 - size) / 2 : clamp(ctx.camera.y, 0, 700 - size);
+  const bounds = cameraBounds(size, ctx.CAMERA_OUTSET);
+  const x = clamp(ctx.camera.x, bounds.min, bounds.max);
+  const y = clamp(ctx.camera.y, bounds.min, bounds.max);
   attr(ctx.svg, 'viewBox', `${x.toFixed(3)} ${y.toFixed(3)} ${size.toFixed(3)} ${size.toFixed(3)}`);
   // The clock is a screen-space HUD: it must not leave the visible area on zoom.
   // Counter / markers remain anchored to their real arena coordinates.
@@ -44,19 +47,14 @@ export function cameraUpdate(dt) {
   const sizeBlend = 1 - Math.exp(-dt / zoomTau);
   ctx.camera.size += (targetSize - ctx.camera.size) * sizeBlend;
   if (Math.abs(ctx.camera.size - targetSize) < .08) ctx.camera.size = targetSize;
-  const currentMax = Math.max(0, 700 - ctx.camera.size);
-  const moveX = clamp(cx - ctx.camera.size / 2, 0, currentMax);
-  const moveY = clamp(cy - ctx.camera.size / 2, 0, currentMax);
+  const bounds = cameraBounds(ctx.camera.size, ctx.CAMERA_OUTSET);
+  const moveX = clamp(cx - ctx.camera.size / 2, bounds.min, bounds.max);
+  const moveY = clamp(cy - ctx.camera.size / 2, bounds.min, bounds.max);
   const moveBlend = 1 - Math.exp(-dt / .47);
   ctx.camera.x += (moveX - ctx.camera.x) * moveBlend;
   ctx.camera.y += (moveY - ctx.camera.y) * moveBlend;
-  // Include startup's 8 cm outer viewBox margin until camera is inside arena.
-  if (ctx.camera.size >= 700) {
-    ctx.camera.x = (700 - ctx.camera.size) / 2;
-    ctx.camera.y = (700 - ctx.camera.size) / 2;
-  } else {
-    ctx.camera.x = clamp(ctx.camera.x, 0, currentMax);
-    ctx.camera.y = clamp(ctx.camera.y, 0, currentMax);
-  }
+  // Keep the viewport inside the complete arena, including its outer wall.
+  ctx.camera.x = clamp(ctx.camera.x, bounds.min, bounds.max);
+  ctx.camera.y = clamp(ctx.camera.y, bounds.min, bounds.max);
   cameraApply();
 }

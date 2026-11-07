@@ -1,3 +1,4 @@
+import { createWalls } from '../render/walls.js';
 import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "./state.js";
@@ -451,12 +452,16 @@ export function initializeGame() {
   fitField();
   // Smooth group-following camera. World units are centimeters; all collision,
   // pathfinding and damage checks continue to use unchanged 0..700 coordinates.
-  ctx.CAMERA_FULL = 716;
+  createWalls();
+  // The clock is a screen-space overlay, not part of the clipped floor.
+  ctx.svg.appendChild(ctx.timerOutput);
+  ctx.CAMERA_OUTSET = Math.max(0, CONFIG.arena.wallThicknessCm) + CONFIG.arena.wallViewMarginCm;
+  ctx.CAMERA_FULL = 700 + 2 * ctx.CAMERA_OUTSET;
   ctx.CAMERA_MIN = 400;
   ctx.CAMERA_MARGIN = 200;
   ctx.camera = {
-    x: -8,
-    y: -8,
+    x: -ctx.CAMERA_OUTSET,
+    y: -ctx.CAMERA_OUTSET,
     size: ctx.CAMERA_FULL
   };
   cameraReset();
