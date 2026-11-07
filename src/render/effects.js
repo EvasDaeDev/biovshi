@@ -1,3 +1,4 @@
+import { renderProfile } from './performance.js';
 import { clamp, smooth } from '../utils/math.js';
 import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
@@ -9,6 +10,7 @@ import { random } from "../utils/random.js";
 export
 // Эффекты Geometry Wars используют отдельные частицы и не влияют на ИИ.
 function burst(x, y) {
+  if (!CONFIG.rendering.sparks) return;
   for (let i = 0; i < CONFIG.effects.particleCount; i++) {
     const a = i * Math.PI * (3 - Math.sqrt(5)),
       speed = (45 + i % 7 * 14) * CONFIG.effects.particleSpread;
@@ -25,6 +27,7 @@ function burst(x, y) {
   while (ctx.sparks.length > CONFIG.effects.particleLimit) ctx.sparks.shift();
 }
 export function updateSparks() {
+  if (!CONFIG.rendering.sparks) return;
   for (let i = ctx.sparks.length - 1; i >= 0; i--) if (ctx.game.time - ctx.sparks[i].time > CONFIG.effects.particleLifeSec) ctx.sparks.splice(i, 1);
   for (let i = 0; i < CONFIG.effects.particleLimit; i++) {
     const p = ctx.sparks[i],
@@ -78,7 +81,7 @@ export function updateSparks() {
   }
 }
 export function updateNeonGrid() {
-  if (!ctx.pulses.length) {
+  if (!ctx.pulses.length || !renderProfile().warpGrid) {
     if (ctx.gridWarped) {
       attr(ctx.gridMinorNode, 'd', ctx.gridBaseMinor);
       attr(ctx.gridMajorNode, 'd', ctx.gridBaseMajor);
@@ -190,11 +193,13 @@ export function paintOil() {
     }
   }
   for (const drop of ctx.combat.oilDrops) {
+    if (ctx.settledOilDrops?.has(drop)) continue;
     const q = smooth((ctx.game.time - drop.born) / CONFIG.oil.spreadSec);
     const radius = drop.baseRadius + (drop.maxRadius - drop.baseRadius) * q;
     const opacity = drop.baseOpacity * (1 - 0.5 * q);
     attr(drop.node, 'r', radius.toFixed(2));
     attr(drop.node, 'opacity', opacity.toFixed(3));
+    if (q >= 1) ctx.settledOilDrops?.add(drop);
   }
 }
 export function paintDetachedAnatomy() {

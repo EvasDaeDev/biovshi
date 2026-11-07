@@ -2,7 +2,7 @@ import { clamp, smooth } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { CONFIG } from "../config.js";
 import { ik, path } from "../utils/math.js";
-import { nearbyLightOutline, visionOutline } from "../systems/perception.js";
+import { paintLighting } from './lighting.js';
 import { attr, dot } from "./svg.js";
 import { victoryBodyColor } from "../utils/colors.js";
 export function visualOffset(robotState) {
@@ -55,24 +55,8 @@ export function bodyTransform(robotState, height) {
 
 // Видимая кисть движется относительно плеча, но другие лапы остаются опорными.
 export function draw(robotState, dt) {
-  const offset = robotState.visualOffset(),
-    eye = robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0),
-    coneOrigin = robotState.visiblePoint(eye),
-    lightCenter = robotState.visiblePoint(robotState.api.center),
-    visibleHeading = robotState.headFrame.angle + robotState.visualRotation();
-  const beamPath = robotState.hasHead() ? path([coneOrigin, ...visionOutline(coneOrigin, visibleHeading, robotState.visionAngle())]) + ' Z' : '';
-  attr(robotState.vision, 'd', beamPath);
-  attr(robotState.lightBeam, 'd', beamPath);
-  attr(robotState.nearLight, 'd', path(nearbyLightOutline(lightCenter)) + ' Z');
-  attr(robotState.gradient, 'cx', lightCenter.x);
-  attr(robotState.gradient, 'cy', lightCenter.y);
-  attr(robotState.pool, 'd', path(nearbyLightOutline(lightCenter)) + ' Z');
-  attr(robotState.poolGradient, 'cx', lightCenter.x);
-  attr(robotState.poolGradient, 'cy', lightCenter.y);
-  for (const g of [robotState.beamFade, robotState.beamTint]) {
-    attr(g, 'cx', coneOrigin.x);
-    attr(g, 'cy', coneOrigin.y);
-  }
+  const offset = robotState.visualOffset();
+  paintLighting(robotState);
   const eating = robotState.mode === 'eat',
     chew = eating && robotState.eatTime > CONFIG.attack.eatSec * .65 / 2.6 && robotState.eatTime < CONFIG.attack.eatSec * 1.8 / 2.6 ? robotState.reduced ? 1 : (1 + Math.sin(robotState.eatTime * 24)) / 2 : 0;
   if (robotState.tailPath) {
@@ -214,7 +198,8 @@ export function robotPaint(robotState, hunter) {
     attr(robotState.trailNodes[i], 'fill', sample?.shield > 0 ? `color-mix(in srgb, var(--night-protected) ${sample.shield * 100}%, var(--night-ink))` : sample?.hunter ? 'var(--night-accent)' : 'var(--night-ink)');
     if (sample) dot(robotState.trailNodes[i], sample);
   }
-  robotState.label.textContent = String.fromCharCode(65 + robotState.id);
+  const name = String.fromCharCode(65 + robotState.id);
+  if (robotState.label.textContent !== name) robotState.label.textContent = name;
   attr(robotState.label, 'x', robotState.spine[2].x);
   attr(robotState.label, 'y', robotState.spine[2].y - 18);
   attr(robotState.label, 'opacity', '1');

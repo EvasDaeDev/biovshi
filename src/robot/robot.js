@@ -132,11 +132,12 @@ function createRobot(id, start) {
   robotState.actorOutlineFilterId = 'tag7hop-identity-outline-' + robotState.id;
   robotState.actorOutlineFilter = el('filter', {
     id: robotState.actorOutlineFilterId,
-    filterUnits: 'userSpaceOnUse',
-    x: -100,
-    y: -100,
-    width: 900,
-    height: 900,
+    // Bound the offscreen filter surface to this robot, rather than the whole arena.
+    filterUnits: 'objectBoundingBox',
+    x: '-20%',
+    y: '-20%',
+    width: '140%',
+    height: '140%',
     colorInterpolationFilters: 'sRGB'
   }, ctx.lightGradients);
   robotState.identityRim = el('feMorphology', {

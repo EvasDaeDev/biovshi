@@ -414,3 +414,15 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
  html body #robot-tag-hops-v22 #tag7hop-status {position:static;transform:none;margin-left:auto;font-size:12px}
  #robot-tag-hops-v22 .atmosphere-controls {padding:8px;gap:5px}
 }
+
+/* Touch-device profile keeps anatomy, identity outlines and obstacle shadows. */
+#robot-tag-hops-v22 .graphics-control { display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#a5c4d5 }
+#robot-tag-hops-v22 #graphics-quality { background:#102039;color:#daf6ff;border:1px solid #284763;padding:5px;font:inherit }
+#robot-tag-hops-v22 #render-fps { color:#8ba6b8;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap }
+#robot-tag-hops-v22.render-light #tag7hop-actors .robot .head,
+#robot-tag-hops-v22.render-light #tag7hop-trails,
+#robot-tag-hops-v22.render-light #tag7hop-pulses,
+#robot-tag-hops-v22.render-light #tag7hop-sparks,
+#robot-tag-hops-v22.render-light #tag7hop-field .score-text { filter:none !important }
+#robot-tag-hops-v22.render-light #tag7hop-ambient-glow { display:none }
+#robot-tag-hops-v22.render-light #tag7hop-timer { mix-blend-mode:normal }

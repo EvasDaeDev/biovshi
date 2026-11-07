@@ -9,6 +9,9 @@ import { arenaAnnounce } from "../ui/announcements.js";
 import { paint } from "../render/frame.js";
 import { random } from "../utils/random.js";
 export function resetRound() {
+  ctx.telemetryDirty = true;
+  ctx.lastTelemetryAt = -Infinity;
+  ctx.settledOilDrops = new WeakSet();
   // Каждый новый раунд заново разыгрывает роль водящего между всеми четырьмя.
   const hunter = -1;
   ctx.round.elapsedSec = 0;
