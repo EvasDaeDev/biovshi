@@ -10,8 +10,8 @@ export const ROBOT_PARTS = {
   head: {col:0,row:0,from:33,to:8},
   // Translate the entire chest 22 px right; preserve its 24 px anchor span.
   'spine-0': {col:1,row:0,from:30,to:54},
-  'spine-1': {col:2,row:0,from:8,to:32},
-  'spine-2': {col:3,row:0,from:8,to:32},
+  'spine-1': {col:2,row:0,from:8,to:32,widthScale:4/3},
+  'spine-2': {col:3,row:0,from:8,to:32,widthScale:4/3},
   'spine-3': {col:0,row:1,from:8,to:32},
   'arm--1-upper': {col:0,row:2},
   'arm--1-lower': {col:1,row:2},
@@ -26,9 +26,9 @@ export const ROBOT_PARTS = {
 export function skinMatrix(a,b,part) {
   const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
   const from=part.from??8,to=part.to??56;
-  // Use one scale for both axes: retain the atlas proportions, including the
-  // full width of the chest, spine and pelvis instead of squeezing them.
-  const sx=length/(to-from),sy=sx;
+  // Width changes perpendicular to the bone; its length and joint anchors stay fixed.
+  // Only the two middle spine sections request an additional width multiplier.
+  const sx=length/(to-from),sy=sx*(part.widthScale??1);
   const ux=length?dx/length:1,uy=length?dy/length:0;
   const A=ux*sx,B=uy*sx,C=-uy*sy,D=ux*sy;
   return [A,B,C,D,a.x-A*from-C*32,a.y-B*from-D*32];
