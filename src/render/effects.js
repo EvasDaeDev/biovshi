@@ -81,6 +81,7 @@ export function updateSparks() {
   }
 }
 export function updateNeonGrid() {
+  if (!CONFIG.rendering.coordinateGrid) return;
   if (!ctx.pulses.length || !renderProfile().warpGrid) {
     if (ctx.gridWarped) {
       attr(ctx.gridMinorNode, 'd', ctx.gridBaseMinor);

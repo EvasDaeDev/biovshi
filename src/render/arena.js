@@ -1,6 +1,8 @@
+import { CONFIG } from '../config.js';
 import { ctx } from "../game/state.js";
 import { el } from "./svg.js";
 export function drawGrid() {
+  if (!CONFIG.rendering.coordinateGrid) return;
   const minor = [],
     major = [];
   for (let n = 0; n <= 70; n++) {

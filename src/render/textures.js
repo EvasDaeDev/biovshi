@@ -1,18 +1,75 @@
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { ctx } from '../game/state.js';
 import { el } from './svg.js';
+import { tintPixels } from './texture-tint.js';
 
-export function applyTextures() {
-  for (const [key, targets] of [
+const tintCache = new Map();
+const TILE_CM = 100; // One complete texture repeats every metre in world coordinates.
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Cannot load arena texture'));
+    image.src = url;
+  });
+}
+async function tintedTexture(url, colour) {
+  const key = url + '|' + colour;
+  if (!tintCache.has(key)) {
+    const pending = (async () => {
+      const image = await loadImage(url);
+      // A fixed-size tile, independent of screen density and zoom.
+      const scale = Math.min(1, 512 / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const drawing = canvas.getContext('2d', { willReadFrequently: true });
+      if (!drawing) throw new Error('Texture canvas is unavailable');
+      drawing.fillStyle = colour;
+      drawing.fillRect(0, 0, 1, 1);
+      const rgb = drawing.getImageData(0, 0, 1, 1).data.slice(0, 3);
+      drawing.clearRect(0, 0, canvas.width, canvas.height);
+      drawing.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const pixels = drawing.getImageData(0, 0, canvas.width, canvas.height);
+      tintPixels(pixels.data, rgb);
+      drawing.putImageData(pixels, 0, 0);
+      return canvas.toDataURL('image/png');
+    })();
+    tintCache.set(key, pending);
+    pending.catch(() => tintCache.delete(key));
+  }
+  return tintCache.get(key);
+}
+
+export async function applyTextures() {
+  const svg = ctx.svg;
+  const defs = ctx.defs;
+  const jobs = [
     ['arenaFloor', [ctx.arenaContent.querySelector(':scope > rect')]],
     ['obstacle', [...ctx.blockG.children]],
-  ]) {
+  ];
+  for (const [key, targets] of jobs) {
     const url = assetUrl(ASSETS.textures[key]);
-    if (!url) continue;
-    const id = 'texture-' + key;
-    ctx.svg.querySelector('#' + id)?.remove();
-    const pattern = el('pattern', { id, patternUnits:'userSpaceOnUse', width:100, height:100 }, ctx.defs);
-    el('image', { href:url, width:100, height:100, preserveAspectRatio:'xMidYMid slice' }, pattern);
-    for (const node of targets) if (node) node.style.fill = 'url(#' + id + ')';
+    if (!url || !targets[0]) continue;
+    try {
+      // Read the original computed fill before installing a pattern; no grey flash.
+      const style = getComputedStyle(targets[0]);
+      // Read the theme colour even if this floor already has a pattern (e.g. HMR).
+      const colour = key === 'arenaFloor' ? style.getPropertyValue('--background').trim() || style.fill : style.fill;
+      const source = key === 'arenaFloor' ? await tintedTexture(url, colour) : url;
+      if (svg !== ctx.svg || !svg.isConnected || ctx.disposed) return;
+      const id = 'texture-' + key;
+      svg.querySelector('#' + id)?.remove();
+      const pattern = el('pattern', {
+        id, patternUnits:'userSpaceOnUse', x:0, y:0, width:TILE_CM, height:TILE_CM,
+      }, defs);
+      el('image', { href:source, width:TILE_CM, height:TILE_CM, preserveAspectRatio:'none' }, pattern);
+      for (const node of targets) node.style.fill = 'url(#' + id + ')';
+    } catch (error) {
+      // Keep the original floor if a file fails; the fight must still start.
+      console.warn('Arena texture:', error);
+    }
   }
 }
