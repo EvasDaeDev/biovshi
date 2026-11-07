@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' ws://localhost:* ws://127.0.0.1:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<!-- Настройки игры: src/config.js. -->
+<title>БИОВШИ — Гладиаторские бои</title>
+
+
+
+<link rel="stylesheet" href="/styles/base.css">
+<link rel="stylesheet" href="/styles/layout.css">
+<link rel="stylesheet" href="/styles/betting.css">
+<link rel="stylesheet" href="/styles/interface.css">
+</head>
+<body>
+
+
+<div id="robot-tag-hops-v22">
+  <div class="viz-controls atmosphere-controls">
+<button id="tag7hop-pause" class="btn" type="button" aria-pressed="false">Пауза</button>
+<button id="tag7hop-reset" class="btn" type="button">Сброс</button>
+<span id="tag7hop-status" class="text-small" aria-live="polite">Гладиаторы · каждый сам за себя</span>
+</div>
+
+<div id="bet-overlay" class="bet-overlay" role="dialog" aria-modal="true" aria-labelledby="bet-title" hidden>
+ <div class="bet-panel">
+  <div class="bet-kicker">БИОВШИ · КАРМАННЫЙ ТОТАЛИЗАТОР</div>
+  <h2 id="bet-title"></h2>
+  <div id="bet-content"></div>
+ </div>
+</div>
+  <div class="tag7hop-layout">
+    <aside class="tag7hop-sidebar-wrap" aria-label="Боковая телеметрия роботов">
+      <div id="tag7hop-roles" class="tag7hop-sidebar"></div>
+    </aside>
+    <div class="tag7hop-main">
+  <div class="tag7hop-stage">
+  <div id="tag7hop-intro" class="tag7hop-intro" role="dialog" aria-modal="true" aria-labelledby="tag7hop-intro-title">
+    <div class="tag7hop-intro-card">
+      <h1 id="tag7hop-intro-title"><span>БИОВШИ</span> <small>ГЛАДИАТОРСКИЕ БОИ</small></h1>
+      <button id="tag7hop-start" type="button">начать</button>
+    </div>
+  </div>
+  <div id="gladiator-results" class="gladiator-results" role="dialog" aria-modal="true" aria-labelledby="gladiator-results-title" hidden>
+    <div class="gladiator-results-card">
+      <div class="gladiator-results-kicker">БИОВШИ · ИТОГИ АРЕНЫ</div>
+      <h2 id="gladiator-results-title">ПОБЕДИТЕЛЬ — A</h2>
+      <p id="gladiator-results-summary" class="gladiator-results-summary"></p>
+      <div id="gladiator-results-totals" class="gladiator-results-totals"></div>
+      <div class="gladiator-results-table-wrap">
+        <table class="gladiator-results-table" aria-label="Статистика роботов">
+          <thead><tr><th>Робот</th><th>Сегменты</th><th>Попадания</th><th>Получено</th><th>Итог</th></tr></thead>
+          <tbody id="gladiator-results-rows"></tbody>
+        </table>
+      </div>
+      <div id="bet-result-summary"></div>
+      <button id="gladiator-results-again" type="button">СЛЕДУЮЩИЙ РАУНД · СТАВКИ</button>
+    </div>
+  </div>
+  <svg id="tag7hop-field" viewBox="-8 -8 716 716" role="img" aria-label="Четыре робота сражаются каждый сам за себя на арене семь на семь метров. Поле слабо видно в темноте. Вокруг каждого робота мягко затухающий свет диаметром полтора метра. На центральном кубе счёт съеденных соперников. Луч водящего красный. Пять препятствий: центральный восьмиугольник, два боковых куба и два треугольника. Внешний периметр имеет скошенные углы." style="display:block;width:100%;height:auto;aspect-ratio:1;overflow:hidden">
+    <title>Гладиаторы: четыре робота, поле 7 × 7 м</title>
+<g id="tag7hop-arena-content">
+    <rect width="700" height="700" fill="var(--background)">
+</rect>
+<g id="tag7hop-grid">
+</g>
+<g id="tag7hop-cones">
+</g>
+<g id="tag7hop-block">
+<rect x="300" y="300" width="100" height="100">
+</rect>
+</g>
+<g id="tag7hop-trails" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width=".8">
+</g>
+<g id="tag7hop-ground">
+</g>
+<g id="tag7hop-actors">
+</g>
+<g id="tag7hop-sparks" fill="none" stroke-width="1.2">
+</g>
+<g id="tag7hop-pulses" fill="none" stroke-width="1.2">
+</g>
+    <defs>
+<g id="tag7hop-gradients">
+</g>
+<mask id="tag7hop-darkness-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="700" height="700" style="mask-type:luminance">
+<rect width="700" height="700" fill="white">
+</rect>
+<g id="tag7hop-light-holes" fill="black">
+</g>
+</mask>
+</defs>
+    <rect id="tag7hop-darkness" width="700" height="700" fill="var(--night-bg)" opacity="0.9" mask="url(#tag7hop-darkness-mask)" pointer-events="none">
+</rect>
+    <g id="tag7hop-score" role="img" aria-label="Оставшиеся сегменты: A — 0, B — 0, C — 0, D — 0">
+<title>Съедено соперников</title>
+</g>
+    <text id="tag7hop-timer" x="350" y="30" text-anchor="middle" dominant-baseline="middle" role="timer" aria-live="off" aria-label="Время раунда" pointer-events="none">0:00</text>
+  </g>
+  </svg>
+  </div>
+  <div id="tag7hop-info" class="text-small text-muted">7 × 7 м · четыре бойца · каждый сам за себя · сегменты получают урон и отваливаются · без головы робот слепнет · без лап останавливается</div>
+    </div>
+    <aside id="bet-hud" aria-label="Банк и ставки игроков" aria-live="polite" hidden></aside>
+  </div>
+</div>
+
+
+<script type="module" src="/src/main.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

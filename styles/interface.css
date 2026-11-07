@@ -1,0 +1,416 @@
+/* Scoped page theme overrides default white wrappers without changing arena colors. */
+html body #robot-tag-hops-v22 { color:#d5e9f3; }
+html body #robot-tag-hops-v22 .viz-controls { color:#d5e9f3; }
+html body #robot-tag-hops-v22 #tag7hop-status { color:#c6e8f6; }
+html body #robot-tag-hops-v22 #tag7hop-info { color:#8ba6b8; }
+html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#daf6ff; border:1px solid #284763; }
+#robot-tag-hops-v22 .tag7hop-layout {display:flex;gap:18px;align-items:flex-start}
+#robot-tag-hops-v22 .tag7hop-sidebar-wrap {width:244px;flex:none;display:flex;flex-direction:column;gap:6px}
+#robot-tag-hops-v22 .tag7hop-sidebar-title {display:none}
+#robot-tag-hops-v22 .tag7hop-sidebar {display:grid;gap:6px}
+#robot-tag-hops-v22 .tag7hop-main {flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:10px}
+#robot-tag-hops-v22 .tag7hop-stage {position:relative;isolation:isolate;width:100%;max-width:960px;aspect-ratio:1}
+#robot-tag-hops-v22 .robot-card {position:relative;padding:4px 10px 4px;border:1px solid #204d74;border-radius:0;background:linear-gradient(180deg, rgba(9,20,43,.97), rgba(5,12,26,.98));color:#dff6ff;box-shadow:inset 0 0 0 1px rgba(102,238,255,.06),0 10px 24px rgba(2,6,16,.24);overflow:hidden}
+#robot-tag-hops-v22 .robot-card::before {content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--accent,#65eeff);box-shadow:0 0 12px var(--accent,#65eeff)}
+#robot-tag-hops-v22 .robot-card::after {content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .18s ease}
+#robot-tag-hops-v22 .robot-card.bleeding::after {background:rgba(160,0,20,.30);opacity:1}
+#robot-tag-hops-v22 .robot-card.disabled::after {background:rgba(0,0,0,.70);opacity:1}
+#robot-tag-hops-v22 .robot-card-header {display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+#robot-tag-hops-v22 .robot-card-name {display:flex;flex-direction:column;gap:0;flex:none}
+#robot-tag-hops-v22 .robot-card-name strong {font-size:15px;line-height:1;color:#fff}
+#robot-tag-hops-v22 .robot-card-sub {font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#8fb9cc}
+#robot-tag-hops-v22 .robot-card-score {text-align:right}
+#robot-tag-hops-v22 .robot-card-segments {font-size:15px;font-weight:700;color:#fff}
+#robot-tag-hops-v22 .robot-card-score small {display:block;font-size:9px;color:#8fb9cc}
+#robot-tag-hops-v22 .robot-card-action {margin:0;flex:1 1 auto;min-width:0;padding:0;background:none;border:0;border-radius:0;font-size:11px;line-height:1.1;color:#9ec4d6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#robot-tag-hops-v22 .robot-card-metrics {display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:3px}
+#robot-tag-hops-v22 .metric-box {padding:0;border-radius:0;background:transparent;border:0}
+#robot-tag-hops-v22 .metric-head {display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#8fb9cc;margin-bottom:4px}
+#robot-tag-hops-v22 .metric-icon {font-size:13px;line-height:1}
+#robot-tag-hops-v22 .metric-inline {display:flex;align-items:center;gap:7px;min-height:19px;white-space:nowrap}
+#robot-tag-hops-v22 .metric-inline .metric-value {display:inline;white-space:nowrap}
+#robot-tag-hops-v22 .metric-value {font-size:11px;font-weight:700;color:#f4fcff}
+#robot-tag-hops-v22 .mini-track {height:6px;border-radius:999px;background:rgba(113,143,165,.18);overflow:hidden;margin-top:2px}
+#robot-tag-hops-v22 .mini-fill {height:100%;border-radius:999px;background:linear-gradient(90deg,#ff5c5c,#ffd84a 56%,#4dff88);box-shadow:0 0 10px rgba(102,238,255,.14)}
+#robot-tag-hops-v22 .robot-card-body {display:block;min-height:0;margin-top:0}
+#robot-tag-hops-v22 .schematic-wrap {border-radius:0;background:transparent;border:0;padding:0;display:flex;align-items:center;justify-content:flex-start}
+#robot-tag-hops-v22 .robot-schematic {display:block;width:100%;height:75px;aspect-ratio:auto;overflow:visible}
+#robot-tag-hops-v22 .robot-schematic .module-segment {fill:none;stroke-linejoin:miter;stroke-linecap:butt;vector-effect:non-scaling-stroke}
+#robot-tag-hops-v22 .robot-schematic .module-limb {stroke-width:9}
+#robot-tag-hops-v22 .robot-schematic .module-spine {stroke-width:3.6}
+#robot-tag-hops-v22 .robot-schematic .module-head {stroke-width:3.6}
+#robot-tag-hops-v22 .robot-card-modules {display:none}
+#robot-tag-hops-v22 .module-pill {display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 6px;border-radius:9px;background:rgba(5,12,24,.85);border:1px solid rgba(101,238,255,.08);font-size:10px;line-height:1.1}
+#robot-tag-hops-v22 .module-pill .label {color:#dff6ff;text-transform:uppercase;letter-spacing:.06em}
+#robot-tag-hops-v22 .module-pill .value {font-weight:700}
+#robot-tag-hops-v22 .module-pill.good {background:rgba(46,186,86,.18);border-color:rgba(85,223,120,.26)}
+#robot-tag-hops-v22 .module-pill.good .value {color:#89ffaf}
+#robot-tag-hops-v22 .module-pill.warn {background:rgba(225,182,52,.16);border-color:rgba(255,220,110,.28)}
+#robot-tag-hops-v22 .module-pill.warn .value {color:#ffe780}
+#robot-tag-hops-v22 .module-pill.bad {background:rgba(201,77,77,.16);border-color:rgba(255,114,114,.28)}
+#robot-tag-hops-v22 .module-pill.bad .value {color:#ff9a9a}
+#robot-tag-hops-v22 .module-pill.off {background:rgba(98,110,126,.14);border-color:rgba(158,172,190,.18)}
+#robot-tag-hops-v22 .module-pill.off .value {color:#c8d1da}
+@media (max-width: 760px){#robot-tag-hops-v22 .tag7hop-layout{flex-direction:column}#robot-tag-hops-v22 .tag7hop-sidebar-wrap{width:100%}#robot-tag-hops-v22 .tag7hop-sidebar{grid-template-columns:repeat(2,minmax(0,1fr))}#robot-tag-hops-v22 .tag7hop-stage{max-width:none}}
+@media (max-width: 540px){#robot-tag-hops-v22 .tag7hop-sidebar{grid-template-columns:1fr}#robot-tag-hops-v22 .robot-card-body{grid-template-columns:1fr}#robot-tag-hops-v22 .robot-card-action{white-space:normal}}
+#robot-tag-hops-v22 .tag7hop-intro {
+  position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--night-bg) 65%,transparent);
+}
+#robot-tag-hops-v22 .tag7hop-intro[hidden] {display:none}
+#robot-tag-hops-v22 .tag7hop-intro-card {
+  width:33.333333%;aspect-ratio:1;box-sizing:border-box;padding:clamp(8px,2vw,24px);
+  display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:clamp(8px,2vw,22px);
+  background:var(--night-bg);border:1.5px solid var(--night-ink);color:var(--night-ink);text-align:center;
+  box-shadow:0 0 26px color-mix(in srgb,var(--night-ink) 16%,transparent);
+}
+#robot-tag-hops-v22 #tag7hop-intro-title {margin:0;line-height:1.2;font-size:clamp(14px,3.2vw,32px);font-weight:700}
+#robot-tag-hops-v22 #tag7hop-intro-title small {display:block;margin-top:.55em;font-size:.48em;line-height:1.4;font-weight:400}
+#robot-tag-hops-v22 #tag7hop-start {
+  min-height:36px;padding:.55em .7em;border:1px solid var(--night-ink);border-radius:0;
+  background:var(--night-ink);color:var(--night-bg);font-size:clamp(13px,2.2vw,22px);font-weight:700;cursor:pointer;
+}
+#robot-tag-hops-v22 #tag7hop-start:focus-visible {outline:2px solid var(--night-accent);outline-offset:4px}
+#robot-tag-hops-v22 #tag7hop-start:hover {filter:brightness(1.15)}
+#robot-tag-hops-v22 button:disabled {opacity:.45;cursor:default}
+#robot-tag-hops-v22 {
+  color:var(--foreground);
+  --tag-label-size:12px
+}
+
+
+#robot-tag-hops-v22 .viz-controls {
+  padding-right:0
+}
+
+
+#tag7hop-field text {
+  font-size:var(--tag-label-size);
+  font-weight:400;
+  fill:var(--muted-foreground);
+  stroke:none
+}
+
+
+#tag7hop-grid .minor {
+  stroke:color-mix(in srgb,var(--foreground) 12%,var(--background) 88%);
+  stroke-width:.5;
+  fill:none
+}
+
+
+#tag7hop-grid .major {
+  stroke:color-mix(in srgb,var(--foreground) 60%,var(--background) 40%);
+  stroke-width:1;
+  fill:none;
+  vector-effect:non-scaling-stroke
+}
+
+
+#tag7hop-block polygon {
+  fill:color-mix(in srgb,var(--foreground) 14%,var(--background) 86%);
+  stroke:var(--muted-foreground);
+  stroke-width:1
+}
+
+
+#tag7hop-ground {
+  fill:none;
+  stroke:var(--border);
+  stroke-width:1
+}
+
+
+#tag7hop-actors {
+  stroke:var(--foreground);
+  fill:var(--background);
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-width:1.3
+}
+
+
+#tag7hop-actors .hunter .shirt {
+  stroke:var(--night-accent)
+}
+
+
+#tag7hop-actors .robot-label {
+  fill:var(--foreground);
+  stroke:var(--background);
+  stroke-width:3;
+  paint-order:stroke;
+  stroke-linejoin:round
+}
+
+
+#tag7hop-cones .cone {
+  fill-opacity:1;
+  stroke:none
+}
+
+
+#tag7hop-cones .cone.hunter {
+  fill-opacity:1
+}
+
+
+#tag7hop-field .score-text {
+  fill:var(--night-light);
+  stroke:var(--night-bg);
+  stroke-width:2;
+  paint-order:stroke;
+  font-variant-numeric:tabular-nums;
+  font-size:var(--score-label-size)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+#tag7hop-field {
+  --background:var(--night-light);
+  --foreground:var(--night-ink);
+  --secondary:var(--night-light);
+  --muted:var(--night-light);
+  --border:color-mix(in srgb,var(--night-ink) 24%,transparent);
+  --muted-foreground:var(--night-ink);
+  background:transparent
+}
+
+
+
+
+
+
+
+
+#tag7hop-actors .head {
+  fill:var(--night-light);
+  filter:drop-shadow(0 0 1.6px var(--night-light))
+}
+
+
+#tag7hop-actors .hunter .head {
+  filter:drop-shadow(0 0 2px var(--night-accent))
+}
+
+
+#tag7hop-trails {
+  stroke:var(--night-ink)
+}
+
+
+#tag7hop-pulses {
+  stroke:var(--night-accent)
+}
+
+
+
+#robot-tag-hops-v22 {
+  --night-bg:#030610;
+  --night-light:#65eeff;
+  --night-accent:#ff397b;
+  --night-ink:#65eeff
+}
+
+
+#robot-tag-hops-v22 #tag7hop-field {
+  --night-bg:#010409;
+  --background:#010409;
+  --foreground:#65eeff;
+  --secondary:#030610;
+  --muted:#030610;
+  --muted-foreground:#4d87ae;
+  --border:#163448
+}
+
+
+#robot-tag-hops-v22 #tag7hop-grid .minor {
+  stroke:#13304d;
+  stroke-width:.55
+}
+
+
+#robot-tag-hops-v22 #tag7hop-grid .major {
+  stroke:#285c8e;
+  stroke-width:1
+}
+
+
+#robot-tag-hops-v22 #tag7hop-block polygon {
+  fill:#050918;
+  stroke:#b961ff;
+  filter:none
+}
+
+
+#robot-tag-hops-v22 #tag7hop-actors .robot {
+  filter:drop-shadow(0 0 1.6px #26bfff) drop-shadow(0 0 4px #137fcf)
+}
+
+
+#robot-tag-hops-v22 #tag7hop-actors .hunter {
+  stroke:#ff397b;
+  filter:drop-shadow(0 0 2px #ff397b) drop-shadow(0 0 4px #af1057)
+}
+
+
+#robot-tag-hops-v22 #tag7hop-actors .head {
+  fill:#030610;
+  filter:none
+}
+
+
+#robot-tag-hops-v22 #tag7hop-trails {
+  filter:drop-shadow(0 0 2px #26bfff)
+}
+
+
+#robot-tag-hops-v22 #tag7hop-pulses,#robot-tag-hops-v22 #tag7hop-sparks {
+  filter:drop-shadow(0 0 2px #ff397b) drop-shadow(0 0 4px #b961ff)
+}
+
+
+#tag7hop-sparks {
+  display:none
+}
+
+
+#robot-tag-hops-v22 #tag7hop-sparks {
+  display:inline
+}
+
+
+#tag7hop-cones .neon-pool {
+  display:none
+}
+
+
+#robot-tag-hops-v22 #tag7hop-cones .neon-pool {
+  display:inline
+}
+
+
+#robot-tag-hops-v22 #tag7hop-field .score-text {
+  fill:#c9f6ff;
+  filter:drop-shadow(0 0 2px #358bd6)
+}
+
+/* Зелёный цвет обозначает защиту. Его доля вычисляется по оставшемуся времени. */
+#robot-tag-hops-v22 { --night-protected: #72ed90; }
+#tag7hop-actors .robot.protected { stroke: var(--robot-color); }
+#tag7hop-actors .protected .shirt { stroke: var(--robot-color); }
+#tag7hop-actors .protected .robot-label { fill: var(--robot-color); }
+#tag7hop-actors .protected .head { filter: drop-shadow(0 0 1.6px var(--robot-color)); }
+#robot-tag-hops-v22 #tag7hop-actors .protected {
+  stroke: var(--robot-color);
+  filter: drop-shadow(0 0 1.6px var(--robot-color)) drop-shadow(0 0 4px var(--robot-color));
+}
+#tag7hop-status { order: 2; flex-basis: 100%; }
+/* Белый текст в режиме difference инвертирует фактический фон под таймером. */
+#tag7hop-field { isolation: isolate; }
+#tag7hop-field #tag7hop-timer {
+  fill: #fff;
+  stroke: none;
+  mix-blend-mode: difference;
+  font-size: calc(var(--score-label-size) * 1.5);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+#tag7hop-actors .robot {
+  stroke: var(--robot-color, var(--foreground));
+  filter: drop-shadow(0 0 1.6px var(--robot-color, #26bfff)) drop-shadow(0 0 4px var(--robot-color, #137fcf));
+}
+#tag7hop-actors .robot .shirt { stroke: var(--robot-color, var(--foreground)); }
+#tag7hop-actors .robot .robot-label { fill: var(--robot-color, var(--foreground)); }
+#tag7hop-actors .robot .head { filter: drop-shadow(0 0 1.6px var(--robot-color, var(--night-light))); }
+#tag7hop-status span { color:#c9f6ff; border-color:#285c8e; box-shadow:none; }
+#robot-tag-hops-v22 .gladiator-results[hidden] { display: none !important; }
+#robot-tag-hops-v22 .gladiator-results {
+  position: absolute; inset: 0; z-index: 6;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(2, 5, 13, .87); padding: 16px;
+  overflow: auto;
+}
+#robot-tag-hops-v22 .gladiator-results-card {
+  box-sizing: border-box; width: min(100%, 580px); max-height: 100%;
+  overflow-y: auto; padding: clamp(14px, 3vw, 25px);
+  border: 2px solid #65eeff; background: #071320;
+  color: #e9faff; box-shadow: 0 0 30px #19aaf45c;
+  font-variant-numeric: tabular-nums;
+}
+#robot-tag-hops-v22 .gladiator-results-kicker {
+  font-size: 12px; color: #9abed2; font-weight: 600; letter-spacing: .14em;
+}
+#robot-tag-hops-v22 #gladiator-results-title {
+  font-weight: 800; color: #fff; font-size: clamp(20px, 3.5vw, 32px);
+  margin: 5px 0 3px; line-height: 1.15;
+  text-shadow: 0 0 12px #45c9ff;
+}
+#robot-tag-hops-v22 .gladiator-results-summary {font-size: 13px; color: #b7d3e0; margin: 0 0 12px;}
+#robot-tag-hops-v22 .gladiator-results-totals {
+  display: grid; grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 7px; margin-bottom: 14px;
+}
+#robot-tag-hops-v22 .gladiator-result-total {
+  padding: 8px 4px; text-align: center;
+  border: 1px solid #2a5265; background: #0a2130;
+}
+#robot-tag-hops-v22 .gladiator-result-total strong {display:block; font-size: clamp(16px, 2.8vw, 24px); color: #65eeff;}
+#robot-tag-hops-v22 .gladiator-result-total small {display:block; font-size: 11px; color: #c5dfeb;}
+#robot-tag-hops-v22 .gladiator-results-table-wrap {overflow-x:auto;}
+#robot-tag-hops-v22 .gladiator-results-table {
+  border-collapse:collapse; width:100%; color: #e9faff; font-size: clamp(10px, 1.75vw, 13px);
+}
+#robot-tag-hops-v22 .gladiator-results-table :is(th,td) {
+  text-align:center; padding: 7px 3px; border-bottom: 1px solid #29485c;
+}
+#robot-tag-hops-v22 .gladiator-results-table th:first-child,
+#robot-tag-hops-v22 .gladiator-results-table td:first-child {text-align:left;}
+#robot-tag-hops-v22 .gladiator-results-table th {color:#a6c9d9; font-weight:600;}
+#robot-tag-hops-v22 .gladiator-results-table tr.is-winner {color:#ffde70; font-weight:700;}
+#robot-tag-hops-v22 #gladiator-results-again {
+  display:block; width:100%; border: 1px solid #65eeff;
+  background:#65eeff; color:#04131a; font-weight:800;
+  cursor:pointer; padding: 11px; margin-top: 16px; border-radius: 0;
+  min-height:42px; font-size:14px;
+}
+#robot-tag-hops-v22 #gladiator-results-again:hover {background:#aff8ff;}
+
+
+/* Arena layout: telemetry, arena, then local betting ledger. */
+html body #robot-tag-hops-v22 {max-width:1560px;flex-basis:1560px}
+#robot-tag-hops-v22 .tag7hop-layout {display:grid;grid-template-columns:clamp(220px,20vw,300px) minmax(320px,1fr) clamp(190px,18vw,260px);gap:20px;align-items:start}
+#robot-tag-hops-v22 .tag7hop-sidebar-wrap {width:100%}
+#robot-tag-hops-v22 .atmosphere-controls {position:relative;display:flex;justify-content:flex-start;align-items:center;gap:8px;min-height:48px;box-sizing:border-box;padding:8px 14px;border:1px solid #29485c;background:#071320;margin-bottom:12px}
+html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transform:translateX(-50%);order:0;flex-basis:auto;margin:0;color:#65eeff;font-weight:700;white-space:nowrap}
+#robot-tag-hops-v22 #bet-hud {min-width:0;margin:0;padding:clamp(12px,5vh,60px) 12px 12px;background:transparent;border:0;line-height:1.5;max-height:calc(100dvh - 110px);overflow:auto}
+#robot-tag-hops-v22 .bet-hud-bank {font-size:24px;color:#dff6ff;margin-bottom:24px}
+#robot-tag-hops-v22 .bet-hud-bank strong {color:#65eeff}
+#robot-tag-hops-v22 .bet-hud-player {border-left:3px solid var(--fighter,#29485c);padding:9px 10px;margin:0 0 12px;background:#071320;font-size:14px;overflow-wrap:anywhere}
+#robot-tag-hops-v22 .bet-hud-player-name {color:#e9faff;font-weight:700}
+#robot-tag-hops-v22 .bet-hud-player-balance {color:#c5dfeb;margin-top:3px}
+#robot-tag-hops-v22 .bet-hud-player-stake {color:var(--fighter,#a5c4d5);margin-top:5px;font-size:13px}
+@media(max-width:1050px){
+ #robot-tag-hops-v22 .tag7hop-layout {grid-template-columns:220px minmax(320px,1fr)}
+ #robot-tag-hops-v22 #bet-hud {grid-column:1/-1;padding:12px 0;max-height:none;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
+ #robot-tag-hops-v22 .bet-hud-bank {font-size:20px;margin:0 10px 0 0}
+ #robot-tag-hops-v22 .bet-hud-player {margin:0;min-width:150px}
+}
+@media(max-width:760px){
+ #robot-tag-hops-v22 .tag7hop-layout {display:flex;flex-direction:column}
+ #robot-tag-hops-v22 .tag7hop-main {width:100%}
+ #robot-tag-hops-v22 #bet-hud {width:100%;box-sizing:border-box}
+}
+@media(max-width:520px){
+ html body #robot-tag-hops-v22 #tag7hop-status {position:static;transform:none;margin-left:auto;font-size:12px}
+ #robot-tag-hops-v22 .atmosphere-controls {padding:8px;gap:5px}
+}
