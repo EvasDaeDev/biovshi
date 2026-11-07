@@ -13,7 +13,13 @@ export function tintPixels(pixels, colour) {
   for (let i = 0; i < pixels.length; i += 4) {
     const shade = (pixels[i] * .2126 + pixels[i + 1] * .7152 + pixels[i + 2] * .0722) / mean;
     for (let channel = 0; channel < 3; channel++) {
-      pixels[i + channel] = Math.max(0, Math.min(255, Math.round(colour[channel] * shade)));
+const strength = 0.5;
+const original = pixels[i + channel];
+const tinted = colour[channel] * shade;
+
+pixels[i + channel] = Math.max(0, Math.min(255,
+  Math.round(original * (1 - strength) + tinted * strength)
+));
     }
   }
   return pixels;
