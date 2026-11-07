@@ -14,6 +14,7 @@ import { beginGame, resetRound } from "./session.js";
 import { cameraReset } from "../render/camera.js";
 import { paint } from "../render/frame.js";
 import { bettingCancel, bettingInit } from "../betting/ui.js";
+import { resetFrameClock } from "./clock.js";
 import { frame } from "./loop.js";
 export function initializeGame() {
   ctx.root = document.getElementById('robot-tag-hops-v22');
@@ -480,9 +481,15 @@ export function initializeGame() {
   ctx.svg.onclick = togglePause;
   ctx.svg.style.setProperty('touch-action', 'manipulation');
   ctx.svg.style.setProperty('cursor', 'pointer');
-  ctx.last = null;
+  resetFrameClock();
+  const gameDocument = ctx.root.ownerDocument;
+  gameDocument.addEventListener('visibilitychange', resetFrameClock);
+  const disposeWithVisibility = ctx.root.__disposeTag;
+  ctx.root.__disposeTag = () => {
+    gameDocument.removeEventListener('visibilitychange', resetFrameClock);
+    disposeWithVisibility();
+  };
   ctx.paintAt = -Infinity;
-  ctx.debt = 0;
   ctx.frameId = requestAnimationFrame(frame);
   // Local pari-mutuel ledger. All values are whole virtual chips.
   ctx.BET_STORAGE = 'biovshi.local-totalizator.v1';

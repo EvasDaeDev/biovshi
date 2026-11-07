@@ -9,12 +9,12 @@ import { segmentDistance } from '../src/utils/math.js';
 import { initializeGame } from '../src/game/initialize.js';
 import { ctx } from '../src/game/state.js';
 import { advanceStartup, resetRound } from '../src/game/session.js';
-import { step } from '../src/game/loop.js';
+import { step, frame } from '../src/game/loop.js';
 import { paint } from '../src/render/frame.js';
 import { CONFIG } from '../src/config.js';
 import { onGameEvent } from '../src/game/event-bus.js';
 import { chooseRenderProfile } from '../src/render/performance.js';
-import { createOilDrop, paintOil } from '../src/render/effects.js';
+import { createOilDrop, paintOil, updateOilLeaks } from '../src/render/effects.js';
 import { spawnHitEffect, paintHitEffects } from '../src/render/hit-effects.js';
 
 function setup() {
@@ -278,7 +278,7 @@ test('dripping drops keep their doubled size; footprints are three times fainter
       CONFIG.oil.dropSizeScale=scale;ctx.seed=42;
       ctx.oilG.replaceChildren();ctx.combat.oilDrops.length=0;
       ctx.combat.oilLeaks=[{robot:0,key:'head',nextAt:ctx.game.time}];
-      paintOil();
+      updateOilLeaks();paintOil();
       const drop=ctx.combat.oilDrops[0];
       return {radius:drop.baseRadius,max:drop.maxRadius,seed:ctx.seed};
     };
@@ -531,5 +531,67 @@ test('all robots share a 2000-drop FIFO limit including settled puddles and thei
   resetRound();
   assert.equal(ctx.combat.oilDrops.length,0);
   assert.equal(ctx.oilG.children.length,0);
+  dom.window.close();
+});
+
+test('fixed simulation and combat RNG are identical at 60, 30, 25, 15, 10 FPS and uneven frames',()=>{
+  const run=intervals=>{
+    const original=Math.random;let dom;
+    try {Math.random=()=>.2468;dom=setup();}finally{Math.random=original;}
+    ctx.last=0;ctx.paintAt=0;ctx.debt=0;
+    // Start with an active wound so render-dependent random consumption cannot
+    // hide behind the relatively long wait for the first severed segment.
+    ctx.combat.oilLeaks=[{robot:0,key:'head',nextAt:0}];
+    let now=0,index=0;
+    while(now<5000-1e-7){now=Math.min(5000,now+intervals[index++%intervals.length]);frame(now);}
+    assert.ok(Math.abs(ctx.game.time-5)<1e-8,'five real seconds produce five simulated seconds');
+    assert.ok(ctx.combat.oilDrops.length>5,'the regression includes active dripping');
+    const result=JSON.parse(JSON.stringify({
+      seed:ctx.seed,game:ctx.game,roundTime:ctx.round.elapsedSec,
+      robots:ctx.robots.map(r=>({x:r.x,y:r.y,angle:r.angle,hp:[...r.hp],pose:r.actualPose})),
+      hits:ctx.combat.hits,strikes:ctx.combat.strikes,pending:ctx.combat.pending,
+      leaks:ctx.combat.oilLeaks,drops:ctx.combat.oilDrops.map(d=>({born:d.born,x:d.x,y:d.y,r:d.baseRadius})),
+    }));
+    dom.window.close();return result;
+  };
+  const baseline=run([1000/60]);
+  for(const fps of [30,25,15,10])assert.deepEqual(run([1000/fps]),baseline,'FPS '+fps);
+  assert.deepEqual(run([16,40,90,250,33,17]),baseline,'irregular frame times');
+});
+
+test('rendering cannot emit liquid or consume simulation randomness',()=>{
+  const dom=setup();
+  ctx.combat.oilLeaks=[{robot:0,key:'head',nextAt:0}];
+  const seed=ctx.seed;
+  for(let i=0;i<5;i++)paint();
+  assert.equal(ctx.seed,seed);
+  assert.equal(ctx.combat.oilDrops.length,0);
+  assert.equal(ctx.combat.oilLeaks[0].nextAt,0);
+  step(1/60);
+  assert.ok(ctx.combat.oilDrops.length>0,'fixed simulation step emits the liquid');
+  dom.window.close();
+});
+
+test('an active frame stall retains debt; pause and hidden-tab time are excluded',()=>{
+  const dom=setup();
+  ctx.last=0;ctx.paintAt=0;ctx.debt=0;
+  frame(2000);
+  assert.ok(Math.abs(ctx.game.time-1)<1e-8,'catch-up work per callback is bounded');
+  assert.ok(Math.abs(ctx.debt-1)<1e-8,'unprocessed active time is kept');
+  frame(2000+1000/60);
+  frame(2000+2000/60);
+  assert.ok(Math.abs(ctx.game.time-(2+2/60))<1e-8,'subsequent callbacks recover all active time');
+  const before=ctx.game.time;
+  ctx.button.click();frame(12000);ctx.button.click();frame(22000);
+  assert.equal(ctx.game.time,before,'resuming does not replay paused time');
+  frame(22000+1000/60);
+  const visibleTime=ctx.game.time;
+  Object.defineProperty(document,'hidden',{value:true,configurable:true});
+  document.dispatchEvent(new Event('visibilitychange'));frame(32000);
+  Object.defineProperty(document,'hidden',{value:false,configurable:true});
+  document.dispatchEvent(new Event('visibilitychange'));frame(42000);
+  assert.equal(ctx.game.time,visibleTime,'returning to a tab does not replay hidden time');
+  frame(42000+1000/60);
+  assert.ok(Math.abs(ctx.game.time-visibleTime-1/60)<1e-8);
   dom.window.close();
 });

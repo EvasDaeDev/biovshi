@@ -144,7 +144,8 @@ export function createOilDrop(robotId, x, y, baseRadius) {
     ctx.settledOilDrops?.delete(oldest);
   }
 }
-export function paintOil() {
+// Emission belongs to the fixed simulation clock: it consumes combat RNG.
+export function updateOilLeaks() {
   for (const leak of ctx.combat.oilLeaks) {
     const robot = ctx.robots[leak.robot];
     if (!robot?.visible || !robot.mobile) continue;
@@ -160,6 +161,8 @@ export function paintOil() {
       leak.nextAt += CONFIG.oil.minIntervalSec + random() * (CONFIG.oil.maxIntervalSec - CONFIG.oil.minIntervalSec);
     }
   }
+}
+export function paintOil() {
   for (const drop of ctx.combat.oilDrops) {
     if (ctx.settledOilDrops?.has(drop)) continue;
     const q = smooth((ctx.game.time - drop.born) / CONFIG.oil.spreadSec);

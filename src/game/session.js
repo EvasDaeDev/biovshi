@@ -1,3 +1,4 @@
+import { resetFrameClock } from "./clock.js";
 import { ctx } from "./state.js";
 import { resetCombatAccents } from "../render/effects.js";
 import { attr } from "../render/svg.js";
@@ -96,7 +97,7 @@ export function resetRound() {
   ctx.paused = false;
   ctx.button.textContent = 'Пауза';
   attr(ctx.button, 'aria-pressed', 'false');
-  ctx.debt = 0;
+  resetFrameClock();
   ctx.paintAt = -Infinity;
   rebuildRobots();
   cameraReset();

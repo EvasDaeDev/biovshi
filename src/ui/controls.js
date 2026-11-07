@@ -1,3 +1,4 @@
+import { resetFrameClock } from "../game/clock.js";
 import { ctx } from "../game/state.js";
 import { attr } from "../render/svg.js";
 export
@@ -25,6 +26,7 @@ export function sizeLabels() {
 export function togglePause() {
   if (ctx.startup.phase !== 'running') return;
   ctx.paused = !ctx.paused;
+  resetFrameClock();
   ctx.button.textContent = ctx.paused ? 'Продолжить' : 'Пауза';
   attr(ctx.button, 'aria-pressed', String(ctx.paused));
 }
