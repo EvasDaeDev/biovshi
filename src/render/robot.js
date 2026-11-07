@@ -4,7 +4,7 @@ import { CONFIG } from "../config.js";
 import { ik, path } from "../utils/math.js";
 import { paintLighting } from './lighting.js';
 import { attr, dot } from "./svg.js";
-import { victoryBodyColor } from "../utils/colors.js";
+import { victoryBodyColor, ROBOT_COLORS } from "../utils/colors.js";
 import { paintRobotSkin, paintSkinVictory } from './robot-skin.js';
 export function visualOffset(robotState) {
   if (robotState.scene && (robotState.mode === 'cover' || robotState.mode === 'eat') && robotState.attackVisual) {
@@ -142,14 +142,11 @@ export function robotPaint(robotState, hunter) {
   if (!robotState.visible) return;
   hunter = false;
   const shield = hunter ? 0 : clamp((ctx.game.immune[robotState.id] - ctx.game.time) / Math.max(.001, CONFIG.attack.previousHunterShieldSec), 0, 1);
-  const baseColor = robotState.anatomyColor();
-  const protectedColor = shield > 0 ? `color-mix(in srgb, var(--night-protected) ${shield * 100}%, ${baseColor})` : baseColor;
   const victorious = ctx.combat.finished && ctx.combat.winner === robotState.id;
   const victoryColor = victorious ? victoryBodyColor(robotState.reduced ? 0 : ctx.game.time - (ctx.combat.finishedAt ?? ctx.game.time)) : null;
   paintSkinVictory(robotState,victoryColor);
-  attr(robotState.actor, 'style', `--robot-color:${victoryColor ?? protectedColor};filter:url(#${robotState.actorOutlineFilterId})`);
-  attr(robotState.identityRim, 'radius', 1);
-  attr(robotState.identityColor, 'flood-color', victoryColor ?? ['#65eeff', '#ffb36b', '#ff397b', '#b961ff'][robotState.id]);
+  attr(robotState.actor, 'style', `--robot-color:${victoryColor ?? '#b7ada1'};filter:none`);
+  attr(robotState.label, 'style', 'fill:'+ROBOT_COLORS[robotState.id]);
   const offset = robotState.visualOffset();
   const elapsedHit = robotState.hitReaction ? ctx.game.time - robotState.hitReaction.start : Infinity;
   const hitPhase = clamp(elapsedHit / (robotState.hitReaction?.duration || 1), 0, 1);

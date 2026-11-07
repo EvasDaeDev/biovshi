@@ -332,8 +332,11 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
   filter: drop-shadow(0 0 1.6px var(--robot-color, #26bfff)) drop-shadow(0 0 4px var(--robot-color, #137fcf));
 }
 #tag7hop-actors .robot .shirt { stroke: var(--robot-color, var(--foreground)); }
-#tag7hop-actors .robot .robot-label { fill: var(--robot-color, var(--foreground)); }
+#tag7hop-actors .robot .robot-label { fill: var(--foreground); }
 #tag7hop-actors .robot .head { filter: drop-shadow(0 0 1.6px var(--robot-color, var(--night-light))); }
+/* Health colours stay in cards; arena actors have no outline or damage glow. */
+#robot-tag-hops-v22 #tag7hop-actors .robot,
+#robot-tag-hops-v22 #tag7hop-actors .robot .head { filter: none; }
 #tag7hop-status span { color:#c9f6ff; border-color:#285c8e; box-shadow:none; }
 #robot-tag-hops-v22 .gladiator-results[hidden] { display: none !important; }
 #robot-tag-hops-v22 .gladiator-results {

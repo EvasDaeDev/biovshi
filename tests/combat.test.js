@@ -124,7 +124,7 @@ test('light graphics preserves combat, positions, damage and random outcomes', (
   finally { Math.random=originalRandom;CONFIG.rendering.quality=originalQuality; }
 });
 
-test('lighting masks reuse stationary geometry and the identity filter stays local to the robot', () => {
+test('lighting masks reuse stationary geometry and robots have no identity outline filter', () => {
   const dom=setup();
   const r=ctx.robots[0];
   paint();
@@ -135,7 +135,8 @@ test('lighting masks reuse stationary geometry and the identity filter stays loc
   for(let i=0;i<10;i++)paint();
   assert.equal(writes,0,'unchanged lighting does not rebuild SVG paths');
   const filter=document.querySelector('#tag7hop-identity-outline-0');
-  assert.equal(filter.getAttribute('filterUnits'),'objectBoundingBox');
+  assert.equal(filter,null);
+  assert.equal(r.actor.style.filter,'none');
   assert.equal(ctx.sparkNodes.length,0,'hidden particles do not create unused SVG nodes');
   dom.window.close();
 });
@@ -174,7 +175,7 @@ test('warm lighting, dark footprints and inward textured obstacle walls survive 
     assert.equal(ctx.outlineG.getAttribute('stroke'),'none');
     assert.ok([...ctx.ambientGlowG.children].every(n=>n.getAttribute('stroke')==='#ffd29a'));
     assert.ok([...ctx.trailsG.children].every(n=>n.getAttribute('fill')==='var(--night-trail)'));
-    assert.ok([...ctx.trailsG.children].every(n=>Number(n.getAttribute('r'))===1.95));
+    assert.ok([...ctx.trailsG.children].every(n=>Number(n.getAttribute('r'))===2.925));
     assert.equal(ctx.OIL_HUES[0],0);
     assert.equal(ctx.OIL_HUES.at(-1),35);
     assert.deepEqual(ctx.obstacles.map(b=>b.points),geometry);
@@ -237,6 +238,17 @@ test('every robot uses its own atlas; severed parts, victory tint and load fallb
   for(const decoration of actor.querySelectorAll('.robot-horn, .robot-sphere'))assert.equal(decoration.style.visibility,'hidden');
   paint();
   assert.ok([...actor.querySelectorAll('[data-skin-segment]')].every(n=>n.getAttribute('transform')&&!n.getAttribute('transform').includes('NaN')));
+  const actorStyle=actor.getAttribute('style');
+  const label=actor.querySelector('.robot-label');
+  const identityColor=ctx.cardNodes[id].card.style.getPropertyValue('--accent');
+  const swatch=document.createElementNS('http://www.w3.org/2000/svg','text');
+  swatch.style.fill=identityColor;
+  const identityFill=swatch.style.fill;
+  assert.equal(label.style.fill,identityFill);
+  assert.equal(actor.style.filter,'none');
+  assert.deepEqual([...ctx.svg.querySelectorAll('#tag7hop-beam-'+id+'-tint stop')].map(n=>Number(n.getAttribute('stop-opacity'))),[.1,.05,0]);
+  const module=ctx.cardNodes[id].card.querySelector('[data-segment="arm--1-upper"]');
+  const healthyStroke=module.getAttribute('stroke');
   for(let i=0;i<4;i++) {
     const node=actor.querySelector('[data-skin-segment="spine-'+i+'"]');
     const [A,B,C,D,E,F]=node.getAttribute('transform').match(/matrix\(([^)]+)\)/)[1].split(' ').map(Number);
@@ -249,6 +261,9 @@ test('every robot uses its own atlas; severed parts, victory tint and load fallb
   const chestMatrix=chest.getAttribute('transform');
   for(let i=0;i<3;i++)hit(a,'arm--1-upper');
   paint();
+  assert.equal(actor.getAttribute('style'),actorStyle,'damage does not recolour or illuminate the actor');
+  assert.equal(label.style.fill,identityFill);
+  assert.notEqual(module.getAttribute('stroke'),healthyStroke,'card retains damage indication');
   assert.equal(actor.querySelector('[data-skin-segment="arm--1-upper"]').getAttribute('display'),'none');
   assert.equal(actor.querySelector('[data-skin-segment="arm--1-lower"]').getAttribute('display'),'none');
   assert.equal(chest.getAttribute('transform'),chestMatrix);
@@ -268,6 +283,7 @@ test('every robot uses its own atlas; severed parts, victory tint and load fallb
   const layer=actor.querySelector('[data-skin-layer="body"]');
   const tintSelector='#tag7hop-skin-victory-'+id;
   assert.equal(layer.getAttribute('filter'),'url('+tintSelector+')');
+  assert.equal(label.style.fill,identityFill,'winner keeps the card identity colour on its letter');
   const slopes=[...ctx.defs.querySelectorAll(tintSelector+' feComponentTransfer > *')].map(n=>n.getAttribute('slope'));
   ctx.game.time+=.3;
   paint();
