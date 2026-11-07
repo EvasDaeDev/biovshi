@@ -98,3 +98,42 @@ test('optional event listeners can unsubscribe without changing combat', () => {
   assert.equal(events.length,1);
   dom.window.close();
 });
+
+test('light graphics preserves combat, positions, damage and random outcomes', () => {
+  const originalRandom=Math.random;
+  const originalQuality=CONFIG.rendering.quality;
+  const run=quality=>{
+    Math.random=()=>0.2468;
+    CONFIG.rendering.quality=quality;
+    const dom=setup();
+    for(let i=0;i<600;i++){
+      step(1/60);
+      if(i%2===0)paint();
+    }
+    const snapshot=JSON.parse(JSON.stringify({
+      robots:ctx.robots.map(r=>({x:r.x,y:r.y,angle:r.angle,hp:[...r.hp],pose:r.actualPose})),
+      game:ctx.game,round:ctx.round,
+      strikes:ctx.combat.strikes,hits:ctx.combat.hits,betting:ctx.betting,
+    }));
+    dom.window.close();
+    return snapshot;
+  };
+  try { assert.deepEqual(run('light'),run('full')); }
+  finally { Math.random=originalRandom;CONFIG.rendering.quality=originalQuality; }
+});
+
+test('lighting masks reuse stationary geometry and the identity filter stays local to the robot', () => {
+  const dom=setup();
+  const r=ctx.robots[0];
+  paint();
+  const mask=r.nearLight;
+  let writes=0;
+  const setAttribute=mask.setAttribute.bind(mask);
+  mask.setAttribute=(key,value)=>{if(key==='d')writes++;setAttribute(key,value);};
+  for(let i=0;i<10;i++)paint();
+  assert.equal(writes,0,'unchanged lighting does not rebuild SVG paths');
+  const filter=document.querySelector('#tag7hop-identity-outline-0');
+  assert.equal(filter.getAttribute('filterUnits'),'objectBoundingBox');
+  assert.equal(ctx.sparkNodes.length,0,'hidden particles do not create unused SVG nodes');
+  dom.window.close();
+});

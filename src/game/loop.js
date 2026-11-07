@@ -1,3 +1,4 @@
+import { recordFrame } from '../render/performance.js';
 import { ctx } from "./state.js";
 import { showResults } from "../ui/results.js";
 import { CONFIG } from "../config.js";
@@ -86,8 +87,10 @@ export function frame(now) {
   }
   const elapsed = ctx.last === null ? 1 / 60 : Math.min(.1, Math.max(0, (now - ctx.last) / 1000));
   ctx.last = now;
+  let painted = false;
+  ctx.cameraDebt = (ctx.cameraDebt || 0) + elapsed;
   if (ctx.startup.phase !== 'running') {
-    if (!document.hidden) advanceStartup(elapsed);
+    if (!document.hidden) { advanceStartup(elapsed); painted = true; }
     ctx.debt = 0;
     ctx.paintAt = now;
   } else if (!ctx.paused && !document.hidden) {
@@ -96,13 +99,18 @@ export function frame(now) {
       const n = Math.min(4, Math.floor((ctx.debt + 1e-9) * 60));
       for (let i = 0; i < n; i++) step(1 / 60);
       ctx.debt = Math.max(0, ctx.debt - n / 60);
-      if (n) paint();
+      if (n) { paint(); painted = true; }
       ctx.paintAt = now;
     }
   } else {
     ctx.debt = 0;
     ctx.paintAt = now;
   }
-  cameraUpdate(elapsed);
+  // Changing viewBox repaints the whole arena. Do it only with a new game frame.
+  if (painted) {
+    cameraUpdate(ctx.cameraDebt);
+    ctx.cameraDebt = 0;
+  } else if (ctx.paused || document.hidden) ctx.cameraDebt = 0;
+  recordFrame(now, painted);
   ctx.frameId = requestAnimationFrame(frame);
 }

@@ -5,10 +5,10 @@ import { rectHit, sightClear } from "./collision.js";
 import { random } from "../utils/random.js";
 export
 // Лучи зрения обрезаются препятствием. Угол зависит от роли робота.
-function visionOutline(o, heading, fov = CONFIG.vision.hunterAngleDeg * Math.PI / 180) {
+function visionOutline(o, heading, fov = CONFIG.vision.hunterAngleDeg * Math.PI / 180, samples = 48) {
   const angles = Array.from({
-    length: 49
-  }, (_, i) => -fov / 2 + fov * i / 48);
+    length: samples + 1
+  }, (_, i) => -fov / 2 + fov * i / samples);
   for (const b of ctx.obstacles) for (const {
     x,
     y
@@ -30,10 +30,10 @@ function visionOutline(o, heading, fov = CONFIG.vision.hunterAngleDeg * Math.PI 
   });
 }
 // Circular nearby light uses the same obstacle shadow test as the flashlight.
-export function nearbyLightOutline(o) {
+export function nearbyLightOutline(o, samples = 120) {
   const angles = Array.from({
-    length: 120
-  }, (_, i) => i * Math.PI * 2 / 120);
+    length: samples
+  }, (_, i) => i * Math.PI * 2 / samples);
   for (const b of ctx.obstacles) for (const {
     x,
     y

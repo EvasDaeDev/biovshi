@@ -1,3 +1,4 @@
+import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "./state.js";
 import { fitField, togglePause } from "../ui/controls.js";
@@ -52,6 +53,7 @@ export function initializeGame() {
   ctx.disposed = false;
   ctx.paused = false;
   ctx.frameId = 0;
+  ctx.cameraDebt = 0;
   ctx.observer = null;
   ctx.root.__disposeTag = () => {
     ctx.disposed = true;
@@ -60,12 +62,15 @@ export function initializeGame() {
     ctx.startButton.onclick = null;
     ctx.resultsAgain.onclick = null;
     ctx.button.onclick = null;
+    const qualityControl = ctx.root.querySelector('#graphics-quality');
+    if (qualityControl) qualityControl.onchange = null;
     ctx.svg.onclick = null;
     ctx.resetButton.onclick = null;
     globalThis.removeEventListener?.('resize', fitField);
     globalThis.visualViewport?.removeEventListener('resize', fitField);
   };
   ctx.cache = new WeakMap();
+  initializePerformance();
   ctx.SAFE_LIMB_COLOR = [101, 238, 255];
   ctx.WARNING_LIMB_COLOR = [255, 214, 64];
   ctx.CRITICAL_LIMB_COLOR = [255, 72, 72];
@@ -330,7 +335,7 @@ export function initializeGame() {
   }, ctx.pulsesG));
   ctx.sparks = [];
   ctx.sparkNodes = Array.from({
-    length: CONFIG.effects.particleLimit
+    length: CONFIG.rendering.sparks ? CONFIG.effects.particleLimit : 0
   }, () => el('path', {
     opacity: 0
   }, ctx.sparksG));
