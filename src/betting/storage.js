@@ -17,10 +17,11 @@ export function bettingLoad() {
     if (!s.players.every((p, i) => p.id === i && typeof p.name === 'string' && p.name.length <= 32 && Number.isSafeInteger(p.balance) && p.balance >= 0 && p.balance <= 16000000)) throw Error();
     if (!Array.isArray(s.bets) || s.bets.length > s.players.length || new Set(s.bets.map(b => b.player)).size !== s.bets.length || !s.bets.every(b => Number.isInteger(b.player) && b.player >= 0 && b.player < s.players.length && Number.isInteger(b.robot) && b.robot >= 0 && b.robot < 4 && Number.isSafeInteger(b.amount) && b.amount > 0 && b.amount <= 16000000)) throw Error();
     if (!Array.isArray(s.history) || s.history.length > 10) throw Error();
-    s.garage??=newGarage();s.shopSpent??=0;
+    s.garage??=newGarage();s.shopSpent??=0;s.topUps??=0;
+    if(!Number.isSafeInteger(s.topUps)||s.topUps<0||s.players.length*s.capital+s.topUps>16000000)throw Error();
     if(!Number.isSafeInteger(s.shopSpent)||s.shopSpent<0||!Array.isArray(s.garage)||s.garage.length!==4||!s.garage.every(g=>validStats(g.stats)&&(g.head===null||(g.head&&[1,2,3,4].includes(g.head.hat)&&Number.isSafeInteger(g.head.price)&&g.head.price>=10&&Number.isInteger(g.head.player)&&g.head.player>=0&&g.head.player<s.players.length))))throw Error();
     const total = s.players.reduce((n, p) => n + p.balance, 0) + s.jackpot + (s.phase === 'running' ? s.lockedJackpot + s.bets.reduce((n, b) => n + b.amount, 0) : 0);
-    if (total + s.shopSpent !== s.players.length * s.capital) throw Error();
+    if (total + s.shopSpent !== s.players.length * s.capital + s.topUps) throw Error();
     if (betRefund(s)) ctx.betNotice = 'Предыдущий бой был прерван: ставки возвращены, джекпот сохранён.';
     return s;
   } catch {

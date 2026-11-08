@@ -1,3 +1,5 @@
+import {formatChips} from '../ui/currency.js';
+import {initializeHints} from '../ui/hints.js';
 import { initializeArenaExpand } from '../ui/arena-expand.js';
 import { initializeSettings } from '../ui/settings.js';
 import { initializeOrientation } from '../ui/orientation.js';
@@ -455,7 +457,7 @@ export function initializeGame({textures=null}={}) {
   ctx.betting = null;
   ctx.betStorageAvailable = true;
   ctx.betNotice = '';
-  ctx.betFormat = n => n.toLocaleString('ru-RU');
+  ctx.betFormat = formatChips;
   ctx.betEscape = s => String(s).replace(/[&<>"']/g, c => ({
     '&': '&amp;',
     '<': '&lt;',
@@ -466,4 +468,5 @@ export function initializeGame({textures=null}={}) {
   bettingInit();
   initializeSettings();
   initializeArenaExpand();
+  initializeHints();
 }

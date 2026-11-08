@@ -1,3 +1,4 @@
+import {statMultiplier,critChance} from '../garage/model.js';
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 import { friendlyAction, oilPressure, segmentDisplayState } from './telemetry.js';
@@ -24,9 +25,10 @@ export function paintTelemetry() {
     const pressurePct = Math.round(pressure * 100);
     if (card.pressureValue.textContent !== pressurePct + '%') card.pressureValue.textContent = pressurePct + '%';
     setWidth(card.pressureFill, pressurePct + '%');
-    const mobilityPct = Math.round(r.locomotion * 100);
-    setText(card.mobility, `${r.movementLimbs}/4 · ${mobilityPct}%`);
-    setWidth(card.mobilityFill, mobilityPct + '%');
+    const stats=ctx.betting?.garage?.[r.id]?.stats??[3,3,3];
+    setText(card.strength,`${stats[1]} · ${Math.round(critChance(stats[1])*100)}%`);
+    setText(card.speed,`${stats[0]} · ${Math.round(statMultiplier(stats[0])*100)}%`);
+    setText(card.maneuver,`${stats[2]} · ${Math.round(statMultiplier(stats[2])*100)}%`);
     setClass(card.card,'bleeding', ctx.combat.unarmedDeadline[r.id] !== null && r.mobile);
     setClass(card.card,'disabled', !r.mobile);
     paintPatientPortrait(card,r.id,PORTRAIT_BONES.map(({key})=>({key,...segmentDisplayState(r,key)})));

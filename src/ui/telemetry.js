@@ -6,7 +6,13 @@ export function makeRobotCard(id) {
   const card = document.createElement('section');
   card.className = 'robot-card';
   card.style.setProperty('--accent', ROBOT_COLORS[id]);
-  card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${String.fromCharCode(65 + id)}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><div class="robot-card-segments">13/13</div></div></div><div class="robot-card-metrics"><div class="metric-box"><div class="metric-inline"><span class="metric-icon" aria-label="Давление масла" title="Давление масла">💧</span><span class="metric-value js-pressure-value">100%</span></div><div class="mini-track"><div class="mini-fill js-pressure-fill" style="width:100%"></div></div></div><div class="metric-box"><div class="metric-inline"><span class="metric-icon" aria-label="Ходовая часть" title="Ходовая часть">⚙</span><span class="metric-value js-mobility">4/4 · 100%</span></div><div class="mini-track"><div class="mini-fill js-mobility-fill" style="width:100%"></div></div></div></div><div class="robot-card-body"><div class="portrait-wrap"><canvas class="patient-portrait" width="520" height="224" role="img" aria-label="Пациент ${String.fromCharCode(65+id)}"></canvas></div></div>`;
+  card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${String.fromCharCode(65 + id)}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><span aria-hidden="true">🦴</span> <span class="robot-card-segments">13/13</span></div></div>
+  <div class="robot-card-metrics"><div class="metric-box"><div class="metric-inline"><span class="metric-icon" aria-label="Давление масла" title="Давление масла">💧</span><span class="metric-value js-pressure-value">100%</span></div><div class="mini-track"><div class="mini-fill js-pressure-fill" style="width:100%"></div></div></div></div>
+  <div class="robot-card-body"><div class="portrait-wrap"><canvas class="patient-portrait" width="520" height="224" role="img" aria-label="Пациент ${String.fromCharCode(65+id)}"></canvas></div>
+  <div class="patient-skills" aria-label="Умения пациента">
+  <div aria-label="Сила" title="Сила · шанс мощного удара"><span aria-hidden="true">💪</span><span class="js-strength">3 · 15%</span></div>
+  <div aria-label="Скорость" title="Скорость движения"><span aria-hidden="true">⚡</span><span class="js-speed">3 · 100%</span></div>
+  <div aria-label="Маневренность" title="Маневренность · скорость поворота"><span aria-hidden="true">↻</span><span class="js-maneuver">3 · 100%</span></div></div></div>`;
   ctx.roles.appendChild(card);
   return {
     card,
@@ -14,8 +20,9 @@ export function makeRobotCard(id) {
     action: card.querySelector('.robot-card-action'),
     pressureValue: card.querySelector('.js-pressure-value'),
     pressureFill: card.querySelector('.js-pressure-fill'),
-    mobility: card.querySelector('.js-mobility'),
-    mobilityFill: card.querySelector('.js-mobility-fill'),
+    strength:card.querySelector('.js-strength'),
+    speed:card.querySelector('.js-speed'),
+    maneuver:card.querySelector('.js-maneuver'),
     portrait:card.querySelector('.patient-portrait')
   };
 }
