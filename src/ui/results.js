@@ -4,10 +4,10 @@ import { bettingResults } from "../betting/ui.js";
 export function showResults() {
   if (!ctx.combat.finished || !ctx.resultsPanel.hidden) return;
   const winner = ctx.combat.winner;
-  ctx.resultsTitle.textContent = winner === null ? 'НИЧЬЯ — НИКТО НЕ ВЫЖИЛ' : `ПОБЕДИТЕЛЬ — ${String.fromCharCode(65 + winner)} · ${betWinnerNames(ctx.betting, winner)}`;
-  ctx.resultsSummary.textContent = `Бой завершён за ${formatRoundTime(ctx.round.elapsedSec)} · ${ctx.ROBOT_COUNT} гладиатора`;
+  ctx.resultsTitle.textContent = winner === null ? 'НИЧЬЯ — НИКТО НЕ ВЫЖИЛ' : `ПОБЕДИТЕЛЬ — ${String.fromCharCode(65 + winner)} - ${betWinnerNames(ctx.betting, winner)}`;
+  ctx.resultsSummary.textContent = `Бой завершён за ${formatRoundTime(ctx.round.elapsedSec)} - ${ctx.ROBOT_COUNT} пациента`;
   const removed = ctx.robots.reduce((sum, r) => sum + r.segmentTotal - r.segmentCount, 0);
-  const totals = [['ЗАМАХОВ', ctx.combat.strikes], ['ПОПАДАНИЙ', ctx.combat.hits], ['ОТОРВАНО ЗВЕНЬЕВ', removed]];
+  const totals = [['ЗАМАХОВ', ctx.combat.strikes], ['ПОПАДАНИЙ', ctx.combat.hits], ['ОТОРВАНО КОНЕЧНОСТЕЙ', removed]];
   ctx.resultsTotals.replaceChildren();
   for (const [label, value] of totals) {
     const tile = document.createElement('div');
@@ -23,7 +23,7 @@ export function showResults() {
   for (const r of ctx.robots) {
     const row = document.createElement('tr');
     if (r.id === winner) row.className = 'is-winner';
-    const cells = [String.fromCharCode(65 + r.id), `${r.segmentCount}/${r.segmentTotal}`, String(ctx.combat.fighterHits[r.id]), String(ctx.combat.fighterTaken[r.id]), r.id === winner ? 'ПОБЕДИЛ' : r.mobile ? 'ПОДВИЖЕН' : 'ОБЕЗДВИЖЕН'];
+    const cells = [String.fromCharCode(65 + r.id), `${r.segmentCount}/${r.segmentTotal}`, String(ctx.combat.fighterHits[r.id]), String(ctx.combat.fighterTaken[r.id]), r.id === winner ? 'ВЫЖИЛ' : r.mobile ? 'ПОДВИЖЕН' : 'РАЗОРВАН'];
     for (const value of cells) {
       const td = document.createElement('td');
       td.textContent = value;
