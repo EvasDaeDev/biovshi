@@ -16,13 +16,14 @@ export function clearanceAt(robotState, p) {
 export function clearCircle(robotState, p, radius, collideWithPeers = true) {
   if (!coreClearCircle(p, radius)) return false;
   if (!collideWithPeers) return true;
-  for (const other of robotState.peerRobots()) for (const c of other.capsules.filter(isSolidBody)) if (pointSegment(p, c.a, c.b) < radius + c.r + .15) return false;
+  for (const other of robotState.peerRobots()) for (const c of other.capsules) if (isSolidBody(c) && pointSegment(p, c.a, c.b) < radius + c.r + .15) return false;
   return true;
 }
 export function clearBone(robotState, a, b, radius, collideWithPeers = true) {
   if (!coreClearBone(a, b, radius)) return false;
   if (!collideWithPeers) return true;
-  for (const other of robotState.peerRobots()) for (const c of other.capsules.filter(isSolidBody)) {
+  for (const other of robotState.peerRobots()) for (const c of other.capsules) {
+    if (!isSolidBody(c)) continue;
     const r = radius + c.r + .15;
     if (Math.max(a.x, b.x) + r < c.minX || Math.min(a.x, b.x) - r > c.maxX || Math.max(a.y, b.y) + r < c.minY || Math.min(a.y, b.y) - r > c.maxY) continue;
     if (segmentDistance(a, b, c.a, c.b) < r) return false;

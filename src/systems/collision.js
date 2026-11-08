@@ -12,8 +12,12 @@ export
 // Circular nearby light uses the same obstacle shadow test as the flashlight.
 function rectHit(a, b, box = null, pad = 0) {
   if (!box) {
-    const hits = ctx.obstacles.map(box => rectHit(a, b, box, pad)).filter(t => t !== null);
-    return hits.length ? Math.min(...hits) : null;
+    let nearest = null;
+    for (const obstacle of ctx.obstacles) {
+      const hit = rectHit(a,b,obstacle,pad);
+      if (hit !== null) nearest = nearest === null ? hit : Math.min(nearest,hit);
+    }
+    return nearest;
   }
   let lo = 0,
     hi = 1;
@@ -62,7 +66,9 @@ export function nearestObstaclePoint(p, b) {
   };
 }
 export function obstacleDistance(p) {
-  return Math.min(...ctx.obstacles.map(b => nearestObstaclePoint(p, b).distance));
+  let nearest = Infinity;
+  for (const obstacle of ctx.obstacles) nearest = Math.min(nearest,nearestObstaclePoint(p,obstacle).distance);
+  return nearest;
 }
 export function coreClearCircle(p, r) {
   return arenaClearance(p) >= r && obstacleDistance(p) > r;

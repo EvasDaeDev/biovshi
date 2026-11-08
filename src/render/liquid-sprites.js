@@ -31,20 +31,42 @@ export function createLiquidSprite(owner,x,y,radius) {
     width:CONFIG.oil.spriteColumns*64,height:CONFIG.oil.spriteRows*64,
     style:CONFIG.rendering.texturePixelated?'image-rendering:crisp-edges;image-rendering:pixelated':'',
   },viewport);
-  const fallback=el('circle',{cx:0,cy:0,r:radius,fill:oilColor(owner),display:'none'},node);
-  image.addEventListener('error',()=>{attr(viewport,'display','none');attr(fallback,'display','');});
-  image.addEventListener('load',()=>{attr(viewport,'display','');attr(fallback,'display','none');});
-  return {node,viewport,image,fallback,url};
+  const sprite={node,viewport,image,fallback:null,url,owner,radius,dry:0};
+  image.addEventListener('error',()=>{
+    sprite.failed=true;
+    if(!sprite.fallback)sprite.fallback=el('circle',{cx:0,cy:0},node);
+    paintFallback(sprite);
+    attr(viewport,'display','none');attr(sprite.fallback,'display','');
+  });
+  image.addEventListener('load',()=>{
+    sprite.failed=false;
+    attr(viewport,'display','');
+    if(sprite.fallback)attr(sprite.fallback,'display','none');
+  });
+  return sprite;
+}
+
+function paintFallback(sprite) {
+  attr(sprite.fallback,'r',sprite.paintedRadius===undefined?sprite.radius:sprite.radius.toFixed(2));
+  attr(sprite.fallback,'fill',oilColor(sprite.owner,.9,sprite.dry));
 }
 
 export function paintLiquidSprite(drop,radius,dry) {
   const sprite=drop.sprite;
   if(!sprite)return;
-  for(const [key,value] of Object.entries({x:-radius,y:-radius,width:radius*2,height:radius*2}))
-    attr(sprite.viewport,key,value.toFixed(3));
+  // The crop stops growing after spreadSec; drying only selects an atlas.
+  if(sprite.paintedRadius!==radius) {
+    for(const [key,value] of Object.entries({x:-radius,y:-radius,width:radius*2,height:radius*2}))
+      attr(sprite.viewport,key,value.toFixed(3));
+    sprite.paintedRadius=radius;
+  }
+  sprite.radius=radius;
+  sprite.dry=dry;
   const sources=ctx.liquidAtlasSources??[sprite.url];
   const bucket=Math.min(sources.length-1,Math.round(dry*(sources.length-1)));
-  attr(sprite.image,'href',sources[bucket]);
-  attr(sprite.fallback,'r',radius.toFixed(2));
-  attr(sprite.fallback,'fill',oilColor(drop.robot,.9,dry));
+  if(sprite.source!==sources[bucket]) {
+    attr(sprite.image,'href',sources[bucket]);
+    sprite.source=sources[bucket];
+  }
+  if(sprite.failed)paintFallback(sprite);
 }

@@ -717,3 +717,46 @@ test('render cap keeps 30 FPS on 75 Hz, 144 Hz and uneven 60 Hz callbacks',()=>{
   }
   assert.ok(results.every(r=>r.fps>=29.5&&r.fps<=30.5),JSON.stringify(results));
 });
+
+test('liquid fallback is allocated only after an error and immediately matches the current stain',()=>{
+  const dom=setup();
+  createOilDrop(0,350,350,4);
+  const drop=ctx.combat.oilDrops.at(-1),sprite=drop.sprite;
+  assert.equal(sprite.fallback,null);
+  assert.equal(drop.node.querySelector('circle'),null);
+  ctx.game.time+=2;paintOil();
+  const radius=Number(sprite.viewport.getAttribute('width'))/2;
+  sprite.image.dispatchEvent(new Event('error'));
+  assert.ok(Math.abs(Number(sprite.fallback.getAttribute('r'))-radius)<.01);
+  assert.equal(sprite.fallback.getAttribute('display'),'');
+  const fallback=sprite.fallback;
+  ctx.game.time+=1;paintOil();
+  assert.equal(Number(fallback.getAttribute('r')),6);
+  sprite.image.dispatchEvent(new Event('load'));
+  assert.equal(fallback.getAttribute('display'),'none');
+  sprite.image.dispatchEvent(new Event('error'));
+  assert.equal(sprite.fallback,fallback,'reuses the existing fallback after another error');
+  dom.window.close();
+});
+
+test('loaded skins skip hidden vector updates and refresh fallback geometry immediately on failure',()=>{
+  const dom=setup();
+  ctx.obstacles=ctx.obstacles.filter(b=>b.left>500);ctx.robots=[];
+  const robot=createRobot(0,{x:300,y:250,angle:0});ctx.robots=[robot];
+  robot.paint(false);
+  const head=robot.actor.querySelector('ellipse.head'),image=robot.actor.querySelector('image');
+  const old=head.getAttribute('cx');
+  image.dispatchEvent(new Event('load'));
+  for(let i=0;i<60;i++){
+    ctx.game.time+=1/60;
+    robot.tick(1/60,{goal:{x:440,y:250},speed:45,mode:'chase',lookPoint:null});
+    robot.paint(false);
+  }
+  assert.equal(head.getAttribute('cx'),old,'hidden fallback is not updated each frame');
+  assert.notEqual(robot.eye.x,Number(old));
+  image.dispatchEvent(new Event('error'));
+  assert.equal(head.style.visibility,'');
+  assert.equal(Number(head.getAttribute('cx')),robot.eye.x,'fallback uses the latest physical pose');
+  assert.equal(Number(head.getAttribute('cy')),robot.eye.y);
+  dom.window.close();
+});

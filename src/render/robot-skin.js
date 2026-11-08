@@ -63,11 +63,13 @@ export function createRobotSkin(robot) {
     ...[...robot.arms,...robot.legs].flatMap(l=>[l.upper,l.lower,l.joint,l.endShape])];
   const skin=robot.skin={url,limbs,body,pieces,vectors,ready:false};
   const activate=ready=>{
+    const wasReady=skin.ready;
     skin.ready=ready;
     for(const node of vectors)node.style.visibility=ready?'hidden':'';
     robot.neck.style.stroke=ready?'#a78a70':'';
     for(const node of [limbs,body])attr(node,'display',ready?'':'none');
     attr(robot.actor,'data-skin-ready',ready);
+    if(wasReady!==ready)robot.draw(0); // Hydrate whichever representation just became visible.
   };
   // Back-to-front body order; head remains above the chest, limbs below it.
   const keys=[...Object.keys(ROBOT_PARTS).filter(k=>/^(arm|leg)/.test(k)),
@@ -82,7 +84,7 @@ export function createRobotSkin(robot) {
 }
 
 export function paintRobotSkin(robot,strikePose=null) {
-  if (!robot.skin) return;
+  if (!robot.skin?.ready) return;
   const position=(key,a,b)=>{
     const piece=robot.skin.pieces.get(key);
     attr(piece.group,'display',robot.healthy(key)?'':'none');
