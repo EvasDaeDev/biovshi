@@ -459,3 +459,8 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #robot-tag-hops-v22 .render-diagnostics { font-size:11px;color:#8ba6b8;margin-top:6px; }
 #robot-tag-hops-v22 .render-diagnostics label { display:inline-flex;align-items:center;gap:5px;margin-right:12px; }
 #robot-tag-hops-v22 .render-diagnostics output { display:block;font-variant-numeric:tabular-nums; }
+
+/* The shader owns the vignette; never stack it with the old CSS overlay.
+   Bypassing post effects also removes that overlay completely. */
+#robot-tag-hops-v22[data-post-effects] .tag7hop-stage::after { display:none; }
+#robot-tag-hops-v22 .render-diagnostics .post-effects-control { display:flex;width:fit-content;margin-top:4px; }

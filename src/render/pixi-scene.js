@@ -3,6 +3,7 @@ import { CONFIG } from '../config.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { loadTextureImage } from '../assets/preload.js';
 import { staticArenaImage } from './pixi-static.js';
+import { ArenaPostEffects } from './post-effects.js';
 import { victoryGold, goldMatrix } from './victory-glow.js';
 import { transformMatrix } from './pixi-math.js';
 
@@ -82,6 +83,9 @@ export class PixiArena {
     this.resizeObserver.observe(ctx.stage);this.resize();
     this.canvas.addEventListener('webglcontextlost',this.onLost=e=>{e.preventDefault();this.contextLost=true;});
     this.canvas.addEventListener('webglcontextrestored',this.onRestored=()=>{this.contextLost=false;this.render();});
+    try {this.postEffects=new ArenaPostEffects(this.p,this.app,ctx.root);}catch(error){
+      this.app.stage.filters=null;ctx.root.dataset.postEffects='off';console.warn('Arena post effects unavailable:',error);
+    }
     this.render();
   }
   attachRoot(node,parent) {const record=this.create(node,null);parent.addChild(record.object);return record;}
@@ -252,6 +256,7 @@ export class PixiArena {
   resize() {
     const side=ctx.fieldSide||700;
     if(this.side===side)return;this.side=side;this.app.renderer.resize(side,side);
+    this.postEffects?.resize(side,side);
     for(const record of this.records.values())if(record.tag==='text')this.dirty.add(record);
   }
   render() {
@@ -264,12 +269,18 @@ export class PixiArena {
     this.ambient.visible=ctx.renderProfile?.name!=='light';
     this.victory();
     this.app.renderer.render({container:this.nightComposition,target:this.nightTexture,clear:true});
-    this.app.render();
+    this.postEffects?.update(ctx.game.time);
+    try {this.app.render();}catch(error){
+      if(!this.postEffects?.enabled)throw error;
+      // A shader failure must not turn a working WebGL arena back into SVG.
+      this.postEffects.fail(error);this.app.render();ctx.refreshPostEffectsControl?.();
+    }
   }
   destroy() {
     if(this.disposed)return;this.disposed=true;this.observer?.disconnect();this.resizeObserver?.disconnect();
     if(this.canvas){this.canvas.onclick=null;this.canvas.removeEventListener('webglcontextlost',this.onLost);this.canvas.removeEventListener('webglcontextrestored',this.onRestored);}
     if(this.halo){this.halo.texture.destroy(true);this.halo.filter.destroy();this.halo.gold.destroy();}
+    this.postEffects?.destroy();
     this.nightComposition?.destroy({children:true});
     this.app.destroy({removeView:true},{children:true});
     for(const frame of this.frames.values())frame.destroy(false);

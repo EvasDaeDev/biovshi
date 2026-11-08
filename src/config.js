@@ -16,6 +16,19 @@ const CONFIG = {
     telemetryIntervalSec: 0.1, // Карточки: 10 обновлений/с вместо 30.
     sparks: false, // Искры были скрыты CSS; не тратим время на невидимые частицы.
   },
+  postEffects: {
+    enabled: true, // Общий выключатель в диагностике под телеметрией.
+    referenceSize: 960, // Эскиз Photoshop: масштаб эффектов относительно окна арены.
+    unsharpAmount: 0.8, // Unsharp Mask: 80%.
+    unsharpRadiusPx: 1,
+    unsharpThreshold: 0,
+    filmGrain: 1,
+    distortion: -7,
+    redCyan: -35,
+    blueYellow: 29,
+    vignetteAmount: -76,
+    vignetteMidpoint: 50,
+  },
   startup: {
     spawnDurationSec: 0.2, // Вылет из тени и приземление.
     spawnScale: 1.25, // Масштаб над землёй в начале появления.
