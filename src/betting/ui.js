@@ -1,3 +1,5 @@
+import {cleanFloor} from '../render/floor-history.js';
+import {garageOpen} from '../garage/ui.js';
 import { ctx } from "../game/state.js";
 import { betCommit, betNewSession, betRefund, betResolve } from "./ledger.js";
 import { bettingLoad, bettingSave } from "./storage.js";
@@ -10,6 +12,7 @@ export function bettingModal(title) {
   ctx.paused = false;
   ctx.debt = 0;
   ctx.betTitle.textContent = title;
+  ctx.betOverlay.dataset.view='betting';
   ctx.betOverlay.hidden = false;
 }
 export function bettingStorageNote() {
@@ -24,7 +27,7 @@ export function bettingSetup() {
  <div id="bet-names" class="bet-names"></div>
  <p class="bet-muted">От 1 до 16 игроков. Капитал выдаётся один раз, при создании игры.</p>
  <div id="bet-error" class="bet-error" role="status"></div>
- <div class="bet-actions">${ctx.betting ? '<button id="bet-back" type="button">Вернуться к ставкам</button>' : ''}<button type="submit" class="bet-primary">СОЗДАТЬ ИГРУ · К СТАВКАМ</button></div></form>`;
+ <div class="bet-actions">${ctx.betting ? '<button id="bet-back" type="button">Вернуться к ставкам</button>' : ''}<button type="submit" class="bet-primary">СОЗДАТЬ ИГРУ · В ГАРАЖ</button></div></form>`;
   const count = ctx.betContent.querySelector('#bet-count'),
     names = ctx.betContent.querySelector('#bet-names');
   function renderNames() {
@@ -46,8 +49,9 @@ export function bettingSetup() {
     if (ctx.betting && !confirm('Начать новую игру? Текущие балансы, джекпот и история будут сброшены.')) return;
     ctx.betting = betNewSession([...names.querySelectorAll('input')].map((el, i) => el.value.trim() || 'Игрок ' + (i + 1)), capital);
     ctx.betNotice = '';
+    cleanFloor();
     bettingSave();
-    bettingOpen();
+    garageOpen();
   };
   count.focus();
 }
@@ -115,7 +119,7 @@ export function bettingOpen() {
   ctx.betContent.innerHTML = `${ctx.betNotice ? `<p class="bet-muted">${ctx.betEscape(ctx.betNotice)}</p>` : ''}
  <p class="bet-muted">Выберите робота для каждого игрока и сумму. Ставка 0 — пропустить раунд.</p>
  <p>Общий банк: <strong id="bet-bank">0</strong> · Джекпот: <strong>${ctx.betFormat(ctx.betting.jackpot)}</strong></p>
- <div class="bet-pools">${ctx.BET_COLORS.map((c, i) => `<div class="bet-pool" style="--fighter:${c}"><strong>${'ABCD'[i]}</strong><span id="bet-pool-${i}"></span><small id="bet-odds-${i}"></small></div>`).join('')}</div>
+ <div class="bet-pools">${ctx.BET_COLORS.map((c, i) => `<div class="bet-pool" style="--fighter:${c}"><strong>${'ABCD'[i]}</strong><small>${ctx.betting.garage?.[i]?.stats.join(' / ')??'3 / 3 / 3'} · скорость / сила / поворот</small><span id="bet-pool-${i}"></span><small id="bet-odds-${i}"></small></div>`).join('')}</div>
  <form id="bet-stakes-form"><div class="bet-table-wrap"><table class="bet-table"><thead><tr><th>Игрок</th><th>Баланс</th><th>Робот</th><th>Ставка</th><th>Останется</th></tr></thead><tbody>
  ${ctx.betting.players.map((p, i) => `<tr data-bet-player="${i}"><td>${ctx.betEscape(p.name)}</td><td>${ctx.betFormat(p.balance)}</td><td><select aria-label="Робот — ${ctx.betEscape(p.name)}" ${p.balance === 0 ? 'disabled' : ''}>${['A', 'B', 'C', 'D'].map((r, j) => `<option value="${j}" ${j === i % 4 ? 'selected' : ''}>${r}</option>`).join('')}</select></td><td><input aria-label="Ставка — ${ctx.betEscape(p.name)}" type="number" value="0" min="0" max="${p.balance}" step="1" required ${p.balance === 0 ? 'disabled' : ''}></td><td data-remaining></td></tr>`).join('')}
  </tbody></table></div>
@@ -154,7 +158,8 @@ export function bettingOpen() {
   ctx.betContent.querySelector('input:not(:disabled)')?.focus();
 }
 export function bettingSettle(winner) {
-  if (!ctx.betting) return;
+  if (!ctx.betting || ctx.betting.phase !== 'running') return;
+  ctx.betting.garage?.forEach((g,id)=>{if(id!==winner)g.head=null;});
   betResolve(ctx.betting, winner);
   bettingSave();
   bettingHud();
@@ -183,6 +188,6 @@ export function bettingInit() {
   ctx.betting = bettingLoad();
   if (ctx.betting) {
     bettingSave();
-    bettingOpen();
+    garageOpen();
   } else bettingSetup();
 }

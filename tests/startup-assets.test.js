@@ -36,13 +36,13 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   assert.equal(root.inert,false);
   assert.equal(requests,Object.keys(ASSETS.textures).length,'tint preparation reuses preloaded images');
   assert.ok(Object.values(ctx.textureAssets).every(status=>status.loaded));
-  assert.equal(staticRasters,1,'stationary ambient shading is prepared once');
+  assert.equal(staticRasters,2,'ambient shading and the initial 1024 floor are prepared once');
   assert.equal(ctx.ambientGlowG.dataset.rasterized,'true');
   assert.equal(ctx.ambientGlowG.getAttribute('filter'),null);
   assert.equal(ctx.ambientGlowG.children.length,1);
   assert.equal(ctx.ambientGlowG.firstElementChild.tagName,'image');
   const {bakeStaticLighting}=await import('../src/render/atmosphere.js');
-  await bakeStaticLighting();assert.equal(staticRasters,1);
+  await bakeStaticLighting();assert.equal(staticRasters,2);
   assert.equal(ctx.actorsG.querySelectorAll('[data-robot-fallback]').length,0);
   assert.equal(ctx.actorsG.querySelectorAll('[data-skin-segment]').length,52);
   ctx.root.__disposeTag();dom.window.close();

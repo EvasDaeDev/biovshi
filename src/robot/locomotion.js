@@ -1,3 +1,4 @@
+import {statMultiplier} from '../garage/model.js';
 import { clamp, wrap, smooth } from '../utils/math.js';
 import { planPath } from "../systems/navigation.js";
 import { CONFIG } from "../config.js";
@@ -51,7 +52,7 @@ export function retreatFromBoundary(robotState, dt) {
   const nx = surface.nx,
     ny = surface.ny;
   const heading = Math.atan2(ny, nx),
-    distance = CONFIG.movement.boundaryRetreatSpeedCm * CONFIG.movement.speedMultiplier * dt;
+    distance = CONFIG.movement.boundaryRetreatSpeedCm * CONFIG.movement.speedMultiplier * statMultiplier(ctx.betting?.garage?.[robotState.id]?.stats[0]??3) * dt;
   let best = null,
     bestScore = -Infinity;
   const peerBodies = robotState.peerRobots().flatMap(r => r.capsules.filter(isSolidBody));
@@ -515,12 +516,12 @@ export function robotTick(robotState, dt, intent) {
     dy = waypoint.y - robotState.y,
     heading = robotState.t >= robotState.recoveryUntil && Math.hypot(dx, dy) > .1 ? Math.atan2(dy, dx) : robotState.angle,
     turn = wrap(heading - robotState.angle),
-    speed = intent.speed * CONFIG.movement.speedMultiplier * robotState.locomotion() * clamp(Math.hypot(goal.x - robotState.x, goal.y - robotState.y) / 18, 0, 1) * (robotState.reduced ? 1 : .86 + .14 * Math.sin(robotState.gait * 2 - .5));
+    speed = intent.speed * CONFIG.movement.speedMultiplier * statMultiplier(ctx.betting?.garage?.[robotState.id]?.stats[0]??3) * robotState.locomotion() * clamp(Math.hypot(goal.x - robotState.x, goal.y - robotState.y) / 18, 0, 1) * (robotState.reduced ? 1 : .86 + .14 * Math.sin(robotState.gait * 2 - .5));
   const flinching = robotState.hitReaction && ctx.game.time < robotState.hitReaction.start + robotState.hitReaction.duration;
   const flinchTime = flinching ? (ctx.game.time - robotState.hitReaction.start) / robotState.hitReaction.duration : 1;
   const flinchSlow = flinching ? .18 + .82 * smooth(flinchTime) : 1;
   robotState.requestedSpeed = speed * flinchSlow;
-  const turning = robotState.turnAbility() * flinchSlow * CONFIG.movement.turnSpeedMultiplier;
+  const turning = robotState.turnAbility() * flinchSlow * CONFIG.movement.turnSpeedMultiplier * statMultiplier(ctx.betting?.garage?.[robotState.id]?.stats[2]??3);
   const rotate = clamp(turn * dt * 5 * turning, -3.4 * dt * turning, 3.4 * dt * turning);
   robotState.angle += rotate;
   robotState.turnRate += (rotate / dt - robotState.turnRate) * (1 - Math.exp(-dt * 8));
@@ -554,8 +555,8 @@ export function robotTick(robotState, dt, intent) {
       ny = surface.ny;
     }
     const d = Math.hypot(nx, ny) || 1;
-    tx = nx / d * 22 * CONFIG.movement.speedMultiplier;
-    ty = ny / d * 22 * CONFIG.movement.speedMultiplier;
+    tx = nx / d * 22 * CONFIG.movement.speedMultiplier * statMultiplier(ctx.betting?.garage?.[robotState.id]?.stats[0]??3);
+    ty = ny / d * 22 * CONFIG.movement.speedMultiplier * statMultiplier(ctx.betting?.garage?.[robotState.id]?.stats[0]??3);
   }
   if (intent.brake) tx = ty = 0;
   tx *= flinchSlow;

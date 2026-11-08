@@ -1,3 +1,4 @@
+import {ASSETS} from '../src/assets/manifest.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -28,7 +29,7 @@ function setup({start=true,reduced=false,textures=null}={}) {
   globalThis.cancelAnimationFrame=()=>{};
   initializeGame({textures});
   document.querySelector('#bet-setup-form').dispatchEvent(new Event('submit',{cancelable:true}));
-  document.querySelector('#bet-fight').click();
+  document.querySelector('#garage-next').click();document.querySelector('#bet-fight').click();
   if(start)advanceStartup(3);
   assert.equal(ctx.startup.phase,start?'running':'spawning');
   return dom;
@@ -69,7 +70,7 @@ test('losing every limb ends mobility; reset restores the anatomy and the bettin
   assert.equal(r.mobile,false);
   assert.equal(r.movementLimbs,0);
   resetRound();
-  assert.equal(ctx.startup.phase,'betting');
+  assert.equal(ctx.startup.phase,'garage');
   assert.equal(ctx.round.elapsedSec,0);
   assert.ok(ctx.robots.every(r=>r.mobile&&r.movementLimbs===4&&r.hasHead));
   dom.window.close();
@@ -123,6 +124,7 @@ test('light graphics preserves combat, positions, damage and random outcomes', (
       game:ctx.game,round:ctx.round,
       strikes:ctx.combat.strikes,hits:ctx.combat.hits,betting:ctx.betting,
     }));
+    delete snapshot.betting.floorId;
     dom.window.close();
     return snapshot;
   };
@@ -329,7 +331,7 @@ test('confirmed hits create bounded retro bursts, severing is stronger, and expi
   dom.window.close();
 });
 
-test('every robot uses its own atlas; severed parts, victory halo and load fallback work for A through D',()=>{
+test('every robot uses its own atlas; severed parts, victory halo and load fallback work for A through D',async()=>{
  for(const id of [0,1,2,3]) {
   const dom=setup();
   const a=ctx.robots[id],actor=a.actor,name='r_0'+(id+1);
@@ -423,7 +425,7 @@ test('every robot uses its own atlas; severed parts, victory halo and load fallb
   assert.equal(actor.querySelector('ellipse.head').style.visibility,'');
   for(const decoration of actor.querySelectorAll('.robot-horn, .robot-sphere'))assert.equal(decoration.style.visibility,'');
   assert.ok([...actor.querySelectorAll('[data-skin-layer]')].every(n=>n.getAttribute('display')==='none'));
-  resetRound();
+  await resetRound();
   assert.equal(ctx.robots[id].actor.querySelectorAll('[data-skin-segment]').length,13);
   assert.equal(ctx.defs.querySelectorAll(glowSelector).length,0,'new round removes victory halo');
   assert.equal(ctx.detachedG.children.length,0);
@@ -1017,4 +1019,19 @@ test('confirmed hits brighten only the attacker light by 50 percent and fade ove
   assert.equal(ctx.svg.querySelector('#gladiator-swings'),null);
   assert.equal(ctx.svg.querySelector('[stroke="#ffe66d"]'),null,'orange strike helpers are never created');
   dom.window.close();
+});
+
+test('powerful contact removes two HP once, expires Crit in .2 seconds and loses the hat exactly on head severing',()=>{
+ const dom=setup({textures:Object.fromEntries(Object.keys(ASSETS.textures).map(key=>[key,{loaded:true}]))});
+ const r=ctx.robots[0];ctx.betting.garage[0].head={hat:1,price:10,player:0};ctx.betting.players[0].balance-=10;ctx.betting.shopSpent=10;
+ paint();assert.ok(r.actor.querySelector('svg[viewBox="0 0 64 64"]'));
+ const hp=r.hp.get('head');assert.equal(r.damage('head',1,2),true);assert.equal(r.hp.get('head'),hp-2);
+ assert.equal(r.damage('head',1,2),false);assert.equal(ctx.hitEffects.group.querySelectorAll('.crit-label').length,1);
+ ctx.game.time+=.19;paint();assert.equal(ctx.hitEffects.group.querySelectorAll('.crit-label').length,1);
+ ctx.game.time+=.02;paint();assert.equal(ctx.hitEffects.group.querySelectorAll('.crit-label').length,0);
+ for(let i=0;i<3;i++)hit(r,'head');paint();
+ assert.equal(ctx.betting.garage[0].head,null);
+ assert.equal(ctx.combat.detached.find(d=>d.cause==='head').pieces.find(p=>p.key==='head').skin.hat,1);
+ assert.ok(ctx.detachedG.querySelector('svg[viewBox="0 0 64 64"]'));
+ dom.window.close();
 });

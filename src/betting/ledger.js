@@ -1,6 +1,10 @@
+import {newGarage} from '../garage/model.js';
 export function betNewSession(names, capital) {
   return {
     version: 1,
+    garage: newGarage(),
+    shopSpent: 0,
+    floorId: globalThis.crypto?.randomUUID?.()??String(Date.now())+Math.random(),
     round: 1,
     capital,
     phase: 'betting',

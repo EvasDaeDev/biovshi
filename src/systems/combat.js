@@ -1,3 +1,5 @@
+import {critChance} from '../garage/model.js';
+import {random} from '../utils/random.js';
 import { clamp, wrap, smooth } from '../utils/math.js';
 import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
@@ -103,7 +105,8 @@ export function combatAttacks() {
       const src = attacker.attackSources.find(s => s.key === pending.source);
       if (attacker.visible && src && victim?.visible && victim.mobile && victim.segmentCount > 0) {
         const touched = struckSegment(attacker, victim, pending);
-        if (touched && victim.damage(touched, id)) {
+        const damage=touched&&random()<critChance(ctx.betting?.garage?.[id]?.stats[1]??3)?2:1;
+        if (touched && victim.damage(touched, id, damage)) {
           if (victim.mobile) victim.reactToHit(attacker, touched);
           ctx.combat.hits++;
           ctx.combat.fighterHits[id]++;
