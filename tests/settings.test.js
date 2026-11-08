@@ -6,6 +6,7 @@ import {initializeGame} from '../src/game/initialize.js';
 import {initializeDiagnostics,timed} from '../src/render/diagnostics.js';
 import {ctx} from '../src/game/state.js';
 import {advanceStartup} from '../src/game/session.js';
+import {fittedCamera} from '../src/render/camera.js';
 import {step,frame} from '../src/game/loop.js';
 import {togglePause,toggleSpeed,fitField} from '../src/ui/controls.js';
 import {ASSETS} from '../src/assets/manifest.js';
@@ -50,13 +51,20 @@ test('Settings preserves an existing manual pause and closes with Escape or back
   assert.equal(document.getElementById('arena-settings').hidden,true);dom.window.close();
 });
 
-test('rules are removed, diagnostics live inside Settings and arena size fills the centre width without the old height cap',()=>{
+test('rules are removed, graphics and diagnostics live in Settings and the rectangular viewport contains a square arena',()=>{
   const dom=setup();assert.equal(document.getElementById('tag7hop-info'),null);
   assert.equal(document.querySelectorAll('.render-diagnostics').length,1);
   assert.ok(document.querySelector('#arena-settings-content .render-diagnostics'));
   const main=ctx.root.querySelector('.tag7hop-main');main.getBoundingClientRect=()=>({width:1220});
-  fitField();assert.equal(ctx.fieldSide,1220);assert.equal(ctx.stage.style.width,'1220px');
-  assert.equal(ctx.stage.style.height,'','CSS aspect-ratio keeps it square');
+  const boundary=JSON.stringify(ctx.arenaBoundary.points);
+  fitField();assert.equal(ctx.fieldWidth,1220);assert.equal(ctx.stage.style.width,'1220px');
+  assert.ok(ctx.fieldHeight<ctx.fieldWidth);assert.equal(ctx.fieldSide,ctx.fieldHeight);
+  assert.equal(ctx.stage.style.height,ctx.fieldHeight+'px');
+  assert.equal(ctx.svg.getAttribute('preserveAspectRatio'),'xMidYMid meet');
+  assert.equal(JSON.stringify(ctx.arenaBoundary.points),boundary);
+  assert.equal(ctx.root.querySelector('.atmosphere-controls #graphics-quality'),null);
+  assert.ok(ctx.root.querySelector('#arena-settings #graphics-quality'));
+  assert.equal(ctx.root.querySelectorAll('#graphics-quality').length,1);
   const output=document.querySelector('.performance-details output');
   ctx.diagnostics.last=0;ctx.diagnostics.samples={simulation:{ms:2,count:2}};ctx.updateDiagnostics(1000);
   const before=output.textContent;open();ctx.updateDiagnostics(3000);assert.equal(output.textContent,before,'Settings retains the last active timing snapshot');close();
@@ -93,4 +101,23 @@ test('portrait redraws only on a health-state change and damage changes the card
   assert.equal(card.portraitStates['arm--1-upper'],'off');assert.equal(card.portraitStates['arm--1-lower'],'off');
   assert.equal(draws,26);assert.equal(r.actor.querySelector('image').getAttribute('href'),atlas);
   ctx.root.__disposeTag();dom.window.close();
+});
+
+
+test('rectangular projection fits the whole square arena with equal axis scale and centred side margins',()=>{
+  for(const [width,height] of [[1220,900],[800,400],[400,800]]){
+    const camera=fittedCamera(width,height,-38,-38,776),side=Math.min(width,height);
+    const project=(x,y)=>({x:x*camera.scale+camera.x,y:y*camera.scale+camera.y});
+    const first=project(-38,-38),last=project(738,738);
+    assert.ok(Math.abs(last.x-first.x-side)<1e-8);assert.ok(Math.abs(last.y-first.y-side)<1e-8);
+    assert.ok(Math.abs(first.x-(width-side)/2)<1e-8);assert.ok(Math.abs(first.y-(height-side)/2)<1e-8);
+  }
+});
+
+test('grey portrait segments are 50 percent darker in RGB while alpha stays unchanged',()=>{
+  const sample=()=>new Uint8ClampedArray([145,120,80,180,255,255,255,255,32,18,10,0]);
+  const original=tintPortraitPixels(sample(),TELEMETRY_COLOURS.off);
+  const shaded=tintPortraitPixels(sample(),TELEMETRY_COLOURS.off,.5);
+  for(let i=0;i<8;i++)if(i%4===3)assert.equal(shaded[i],original[i]);else assert.ok(Math.abs(shaded[i]-original[i]/2)<=1);
+  assert.deepEqual([...shaded.slice(8)],[32,18,10,0]);
 });

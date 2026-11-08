@@ -1,3 +1,4 @@
+import { fittedCamera } from './camera.js';
 import { ctx } from '../game/state.js';
 import { CONFIG } from '../config.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
@@ -74,7 +75,7 @@ export class PixiArena {
     this.observer.observe(ctx.svg,{attributes:true,childList:true,characterData:true,subtree:true});
     this.canvas=this.app.canvas;this.canvas.id='tag7hop-pixi';
     this.canvas.setAttribute('role','img');this.canvas.setAttribute('aria-label',ctx.svg.getAttribute('aria-label'));
-    this.canvas.style.cssText='display:block;width:100%;height:100%;aspect-ratio:1;touch-action:manipulation;cursor:pointer';
+    this.canvas.style.cssText='display:block;width:100%;height:100%;aspect-ratio:auto;touch-action:manipulation;cursor:pointer';
     this.canvas.onclick=ctx.svg.onclick;
     ctx.svg.after(this.canvas);
     ctx.svg.style.setProperty('display','none','important');
@@ -254,9 +255,11 @@ export class PixiArena {
     this.halo.gold.matrix=goldMatrix(colour);this.halo.sprite.alpha=colour.opacity;
   }
   resize() {
-    const side=ctx.fieldSide||700;
-    if(this.side===side)return;this.side=side;this.app.renderer.resize(side,side);
-    this.postEffects?.resize(side,side);
+    const width=ctx.fieldWidth||ctx.fieldSide||700,height=ctx.fieldHeight||ctx.fieldSide||700;
+    if(this.width===width&&this.height===height)return;
+    this.width=width;this.height=height;this.side=Math.min(width,height);
+    this.app.renderer.resize(width,height);
+    this.postEffects?.resize(width,height);
     for(const record of this.records.values())if(record.tag==='text')this.dirty.add(record);
   }
   render() {
@@ -264,8 +267,9 @@ export class PixiArena {
     this.consume(this.observer?.takeRecords()??[]);
     for(const record of this.dirty){if(record.node!==ctx.svg&&!ctx.svg.contains(record.node))continue;this.sync(record);if(record.structureDirty){record.structureDirty=false;this.children(record);}}
     this.dirty.clear();this.resize();
-    const [x,y,size]=ctx.svg.getAttribute('viewBox').split(/[\s,]+/).map(Number),scale=this.side/size;
-    this.world.scale.set(scale);this.world.position.set(-x*scale,-y*scale);
+    const [x,y,size]=ctx.svg.getAttribute('viewBox').split(/[\s,]+/).map(Number);
+    const camera=fittedCamera(this.width,this.height,x,y,size);
+    this.world.scale.set(camera.scale);this.world.position.set(camera.x,camera.y);
     this.ambient.visible=ctx.renderProfile?.name!=='light';
     this.victory();
     this.app.renderer.render({container:this.nightComposition,target:this.nightTexture,clear:true});
@@ -302,7 +306,7 @@ export async function initializePixiArena() {
   if(ctx.disposed||ctx.svg!==svg)return null;
   const app=new pixi.Application();let arena;
   try{
-    await app.init({width:ctx.fieldSide||700,height:ctx.fieldSide||700,preference:'webgl',
+    await app.init({width:ctx.fieldWidth||ctx.fieldSide||700,height:ctx.fieldHeight||ctx.fieldSide||700,preference:'webgl',
       autoStart:false,sharedTicker:false,autoDensity:true,resolution:Math.min(win.devicePixelRatio||1,CONFIG.rendering.maxPixelRatio),
       antialias:true,backgroundAlpha:0,eventMode:'none',powerPreference:'high-performance'});
     arena=new PixiArena(pixi,app);await arena.prepare();

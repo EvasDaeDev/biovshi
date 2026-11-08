@@ -149,3 +149,22 @@ test('victory halo inflates once, colours the final blurred alpha gold and reuse
   ctx.combat.winner=null;arena.victory();assert.equal(arena.halo,null);assert.ok(gold.destroyed);assert.ok(filter.destroyed);
   arena.finish();ctx.root.__disposeTag();dom.window.close();
 });
+
+
+test('Pixi resizes a rectangular drawing buffer and post filter while centring an unstretched square camera',()=>{
+  const dom=setup(),arena=bridge(),sizes=[],postSizes=[];
+  arena.ambient=new PIXI.Container();arena.nightComposition=new PIXI.Container();
+  arena.app.renderer.resize=(w,h)=>sizes.push([w,h]);arena.app.renderer.render=()=>{};arena.app.render=()=>{};
+  arena.postEffects={resize(w,h){postSizes.push([w,h]);},update(){}};
+  for(const [w,h] of [[1180,640],[640,1180]]){
+    ctx.fieldWidth=w;ctx.fieldHeight=h;ctx.fieldSide=640;arena.render();
+    assert.deepEqual(sizes.at(-1),[w,h]);assert.deepEqual(postSizes.at(-1),[w,h]);
+    assert.equal(arena.world.scale.x,arena.world.scale.y);
+    const [x,y,size]=ctx.svg.getAttribute('viewBox').split(/\s+/).map(Number);
+    assert.ok(Math.abs(arena.world.position.x+x*arena.world.scale.x-(w-640)/2)<1e-8);
+    assert.ok(Math.abs(arena.world.position.y+y*arena.world.scale.y-(h-640)/2)<1e-8);
+    assert.ok(Math.abs(arena.world.scale.x-640/size)<1e-8);
+  }
+  assert.equal(sizes.length,2,'swapping width and height must resize even though the short side is unchanged');
+  arena.ambient.destroy();arena.nightComposition.destroy();arena.finish();ctx.root.__disposeTag();dom.window.close();
+});

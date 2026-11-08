@@ -6,23 +6,24 @@ export
 function fitField() {
   const main = ctx.root.querySelector('.tag7hop-main');
   const columnWidth = main.getBoundingClientRect().width || 700;
-  // Fill the centre column, including on wide displays. A square may scroll
-  // vertically rather than leaving an unused strip beside a height-capped arena.
-  // Compact touch screens still keep the whole square visible in landscape.
   const win=ctx.root.ownerDocument.defaultView;
-  const compactTouch=ctx.touchDevice&&win.innerWidth<=1050;
   const viewportHeight=win.visualViewport?.height||win.innerHeight;
   const toolbarHeight=ctx.root.querySelector('.atmosphere-controls').getBoundingClientRect().height;
-  const side = Math.max(1, Math.floor(compactTouch?Math.min(columnWidth,Math.max(220,viewportHeight-toolbarHeight-32)):columnWidth));
-  if (side !== ctx.fieldSide) {
-    ctx.fieldSide = side;
-    ctx.stage.style.width = side + 'px';
+  // The WINDOW is rectangular; the camera fits the square arena inside it.
+  const width=Math.max(1,Math.floor(columnWidth));
+  const height=Math.max(1,Math.floor(Math.min(width*.8,Math.max(220,viewportHeight-toolbarHeight-48))));
+  if(width!==ctx.fieldWidth||height!==ctx.fieldHeight){
+    ctx.fieldWidth=width;ctx.fieldHeight=height;ctx.fieldSide=Math.min(width,height);
+    ctx.stage.style.width=width+'px';ctx.stage.style.height=height+'px';
+    ctx.svg.style.height='100%';ctx.svg.style.aspectRatio='auto';
+    ctx.svg.setAttribute('preserveAspectRatio','xMidYMid meet');
   }
   sizeLabels();
   ctx.arenaRenderer?.resize();
 }
 export function sizeLabels() {
-  const width = (ctx.arenaRenderer?.canvas??ctx.svg).getBoundingClientRect().width || 700;
+  const bounds=(ctx.arenaRenderer?.canvas??ctx.svg).getBoundingClientRect();
+  const width=Math.min(bounds.width||ctx.fieldSide||700,bounds.height||ctx.fieldSide||700);
   ctx.root.style.setProperty('--tag-label-size', 12 * 716 / width + 'px');
   ctx.root.style.setProperty('--score-label-size', Math.min(12 * 716 / width, 24) + 'px');
 }

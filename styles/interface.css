@@ -393,7 +393,7 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
 
 /* Arena layout: telemetry, arena, then local betting ledger. */
 html body #robot-tag-hops-v22 {max-width:none;flex-basis:auto}
-#robot-tag-hops-v22 .tag7hop-layout {display:grid;grid-template-columns:clamp(220px,19vw,360px) minmax(0,1fr) clamp(190px,15vw,300px);gap:20px;align-items:start}
+#robot-tag-hops-v22 .tag7hop-layout {display:grid;grid-template-columns:var(--card-width) minmax(0,1fr) calc(var(--card-width) + 20px);gap:20px;align-items:start}
 #robot-tag-hops-v22 .tag7hop-sidebar-wrap {width:100%}
 #robot-tag-hops-v22 .atmosphere-controls {position:relative;display:flex;justify-content:flex-start;align-items:center;gap:8px;min-height:48px;box-sizing:border-box;padding:8px 14px;border:1px solid #29485c;background:#071320;margin-bottom:12px}
 html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transform:translateX(-50%);order:0;flex-basis:auto;margin:0;color:#65eeff;font-weight:700;white-space:nowrap}
@@ -405,7 +405,7 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 #robot-tag-hops-v22 .bet-hud-player-balance {color:#c5dfeb;margin-top:3px}
 #robot-tag-hops-v22 .bet-hud-player-stake {color:var(--fighter,#a5c4d5);margin-top:5px;font-size:13px}
 @media(max-width:1050px){
- #robot-tag-hops-v22 .tag7hop-layout {grid-template-columns:220px minmax(320px,1fr)}
+ #robot-tag-hops-v22 .tag7hop-layout {grid-template-columns:var(--card-width) minmax(0,1fr)}
  #robot-tag-hops-v22 #bet-hud {grid-column:1/-1;padding:12px 0;max-height:none;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
  #robot-tag-hops-v22 .bet-hud-bank {font-size:20px;margin:0 10px 0 0}
  #robot-tag-hops-v22 .bet-hud-player {margin:0;min-width:150px}
@@ -473,3 +473,23 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #robot-tag-hops-v22 .portrait-wrap {display:flex;justify-content:center;align-items:center}
 #robot-tag-hops-v22 .patient-portrait {display:block;width:100%;height:auto;max-height:140px;object-fit:contain;image-rendering:pixelated}
 #robot-tag-hops-v22 .settings-panel .btn {background:#102039;color:#daf6ff;border:1px solid #284763;min-width:40px;min-height:40px}
+
+/* Fixed matching cards; only the arena viewport grows with the window. */
+#robot-tag-hops-v22 {--card-width:280px;--card-height:164px}
+#robot-tag-hops-v22 .tag7hop-stage {aspect-ratio:auto;background:#02050d}
+#robot-tag-hops-v22 .robot-card,
+#robot-tag-hops-v22 .bet-hud-player {box-sizing:border-box;width:var(--card-width);min-width:var(--card-width);height:var(--card-height);min-height:var(--card-height);flex:none;margin:0;overflow:hidden}
+#robot-tag-hops-v22 .robot-card {display:flex;flex-direction:column}
+#robot-tag-hops-v22 .robot-card-header,
+#robot-tag-hops-v22 .robot-card-metrics {flex:none}
+#robot-tag-hops-v22 .robot-card-action {white-space:nowrap}
+#robot-tag-hops-v22 .robot-card-body {flex:1;min-height:0}
+#robot-tag-hops-v22 .portrait-wrap {height:100%}
+#robot-tag-hops-v22 .patient-portrait {height:100%;max-height:none;object-fit:contain}
+#robot-tag-hops-v22 #bet-hud {box-sizing:border-box;padding:12px 0;display:flex;flex-direction:column;gap:8px}
+#robot-tag-hops-v22 .bet-hud-bank {margin-bottom:16px}
+#robot-tag-hops-v22 .bet-hud-player {padding:12px;border:1px solid #204d74;border-left:3px solid var(--fighter,#29485c);display:flex;flex-direction:column;justify-content:center}
+#robot-tag-hops-v22 .bet-hud-player-name {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#robot-tag-hops-v22 .settings-panel .graphics-control {display:flex;margin:0 0 16px;gap:12px}
+@media(max-width:1050px){#robot-tag-hops-v22 #bet-hud{flex-direction:row;flex-wrap:wrap}#robot-tag-hops-v22 .bet-hud-bank{flex-basis:100%}}
+@media(max-width:760px){#robot-tag-hops-v22 .tag7hop-sidebar{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}}

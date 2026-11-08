@@ -395,7 +395,7 @@ export function initializeGame({textures=null}={}) {
   ctx.startButton.onclick = beginGame;
   attr(ctx.root.querySelector('#tag7hop-darkness'), 'opacity', CONFIG.light.darknessOpacity);
   ctx.stage = ctx.root.querySelector('.tag7hop-stage');
-  ctx.fieldSide = 0;
+  ctx.fieldSide = ctx.fieldWidth = ctx.fieldHeight = 0;
   ctx.observer = new ResizeObserver(fitField);
   for (const node of [ctx.root, ctx.root.querySelector('.tag7hop-main'), ctx.root.querySelector('.atmosphere-controls')]) ctx.observer.observe(node);
   globalThis.addEventListener?.('resize', fitField);

@@ -31,13 +31,13 @@ const palettes=new Map();
 
 // Palette atlases are prepared once. Transparency and luminance detail survive;
 // healthy parts use the original image with absolutely no green tint.
-export function tintPortraitPixels(pixels,hex) {
+export function tintPortraitPixels(pixels,hex,brightness=1) {
   const colour=hex.match(/[a-f\d]{2}/gi).map(n=>parseInt(n,16));
   const gain=255/Math.max(...colour);
   for(let i=0;i<pixels.length;i+=4){
     if(!pixels[i+3])continue;
     const shade=Math.sqrt((.2126*pixels[i]+.7152*pixels[i+1]+.0722*pixels[i+2])/255)*gain;
-    for(let c=0;c<3;c++)pixels[i+c]=Math.min(255,Math.round(colour[c]*shade));
+    for(let c=0;c<3;c++)pixels[i+c]=Math.min(255,Math.round(colour[c]*shade*brightness));
   }
   return pixels;
 }
@@ -52,7 +52,7 @@ async function atlasPalette(url) {
     for(const state of ['warn','bad','off']){
       const canvas=document.createElement('canvas');canvas.width=base.width;canvas.height=base.height;
       const painter=canvas.getContext('2d'),pixels=painter.getImageData(0,0,base.width,base.height);
-      pixels.data.set(original.data);tintPortraitPixels(pixels.data,TELEMETRY_COLOURS[state]);painter.putImageData(pixels,0,0);
+      pixels.data.set(original.data);tintPortraitPixels(pixels.data,TELEMETRY_COLOURS[state],state==='off'?.5:1);painter.putImageData(pixels,0,0);
       variants[state]=canvas;
     }
     return variants;
@@ -86,7 +86,7 @@ export function paintPatientPortrait(card,id,states) {
       draw.transform(...bone.matrix);
       draw.drawImage(card.portraitAtlas[state.state],bone.part.col*64,bone.part.row*64,64,64,0,0,64,64);
     }else{
-      draw.strokeStyle=TELEMETRY_COLOURS[state.state]??'#b7ada1';draw.fillStyle=draw.strokeStyle;
+      draw.strokeStyle=state.state==='off'?'#353e48':TELEMETRY_COLOURS[state.state]??'#b7ada1';draw.fillStyle=draw.strokeStyle;
       draw.lineWidth=bone.key.startsWith('spine')?10:3;draw.lineCap='round';draw.beginPath();
       if(bone.key==='head'){draw.arc(25,0,10,0,Math.PI*2);draw.fill();}
       else{draw.moveTo(bone.a.x,bone.a.y);draw.lineTo(bone.b.x,bone.b.y);draw.stroke();}

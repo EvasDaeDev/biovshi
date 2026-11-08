@@ -1,6 +1,12 @@
 import { clamp } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { attr } from "./svg.js";
+// Isotropic projection: rectangular viewports add space around the square
+// camera rather than stretching the arena or changing collision coordinates.
+export function fittedCamera(width,height,x,y,size) {
+  const scale=Math.min(width,height)/size;
+  return {scale,x:(width-size*scale)/2-x*scale,y:(height-size*scale)/2-y*scale};
+}
 export function cameraBounds(size, outset = 8) {
   return {min:-outset,max:700+outset-size};
 }
