@@ -33,3 +33,9 @@
 #bet-result-summary .bet-net-win {border-color:#48ed57}
 
 @media(max-width:500px){#robot-tag-hops-v22 .bet-fields,#robot-tag-hops-v22 .bet-names{grid-template-columns:1fr}#robot-tag-hops-v22 .bet-panel{padding:15px}#robot-tag-hops-v22 .bet-overlay{padding:8px}#robot-tag-hops-v22 .bet-panel{max-height:calc(100dvh - 16px)}#robot-tag-hops-v22 .bet-pool{padding:8px 2px}}
+
+#robot-tag-hops-v22 .garage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}#robot-tag-hops-v22 .garage-patient{padding:14px;border:1px solid #586457;border-radius:8px;display:flex;flex-direction:column;gap:8px}#robot-tag-hops-v22 .garage-patient h3,#robot-tag-hops-v22 .garage-patient p{margin:0}#robot-tag-hops-v22 .garage-patient label{display:flex;justify-content:space-between;gap:8px}#robot-tag-hops-v22 .garage-patient select,#robot-tag-hops-v22 .garage-patient input{max-width:150px}#robot-tag-hops-v22 .garage-patient small{color:#a7ada2}#robot-tag-hops-v22 .garage-portrait canvas{width:100%;height:auto}#robot-tag-hops-v22 .garage-hats{display:flex;gap:6px}#robot-tag-hops-v22 .garage-hats img{width:48px;height:48px;image-rendering:pixelated}#robot-tag-hops-v22 .garage-hats button{padding:2px}#robot-tag-hops-v22 .garage-patient [data-error]{color:#ffb47a}
+
+#robot-tag-hops-v22 .bet-overlay[data-view="garage"] .bet-panel{width:min(100%,1220px)}
+#robot-tag-hops-v22 .bet-panel .garage-hats button{padding:2px;min-width:0;flex:1}
+#robot-tag-hops-v22 .garage-patient label{display:flex;align-items:center}

@@ -6,7 +6,7 @@ import { createOilDrop } from './effects.js';
 import { paintLighting } from './lighting.js';
 import { attr, dot } from "./svg.js";
 import { ROBOT_COLORS } from "../utils/colors.js";
-import { paintRobotSkin } from './robot-skin.js';
+import { paintRobotSkin,paintHeadDecor } from './robot-skin.js';
 import { inertiaOffset } from './inertia.js';
 import { spawnAppearance } from './spawn.js';
 import { paintVictoryGlow } from './victory-glow.js';
@@ -141,6 +141,7 @@ export function draw(robotState, dt) {
     l.pose = [a, solved.joint, solved.end];
   }
   paintRobotSkin(robotState,strikePose);
+  paintHeadDecor(robotState,strikePose);
   paintTorsoShadow(robotState);
 }
 

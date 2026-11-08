@@ -1,3 +1,5 @@
+import {garageOpen} from '../garage/ui.js';
+import {bakeRoundFloor} from '../render/floor-history.js';
 import { setTimeScale } from "../ui/controls.js";
 import { resetFrameClock } from "./clock.js";
 import { ctx } from "./state.js";
@@ -5,13 +7,24 @@ import { resetCombatAccents } from "../render/effects.js";
 import { attr } from "../render/svg.js";
 import { rebuildRobots } from "./arena.js";
 import { cameraReset } from "../render/camera.js";
-import { bettingInit, bettingOpen } from "../betting/ui.js";
+import { bettingInit } from "../betting/ui.js";
 import { CONFIG } from "../config.js";
 import { arenaAnnounce } from "../ui/announcements.js";
 import { paint } from "../render/frame.js";
 import { random } from "../utils/random.js";
 import { resetHitEffects } from '../render/hit-effects.js';
-export function resetRound() {
+export async function resetRound() {
+  if(ctx.floorBaking)return;
+  if(ctx.combat.finished){
+    ctx.floorBaking=true;
+    ctx.resultsAgain.disabled=true;
+    try{await bakeRoundFloor();}
+    catch(error){
+      console.warn('Floor baking:',error);
+      ctx.resultsSummary.textContent='Не удалось сохранить следы раунда. Повторите переход.';
+      return;
+    }finally{ctx.floorBaking=false;ctx.resultsAgain.disabled=false;}
+  }
   ctx.telemetryDirty = true;
   ctx.lastTelemetryAt = -Infinity;
   ctx.settledOilDrops = new WeakSet();
@@ -102,7 +115,7 @@ export function resetRound() {
   ctx.paintAt = -Infinity;
   rebuildRobots();
   cameraReset();
-  bettingOpen();
+  garageOpen();
   ctx.arenaRenderer?.render();
 }
 // Новая случайная последовательность при каждой загрузке, без фиксированного seed.

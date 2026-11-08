@@ -90,6 +90,7 @@ export function paintHitEffects() {
 }
 
 export function resetHitEffects() {
+  for(const label of ctx.critLabels??[])label.node.remove();ctx.critLabels=[];
   if(!ctx.hitEffects)return;
   ctx.hitEffects.serial=0;
   for(const slot of ctx.hitEffects.slots){slot.effect=null;attr(slot.node,'display','none');}

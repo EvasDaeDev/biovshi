@@ -33,7 +33,7 @@ export class PixiArena {
     this.owned.add(texture);return texture;
   }
   async prepareSources() {
-    const urls=[...Object.entries(ASSETS.textures).filter(([key])=>/^robot|liquids/.test(key)).map(([,file])=>assetUrl(file)),...(ctx.liquidAtlasSources??[])];
+    const urls=[...Object.entries(ASSETS.textures).filter(([key])=>/^robot|liquids|hat/.test(key)).map(([,file])=>assetUrl(file)),...(ctx.liquidAtlasSources??[])];
     await Promise.all([...new Set(urls.filter(Boolean))].map(async url=>{
       try{this.sources.set(url,this.texture(await loadTextureImage(url)));}catch{/* Vector fallback is already prepared by the game. */}
     }));
@@ -43,19 +43,25 @@ export class PixiArena {
     const sprite=new this.p.Sprite(this.texture(canvas,false));
     sprite.position.set(x,y);sprite.width=sprite.height=size;return sprite;
   }
+  floorSprite(canvas){const sprite=new this.p.Sprite(this.texture(canvas,false));sprite.width=sprite.height=700;return sprite;}
+  replaceFloor(canvas){
+    if(!this.floor||this.disposed)return;
+    const old=this.floor.texture;this.floor.texture=this.texture(canvas,false);this.floor.width=this.floor.height=700;
+    this.owned.delete(old);old.destroy(true);this.render();
+  }
   async prepare() {
     await this.prepareSources();
     // Order agrees with the original scene: lights behind walls, oil below actors,
     // darkness above actors, announcements and impact accents above darkness.
     const [walls,floor,obstacles,night,ambient]=await Promise.all([
       this.staticLayer([ctx.svg.querySelector('#tag7hop-walls'),ctx.outlineG],{outset:ctx.CAMERA_OUTSET}),
-      this.staticLayer([ctx.arenaContent.querySelector(':scope > rect'),ctx.svg.querySelector('#tag7hop-floor-decals'),ctx.grid]),
+      ctx.floorCanvas?Promise.resolve(this.floorSprite(ctx.floorCanvas)):this.staticLayer([ctx.arenaContent.querySelector(':scope > rect'),ctx.svg.querySelector('#tag7hop-floor-decals'),ctx.grid],{pixels:1024}),
       this.staticLayer([ctx.svg.querySelector('#tag7hop-obstacle-lights'),ctx.blockG]),
       this.staticLayer([ctx.darkness],{night:true}),
       this.staticLayer([ctx.ambientGlowG],{forceVisible:true}),
     ]);
     this.world.addChildAt(walls,0);
-    this.content.addChild(floor);
+    this.floor=floor;this.content.addChild(floor);
     this.attachRoot(ctx.conesG,this.content);
     this.content.addChild(obstacles);
     for(const root of [ctx.trailsG,ctx.groundG,ctx.oilG,ctx.detachedG,ctx.actorsG,ctx.sparksG,ctx.pulsesG])this.attachRoot(root,this.content);
@@ -199,7 +205,7 @@ export class PixiArena {
     }
     if(tag==='text'){
       const label=node.classList.contains('robot-label'),timer=node===ctx.timerOutput;
-      const size=timer?Math.min(12*716/(ctx.fieldSide||700),24)*1.5:label?12*716/(ctx.fieldSide||700):12;
+      const size=timer?Math.min(12*716/(ctx.fieldSide||700),24)*1.5:label?12*716/(ctx.fieldSide||700):node.classList.contains('crit-label')?10*716/(ctx.fieldSide||700):12;
       const colour=node.style.fill||node.getAttribute('fill')||(timer?'#ffffff':label?'#d3cead':'#d2d5bf');
       const key=[node.textContent,size,colour,node.getAttribute('textLength')].join('|');
       if(record.textKey!==key){

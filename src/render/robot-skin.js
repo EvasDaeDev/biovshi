@@ -118,12 +118,29 @@ export function snapshotRobotSkin(robot,key) {
     const transform=node.getAttribute?.('transform');
     if (transform)transforms.unshift(transform);
   }
-  return {key,url:robot.skin.url,transform:transforms.join(' ')};
+  return {key,url:robot.skin.url,transform:transforms.join(' '),hat:key==='head'?ctx.betting?.garage?.[robot.id]?.head?.hat:null};
 }
 
 export function drawDetachedSkin(snapshot,parent) {
   const piece=createPiece(snapshot.key,snapshot.url,parent);
   if (!piece) return false;
   attr(piece.group,'transform',snapshot.transform);
+  if(snapshot.hat){const hat=createHat(snapshot.hat,parent);attr(hat,'transform',snapshot.transform);}
   return true;
+}
+
+export function createHat(hat,parent){
+  const viewport=el('svg',{x:0,y:0,width:64,height:64,viewBox:'0 0 64 64',overflow:'hidden',preserveAspectRatio:'none'},parent);
+  el('image',{href:assetUrl(ASSETS.textures['hat'+hat]),x:0,y:0,width:64,height:64},viewport);
+  return viewport;
+}
+export function paintHeadDecor(robot,strikePose){
+  const hat=!robot.mobile()&&robot.decorHatId?robot.decorHatId:ctx.betting?.garage?.[robot.id]?.head?.hat;
+  if(robot.decorHatId!==hat){robot.decorHat?.remove();robot.decorHat=hat?createHat(hat,robot.bodyG):null;robot.decorHatId=hat;}
+  if(!robot.decorHat)return;
+  attr(robot.decorHat,'display',robot.healthy('head')?'':'none');
+  const dx=Math.cos(robot.headFrame.angle)*10*ctx.scale,dy=Math.sin(robot.headFrame.angle)*10*ctx.scale;
+  const offset=strikePose?.kind==='head'?{x:strikePose.tip.x-strikePose.base.x,y:strikePose.tip.y-strikePose.base.y}:{x:0,y:0};
+  const head=robot.headCenter;
+  attr(robot.decorHat,'transform','matrix('+skinMatrix({x:head.x+offset.x-dx,y:head.y+offset.y-dy},{x:head.x+offset.x+dx,y:head.y+offset.y+dy},ROBOT_PARTS.head).join(' ')+')');
 }

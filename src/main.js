@@ -1,3 +1,5 @@
+import {initializeFloor} from './render/floor-history.js';
+import {garageOpen} from './garage/ui.js';
 import { preparePatientPortraits } from './ui/patient-portrait.js';
 import { paintTelemetry } from './ui/paint-telemetry.js';
 import { initializeGame } from './game/initialize.js';
@@ -22,7 +24,9 @@ async function boot() {
   await preparePatientPortraits();
   if(cancelled||ctx.disposed)return;
   paintTelemetry();
+  await initializeFloor();
   await initializePixiArena();
+  if(ctx.startup.phase==='garage')garageOpen();
   if(cancelled||ctx.disposed)return;
   initializeDiagnostics();
   root.inert=false;

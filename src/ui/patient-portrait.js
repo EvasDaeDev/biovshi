@@ -28,6 +28,7 @@ const minY=Math.min(...corners.map(p=>p.y)),maxY=Math.max(...corners.map(p=>p.y)
 const scale=Math.min((PORTRAIT_WIDTH-12)/(maxX-minX),(PORTRAIT_HEIGHT-8)/(maxY-minY));
 const offset={x:PORTRAIT_WIDTH/2-(minX+maxX)*scale/2,y:PORTRAIT_HEIGHT/2-(minY+maxY)*scale/2};
 const palettes=new Map();
+const hatImages=new Map();
 
 // Palette atlases are prepared once. Transparency and luminance detail survive;
 // healthy parts use the original image with absolutely no green tint.
@@ -61,6 +62,7 @@ async function atlasPalette(url) {
 }
 export async function preparePatientPortraits() {
   const cards=ctx.cardNodes;
+  await Promise.all([1,2,3,4].map(async id=>{try{hatImages.set(id,await loadTextureImage(assetUrl(ASSETS.textures['hat'+id])));}catch{}}));
   await Promise.all(cards.map(async(card,id)=>{
     const key=['robotA','robotB','robotC','robotD'][id];
     try{card.portraitAtlas=ctx.textureAssets?.[key]?.loaded===false?null:await atlasPalette(assetUrl(ASSETS.textures[key]));}
@@ -70,7 +72,8 @@ export async function preparePatientPortraits() {
   ctx.telemetryPortraitsReady=true;ctx.telemetryDirty=true;
 }
 export function paintPatientPortrait(card,id,states) {
-  const key=states.map(s=>s.state+':'+s.opacity).join('|');
+  const hat=ctx.betting?.garage?.[id]?.head?.hat;
+  const key=states.map(s=>s.state+':'+s.opacity).join('|')+'|'+hat;
   if(card.portraitStateKey!==key){
     card.portraitStateKey=key;card.portraitStates=Object.fromEntries(states.map(s=>[s.key,s.state]));
     const counts=states.reduce((counts,s)=>(counts[s.state]=(counts[s.state]??0)+1,counts),{});
@@ -93,5 +96,6 @@ export function paintPatientPortrait(card,id,states) {
     }
     draw.restore();
   }
+  if(hatImages.has(hat)&&states.find(s=>s.key==='head')?.state!=='off'){draw.save();draw.transform(...PORTRAIT_BONES.find(b=>b.key==='head').matrix);draw.drawImage(hatImages.get(hat),0,0,64,64);draw.restore();}
   card.portraitPaintKey=key;
 }

@@ -1,3 +1,4 @@
+import {paintCrit} from './crit.js';
 import { timed } from './diagnostics.js';
 import { formatRoundTime } from "../ui/results.js";
 import { ctx } from "../game/state.js";
@@ -15,6 +16,7 @@ export function paint() {
   timed('telemetry',paintTelemetry);
   paintCombatAccents();
   paintHitEffects();
+  paintCrit();
   let text = ctx.startup.phase === 'intro' ? 'Нажмите «начать»' : ctx.startup.phase === 'spawning' ? `Выход на арену · ${ctx.startup.nextIndex} / ${ctx.ROBOT_COUNT}` : 'Все против всех · осталось подвижных: ' + ctx.robots.filter(r => r.mobile).length;
   if (ctx.combat.finished) text = ctx.combat.winner === null ? 'НИЧЬЯ · все обездвижены' : `ПОБЕДИТЕЛЬ — ${String.fromCharCode(65 + ctx.combat.winner)}!`;
   if(ctx.status.title!==text)ctx.status.title = text;

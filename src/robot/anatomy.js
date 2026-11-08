@@ -1,3 +1,5 @@
+import {bettingSave} from '../betting/storage.js';
+import {showCrit} from '../render/crit.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { CONFIG } from "../config.js";
@@ -178,10 +180,10 @@ export function robotFailFromOilLoss(robotState) {
   robotState.api.capsules = robotState.makeCapsules();
   return true;
 }
-export function robotDamage(robotState, key, by) {
+export function robotDamage(robotState, key, by, damage=1) {
   if (!key || !robotState.isDamageable(key) || !robotState.hp.has(key) || robotState.broken.has(key) || ctx.game.time - (robotState.hitAt.get(key) ?? -99) < CONFIG.combat.damageInvulnerabilitySec) return false;
   robotState.hitAt.set(key, ctx.game.time);
-  robotState.hp.set(key, robotState.hp.get(key) - 1);
+  robotState.hp.set(key, Math.max(0,robotState.hp.get(key) - damage));
   const caps = robotState.api.capsules.filter(c => c.segment === key);
   const pivot = caps.length ? {
     x: (caps[0].a.x + caps[0].b.x) / 2,
@@ -190,6 +192,7 @@ export function robotDamage(robotState, key, by) {
     x: robotState.x,
     y: robotState.y
   };
+  if(damage===2)showCrit(pivot.x,pivot.y);
   burst(pivot.x, pivot.y);
   const attacker=ctx.robots[by];
   if(attacker&&attacker.id!==robotState.id)attacker.flashHitLight();
@@ -220,6 +223,7 @@ export function robotDamage(robotState, key, by) {
       inertia:createInertia(direction,robotState.api.capsules.filter(c=>[key,...attached].includes(c.segment))),
       pieces: wreckPieces
     });
+    if(wreckKeys.includes('head')&&ctx.betting?.garage?.[robotState.id]){ctx.betting.garage[robotState.id].head=null;bettingSave();}
     for (const part of [key, ...attached]) {
       robotState.broken.add(part);
       robotState.hp.set(part, 0);

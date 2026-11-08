@@ -32,3 +32,6 @@ export async function preloadTextures() {
   }));
   return Object.fromEntries(entries);
 }
+
+// Transient SVG rasterizations must not accumulate across rounds.
+export function releaseTextureImage(url){images.delete(url);}

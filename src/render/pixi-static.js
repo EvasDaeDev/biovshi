@@ -1,15 +1,15 @@
 import { ctx } from '../game/state.js';
-import { loadTextureImage } from '../assets/preload.js';
+import { loadTextureImage,releaseTextureImage } from '../assets/preload.js';
 
 // SVG is used ONLY to prepare the stationary artwork. Never called in paint().
 // Inline styles and images: SVG-as-image cannot load external resources in Safari.
 const PROPERTIES=['fill','fill-opacity','fill-rule','stroke','stroke-width','stroke-opacity',
   'stroke-linecap','stroke-linejoin','opacity','display','filter','clip-path','font-size',
   'font-weight','font-family','text-anchor','mix-blend-mode','image-rendering'];
-export async function staticArenaImage(nodes,{outset=0,night=false,forceVisible=false}={}) {
+export async function staticArenaImage(nodes,{outset=0,night=false,forceVisible=false,pixels=null,exclude=null}={}) {
   const doc=ctx.svg.ownerDocument,win=doc.defaultView;
   const root=doc.createElementNS(ctx.NS,'svg'),defs=doc.createElementNS(ctx.NS,'defs');
-  const size=700+outset*2,resolution=2;
+  const size=700+outset*2,resolution=pixels?pixels/size:2;
   root.setAttribute('xmlns',ctx.NS);root.setAttribute('width',size*resolution);root.setAttribute('height',size*resolution);
   root.setAttribute('viewBox',`${-outset} ${-outset} ${size} ${size}`);
   root.appendChild(defs);
@@ -25,6 +25,7 @@ export async function staticArenaImage(nodes,{outset=0,night=false,forceVisible=
     if(forceVisible)clone.style.display='inline';
     // The final ambient blend happens against the real scene, once.
     if(forceVisible)clone.style.mixBlendMode='normal';
+    if(exclude)clone.querySelectorAll(exclude).forEach(node=>node.remove());
     root.appendChild(clone);
   }
   if(night)root.querySelector('#tag7hop-light-holes')?.replaceChildren();
@@ -43,5 +44,6 @@ export async function staticArenaImage(nodes,{outset=0,night=false,forceVisible=
   // Upload pixels, never a live SVG image, to WebGL.
   const canvas=doc.createElement('canvas');canvas.width=canvas.height=size*resolution;
   canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+  releaseTextureImage(url);
   return {canvas,x:-outset,y:-outset,size};
 }
