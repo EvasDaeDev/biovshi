@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
-import {Container,UniformGroup,Rectangle} from 'pixi.js';
+import {Container,UniformGroup,Rectangle,Filter,DOMAdapter} from 'pixi.js';
 import {CONFIG} from '../src/config.js';
 import {ctx} from '../src/game/state.js';
 import {ArenaPostEffects,POST_EFFECTS_STORAGE,POST_VERTEX,POST_FRAGMENT,postEffectUniforms,
@@ -123,5 +123,32 @@ test('one-time device shader validation frees its temporary resources on success
     if(failure)assert.throws(()=>validatePostShader(gl,{vertex:POST_VERTEX,fragment:POST_FRAGMENT}));
     else validatePostShader(gl,{vertex:POST_VERTEX,fragment:POST_FRAGMENT});
     assert.deepEqual(deletedShaders,shaders);assert.deepEqual(deletedPrograms,programs);
+  }
+});
+
+
+test('real Pixi filter preparation keeps shared uniform precision identical across shader stages',()=>{
+  const dom=setup(),adapter=DOMAdapter.get();
+  DOMAdapter.set({...adapter,createCanvas:()=>({getContext:()=>({
+    getShaderPrecisionFormat:()=>({precision:23}),isContextLost:()=>false,
+  })})});
+  const {app}=engine();let post;
+  try {
+    // Use the actual Filter.from and GlProgram preprocessors, not the filter mock.
+    post=new ArenaPostEffects({Container,UniformGroup,Rectangle,Filter},app,ctx.root);
+    assert.equal(post.available,true);assert.equal(post.enabled,true);
+    const {vertex,fragment}=post.filter.glProgram;
+    assert.match(fragment,/precision highp float/,'grain needs highp where the device supports it');
+    const uniforms=source=>{
+      const precision=source.match(/precision (highp|mediump|lowp) float/)[1];
+      return new Map([...source.matchAll(/uniform\s+(?:(highp|mediump|lowp)\s+)?(\w+)\s+(\w+)\s*;/g)]
+        .map(([,qualifier,type,name])=>[name,{type,precision:qualifier??precision}]));
+    };
+    const a=uniforms(vertex),b=uniforms(fragment);let shared=0;
+    for(const [name,value] of a)if(b.has(name)){shared++;assert.deepEqual(b.get(name),value,name+' must link in GLSL ES');}
+    assert.equal(shared,2);
+    assert.match(fragment,/#define texture texture2D/,'verify the GLSL ES version actually used by Pixi');
+  } finally {
+    post?.destroy();app.stage.destroy({children:true});DOMAdapter.set(adapter);dom.window.close();
   }
 });

@@ -16,7 +16,9 @@ export function initializeDiagnostics() {
   const refreshEffects=()=>{
     const post=ctx.arenaRenderer?.postEffects;
     effects.checked=Boolean(post?.enabled);effects.disabled=!post?.available;
-    effects.title=post?.available?'Резкость, зерно, искажение, цветовое расхождение и виньетка':'Постэффекты доступны при рендере WebGL';
+    effects.title=post?.available?'Резкость, зерно, искажение, цветовое расхождение и виньетка':
+      ctx.arenaRenderer?'Постобработка не запустилась: '+(post?.error??ctx.arenaRenderer.postEffectsError??'ошибка фильтра'):'Постэффекты доступны при рендере WebGL';
+    effects.closest('label').title=effects.title;
     ctx.root.dataset.postEffects=effects.checked?'on':'off';
   };
   ctx.refreshPostEffectsControl=refreshEffects;refreshEffects();

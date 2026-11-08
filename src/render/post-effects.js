@@ -24,12 +24,14 @@ export function postEffectUniforms(settings=CONFIG.postEffects) {
   };
 }
 
+// Shared uniforms explicitly match precision in both stages. Pixi defaults to
+// highp vertices and mediump fragments; shared uniforms must not inherit conflicting defaults.
 export const POST_VERTEX=`
 in vec2 aPosition;
 out vec2 vTextureCoord;
 out vec2 vScreenCoord;
-uniform vec4 uInputSize;
-uniform vec4 uOutputFrame;
+uniform mediump vec4 uInputSize;
+uniform mediump vec4 uOutputFrame;
 uniform vec4 uOutputTexture;
 void main() {
     vec2 position = aPosition * uOutputFrame.zw + uOutputFrame.xy;
@@ -47,9 +49,9 @@ in vec2 vTextureCoord;
 in vec2 vScreenCoord;
 out vec4 finalColor;
 uniform sampler2D uTexture;
-uniform vec4 uInputSize;
+uniform mediump vec4 uInputSize;
 uniform vec4 uInputClamp;
-uniform vec4 uOutputFrame;
+uniform mediump vec4 uOutputFrame;
 uniform vec4 uOptics;
 uniform vec4 uLook;
 uniform vec2 uVignette;
@@ -129,7 +131,7 @@ export class ArenaPostEffects {
       uGrainTime:{value:0,type:'f32'},
     });
     this.filter=pixi.Filter.from({
-      gl:{vertex:POST_VERTEX,fragment:POST_FRAGMENT,name:'arena-film-lens'},
+      gl:{vertex:POST_VERTEX,fragment:POST_FRAGMENT,name:'arena-film-lens',preferredFragmentPrecision:'highp'},
       resources:{postUniforms:this.uniforms},
       resolution:app.renderer.resolution,padding:0,antialias:false,
     });
@@ -149,7 +151,7 @@ export class ArenaPostEffects {
     if(this.enabled)this.uniforms.uniforms.uGrainTime=this.reduced?0:Math.floor(time*12)%4096;
   }
   fail(error) {
-    this.available=false;this.setEnabled(false);
+    this.available=false;this.error=error.message;this.setEnabled(false);
     console.warn('Arena post effects disabled:',error);
   }
   destroy() {

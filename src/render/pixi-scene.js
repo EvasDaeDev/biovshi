@@ -84,7 +84,7 @@ export class PixiArena {
     this.canvas.addEventListener('webglcontextlost',this.onLost=e=>{e.preventDefault();this.contextLost=true;});
     this.canvas.addEventListener('webglcontextrestored',this.onRestored=()=>{this.contextLost=false;this.render();});
     try {this.postEffects=new ArenaPostEffects(this.p,this.app,ctx.root);}catch(error){
-      this.app.stage.filters=null;ctx.root.dataset.postEffects='off';console.warn('Arena post effects unavailable:',error);
+      this.app.stage.filters=null;this.postEffectsError=error.message;ctx.root.dataset.postEffects='off';console.warn('Arena post effects unavailable:',error);
     }
     this.render();
   }
