@@ -1,3 +1,4 @@
+import { initializeArenaExpand } from '../ui/arena-expand.js';
 import { initializeSettings } from '../ui/settings.js';
 import { initializeOrientation } from '../ui/orientation.js';
 import { createWalls } from '../render/walls.js';
@@ -464,4 +465,5 @@ export function initializeGame({textures=null}={}) {
   })[c]);
   bettingInit();
   initializeSettings();
+  initializeArenaExpand();
 }

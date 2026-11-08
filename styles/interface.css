@@ -493,3 +493,14 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #robot-tag-hops-v22 .settings-panel .graphics-control {display:flex;margin:0 0 16px;gap:12px}
 @media(max-width:1050px){#robot-tag-hops-v22 #bet-hud{flex-direction:row;flex-wrap:wrap}#robot-tag-hops-v22 .bet-hud-bank{flex-basis:100%}}
 @media(max-width:760px){#robot-tag-hops-v22 .tag7hop-sidebar{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}}
+
+/* The expand control is HTML above the canvas, so post effects do not blur it. */
+#robot-tag-hops-v22 .settings-button,
+#robot-tag-hops-v22 .arena-expand-button {box-sizing:border-box;width:42px;height:42px}
+#robot-tag-hops-v22 .arena-expand-button {position:absolute;right:12px;bottom:12px;z-index:3;padding:8px;display:grid;place-items:center;border:1px solid #284763;border-radius:50%;background:#102039;color:#daf6ff;touch-action:manipulation;cursor:pointer}
+#robot-tag-hops-v22.arena-expanded {position:fixed;inset:0;z-index:100;width:auto;height:100dvh;box-sizing:border-box;padding:12px;margin:0;overflow:auto;background:#02050d}
+#robot-tag-hops-v22.arena-expanded .tag7hop-layout {display:block}
+#robot-tag-hops-v22.arena-expanded .tag7hop-sidebar-wrap,
+#robot-tag-hops-v22.arena-expanded #bet-hud {display:none !important}
+#robot-tag-hops-v22.arena-expanded .tag7hop-main {width:100%}
+#robot-tag-hops-v22.arena-expanded .arena-expand-button {background:#235361;color:#fff4cc;border-color:#e8c174}

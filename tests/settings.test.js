@@ -121,3 +121,48 @@ test('grey portrait segments are 50 percent darker in RGB while alpha stays unch
   for(let i=0;i<8;i++)if(i%4===3)assert.equal(shaded[i],original[i]);else assert.ok(Math.abs(shaded[i]-original[i]/2)<=1);
   assert.deepEqual([...shaded.slice(8)],[32,18,10,0]);
 });
+
+test('expand fills the available viewport without pausing, changing time scale or touching the simulation',()=>{
+  const dom=setup(),button=document.getElementById('arena-expand-button');
+  const main=ctx.root.querySelector('.tag7hop-main');main.getBoundingClientRect=()=>({width:ctx.arenaExpanded?1200:700});
+  ctx.root.querySelector('.atmosphere-controls').getBoundingClientRect=()=>({height:60});
+  fitField();toggleSpeed();const seed=ctx.seed,time=ctx.game.time,camera=JSON.stringify(ctx.camera),last=ctx.last,debt=ctx.debt;
+  let renders=0;ctx.arenaRenderer={resize(){},render(){renders++;}};
+  button.click();
+  assert.equal(ctx.arenaExpanded,true);assert.equal(ctx.root.classList.contains('arena-expanded'),true);
+  assert.equal(button.getAttribute('aria-label'),'Свернуть');assert.equal(button.getAttribute('aria-pressed'),'true');
+  assert.equal(ctx.fieldWidth,1200);assert.equal(ctx.fieldHeight,dom.window.innerHeight-60-36);
+  assert.equal(ctx.paused,false);assert.equal(ctx.timeScale,2);assert.equal(ctx.seed,seed);assert.equal(ctx.game.time,time);
+  assert.equal(JSON.stringify(ctx.camera),camera);assert.equal(ctx.last,last);assert.equal(ctx.debt,debt);
+  assert.equal(renders,1);
+  const cards=ctx.roles.innerHTML;ctx.game.time+=1;ctx.robots[0].damage('head',1);paintTelemetry();
+  assert.equal(ctx.roles.innerHTML,cards,'hidden telemetry does no rendering work');
+  button.click();
+  assert.equal(ctx.arenaExpanded,false);assert.equal(button.getAttribute('aria-label'),'Развернуть');
+  assert.equal(ctx.fieldWidth,700);assert.notEqual(ctx.roles.innerHTML,cards,'cards catch up immediately on collapse');
+  assert.equal(ctx.paused,false);assert.equal(ctx.timeScale,2);
+  ctx.arenaRenderer=null;ctx.root.__disposeTag();dom.window.close();
+});
+
+test('Escape closes Settings before collapsing the arena and preserves a manual pause and telemetry preference',()=>{
+  const dom=setup();togglePause();
+  const toggle=document.querySelector('.render-diagnostics input');toggle.checked=false;toggle.dispatchEvent(new Event('change'));
+  document.getElementById('arena-expand-button').click();open();
+  document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+  assert.equal(ctx.settingsOpen,false);assert.equal(ctx.arenaExpanded,true);assert.equal(ctx.paused,true);
+  document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+  assert.equal(ctx.arenaExpanded,false);assert.equal(ctx.paused,true);assert.equal(ctx.telemetryEnabled,false);
+  assert.equal(toggle.checked,false);assert.equal(ctx.root.querySelector('.tag7hop-sidebar-wrap').style.visibility,'hidden');
+  assert.equal(ctx.betHud.hidden,false,'layout mode does not overwrite ledger visibility');
+  ctx.root.__disposeTag();dom.window.close();
+});
+
+test('disposing expanded mode restores scrolling and removes its listeners',()=>{
+  const dom=setup();document.documentElement.style.overflow='clip';document.body.style.overflow='scroll';
+  const button=document.getElementById('arena-expand-button');button.click();
+  assert.equal(document.documentElement.style.overflow,'hidden');assert.equal(document.body.style.overflow,'hidden');
+  ctx.root.__disposeTag();
+  assert.equal(document.documentElement.style.overflow,'clip');assert.equal(document.body.style.overflow,'scroll');
+  assert.equal(ctx.arenaExpanded,false);assert.equal(button.onclick,null);assert.equal(button.getAttribute('aria-pressed'),'false');
+  dom.window.close();
+});

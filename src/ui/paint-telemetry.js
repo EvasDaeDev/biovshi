@@ -7,7 +7,7 @@ const setClass = (node,key,on) => {if(node.classList.contains(key)!==on)node.cla
 const setWidth = (node, value) => { if (node.style.width !== value) node.style.width = value; };
 
 export function paintTelemetry() {
-  if(ctx.telemetryEnabled===false)return;
+  if(ctx.telemetryEnabled===false||ctx.arenaExpanded)return;
   const now=ctx.telemetryNow?.()??performance.now()/1000;
   if (!ctx.telemetryDirty && ctx.telemetryRobots === ctx.robots[0] && now >= ctx.lastTelemetryAt && now - ctx.lastTelemetryAt < CONFIG.rendering.telemetryIntervalSec) return;
   ctx.telemetryDirty = false;

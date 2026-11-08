@@ -11,7 +11,8 @@ function fitField() {
   const toolbarHeight=ctx.root.querySelector('.atmosphere-controls').getBoundingClientRect().height;
   // The WINDOW is rectangular; the camera fits the square arena inside it.
   const width=Math.max(1,Math.floor(columnWidth));
-  const height=Math.max(1,Math.floor(Math.min(width*.8,Math.max(220,viewportHeight-toolbarHeight-48))));
+  const height=ctx.arenaExpanded?Math.max(1,Math.floor(viewportHeight-toolbarHeight-36)):
+    Math.max(1,Math.floor(Math.min(width*.8,Math.max(220,viewportHeight-toolbarHeight-48))));
   if(width!==ctx.fieldWidth||height!==ctx.fieldHeight){
     ctx.fieldWidth=width;ctx.fieldHeight=height;ctx.fieldSide=Math.min(width,height);
     ctx.stage.style.width=width+'px';ctx.stage.style.height=height+'px';
