@@ -1,10 +1,11 @@
+import { bakeStaticLighting } from './atmosphere.js';
 import { enforceOilLimits } from '../systems/oil-limits.js';
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 
 const STORAGE_KEY = 'biovshi.graphics.v1';
-const FULL = Object.freeze({ name:'full', nearSamples:120, coneSamples:48, lightInterval:0 });
-const LIGHT = Object.freeze({ name:'light', nearSamples:40, coneSamples:20, lightInterval:1/15 });
+const FULL = Object.freeze({ name:'full' });
+const LIGHT = Object.freeze({ name:'light' });
 
 export function detectMobileDevice(nav=globalThis.navigator,media=query=>globalThis.matchMedia?.(query)) {
   return Boolean(media?.('(any-pointer: coarse)')?.matches || nav?.userAgentData?.mobile ||
@@ -36,6 +37,7 @@ export function initializePerformance() {
   apply(mode);
   if (control) control.onchange = () => {
     apply(control.value);
+    if(ctx.renderProfile.name==='full')bakeStaticLighting().catch(error=>console.warn('Static lighting:',error));
     try { localStorage.setItem(STORAGE_KEY, control.value); } catch { /* Storage is optional. */ }
   };
   ctx.fpsOutput = ctx.root.querySelector('#render-fps');

@@ -127,8 +127,7 @@ export function initializeGame({textures=null}={}) {
   // Обрезаем внутренний слой в координатах поля, а не корневой SVG в CSS-пикселях.
   attr(ctx.svg, 'clip-path', 'none');
   attr(ctx.root.querySelector('#tag7hop-arena-content'), 'clip-path', 'url(#tag7hop-arena-clip)');
-  // Independent stationary lighting, painted ABOVE the night overlay.
-  // This leaves robot flashlight masks and directional beams unchanged.
+  // Stationary ambient lighting, baked once before the arena becomes interactive.
   ctx.darkness = ctx.root.querySelector('#tag7hop-darkness');
   ctx.defs = ctx.svg.querySelector('defs');
   ctx.ambientBlur = el('filter', {
@@ -175,7 +174,6 @@ export function initializeGame({textures=null}={}) {
   // Gradient over 60 cm from walls and obstacles, about half as
   // bright as the robots' nearby illumination. The gradient is made of soft
   // concentric bands inside the luminance mask; black means LESS darkness.
-  // The scene's flashlight gradients remain completely unchanged.
   ctx.ambientBands = [{
     width: 110,
     opacity: .012
@@ -203,9 +201,8 @@ export function initializeGame({textures=null}={}) {
   }];
   ctx.ambientPolygons = [ctx.arenaBoundary.points, ...ctx.obstacles.map(b => b.points)];
   ctx.ambientLights=[];
-  ctx.atmosphereReduced=Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
   for (const vertices of ctx.ambientPolygons) {
-    const source=el('g',{'data-ambient-light':ctx.ambientLights.length},ctx.ambientGlowG);
+    const source=el('g',{'data-ambient-light':ctx.ambientLights.length,opacity:CONFIG.light.ambientIntensity},ctx.ambientGlowG);
     ctx.ambientLights.push(source);
     const points = vertices.map(p => p.x + ',' + p.y).join(' ');
     for (const band of ctx.ambientBands) el('polygon', {

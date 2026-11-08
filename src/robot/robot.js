@@ -82,55 +82,35 @@ function createRobot(id, start) {
   robotState.glowId = 'tag7hop-glow-' + robotState.id;
   robotState.gradient = el('radialGradient', {
     id: robotState.glowId,
-    gradientUnits: 'userSpaceOnUse',
-    r: CONFIG.light.nearbyRadiusCm
+    gradientUnits: 'objectBoundingBox',
+    cx:.5,cy:.5,r:.5
   }, ctx.lightGradients);
   for (const [offset, opacity] of [[0, 1], [.3, 1], [.55, .8], [.8, .3], [1, 0]]) el('stop', {
     offset,
     'stop-color': 'black',
     'stop-opacity': opacity
   }, robotState.gradient);
-  robotState.beamId = 'tag7hop-beam-' + robotState.id;
-  robotState.beamFade = el('radialGradient', {
-    id: robotState.beamId,
-    gradientUnits: 'userSpaceOnUse',
-    r: CONFIG.vision.rangeCm
-  }, ctx.lightGradients);
-  robotState.beamTint = el('radialGradient', {
-    id: robotState.beamId + '-tint',
-    gradientUnits: 'userSpaceOnUse',
-    r: CONFIG.vision.rangeCm
-  }, ctx.lightGradients);
-  for (const [offset, opacity] of [[0, 1], [.3, .9], [.75, .35], [1, 0]]) el('stop', {
-    offset,
-    'stop-color': 'black',
-    'stop-opacity': opacity
-  }, robotState.beamFade);
-  robotState.tintStops = [[0, .10], [.55, .05], [1, 0]].map(([offset, opacity]) => el('stop', {
-    offset,
-    'stop-color': 'var(--night-light)',
-    'stop-opacity': opacity
-  }, robotState.beamTint));
+  robotState.vision = null;
+  robotState.lightBeam = null;
   robotState.poolGradient = el('radialGradient', {
     id: 'tag7hop-pool-' + robotState.id,
-    gradientUnits: 'userSpaceOnUse',
-    r: CONFIG.light.nearbyRadiusCm
+    gradientUnits: 'objectBoundingBox',
+    cx:.5,cy:.5,r:.5
   }, ctx.lightGradients);
   for (const [offset, opacity] of [[0, .17], [.5, .07], [1, 0]]) el('stop', {
     offset,
     'stop-color': 'var(--night-light)',
     'stop-opacity': opacity
   }, robotState.poolGradient);
-  robotState.pool = el('path', {
+  robotState.pool = el('circle', {
+    cx:0,cy:0,r:CONFIG.light.nearbyRadiusCm,
     class: 'neon-pool',
     fill: 'url(#tag7hop-pool-' + robotState.id + ')'
   }, ctx.conesG);
-  robotState.lightBeam = el('path', {
-    fill: 'url(#' + robotState.beamId + ')'
-  }, ctx.lightHoles);
-  robotState.nearLight = el('path', {
-    fill: 'url(#' + robotState.glowId + ')'
-  }, ctx.lightHoles);
+  robotState.nearLight = el('circle', {
+    cx:0,cy:0,r:CONFIG.light.nearbyRadiusCm,
+    fill:'url(#'+robotState.glowId+')'
+  },ctx.lightHoles);
   robotState.actor = el('g', {
     class: 'robot'
   }, ctx.actorsG);
@@ -139,9 +119,6 @@ function createRobot(id, start) {
   robotState.figure = el('g', {'data-robot-figure':robotState.id}, robotState.actor);
   robotState.limbG = el('g', {}, robotState.figure);
   robotState.bodyG = el('g', {}, robotState.figure);
-  robotState.vision = el('path', {
-    class: 'cone'
-  }, ctx.conesG);
   robotState.label = el('text', {
     class: 'robot-label',
     'text-anchor': 'middle'

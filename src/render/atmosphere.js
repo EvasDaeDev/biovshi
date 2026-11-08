@@ -1,30 +1,35 @@
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
-import { attr } from './svg.js';
+import { el } from './svg.js';
+import { loadTextureImage } from '../assets/preload.js';
 
-const hash=n=>{const value=Math.sin(n*127.1+311.7)*43758.5453;return value-Math.floor(value);};
-
-// Cosmetic clock only: no simulation RNG, timers, or effects on perception.
-export function lampBrightness(time,id,reduced=false) {
-  if (reduced) return 1;
-  const period=8.5+hash(id+1)*5;
-  const clock=time+id*1.73,cycle=Math.floor(clock/period),phase=clock-cycle*period;
-  const start=2+hash(cycle*37+id*11)*Math.max(1,period-3);
-  const duration=.18+hash(cycle*17+id*19)*.13;
-  const t=(phase-start)/duration;
-  if(t<=0||t>=1)return 1;
-  return 1-CONFIG.light.flickerDepth*(.75+.25*hash(cycle+id*7))*Math.sin(Math.PI*t)**2;
-}
-
-export function paintAtmosphere() {
-  const fighting=ctx.startup.phase==='running';
-  for (const [i,node] of (ctx.ambientLights??[]).entries()) {
-    const brightness=lampBrightness(fighting?ctx.game.time:0,i+10,ctx.atmosphereReduced);
-    attr(node,'opacity',(CONFIG.light.ambientIntensity*brightness).toFixed(3));
+const rasters=new Map();
+// Convert the stationary blurred ambient layer once during arena preparation.
+// Camera motion then displays a bitmap instead of rerunning the SVG blur.
+export async function bakeStaticLighting() {
+  const svg=ctx.svg,group=ctx.ambientGlowG;
+  if(!group||group.dataset.rasterized==='true')return;
+  const source=group.cloneNode(true);
+  source.removeAttribute('style');
+  const size=Math.round(700*CONFIG.light.staticResolution);
+  const markup=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 700 700"><defs>${ctx.ambientBlur.outerHTML}${ctx.fieldClip.outerHTML}</defs>${source.outerHTML}</svg>`;
+  const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(markup);
+  if(!rasters.has(url)){
+    const pending=(async()=>{
+      const image=await loadTextureImage(url);
+      const canvas=document.createElement('canvas');canvas.width=canvas.height=size;
+      const drawing=canvas.getContext('2d');
+      if(!drawing)throw new Error('Static lighting canvas is unavailable');
+      drawing.drawImage(image,0,0,size,size);
+      return canvas.toDataURL('image/png');
+    })();
+    if(rasters.size>=2)rasters.delete(rasters.keys().next().value);
+    rasters.set(url,pending);pending.catch(()=>rasters.delete(url));
   }
-  for(const [i,spot] of (ctx.obstacleLightSpots??[]).entries()) {
-    const brightness=lampBrightness(fighting?ctx.game.time:0,i+11,ctx.atmosphereReduced);
-    attr(spot.glow,'opacity',(CONFIG.light.obstacleLightOpacity*brightness).toFixed(3));
-    attr(spot.reveal,'opacity',(CONFIG.light.obstacleLightReveal*brightness).toFixed(3));
-  }
+  const href=await rasters.get(url);
+  if(svg!==ctx.svg||!group.isConnected||ctx.disposed)return;
+  group.replaceChildren();group.removeAttribute('filter');
+  el('image',{href,x:0,y:0,width:700,height:700,preserveAspectRatio:'none'},group);
+  group.dataset.rasterized='true';
+  ctx.ambientBlur.remove();ctx.ambientLights=[];
 }

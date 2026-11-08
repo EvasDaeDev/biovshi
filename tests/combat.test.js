@@ -191,20 +191,20 @@ test('operating-room lighting, dark footprints and inward textured obstacle wall
   dom.window.close();
 });
 
-test('vision stays sharp in both qualities; liquid sprites age and fall back cleanly; red centre circle is absent',()=>{
+test('vision cones stay absent in both qualities; liquid sprites age and fall back cleanly; red centre circle is absent',()=>{
   const dom=setup();
   assert.equal(ctx.root.querySelector('#tag7hop-guide-visuals'),null);
   const robot=ctx.robots[0];
   for(const mode of ['full','light','full']) {
     ctx.renderProfile=chooseRenderProfile(mode,false);paint();
-    assert.equal(robot.vision.tagName,'path');
-    assert.ok(robot.vision.getAttribute('d').endsWith(' Z'));
-    assert.equal(robot.lightBeam.getAttribute('d'),robot.vision.getAttribute('d'));
-    assert.equal(robot.vision.children.length,0);
+    assert.equal(robot.vision,null);
+    assert.equal(robot.lightBeam,null);
+    assert.equal(ctx.svg.querySelectorAll('[id*="tag7hop-beam-"]').length,0);
+    assert.equal(robot.nearLight.tagName,'circle');
   }
   for(let i=0;i<5;i++)hit(robot,'head');
   paint();
-  assert.equal(robot.vision.getAttribute('d'),'');
+  assert.equal(robot.vision,null);
   ctx.liquidAtlasSources=['fresh','early','late','dry'];
   const seed=ctx.seed;
   createOilDrop(0,350,350,3);
@@ -354,7 +354,7 @@ test('every robot uses its own atlas; severed parts, victory halo and load fallb
   const identityFill=swatch.style.fill;
   assert.equal(label.style.fill,identityFill);
   assert.equal(actor.style.filter,'none');
-  assert.deepEqual([...ctx.svg.querySelectorAll('#tag7hop-beam-'+id+'-tint stop')].map(n=>Number(n.getAttribute('stop-opacity'))),[.1,.05,0]);
+  assert.equal(ctx.svg.querySelector('#tag7hop-beam-'+id+'-tint'),null);
   const module=ctx.cardNodes[id].card.querySelector('[data-segment="arm--1-upper"]');
   const healthyStroke=module.getAttribute('stroke');
   for(let i=0;i<4;i++) {
@@ -494,23 +494,22 @@ test('limbs still stop at arena walls and obstacles',()=>{
 });
 
 
-test('nearby light is half as bright without changing its diameter or the beam',()=>{
+test('nearby light is half as bright without changing its circular diameter',()=>{
   const dom=setup(),r=ctx.robots[0];
   const gradient=document.getElementById('tag7hop-pool-0');
-  const near=r.nearLight.getAttribute('d');
+  const near=r.nearLight.getAttribute('transform');
   const original=CONFIG.light.nearbyIntensity;
   try {
     CONFIG.light.nearbyIntensity=1;r.paint(false);
     const pool=document.querySelector('.neon-pool');
     const full=Number(r.nearLight.getAttribute('opacity'));
-    const beam=r.lightBeam.getAttribute('opacity');
     const poolFull=Number(pool.getAttribute('opacity'));
     CONFIG.light.nearbyIntensity=.5;r.paint(false);
     assert.equal(Number(r.nearLight.getAttribute('opacity')),full/2);
     assert.equal(Number(pool.getAttribute('opacity')),poolFull/2);
-    assert.equal(r.lightBeam.getAttribute('opacity'),beam);
-    assert.equal(r.nearLight.getAttribute('d'),near);
-    assert.equal(Number(gradient.getAttribute('r')),75);
+    assert.equal(r.nearLight.getAttribute('transform'),near);
+    assert.equal(Number(r.nearLight.getAttribute('r')),75);
+    assert.equal(gradient.getAttribute('gradientUnits'),'objectBoundingBox');
   } finally {CONFIG.light.nearbyIntensity=original;dom.window.close();}
 });
 
@@ -662,12 +661,12 @@ test('spawn leaps from beyond the arena, fades and lands before combat without c
     assert.ok(first.actor.getAttribute('transform').includes('scale(1.25)'));
     const translated=first.actor.getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1).map(Number);
     assert.ok(ctx.arenaPlanes.some(p=>p.nx*translated[0]+p.ny*translated[1]>p.c),'starts beyond the playable perimeter');
-    const initialLight=first.nearLight.getAttribute('d');
+    const initialLight=first.nearLight.getAttribute('transform');
     step(1/60);assert.equal(ctx.game.time,0,'no combat while spawning');
     advanceStartup(.1);
     assert.equal(first.actor.getAttribute('opacity'),'0.500');
     assert.equal(first.trail.length,0,'airborne feet leave no footprints');
-    assert.notEqual(first.nearLight.getAttribute('d'),initialLight,'light follows the entry in both graphics modes');
+    assert.notEqual(first.nearLight.getAttribute('transform'),initialLight,'light follows the entry in both graphics modes');
     assert.ok(first.actor.getAttribute('transform').includes('scale(1.03125)'));
     advanceStartup(.1);
     assert.equal(first.actor.getAttribute('opacity'),'1.000');
@@ -915,5 +914,29 @@ test('opening results stops hidden arena work after the three-second victory pre
   assert.equal(paints,0,'covered arena, lights and victory glow are no longer redrawn');
   assert.equal(ctx.game.time,time);assert.equal(ctx.seed,seed);
   assert.equal(ctx.fpsOutput.textContent,'— FPS');
+  dom.window.close();
+});
+
+
+test('decorative light is independent of mathematical vision and no longer clips against obstacles',()=>{
+  const dom=setup();ctx.robots=[];
+  const r=createRobot(0,{x:250,y:350,angle:0});ctx.robots=[r];r.paint(false);
+  assert.equal(r.canSee({x:280,y:350}),true);
+  assert.equal(r.canSee({x:450,y:350}),false,'the central obstacle still blocks AI vision');
+  assert.equal(r.vision,null);assert.equal(r.lightBeam,null);
+  assert.equal(r.nearLight.tagName,'circle');
+  assert.equal(r.nearLight.getAttribute('r'),'75');
+  assert.equal(r.nearLight.getAttribute('d'),null);
+  const seed=ctx.seed;paint();paint();assert.equal(ctx.seed,seed);
+  dom.window.close();
+});
+
+test('ambient shading and obstacle gradients do not change with game time',()=>{
+  const dom=setup();
+  const nodes=[ctx.ambientGlowG,...ctx.obstacleLightSpots.flatMap(s=>[s.glow,s.reveal])];
+  const before=nodes.map(n=>n.outerHTML);
+  for(const time of [1,3,8,13,25,50,100]){ctx.game.time=time;paint();}
+  assert.deepEqual(nodes.map(n=>n.outerHTML),before);
+  assert.ok(ctx.ambientLights.every(n=>Number(n.getAttribute('opacity'))===CONFIG.light.ambientIntensity));
   dom.window.close();
 });

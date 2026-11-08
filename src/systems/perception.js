@@ -1,61 +1,6 @@
-import { wrap } from '../utils/math.js';
-import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
-import { rectHit, sightClear } from "./collision.js";
+import { sightClear } from "./collision.js";
 import { random } from "../utils/random.js";
-export
-// Лучи зрения обрезаются препятствием. Угол зависит от роли робота.
-function visionOutline(o, heading, fov = CONFIG.vision.hunterAngleDeg * Math.PI / 180, samples = 48) {
-  const angles = Array.from({
-    length: samples + 1
-  }, (_, i) => -fov / 2 + fov * i / samples);
-  for (const b of ctx.obstacles) for (const {
-    x,
-    y
-  } of b.points) {
-    const a = wrap(Math.atan2(y - o.y, x - o.x) - heading);
-    for (const e of [-1e-6, 0, 1e-6]) if (Math.abs(a + e) < fov / 2) angles.push(a + e);
-  }
-  angles.sort((a, b) => a - b);
-  return angles.map(a => {
-    const p = {
-        x: o.x + Math.cos(heading + a) * CONFIG.vision.rangeCm,
-        y: o.y + Math.sin(heading + a) * CONFIG.vision.rangeCm
-      },
-      q = rectHit(o, p) ?? 1;
-    return {
-      x: o.x + (p.x - o.x) * q,
-      y: o.y + (p.y - o.y) * q
-    };
-  });
-}
-// Circular nearby light uses the same obstacle shadow test as the flashlight.
-export function nearbyLightOutline(o, samples = 120) {
-  const angles = Array.from({
-    length: samples
-  }, (_, i) => i * Math.PI * 2 / samples);
-  for (const b of ctx.obstacles) for (const {
-    x,
-    y
-  } of b.points) {
-    const a = Math.atan2(y - o.y, x - o.x);
-    for (const e of [-1e-6, 0, 1e-6]) angles.push(a + e);
-  }
-  angles.sort((a, b) => a - b);
-  return angles.map(a => {
-    const p = {
-        x: o.x + Math.cos(a) * CONFIG.light.nearbyRadiusCm,
-        y: o.y + Math.sin(a) * CONFIG.light.nearbyRadiusCm
-      },
-      hit = rectHit(o, p),
-      q = hit === null ? 1 : Math.min(1, hit + .003);
-    return {
-      x: o.x + (p.x - o.x) * q,
-      y: o.y + (p.y - o.y) * q
-    };
-  });
-}
-// Граф видимости: кратчайший обход углов всех кубов с запасом для лап.
 export function updateFootsteps() {
   for (const r of ctx.robots) {
     if (!r.visible || !r.mobile) continue;

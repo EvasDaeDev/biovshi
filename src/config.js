@@ -200,8 +200,8 @@ const CONFIG = {
     obstacleLightExtraDiameterCm: 100,
     obstacleLightOpacity: 0.12,
     obstacleLightReveal: 0.35,
-    flickerDepth: 0.2, // Краткие просадки яркости до 20%, без погасания.
-    nearbyIntensity: 0.5, // Яркость кругового пятна; направленный свет не меняется.
+    staticResolution: 2, // Статичный свет: пикселей на сантиметр при однократной подготовке.
+    nearbyIntensity: 0.5, // Яркость простого кругового пятна.
     nearbyRadiusCm: 75,
     // Радиус ближнего света; диаметр = 150 см.
     darknessOpacity: 0.92 // 0 — светло, 1 — полная темнота вне фонариков.

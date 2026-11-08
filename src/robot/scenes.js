@@ -526,7 +526,7 @@ export function jumpTick(robotState, dt, intent) {
 export function robotSetVisible(robotState, value, spawnAt = null) {
   robotState.visible = value;
   robotState.spawnAt = value ? spawnAt : null;
-  for (const node of [robotState.actor, robotState.floor, robotState.vision, robotState.pool, robotState.lightBeam, robotState.nearLight, ...robotState.trailNodes]) attr(node, 'display', value ? '' : 'none');
+  for (const node of [robotState.actor, robotState.floor, robotState.pool, robotState.nearLight, ...robotState.trailNodes]) attr(node, 'display', value ? '' : 'none');
 }
 export function robotPerformIdle(robotState, kind) {
   if (!robotState.idleKinds.includes(kind) || robotState.scene || robotState.leap || !robotState.mobile() || !robotState.clearCircle(robotState.api.center, 52)) return false;

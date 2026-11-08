@@ -13,10 +13,11 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
   globalThis.addEventListener=dom.window.addEventListener.bind(dom.window);
   globalThis.removeEventListener=dom.window.removeEventListener.bind(dom.window);
-  const pending=[];let requests=0;
+  const pending=[];let requests=0,released=false,staticRasters=0;
   globalThis.Image=class{
     naturalWidth=256;naturalHeight=256;
-    set src(value){requests++;pending.push(()=>this.onload?.());}
+    set src(value){if(value.startsWith('data:image/svg+xml'))staticRasters++;else requests++;
+      if(released)queueMicrotask(()=>this.onload?.());else pending.push(()=>this.onload?.());}
     async decode(){}
   };
   const create=document.createElement.bind(document);
@@ -32,12 +33,19 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   assert.equal(root.inert,true,'controls stay inactive while textures are pending');
   assert.equal(ctx.robots,undefined,'participants are not instantiated before checking images');
   assert.equal(requests,Object.keys(ASSETS.textures).length);
-  for(const finish of pending)finish();
+  released=true;for(const finish of pending)finish();
   for(let i=0;i<100&&document.getElementById('texture-loading');i++)await new Promise(resolve=>setImmediate(resolve));
   assert.equal(document.getElementById('texture-loading'),null);
   assert.equal(root.inert,false);
   assert.equal(requests,Object.keys(ASSETS.textures).length,'tint preparation reuses preloaded images');
   assert.ok(Object.values(ctx.textureAssets).every(status=>status.loaded));
+  assert.equal(staticRasters,1,'stationary ambient shading is prepared once');
+  assert.equal(ctx.ambientGlowG.dataset.rasterized,'true');
+  assert.equal(ctx.ambientGlowG.getAttribute('filter'),null);
+  assert.equal(ctx.ambientGlowG.children.length,1);
+  assert.equal(ctx.ambientGlowG.firstElementChild.tagName,'image');
+  const {bakeStaticLighting}=await import('../src/render/atmosphere.js');
+  await bakeStaticLighting();assert.equal(staticRasters,1);
   assert.equal(ctx.actorsG.querySelectorAll('[data-robot-fallback]').length,0);
   assert.equal(ctx.actorsG.querySelectorAll('[data-skin-segment]').length,52);
   ctx.root.__disposeTag();dom.window.close();

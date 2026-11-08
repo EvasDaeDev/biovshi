@@ -2,6 +2,7 @@ import { CONFIG } from '../config.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { ctx } from '../game/state.js';
 import { el } from './svg.js';
+import { bakeStaticLighting } from './atmosphere.js';
 import { loadTextureImage } from '../assets/preload.js';
 import { tintPixels } from './texture-tint.js';
 
@@ -79,4 +80,5 @@ export async function applyTextures() {
     ctx.liquidAtlasSources=[liquidUrl,...dry];
     ctx.settledOilDrops=new WeakSet();
   } catch(error) {console.warn('Liquid texture:',error);}
+  try{if(ctx.renderProfile?.name!=='light')await bakeStaticLighting();}catch(error){console.warn('Static lighting:',error);}
 }

@@ -170,9 +170,6 @@ export function robotPaint(robotState, hunter) {
   attr(robotState.limbG, 'transform', robotState.bodyTransform(height));
   attr(robotState.bodyG, 'transform', robotState.bodyTransform(height));
   attr(robotState.actor, 'class', hunter ? 'robot hunter' : shield > 0 ? 'robot protected' : 'robot');
-  attr(robotState.vision, 'class', hunter ? 'cone hunter' : shield > 0 ? 'cone protected' : 'cone');
-  attr(robotState.vision, 'fill', 'url(#' + robotState.beamId + '-tint)');
-  for (const stop of robotState.tintStops) attr(stop, 'stop-color', hunter ? 'var(--night-accent)' : shield > 0 ? `color-mix(in srgb, var(--night-protected) ${shield * 100}%, var(--night-light))` : 'var(--night-light)');
   robotState.draw(0);
   // Отпечаток появляется только при постановке конечности на землю.
   for (const l of robotState.allLimbs()) {
