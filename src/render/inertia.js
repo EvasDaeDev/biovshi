@@ -1,5 +1,6 @@
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
+import { transformMatrix, transformPoint } from './pixi-math.js';
 import { clamp } from '../utils/math.js';
 import { coreClearBone, coreClearCircle } from '../systems/collision.js';
 
@@ -25,15 +26,32 @@ export function createInertia(direction,capsules=[]) {
       distance=lo;break;
     }
   }
-  return {started:ctx.game.time,duration:CONFIG.effects.inertiaSec,dx:dx*distance,dy:dy*distance};
+  return {started:ctx.game.time,duration:Math.hypot(dx*distance,dy*distance)>1e-9?CONFIG.effects.inertiaSec:0,dx:dx*distance,dy:dy*distance};
 }
 export function inertiaOffset(inertia,time=ctx.game.time) {
   if(!inertia)return STILL;
   const previous=samples.get(inertia);
   if(previous&&(previous.time===time||(previous.offset.settled&&time>=inertia.started+inertia.duration)))return previous.offset;
-  const q=clamp((time-inertia.started)/inertia.duration,0,1);
+  const q=inertia.duration>0?clamp((time-inertia.started)/inertia.duration,0,1):1;
   const ease=1-(1-q)**2;
   const offset={x:inertia.dx*ease,y:inertia.dy*ease,settled:q>=1};
   samples.set(inertia,{time,offset});
   return offset;
+}
+
+// A frozen skin already includes the actor's jump/recoil transforms. Use its
+// world-space bounds, rather than the original wound or the moving owner.
+export function detachedCenter(pieces) {
+  const points=[];
+  for(const piece of pieces) {
+    if(piece.skin) {
+      const matrix=transformMatrix(piece.skin.transform);
+      for(const [x,y] of [[0,0],[64,0],[64,64],[0,64]])points.push(transformPoint(matrix,{x,y}));
+    } else {
+      const g=piece.geometry,r=g.kind==='head'?g.r:g.w/2;
+      for(const p of g.kind==='head'?[g]:[g.a,g.b])for(const x of [-r,r])for(const y of [-r,r])points.push({x:p.x+x,y:p.y+y});
+    }
+  }
+  return {x:(Math.min(...points.map(p=>p.x))+Math.max(...points.map(p=>p.x)))/2,
+    y:(Math.min(...points.map(p=>p.y))+Math.max(...points.map(p=>p.y)))/2};
 }

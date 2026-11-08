@@ -2,6 +2,7 @@ import { clamp, smooth } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { CONFIG } from "../config.js";
 import { ik, path } from "../utils/math.js";
+import { createOilDrop } from './effects.js';
 import { paintLighting } from './lighting.js';
 import { attr, dot } from "./svg.js";
 import { ROBOT_COLORS } from "../utils/colors.js";
@@ -171,6 +172,11 @@ export function robotPaint(robotState, hunter) {
   attr(robotState.bodyG, 'transform', robotState.bodyTransform(height));
   attr(robotState.actor, 'class', hunter ? 'robot hunter' : shield > 0 ? 'robot protected' : 'robot');
   robotState.draw(0);
+  if(robotState.corpsePuddlePending&&inertiaOffset(robotState.corpseInertia).settled) {
+    const center=robotState.visiblePoint(robotState.api.center);
+    createOilDrop(robotState.id,center.x,center.y,CONFIG.oil.settledPuddleRadiusCm);
+    robotState.corpsePuddlePending=false;
+  }
   // Отпечаток появляется только при постановке конечности на землю.
   for (const l of robotState.allLimbs()) {
     const grounded = !spawn.airborne && l.phase >= 1 && !robotState.lifted(l),

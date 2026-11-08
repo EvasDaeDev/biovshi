@@ -2,7 +2,7 @@ import { clamp } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { CONFIG } from "../config.js";
 import { ik } from "../utils/math.js";
-import { burst, createOilDrop, flashSeveredParts } from "../render/effects.js";
+import { burst, flashSeveredParts } from "../render/effects.js";
 import { note } from "../game/events.js";
 import { random } from "../utils/random.js";
 import { snapshotRobotSkin } from '../render/robot-skin.js';
@@ -105,8 +105,7 @@ export function leakOrigin(robotState, key) {
 export function finishMobility(robotState, reason, impact = robotState.lastImpact) {
   if(impact)robotState.corpseInertia=createInertia(impact.direction,robotState.api.capsules);
   ctx.combat.oilLeaks = ctx.combat.oilLeaks.filter(leak => leak.robot !== robotState.id);
-  const center = robotState.api.center;
-  createOilDrop(robotState.id, center.x, center.y, 15);
+  robotState.corpsePuddlePending = true;
   robotState.leap = null;
   if (robotState.scene) robotState.api.endScene();
   robotState.vx = robotState.vy = 0;
@@ -182,6 +181,7 @@ export function robotFailFromOilLoss(robotState) {
 export function robotDamage(robotState, key, by) {
   if (!key || !robotState.isDamageable(key) || !robotState.hp.has(key) || robotState.broken.has(key) || ctx.game.time - (robotState.hitAt.get(key) ?? -99) < CONFIG.combat.damageInvulnerabilitySec) return false;
   robotState.hitAt.set(key, ctx.game.time);
+  robotState.lightHitAt = ctx.game.time;
   robotState.hp.set(key, robotState.hp.get(key) - 1);
   const caps = robotState.api.capsules.filter(c => c.segment === key);
   const pivot = caps.length ? {

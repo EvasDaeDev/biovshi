@@ -1,11 +1,10 @@
-import { inertiaOffset } from './inertia.js';
+import { inertiaOffset, detachedCenter } from './inertia.js';
 import { enforceOilLimits } from '../systems/oil-limits.js';
 import { clamp, smooth } from '../utils/math.js';
 import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
 import { attr, dot, el } from "./svg.js";
 import { path } from "../utils/math.js";
-import { strikeProgress } from "../systems/combat.js";
 import { oilColor } from "../utils/colors.js";
 import { random } from "../utils/random.js";
 import { drawDetachedSkin } from './robot-skin.js';
@@ -101,27 +100,6 @@ export function updatePulses() {
 // Неудачная атака не должна немедленно возобновляться от того же касания лап.
 
 // Выполняется после движения: охотник доводит прыжок к актуальному положению жертвы.
-export function paintSwings() {
-  for (let id = 0; id < ctx.ROBOT_COUNT; id++) {
-    const e = ctx.swingLines[id],
-      p = ctx.combat.pending[id];
-    if (!p) {
-      attr(e, 'opacity', 0);
-      continue;
-    }
-    const r = ctx.robots[id],
-      pose = r.attackPose(p);
-    if (!pose) {
-      attr(e, 'opacity', 0);
-      continue;
-    }
-    // Короткий след именно за ударяющей конечностью, а не «луч к цели».
-    const from = pose.kind === 'arm' ? pose.shoulder : pose.base;
-    attr(e, 'd', path([from, pose.tip]));
-    const phase = strikeProgress(p);
-    attr(e, 'opacity', phase.phase === 'thrust' ? .28 : 0);
-  }
-}
 export function createOilDrop(robotId, x, y, baseRadius) {
   const sprite=createLiquidSprite(robotId,x,y,baseRadius);
   const node = sprite?.node??el('circle', {
@@ -212,6 +190,11 @@ export function paintDetachedAnatomy() {
       const slide=inertiaOffset(part.inertia);
       attr(part.node,'transform',`translate(${slide.x} ${slide.y})`);
       part.settled=slide.settled;
+      if(slide.settled&&!part.puddleCreated) {
+        const center=detachedCenter(part.pieces);
+        createOilDrop(part.id,center.x+slide.x,center.y+slide.y,CONFIG.oil.settledPuddleRadiusCm);
+        part.puddleCreated=true;
+      }
     }
   }
 }

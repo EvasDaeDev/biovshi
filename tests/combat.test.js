@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { JSDOM } from 'jsdom';
-import { createInertia, inertiaOffset } from '../src/render/inertia.js';
+import { createInertia, inertiaOffset, detachedCenter } from '../src/render/inertia.js';
 import { coreClearBone } from '../src/systems/collision.js';
 import { strikeCandidates } from '../src/systems/combat.js';
 import { createRobot } from '../src/robot/robot.js';
@@ -938,5 +938,81 @@ test('ambient shading and obstacle gradients do not change with game time',()=>{
   for(const time of [1,3,8,13,25,50,100]){ctx.game.time=time;paint();}
   assert.deepEqual(nodes.map(n=>n.outerHTML),before);
   assert.ok(ctx.ambientLights.every(n=>Number(n.getAttribute('opacity'))===CONFIG.light.ambientIntensity));
+  dom.window.close();
+});
+
+
+test('detached limbs leave one full-size puddle only at their final rendered skin position',()=>{
+  const textures=Object.fromEntries(['robotA','robotB','robotC','robotD'].map(key=>[key,{loaded:true}]));
+  const dom=setup({textures});
+  ctx.obstacles=ctx.obstacles.filter(b=>b.left>500);ctx.robots=[];
+  const r=createRobot(0,{x:300,y:250,angle:0}),attacker=createRobot(1,{x:230,y:250,angle:0});
+  ctx.robots=[r,attacker];r.paint(false);
+  for(let i=0;i<3;i++)hit(r,'arm-1-upper');
+  const part=ctx.combat.detached.at(-1),center=detachedCenter(part.pieces),seed=ctx.seed;
+  paint();assert.equal(ctx.combat.oilDrops.length,0);
+  ctx.game.time=part.inertia.started+part.inertia.duration-.001;paint();
+  assert.equal(ctx.combat.oilDrops.length,0,'no puddle while the limb is still sliding');
+  ctx.game.time=part.inertia.started+part.inertia.duration;paint();
+  const drop=ctx.combat.oilDrops[0];
+  assert.equal(ctx.combat.oilDrops.length,1);
+  assert.equal(drop.baseRadius,CONFIG.oil.settledPuddleRadiusCm);
+  assert.equal(drop.born,ctx.game.time);
+  assert.ok(Math.abs(drop.x-center.x-part.inertia.dx)<1e-8);
+  assert.ok(Math.abs(drop.y-center.y-part.inertia.dy)<1e-8);
+  assert.ok(Math.hypot(drop.x-center.x,drop.y-center.y)>0);
+  ctx.game.time+=5;paint();paint();
+  assert.equal(ctx.combat.oilDrops.length,1,'an already settled fragment never emits another puddle');
+  assert.equal(ctx.seed,seed,'settling does not consume combat RNG');
+  resetRound();ctx.game.time+=5;paint();
+  assert.equal(ctx.combat.detached.length,0);assert.equal(ctx.combat.oilDrops.length,0,'reset cancels pending puddles');
+  dom.window.close();
+});
+
+test('an immobilized patient leaves its puddle after stopping, at the torso light centre instead of the killing impact',()=>{
+  const dom=setup();ctx.obstacles=ctx.obstacles.filter(b=>b.left>500);ctx.robots=[];
+  const r=createRobot(0,{x:300,y:250,angle:0}),attacker=createRobot(1,{x:230,y:250,angle:0});ctx.robots=[r,attacker];
+  r.paint(false);
+  for(const kind of ['arm','leg'])for(const side of [-1,1])for(let i=0;i<3;i++)hit(r,`${kind}-${side}-upper`);
+  assert.equal(r.mobile,false);const stoppedAt=ctx.game.time+CONFIG.effects.inertiaSec;
+  const torso={...r.center};paint();
+  // Remove earlier fragments to isolate the patient's pending puddle.
+  ctx.combat.detached.length=0;ctx.combat.oilDrops.length=0;ctx.oilG.replaceChildren();
+  ctx.game.time=stoppedAt-.001;paint();assert.equal(ctx.combat.oilDrops.length,0);
+  ctx.game.time=stoppedAt;paint();assert.equal(ctx.combat.oilDrops.length,1);
+  const drop=ctx.combat.oilDrops[0];
+  const centre=r.nearLight.getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1).map(Number);
+  assert.ok(Math.hypot(drop.x-centre[0],drop.y-centre[1])<1e-8);
+  assert.ok(Math.abs(Math.hypot(drop.x-torso.x,drop.y-torso.y)-30)<1e-7);
+  assert.equal(drop.baseRadius,CONFIG.oil.settledPuddleRadiusCm);
+  ctx.game.time+=2;paint();assert.equal(ctx.combat.oilDrops.length,1);
+  dom.window.close();
+});
+
+test('blocked remains are already stopped and do not wait for a fictitious slide',()=>{
+  const dom=setup();
+  const inertia=createInertia(0,[{a:{x:705,y:350},b:{x:705,y:350},r:5}]);
+  assert.equal(inertia.duration,0);assert.deepEqual(inertiaOffset(inertia),{x:0,y:0,settled:true});
+  assert.deepEqual(detachedCenter([{geometry:{kind:'head',x:100,y:200,r:5}}]),{x:100,y:200});
+  dom.window.close();
+});
+
+test('confirmed hits brighten only the target light by 10 percent and fade over 0.2 seconds without stacking',()=>{
+  const dom=setup(),r=ctx.robots[0],other=ctx.robots[1];paint();
+  const base=Number(r.nearLight.getAttribute('opacity')),otherBase=other.nearLight.getAttribute('opacity');
+  const radius=r.nearLight.getAttribute('r');
+  assert.equal(r.damage('head',1),true);paint();
+  assert.equal(Number(r.nearLight.getAttribute('opacity')),base*1.1);
+  assert.equal(Number(document.querySelector('.neon-pool').getAttribute('opacity')),base*1.1);
+  assert.equal(other.nearLight.getAttribute('opacity'),otherBase);
+  ctx.game.time+=.1;paint();assert.equal(Number(r.nearLight.getAttribute('opacity')),base*1.05);
+  assert.equal(r.damage('head',1),false,'invulnerable repeat is not a new hit');paint();
+  assert.equal(Number(r.nearLight.getAttribute('opacity')),base*1.05);
+  assert.equal(r.damage('arm-1-upper',1),true);paint();
+  assert.equal(Number(r.nearLight.getAttribute('opacity')),base*1.1,'another hit restarts the flash without accumulating it');
+  ctx.game.time+=.2;paint();assert.equal(Number(r.nearLight.getAttribute('opacity')),base);
+  assert.equal(r.nearLight.getAttribute('r'),radius);
+  assert.equal(ctx.svg.querySelector('#gladiator-swings'),null);
+  assert.equal(ctx.svg.querySelector('[stroke="#ffe66d"]'),null,'orange strike helpers are never created');
   dom.window.close();
 });

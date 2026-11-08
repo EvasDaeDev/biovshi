@@ -13,6 +13,7 @@ import {paint} from '../src/render/frame.js';
 import {createOilDrop} from '../src/render/effects.js';
 import {resetRound} from '../src/game/session.js';
 import {initializeDiagnostics} from '../src/render/diagnostics.js';
+import {victoryGold,goldMatrix} from '../src/render/victory-glow.js';
 import {paintTelemetry} from '../src/ui/paint-telemetry.js';
 
 test('Pixi transforms preserve skin anchors, head reversal, recoil and spawn scaling',()=>{
@@ -38,8 +39,9 @@ function setup(){
 class TestText extends PIXI.Container {
   constructor(){super();this.anchor=new PIXI.Point();this.style={};this.text='';}
 }
+class TestFilter {constructor(options={}){Object.assign(this,options);}destroy(){this.destroyed=true;}}
 function bridge(){
-  const p={...PIXI,Text:TestText};
+  const p={...PIXI,Text:TestText,BlurFilter:TestFilter,ColorMatrixFilter:TestFilter};
   const arena=new PixiArena(p,{stage:new PIXI.Container(),renderer:{resize(){}}});
   const source=new PIXI.Texture({source:new PIXI.ImageSource({resource:{width:256,height:256}})});
   for(const robot of ctx.robots)arena.sources.set(robot.actor.querySelector('[data-skin-segment] image').getAttribute('href'),source);
@@ -108,4 +110,34 @@ test('telemetry can be isolated without changing arena dimensions, RNG or simula
   const last=ctx.lastTelemetryAt;ctx.game.time+=20;paintTelemetry();assert.equal(ctx.lastTelemetryAt,last);
   time+=.11;paintTelemetry();assert.equal(ctx.lastTelemetryAt,time);delete ctx.telemetryNow;
   ctx.root.__disposeTag();dom.window.close();
+});
+
+
+test('victory halo inflates once, colours the final blurred alpha gold and reuses it while shimmering',()=>{
+  const dom=setup(),arena=bridge();ctx.robots[0].setVisible(true);paint();arena.flush();
+  const generated=[];
+  arena.app.renderer.generateTexture=({target})=>{
+    const bounds=target.getLocalBounds();
+    const texture=new PIXI.Texture({source:new PIXI.ImageSource({resource:{width:Math.max(1,bounds.width),height:Math.max(1,bounds.height)}})});
+    generated.push({children:target.children.length,texture});return texture;
+  };
+  ctx.combat.finished=true;ctx.combat.winner=0;ctx.combat.finishedAt=ctx.game.time;
+  arena.victory();
+  assert.equal(generated.length,2,'silhouette expansion is baked once');
+  assert.equal(generated[1].children,9);
+  assert.ok(generated[0].texture.destroyed);
+  const {sprite,filter,gold}=arena.halo;
+  assert.deepEqual(sprite.filters,[filter,gold],'gold colour is applied after the blur');
+  assert.equal(sprite.tint,0xffffff,'no ineffective pre-filter tint');
+  assert.equal(sprite.blendMode,'normal','gold remains saturated against the background');
+  const original=[...gold.matrix];ctx.game.time+=.4;arena.victory();
+  assert.notDeepEqual(gold.matrix,original);assert.equal(generated.length,2);
+  for(const t of [0,.5,1,2,10]) {
+    const colour=victoryGold(t),matrix=goldMatrix(colour);
+    assert.equal(matrix[4],1);assert.ok(matrix[9]>.6&&matrix[9]<.85);assert.ok(matrix[14]<.2);
+    assert.equal(matrix[18],1,'the input alpha is preserved');assert.equal(matrix[19],0,'transparent surroundings stay transparent');
+    for(const index of [0,1,2,3,5,6,7,8,10,11,12,13])assert.equal(matrix[index],0,'old texture RGB cannot wash out the halo');
+  }
+  ctx.combat.winner=null;arena.victory();assert.equal(arena.halo,null);assert.ok(gold.destroyed);assert.ok(filter.destroyed);
+  arena.finish();ctx.root.__disposeTag();dom.window.close();
 });

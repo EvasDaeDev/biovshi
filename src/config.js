@@ -202,6 +202,8 @@ const CONFIG = {
     obstacleLightOpacity: 0.12,
     obstacleLightReveal: 0.35,
     staticResolution: 2, // Статичный свет: пикселей на сантиметр при однократной подготовке.
+    hitBoost: 0.1, // Попадание: +10% к свету под целью.
+    hitFadeSec: 0.2, // Возврат к обычной яркости за 0.2 с игрового времени.
     nearbyIntensity: 0.5, // Яркость простого кругового пятна.
     nearbyRadiusCm: 75,
     // Радиус ближнего света; диаметр = 150 см.
@@ -224,6 +226,7 @@ const CONFIG = {
     baseHue: 359,
     saturation: 81,
     lightness: 12.2, // Приблизительно #380607.
+    settledPuddleRadiusCm: 15, // Одинаковая лужа под остановившимся телом или фрагментом.
     drySec: 18, // Старые пятна становятся буро-чёрными.
     spriteColumns: 4,
     spriteRows: 4,

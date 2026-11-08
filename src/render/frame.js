@@ -1,7 +1,7 @@
 import { timed } from './diagnostics.js';
 import { formatRoundTime } from "../ui/results.js";
 import { ctx } from "../game/state.js";
-import { paintCombatAccents, paintDetachedAnatomy, paintOil, paintSwings, updatePulses, updateSparks } from "./effects.js";
+import { paintCombatAccents, paintDetachedAnatomy, paintOil, updatePulses, updateSparks } from "./effects.js";
 import { paintTelemetry } from '../ui/paint-telemetry.js';
 import { paintHitEffects } from './hit-effects.js';
 export function paint() {
@@ -11,7 +11,6 @@ export function paint() {
   updateSparks();
   paintOil();
   paintDetachedAnatomy();
-  paintSwings();
   for (const r of ctx.robots) r.paint(false);
   timed('telemetry',paintTelemetry);
   paintCombatAccents();

@@ -3,6 +3,7 @@ import { CONFIG } from '../config.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { loadTextureImage } from '../assets/preload.js';
 import { staticArenaImage } from './pixi-static.js';
+import { victoryGold, goldMatrix } from './victory-glow.js';
 import { transformMatrix } from './pixi-math.js';
 
 // The hidden SVG is a scene description for the existing animation code, not a
@@ -63,7 +64,7 @@ export class PixiArena {
     this.owned.add(this.nightTexture);
     this.content.addChild(new this.p.Sprite(this.nightTexture));
     this.ambient=ambient;ambient.blendMode='screen';this.content.addChild(ambient);
-    for(const root of [ctx.scoreG,ctx.swingG,ctx.severFlashG,ctx.hitEffects.group])this.attachRoot(root,this.content);
+    for(const root of [ctx.scoreG,ctx.severFlashG,ctx.hitEffects.group])this.attachRoot(root,this.content);
     this.attachRoot(ctx.timerOutput,this.world);
     const clip=new this.p.Graphics().poly(ctx.arenaBoundary.points.flatMap(p=>[p.x,p.y])).fill('#ffffff');
     this.world.addChild(clip);this.content.mask=clip;
@@ -219,20 +220,34 @@ export class PixiArena {
   }
   victory() {
     const winner=ctx.combat.finished&&ctx.combat.winner!==null?ctx.robots[ctx.combat.winner]:null;
-    if(this.halo&&this.halo.robot!==winner){if(!this.halo.sprite.destroyed)this.halo.sprite.destroy();this.halo.texture.destroy(true);this.halo.filter.destroy();this.halo.white.destroy();this.halo=null;}
+    if(this.halo&&this.halo.robot!==winner){if(!this.halo.sprite.destroyed)this.halo.sprite.destroy();this.halo.texture.destroy(true);this.halo.filter.destroy();this.halo.gold.destroy();this.halo=null;}
     if(!winner)return;
     if(!this.halo){
       const figure=this.records.get(winner.actor.querySelector('[data-robot-figure]'))?.object,actor=this.records.get(winner.actor)?.object;if(!figure||!actor)return;
       const bounds=figure.getLocalBounds(),range=CONFIG.effects.victoryGlowRangeCm;
-      const texture=this.app.renderer.generateTexture({target:figure,resolution:2});
-      const sprite=new this.p.Sprite(texture);sprite.position.set(bounds.x,bounds.y);
-      const filter=new this.p.BlurFilter({strength:range/3,quality:4});filter.padding=range+10;
-      const white=new this.p.ColorMatrixFilter();white.matrix=[0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0];
-      sprite.filters=[white,filter];sprite.blendMode='screen';actor.addChildAt(sprite,0);
-      this.halo={robot:winner,sprite,texture,filter,white};
+      const source=this.app.renderer.generateTexture({target:figure,resolution:2});
+      // Inflate the silhouette once (~6 cm) before the blur, just like the old
+      // SVG morphology. Thin limbs then have a visible halo instead of fading out.
+      const spread=new this.p.Container(),radius=range*.2;
+      for(let i=0;i<9;i++){
+        const copy=new this.p.Sprite(source),angle=i*Math.PI/4;
+        copy.position.set(bounds.x+(i<8?Math.cos(angle)*radius:0),bounds.y+(i<8?Math.sin(angle)*radius:0));
+        spread.addChild(copy);
+      }
+      const inflated=spread.getLocalBounds(),x=inflated.x,y=inflated.y;
+      const texture=this.app.renderer.generateTexture({target:spread,resolution:2});
+      spread.destroy({children:true});source.destroy(true);
+      const sprite=new this.p.Sprite(texture);sprite.position.set(x,y);
+      const filter=new this.p.BlurFilter({strength:range*4/15*this.world.scale.x,quality:4});
+      filter.padding=(range+10)*this.world.scale.x;
+      const gold=new this.p.ColorMatrixFilter();
+      // Tinting a sprite before a whitening filter produced a white winner.
+      // Colourise the blurred alpha last; keep the original patient above it.
+      sprite.filters=[filter,gold];sprite.blendMode='normal';actor.addChildAt(sprite,0);
+      this.halo={robot:winner,sprite,texture,filter,gold};
     }
-    const t=Math.max(0,ctx.game.time-(ctx.combat.finishedAt??ctx.game.time)),q=.5+.5*Math.sin(t*2.1);
-    this.halo.sprite.tint=(255<<16)|(Math.round(178+48*q)<<8)|Math.round(48+72*q);this.halo.sprite.alpha=.72+.18*q;
+    const colour= victoryGold(Math.max(0,ctx.game.time-(ctx.combat.finishedAt??ctx.game.time)));
+    this.halo.gold.matrix=goldMatrix(colour);this.halo.sprite.alpha=colour.opacity;
   }
   resize() {
     const side=ctx.fieldSide||700;
@@ -254,7 +269,7 @@ export class PixiArena {
   destroy() {
     if(this.disposed)return;this.disposed=true;this.observer?.disconnect();this.resizeObserver?.disconnect();
     if(this.canvas){this.canvas.onclick=null;this.canvas.removeEventListener('webglcontextlost',this.onLost);this.canvas.removeEventListener('webglcontextrestored',this.onRestored);}
-    if(this.halo){this.halo.texture.destroy(true);this.halo.filter.destroy();this.halo.white.destroy();}
+    if(this.halo){this.halo.texture.destroy(true);this.halo.filter.destroy();this.halo.gold.destroy();}
     this.nightComposition?.destroy({children:true});
     this.app.destroy({removeView:true},{children:true});
     for(const frame of this.frames.values())frame.destroy(false);

@@ -345,19 +345,6 @@ export function initializeGame({textures=null}={}) {
     'pointer-events': 'none'
   }, ctx.arenaContent);
   ctx.arenaContent.insertBefore(ctx.detachedG, ctx.actorsG);
-  ctx.swingG = el('g', {
-    id: 'gladiator-swings',
-    'pointer-events': 'none'
-  }, ctx.root.querySelector('#tag7hop-arena-content'));
-  ctx.swingLines = Array.from({
-    length: ctx.ROBOT_COUNT
-  }, () => el('path', {
-    fill: 'none',
-    stroke: '#ffe66d',
-    'stroke-width': 2,
-    'stroke-linecap': 'round',
-    opacity: 0
-  }, ctx.swingG));
   ctx.schematicModuleMap = {
     'arm--1-upper': ['arm--1-upper', 'arm--1-lower'],
     'arm--1-lower': ['arm--1-upper', 'arm--1-lower'],

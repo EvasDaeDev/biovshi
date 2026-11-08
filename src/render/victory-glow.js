@@ -2,6 +2,15 @@ import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 import { attr, el } from './svg.js';
 
+// Shared gold palette: colour is applied AFTER the blur, preserving its alpha.
+export function victoryGold(time) {
+  const q=.5+.5*Math.sin(Math.max(0,time)*2.1);
+  return {red:1,green:(164+46*q)/255,blue:(8+40*q)/255,opacity:.9+.1*q};
+}
+export function goldMatrix(gold) {
+  return [0,0,0,0,gold.red,0,0,0,0,gold.green,0,0,0,0,gold.blue,0,0,0,1,0];
+}
+
 // Filter the combined silhouette, excluding the identity label. Merge the
 // untouched texture last; subtract its alpha so gold only appears outside it.
 export function paintVictoryGlow(robot, active) {
@@ -28,9 +37,9 @@ export function paintVictoryGlow(robot, active) {
   }
   const {id, filter, gold} = robot.victoryGlow;
   const t = robot.reduced ? 0 : Math.max(0, ctx.game.time-(ctx.combat.finishedAt??ctx.game.time));
-  const shimmer = .5+.5*Math.sin(t*2.1);
-  attr(gold, 'flood-color', `rgb(255 ${Math.round(178+48*shimmer)} ${Math.round(48+72*shimmer)})`);
-  attr(gold, 'flood-opacity', (.72+.18*shimmer).toFixed(3));
+  const colour= victoryGold(t);
+  attr(gold, 'flood-color', `rgb(255 ${Math.round(255*colour.green)} ${Math.round(255*colour.blue)})`);
+  attr(gold, 'flood-opacity', colour.opacity.toFixed(3));
   // A compact world-space surface keeps blur cost bounded and leaves room for
   // sprite edges beyond the physical bones, plus the ~30 cm falloff (3 sigma).
   const caps = robot.api.capsules;
