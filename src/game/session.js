@@ -103,6 +103,7 @@ export function resetRound() {
   rebuildRobots();
   cameraReset();
   bettingOpen();
+  ctx.arenaRenderer?.render();
 }
 // Новая случайная последовательность при каждой загрузке, без фиксированного seed.
 export function advanceStartup(dt) {

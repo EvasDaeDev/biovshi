@@ -7,10 +7,12 @@ const setClass = (node,key,on) => {if(node.classList.contains(key)!==on)node.cla
 const setWidth = (node, value) => { if (node.style.width !== value) node.style.width = value; };
 
 export function paintTelemetry() {
-  if (!ctx.telemetryDirty && ctx.telemetryRobots === ctx.robots[0] && ctx.game.time >= ctx.lastTelemetryAt && ctx.game.time - ctx.lastTelemetryAt < CONFIG.rendering.telemetryIntervalSec) return;
+  if(ctx.telemetryEnabled===false)return;
+  const now=ctx.telemetryNow?.()??performance.now()/1000;
+  if (!ctx.telemetryDirty && ctx.telemetryRobots === ctx.robots[0] && now >= ctx.lastTelemetryAt && now - ctx.lastTelemetryAt < CONFIG.rendering.telemetryIntervalSec) return;
   ctx.telemetryDirty = false;
   ctx.telemetryRobots = ctx.robots[0];
-  ctx.lastTelemetryAt = ctx.game.time;
+  ctx.lastTelemetryAt = now;
   for (const r of ctx.robots) {
     const n = r.segmentCount;
     const card = ctx.cardNodes[r.id];

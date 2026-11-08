@@ -2,6 +2,8 @@ import { initializeGame } from './game/initialize.js';
 import { ctx } from './game/state.js';
 import { createAudio } from './audio/audio.js';
 import { applyTextures } from './render/textures.js';
+import { initializePixiArena } from './render/pixi-scene.js';
+import { initializeDiagnostics } from './render/diagnostics.js';
 import { preloadTextures } from './assets/preload.js';
 
 let cancelled=false;
@@ -15,6 +17,9 @@ async function boot() {
   initializeGame({textures});
   await applyTextures();
   if(cancelled||ctx.disposed)return;
+  await initializePixiArena();
+  if(cancelled||ctx.disposed)return;
+  initializeDiagnostics();
   root.inert=false;
   loading.remove();
   const audio=createAudio();

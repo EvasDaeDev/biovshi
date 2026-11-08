@@ -1,3 +1,4 @@
+import { timed } from '../render/diagnostics.js';
 import { updateOilLeaks } from '../render/effects.js';
 import { recordFrame } from '../render/performance.js';
 import { ctx } from "./state.js";
@@ -93,7 +94,7 @@ export function frame(now) {
   const resultsOpen=ctx.combat.finished&&!ctx.resultsPanel.hidden;
   ctx.cameraDebt = (ctx.cameraDebt || 0) + elapsed;
   if (ctx.startup.phase !== 'running') {
-    if (!document.hidden && !ctx.orientationBlocked) { advanceStartup(elapsed); painted = true; }
+    if (!document.hidden && !ctx.orientationBlocked && ctx.startup.phase === 'spawning') { advanceStartup(elapsed); painted = true; }
     ctx.debt = 0;
     ctx.paintAt = now;
   } else if (!ctx.paused && !ctx.orientationBlocked && !document.hidden && !resultsOpen) {
@@ -101,11 +102,11 @@ export function frame(now) {
     // Keep excess debt after a long active-frame stall instead of losing time.
     ctx.debt += elapsed * ctx.timeScale;
     const n = Math.min(60, Math.floor((ctx.debt + 1e-9) * 60));
-    for (let i = 0; i < n; i++) step(1 / 60);
+    timed('simulation',()=>{for (let i = 0; i < n; i++) step(1 / 60);});
     ctx.debt = Math.max(0, ctx.debt - n / 60);
     const paintInterval = 1000 / 30;
     if (now - ctx.paintAt >= paintInterval - .1) {
-      paint();
+      timed('animation',paint);
       painted = true;
       // Preserve the scheduled phase instead of restarting the timer on each
       // callback. A 75/144 Hz display or small jitter must not lower the cap.
@@ -122,6 +123,7 @@ export function frame(now) {
   // Changing viewBox repaints the whole arena. Do it only with a new game frame.
   if (painted) {
     cameraUpdate(ctx.cameraDebt);
+    timed('webgl',()=>ctx.arenaRenderer?.render());
     ctx.cameraDebt = 0;
   } else if (ctx.paused || ctx.orientationBlocked || document.hidden || resultsOpen) ctx.cameraDebt = 0;
   recordFrame(now, painted);

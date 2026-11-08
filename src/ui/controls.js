@@ -17,9 +17,10 @@ function fitField() {
     ctx.stage.style.width = side + 'px';
   }
   sizeLabels();
+  ctx.arenaRenderer?.resize();
 }
 export function sizeLabels() {
-  const width = ctx.svg.getBoundingClientRect().width || 700;
+  const width = (ctx.arenaRenderer?.canvas??ctx.svg).getBoundingClientRect().width || 700;
   ctx.root.style.setProperty('--tag-label-size', 12 * 716 / width + 'px');
   ctx.root.style.setProperty('--score-label-size', Math.min(12 * 716 / width, 24) + 'px');
 }

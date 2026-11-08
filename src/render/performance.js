@@ -37,7 +37,8 @@ export function initializePerformance() {
   apply(mode);
   if (control) control.onchange = () => {
     apply(control.value);
-    if(ctx.renderProfile.name==='full')bakeStaticLighting().catch(error=>console.warn('Static lighting:',error));
+    ctx.arenaRenderer?.render();
+    if(!ctx.arenaRenderer&&ctx.renderProfile.name==='full')bakeStaticLighting().catch(error=>console.warn('Static lighting:',error));
     try { localStorage.setItem(STORAGE_KEY, control.value); } catch { /* Storage is optional. */ }
   };
   ctx.fpsOutput = ctx.root.querySelector('#render-fps');
@@ -49,6 +50,7 @@ export function initializePerformance() {
 
 // Counts rendered frames, rather than assuming requestAnimationFrame is the game FPS.
 export function recordFrame(now, painted) {
+  ctx.updateDiagnostics?.(now);
   const stats = ctx.frameStats;
   if (!stats) return;
   const active = ctx.startup.phase === 'running' && !ctx.paused && !ctx.orientationBlocked && !document.hidden && !(ctx.combat?.finished&&ctx.resultsPanel?.hidden===false);

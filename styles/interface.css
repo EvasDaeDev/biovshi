@@ -451,3 +451,11 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #landscape-required .btn {margin-top:12px;}
 
 #robot-tag-hops-v22:fullscreen {width:100vw;max-width:none;height:100dvh;overflow:auto;box-sizing:border-box;background:#090f0c;}
+
+/* Isolate card layout/paint from the arena; hiding diagnostics keeps geometry stable. */
+#robot-tag-hops-v22 .tag7hop-sidebar-wrap { contain:layout paint style; }
+#robot-tag-hops-v22 .robot-card { contain:layout paint style; }
+#robot-tag-hops-v22 #tag7hop-pixi { display:block;width:100%;height:100%; }
+#robot-tag-hops-v22 .render-diagnostics { font-size:11px;color:#8ba6b8;margin-top:6px; }
+#robot-tag-hops-v22 .render-diagnostics label { display:inline-flex;align-items:center;gap:5px;margin-right:12px; }
+#robot-tag-hops-v22 .render-diagnostics output { display:block;font-variant-numeric:tabular-nums; }

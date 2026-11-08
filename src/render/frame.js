@@ -1,3 +1,4 @@
+import { timed } from './diagnostics.js';
 import { formatRoundTime } from "../ui/results.js";
 import { ctx } from "../game/state.js";
 import { paintCombatAccents, paintDetachedAnatomy, paintOil, paintSwings, updatePulses, updateSparks } from "./effects.js";
@@ -12,7 +13,7 @@ export function paint() {
   paintDetachedAnatomy();
   paintSwings();
   for (const r of ctx.robots) r.paint(false);
-  paintTelemetry();
+  timed('telemetry',paintTelemetry);
   paintCombatAccents();
   paintHitEffects();
   let text = ctx.startup.phase === 'intro' ? 'Нажмите «начать»' : ctx.startup.phase === 'spawning' ? `Выход на арену · ${ctx.startup.nextIndex} / ${ctx.ROBOT_COUNT}` : 'Все против всех · осталось подвижных: ' + ctx.robots.filter(r => r.mobile).length;
