@@ -63,7 +63,6 @@ export function resetRound() {
   ctx.detachedG.replaceChildren();
   ctx.combat.oilLeaks.length = 0;
   ctx.combat.oilDrops.length = 0;
-  ctx.debrisG.replaceChildren();
   ctx.oilG.replaceChildren();
   ctx.game.bans.forEach(row => row.fill(0));
   ctx.game.events.length = 0;

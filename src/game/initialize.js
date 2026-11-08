@@ -1,3 +1,4 @@
+import { initializeOrientation } from '../ui/orientation.js';
 import { createWalls } from '../render/walls.js';
 import { createObstacleLights } from '../render/ground-spots.js';
 import { initializeHitEffects } from '../render/hit-effects.js';
@@ -16,7 +17,8 @@ import { paint } from "../render/frame.js";
 import { bettingCancel, bettingInit } from "../betting/ui.js";
 import { resetFrameClock } from "./clock.js";
 import { frame } from "./loop.js";
-export function initializeGame() {
+export function initializeGame({textures=null}={}) {
+  ctx.textureAssets=textures;
   ctx.root = document.getElementById('robot-tag-hops-v22');
   ctx.svg = ctx.root.querySelector('#tag7hop-field');
   ctx.grid = ctx.root.querySelector('#tag7hop-grid');
@@ -216,42 +218,6 @@ export function initializeGame() {
     }, source);
   }
   ctx.root.querySelector('#tag7hop-guide-visuals')?.remove();
-  ctx.guideG = el('g', {
-    id: 'tag7hop-guide-visuals',
-    'pointer-events': 'none'
-  }, ctx.arenaContent);
-  ctx.arenaContent.insertBefore(ctx.guideG, ctx.conesG);
-  ctx.startMarkers = [{
-    x: 350,
-    y: 52
-  }, {
-    x: 52,
-    y: 350
-  }, {
-    x: 648,
-    y: 350
-  }, {
-    x: 350,
-    y: 648
-  }];
-  for (const marker of ctx.startMarkers) {
-    el('circle', {
-      cx: marker.x,
-      cy: marker.y,
-      r: 40,
-      fill: 'rgba(255,214,236,0.10)',
-      stroke: 'rgba(255,214,236,0.65)',
-      'stroke-width': 3
-    }, ctx.guideG);
-    el('circle', {
-      cx: marker.x,
-      cy: marker.y,
-      r: 23,
-      fill: 'rgba(255,214,236,0.05)',
-      stroke: 'rgba(255,233,244,0.35)',
-      'stroke-width': 1.5
-    }, ctx.guideG);
-  }
   ctx.gridMinorNode = undefined;
   ctx.gridMajorNode = undefined;
   ctx.gridBaseMinor = undefined;
@@ -371,6 +337,7 @@ export function initializeGame() {
     fighterSwings: Array(ctx.ROBOT_COUNT).fill(0),
     detached: []
   };
+  for(const id of ['gladiator-oil','gladiator-detached-anatomy','gladiator-debris','gladiator-swings','gladiator-sever-flashes'])ctx.svg.querySelector('#'+id)?.remove();
   ctx.oilG = el('g', {
     id: 'gladiator-oil',
     'pointer-events': 'none'
@@ -381,10 +348,6 @@ export function initializeGame() {
     'pointer-events': 'none'
   }, ctx.arenaContent);
   ctx.arenaContent.insertBefore(ctx.detachedG, ctx.actorsG);
-  ctx.debrisG = el('g', {
-    id: 'gladiator-debris',
-    'pointer-events': 'none'
-  }, ctx.arenaContent);
   ctx.swingG = el('g', {
     id: 'gladiator-swings',
     'pointer-events': 'none'
@@ -495,6 +458,7 @@ export function initializeGame() {
     disposeWithVisibility();
   };
   ctx.paintAt = -Infinity;
+  initializeOrientation();
   ctx.frameId = requestAnimationFrame(frame);
   // Local pari-mutuel ledger. All values are whole virtual chips.
   ctx.BET_STORAGE = 'biovshi.local-totalizator.v1';

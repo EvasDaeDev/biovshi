@@ -443,3 +443,11 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] {
   background:#235361;color:#fff4cc;border-color:#e8c174;
 }
+
+#texture-loading {position:fixed;inset:0;z-index:2000;display:grid;place-items:center;background:#090f0c;color:#d3cead;font:18px system-ui;}
+
+#landscape-required:not([hidden]) {position:fixed;inset:0;z-index:1500;display:grid;place-items:center;padding:24px;background:#090f0c;color:#d3cead;text-align:center;}
+#landscape-required[hidden] {display:none;}
+#landscape-required .btn {margin-top:12px;}
+
+#robot-tag-hops-v22:fullscreen {width:100vw;max-width:none;height:100dvh;overflow:auto;box-sizing:border-box;background:#090f0c;}

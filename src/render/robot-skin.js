@@ -53,23 +53,19 @@ function createPiece(key,url,parent) {
 export function createRobotSkin(robot) {
   const assetKey=['robotA','robotB','robotC','robotD'][robot.id];
   const url=assetUrl(ASSETS.textures[assetKey]);
-  if (!url) return;
+  if (!url || ctx.textureAssets?.[assetKey]?.loaded===false) return;
   const limbs=el('g',{'data-skin-layer':'limbs',display:'none'},robot.limbG);
   const body=el('g',{'data-skin-layer':'body',display:'none'},robot.bodyG);
   const pieces=new Map();
-  const vectors=[robot.torso,robot.head,robot.nose,robot.mouth,
-    robot.shoulderBar,robot.pelvicBar,...robot.spineBones,...robot.spineDots,
-    ...robot.horns,...robot.spheres,
-    ...[...robot.arms,...robot.legs].flatMap(l=>[l.upper,l.lower,l.joint,l.endShape])];
-  const skin=robot.skin={url,limbs,body,pieces,vectors,ready:false};
+  const skin=robot.skin={url,limbs,body,pieces,ready:false};
   const activate=ready=>{
     const wasReady=skin.ready;
+    if(ready)robot.detachFallback();else robot.ensureFallback();
     skin.ready=ready;
-    for(const node of vectors)node.style.visibility=ready?'hidden':'';
     robot.neck.style.stroke=ready?'#a78a70':'';
     for(const node of [limbs,body])attr(node,'display',ready?'':'none');
     attr(robot.actor,'data-skin-ready',ready);
-    if(wasReady!==ready)robot.draw(0); // Hydrate whichever representation just became visible.
+    if(wasReady!==ready)robot.draw(0);
   };
   // Back-to-front body order; head remains above the chest, limbs below it.
   const keys=[...Object.keys(ROBOT_PARTS).filter(k=>/^(arm|leg)/.test(k)),
@@ -81,6 +77,7 @@ export function createRobotSkin(robot) {
     pieces.set(key,piece);
   }
   attr(robot.actor,'data-skin','r_0'+(robot.id+1));
+  if(ctx.textureAssets?.[assetKey]?.loaded)activate(true);
 }
 
 export function paintRobotSkin(robot,strikePose=null) {

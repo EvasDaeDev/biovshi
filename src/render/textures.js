@@ -2,25 +2,17 @@ import { CONFIG } from '../config.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { ctx } from '../game/state.js';
 import { el } from './svg.js';
+import { loadTextureImage } from '../assets/preload.js';
 import { tintPixels } from './texture-tint.js';
 
 const tintCache = new Map();
 const TILE_CM = 100; // One complete texture repeats every metre in world coordinates.
 
-function loadImage(url) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.crossOrigin = 'anonymous';
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('Cannot load arena texture'));
-    image.src = url;
-  });
-}
 async function tintedTexture(url, colour, strength) {
   const key = [url, colour, strength, CONFIG.rendering.textureMaxSize, CONFIG.rendering.texturePixelated].join('|');
   if (!tintCache.has(key)) {
     const pending = (async () => {
-      const image = await loadImage(url);
+      const image = await loadTextureImage(url);
       // A fixed-size tile, independent of screen density and zoom.
       const scale = Math.min(1, CONFIG.rendering.textureMaxSize / Math.max(image.naturalWidth, image.naturalHeight));
       const canvas = document.createElement('canvas');
@@ -55,7 +47,7 @@ export async function applyTextures() {
   ];
   for (const [key, targets, colour, strength] of jobs) {
     const url = assetUrl(ASSETS.textures[key]);
-    if (!url || !targets[0]) continue;
+    if (!url || !targets[0] || ctx.textureAssets?.[key]?.loaded===false) continue;
     try {
       const source = await tintedTexture(url, colour, strength);
       if (svg !== ctx.svg || !svg.isConnected || ctx.disposed) return;
@@ -80,7 +72,7 @@ export async function applyTextures() {
     }
   }
   const liquidUrl=assetUrl(ASSETS.textures.liquids);
-  if(liquidUrl)try {
+  if(liquidUrl&&ctx.textureAssets?.liquids?.loaded!==false)try {
     const dry=await Promise.all([1/3,2/3,1].map(level=>
       tintedTexture(liquidUrl,CONFIG.oil.spriteDryColor,level*CONFIG.oil.spriteDryStrength)));
     if(svg!==ctx.svg||!svg.isConnected||ctx.disposed)return;

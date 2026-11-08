@@ -12,7 +12,7 @@ import { advanceStartup } from "./session.js";
 import { paint } from "../render/frame.js";
 import { cameraUpdate } from "../render/camera.js";
 export function step(dt) {
-  if (ctx.startup.phase !== 'running') return;
+  if (ctx.startup.phase !== 'running' || ctx.orientationBlocked) return;
   if (ctx.combat.finished) {
     // Отдельный таймер не нужен: продолжаем время анимации, не меняя итоговую длительность боя.
     ctx.game.time += dt;
@@ -92,10 +92,10 @@ export function frame(now) {
   let painted = false;
   ctx.cameraDebt = (ctx.cameraDebt || 0) + elapsed;
   if (ctx.startup.phase !== 'running') {
-    if (!document.hidden) { advanceStartup(elapsed); painted = true; }
+    if (!document.hidden && !ctx.orientationBlocked) { advanceStartup(elapsed); painted = true; }
     ctx.debt = 0;
     ctx.paintAt = now;
-  } else if (!ctx.paused && !document.hidden) {
+  } else if (!ctx.paused && !ctx.orientationBlocked && !document.hidden) {
     // Physics always advances in 1/60 s steps, independently of the paint cap.
     // Keep excess debt after a long active-frame stall instead of losing time.
     ctx.debt += elapsed * ctx.timeScale;
@@ -122,7 +122,7 @@ export function frame(now) {
   if (painted) {
     cameraUpdate(ctx.cameraDebt);
     ctx.cameraDebt = 0;
-  } else if (ctx.paused || document.hidden) ctx.cameraDebt = 0;
+  } else if (ctx.paused || ctx.orientationBlocked || document.hidden) ctx.cameraDebt = 0;
   recordFrame(now, painted);
   ctx.frameId = requestAnimationFrame(frame);
 }

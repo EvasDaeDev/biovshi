@@ -18,7 +18,6 @@ export function lampBrightness(time,id,reduced=false) {
 
 export function paintAtmosphere() {
   const fighting=ctx.startup.phase==='running';
-  attr(ctx.guideG,'display',fighting?'none':'');
   for (const [i,node] of (ctx.ambientLights??[]).entries()) {
     const brightness=lampBrightness(fighting?ctx.game.time:0,i+10,ctx.atmosphereReduced);
     attr(node,'opacity',(CONFIG.light.ambientIntensity*brightness).toFixed(3));

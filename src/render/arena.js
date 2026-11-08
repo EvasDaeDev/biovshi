@@ -6,7 +6,7 @@ import { ASSETS, assetUrl } from '../assets/manifest.js';
 export function drawFloorDecals() {
   ctx.arenaContent.querySelector('#tag7hop-floor-decals')?.remove();
   const url = assetUrl(ASSETS.textures.floorDecals);
-  if (!url) return;
+  if (!url || ctx.textureAssets?.floorDecals?.loaded===false) return;
   // One original image over the entire floor: no tiling, tint or collision data.
   // The arena-content clip also trims the chamfered corners of this layer.
   const image = el('image', {

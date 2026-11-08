@@ -1,3 +1,4 @@
+import { enforceOilLimits } from '../systems/oil-limits.js';
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 
@@ -16,11 +17,13 @@ export function initializePerformance() {
   if (!['auto','full','light'].includes(mode)) mode = 'auto';
   const touchDevice = globalThis.matchMedia?.('(any-pointer: coarse)').matches ||
     (globalThis.navigator?.platform === 'MacIntel' && globalThis.navigator.maxTouchPoints > 1);
+  ctx.touchDevice=Boolean(touchDevice);
   const apply = value => {
     ctx.renderProfile = chooseRenderProfile(value, touchDevice);
     ctx.root.classList.toggle('render-light', ctx.renderProfile.name === 'light');
     ctx.root.dataset.graphics = ctx.renderProfile.name;
     ctx.telemetryDirty = true;
+    enforceOilLimits();
     if (control) {
       control.value = value;
       control.title = 'Активный режим: ' + (ctx.renderProfile.name === 'light' ? 'лёгкий' : 'полный');
@@ -42,7 +45,7 @@ export function initializePerformance() {
 export function recordFrame(now, painted) {
   const stats = ctx.frameStats;
   if (!stats) return;
-  const active = ctx.startup.phase === 'running' && !ctx.paused && !document.hidden;
+  const active = ctx.startup.phase === 'running' && !ctx.paused && !ctx.orientationBlocked && !document.hidden;
   const meter = ctx.fpsOutput;
   if (!active) {
     stats.started = null; stats.paints = 0;

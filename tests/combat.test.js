@@ -17,7 +17,7 @@ import { chooseRenderProfile } from '../src/render/performance.js';
 import { createOilDrop, paintOil, updateOilLeaks } from '../src/render/effects.js';
 import { spawnHitEffect, paintHitEffects } from '../src/render/hit-effects.js';
 
-function setup({start=true,reduced=false}={}) {
+function setup({start=true,reduced=false,textures=null}={}) {
   const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const dom=new JSDOM(html,{url:'https://biovshi.test/',pretendToBeVisual:true});
   for(const key of ['document','localStorage','Event'])globalThis[key]=dom.window[key];
@@ -25,7 +25,7 @@ function setup({start=true,reduced=false}={}) {
   globalThis.ResizeObserver=class { observe(){} disconnect(){} };
   globalThis.requestAnimationFrame=()=>1;
   globalThis.cancelAnimationFrame=()=>{};
-  initializeGame();
+  initializeGame({textures});
   document.querySelector('#bet-setup-form').dispatchEvent(new Event('submit',{cancelable:true}));
   document.querySelector('#bet-fight').click();
   if(start)advanceStartup(3);
@@ -192,7 +192,7 @@ test('operating-room lighting, dark footprints and inward textured obstacle wall
 
 test('vision stays sharp in both qualities; liquid sprites age and fall back cleanly; red centre circle is absent',()=>{
   const dom=setup();
-  assert.equal(ctx.guideG.getAttribute('display'),'none');
+  assert.equal(ctx.root.querySelector('#tag7hop-guide-visuals'),null);
   const robot=ctx.robots[0];
   for(const mode of ['full','light','full']) {
     ctx.renderProfile=chooseRenderProfile(mode,false);paint();
@@ -221,9 +221,9 @@ test('vision stays sharp in both qualities; liquid sprites age and fall back cle
   drop.sprite.image.dispatchEvent(new Event('load'));
   assert.equal(drop.sprite.fallback.getAttribute('display'),'none');
   resetRound();paint();
-  assert.equal(ctx.guideG.getAttribute('display'),'');
+  assert.equal(ctx.root.querySelector('#tag7hop-guide-visuals'),null);
   assert.equal(ctx.oilG.childNodes.length,0);
-  assert.equal(ctx.guideG.querySelector('circle[r="178"]'),null);
+  assert.equal(ctx.root.querySelector('#tag7hop-guide-visuals'),null);
   dom.window.close();
 });
 
@@ -341,8 +341,8 @@ test('every robot uses its own atlas; severed parts, victory halo and load fallb
   const image=actor.querySelector('image');
   image.dispatchEvent(new Event('load'));
   assert.equal(actor.getAttribute('data-skin-ready'),'true');
-  assert.equal(actor.querySelector('ellipse.head').style.visibility,'hidden');
-  for(const decoration of actor.querySelectorAll('.robot-horn, .robot-sphere'))assert.equal(decoration.style.visibility,'hidden');
+  assert.equal(actor.querySelector('ellipse.head'),null,'textured patients have no fallback geometry in the scene');
+  assert.equal(actor.querySelectorAll('.robot-horn, .robot-sphere').length,0);
   paint();
   assert.ok([...actor.querySelectorAll('[data-skin-segment]')].every(n=>n.getAttribute('transform')&&!n.getAttribute('transform').includes('NaN')));
   const actorStyle=actor.getAttribute('style');
@@ -517,7 +517,7 @@ test('all robots share a 2000-drop FIFO limit including settled puddles and thei
   const dom=setup();
   ctx.combat.oilLeaks=[];
   const seed=ctx.seed;
-  for(let i=0;i<2000;i++)createOilDrop(i%4,200+i%100,250,4);
+  for(let i=0;i<2000;i++){createOilDrop(i%4,200+i%100,250,4);ctx.combat.oilDrops.at(-1).born-=CONFIG.oil.drySec+1;}
   const first=ctx.combat.oilDrops[0],sixth=ctx.combat.oilDrops[5];
   ctx.settledOilDrops.add(first);
   for(let i=0;i<5;i++)createOilDrop(i%4,350,350,15);
@@ -758,5 +758,70 @@ test('loaded skins skip hidden vector updates and refresh fallback geometry imme
   assert.equal(head.style.visibility,'');
   assert.equal(Number(head.getAttribute('cx')),robot.eye.x,'fallback uses the latest physical pose');
   assert.equal(Number(head.getAttribute('cy')),robot.eye.y);
+  dom.window.close();
+});
+
+test('preloaded patients create no duplicate vector models and only a failed atlas uses fallback',()=>{
+  const textures=Object.fromEntries(['robotA','robotB','robotC','robotD'].map(key=>[key,{loaded:true}]));
+  const dom=setup({textures});
+  assert.equal(ctx.actorsG.querySelectorAll('[data-robot-fallback]').length,0);
+  assert.equal(ctx.actorsG.querySelectorAll('ellipse.head').length,0);
+  assert.equal(ctx.groundG.querySelectorAll('circle').length,0,'support markers are not part of the scene');
+  assert.equal(ctx.actorsG.querySelectorAll('.extra-limbs').length,0);
+  const r=ctx.robots[0],image=r.actor.querySelector('image');
+  image.dispatchEvent(new Event('error'));
+  assert.equal(r.actor.querySelectorAll('[data-robot-fallback]').length,2);
+  image.dispatchEvent(new Event('load'));
+  assert.equal(r.actor.querySelectorAll('[data-robot-fallback]').length,0);
+  assert.equal(ctx.root.querySelector('#tag7hop-guide-visuals'),null);
+  assert.equal(ctx.root.querySelector('#gladiator-debris'),null);
+  for(let i=0;i<3;i++)initializeGame({textures});
+  const ids=[...ctx.svg.querySelectorAll('[id]')].map(n=>n.id);
+  assert.equal(new Set(ids).size,ids.length,'reinitialization leaves no duplicate legacy layers');
+  dom.window.close();
+  const partial=setup({textures:{...textures,robotB:{loaded:false}}});
+  assert.equal(ctx.robots[1].actor.querySelectorAll('image').length,0,'known missing textures are not requested again');
+  assert.equal(ctx.robots[1].actor.querySelectorAll('[data-robot-fallback]').length,2);
+  assert.ok(ctx.robots.filter(r=>r.id!==1).every(r=>!r.actor.querySelector('[data-robot-fallback]')));
+  partial.window.close();
+});
+
+test('fresh liquid is capped globally at 1000/full or 500/light while dry stains keep the 2000 total cap',()=>{
+  const dom=setup();
+  const seed=ctx.seed;
+  for(let i=0;i<1500;i++)createOilDrop(i%4,i,250,4);
+  assert.equal(ctx.combat.oilDrops.length,1000);
+  assert.equal(ctx.combat.oilDrops[0].x,500,'oldest fresh stains disappear first');
+  const control=document.getElementById('graphics-quality');
+  control.value='light';control.dispatchEvent(new Event('change'));
+  assert.equal(ctx.combat.oilDrops.length,500,'switching quality applies the limit immediately');
+  assert.equal(ctx.combat.oilDrops[0].x,1000);
+  ctx.game.time+=CONFIG.oil.drySec+1;
+  for(let i=0;i<600;i++)createOilDrop(i%4,2000+i,250,4);
+  assert.equal(ctx.combat.oilDrops.length,1000,'500 dry and 500 fresh stains coexist');
+  assert.equal(ctx.combat.oilDrops.filter(d=>ctx.game.time-d.born<CONFIG.oil.drySec).length,500);
+  assert.equal(ctx.seed,seed,'graphics limits do not change combat randomness');
+  dom.window.close();
+});
+
+test('mobile portrait is blocked and pauses game time until landscape resumes',()=>{
+  const dom=setup(),win=dom.window;
+  ctx.touchDevice=true;
+  Object.defineProperty(win,'innerWidth',{value:390,configurable:true});
+  Object.defineProperty(win,'innerHeight',{value:844,configurable:true});
+  win.dispatchEvent(new Event('resize'));
+  assert.equal(ctx.orientationBlocked,true);
+  assert.equal(ctx.root.querySelector('#landscape-required').hidden,false);
+  ctx.last=0;frame(1000);step(1/60);
+  assert.equal(ctx.game.time,0);
+  Object.defineProperty(win,'innerWidth',{value:844,configurable:true});
+  Object.defineProperty(win,'innerHeight',{value:390,configurable:true});
+  win.dispatchEvent(new Event('resize'));
+  assert.equal(ctx.orientationBlocked,false);
+  frame(10000);frame(10000+1000/60);
+  assert.ok(Math.abs(ctx.game.time-1/60)<1e-8,'portrait time is not replayed on rotation');
+  assert.equal(ctx.paused,false,'orientation does not alter the manual pause toggle');
+  ctx.root.__disposeTag();
+  assert.equal(ctx.root.querySelector('#landscape-required'),null);
   dom.window.close();
 });

@@ -121,7 +121,7 @@ export function draw(robotState, dt) {
       attr(robotState.head, 'transform', `rotate(${robotState.headFrame.angle * 180 / Math.PI} ${robotState.headCenter.x} ${robotState.headCenter.y})`);
     }
   }
-  for (const l of [...robotState.arms, ...robotState.legs, ...robotState.extraLimbs]) {
+  for (const l of [...robotState.arms, ...robotState.legs]) {
     const attackEnd = strikePose?.kind === 'arm' && strikePose.limb === l ? strikePose.tip : robotState.handEnd(l);
     const a = robotState.origin(l),
       solved = ik(a, attackEnd, ...robotState.lengths(l), l.kind === 'arm' ? l.side : -l.side);
@@ -135,8 +135,6 @@ export function draw(robotState, dt) {
       dot(l.joint, solved.joint);
       dot(l.endShape, solved.end);
     }
-    dot(l.contact, robotState.visiblePoint(l.foot));
-    attr(l.contact, 'opacity', !robotState.healthyLimb(l) || robotState.lifted(l) || l.phase < 1 ? '0' : '.5');
     l.pose = [a, solved.joint, solved.end];
   }
   paintRobotSkin(robotState,strikePose);

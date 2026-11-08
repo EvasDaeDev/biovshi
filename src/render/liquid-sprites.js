@@ -15,7 +15,7 @@ export function liquidVariant(seed,index,owner) {
 
 export function createLiquidSprite(owner,x,y,radius) {
   const url=assetUrl(ASSETS.textures.liquids);
-  if(!url)return null;
+  if(!url||ctx.textureAssets?.liquids?.loaded===false)return null;
   const variant=liquidVariant(ctx.seed,ctx.combat.oilDrops.length,owner);
   const col=variant.index%CONFIG.oil.spriteColumns,row=Math.floor(variant.index/CONFIG.oil.spriteColumns);
   const node=el('g',{

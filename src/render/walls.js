@@ -8,7 +8,7 @@ const outline=points=>points.map((p,i)=>(i?'L':'M')+p.x+','+p.y).join(' ')+' Z';
 
 function createWallPattern(key, length, width) {
   const url=assetUrl(ASSETS.textures[key]);
-  if (!url) return false;
+  if (!url || ctx.textureAssets?.[key]?.loaded===false) return false;
   const pattern=el('pattern',{
     id:'texture-'+key,patternUnits:'userSpaceOnUse',width:length,height:width,x:0,y:0,
   },ctx.defs);

@@ -1,3 +1,4 @@
+import { enforceOilLimits } from '../systems/oil-limits.js';
 import { clamp, smooth } from '../utils/math.js';
 import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
@@ -138,11 +139,7 @@ export function createOilDrop(robotId, x, y, baseRadius) {
     maxRadius: baseRadius * CONFIG.oil.growFactor,
     baseOpacity: .92
   });
-  while (ctx.combat.oilDrops.length > CONFIG.oil.limit) {
-    const oldest = ctx.combat.oilDrops.shift();
-    oldest.node.remove();
-    ctx.settledOilDrops?.delete(oldest);
-  }
+  enforceOilLimits();
 }
 // Emission belongs to the fixed simulation clock: it consumes combat RNG.
 export function updateOilLeaks() {

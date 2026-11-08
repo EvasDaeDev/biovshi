@@ -266,10 +266,6 @@ function createRobot(id, start) {
   robotState.peerRobots = () => ctx.robots.filter(r => r.id !== robotState.id && r.mobile && Math.hypot(r.x - robotState.x, r.y - robotState.y) < 220 && !(robotState.leap?.kind === 'rebound' && robotState.leap.launched && r.id === robotState.leap.victim) && !(r.actualPose.leap?.kind === 'rebound' && r.actualPose.leap.launched && r.actualPose.leap.victim === robotState.id));
   robotState.extraWeight = 0;
   robotState.extraActive = false;
-  robotState.extraG = el('g', {
-    opacity: 0,
-    class: 'extra-limbs'
-  }, robotState.limbG);
   robotState.trail = [];
   robotState.trailNodes = Array.from({
     length: CONFIG.trails.limit
@@ -293,152 +289,85 @@ function createRobot(id, start) {
   robotState.idleKinds = ['stretch', 'scratch', 'hops'];
   robotState.idleSequence = robotState.id;
   robotState.nextIdleAt = ctx.game.time + 8 + robotState.id * 3;
-  robotState.sphereLayer = el('g', {
-    class: 'sphere-under-spine'
-  }, robotState.bodyG);
-  robotState.torso = el('path', {
-    fill: 'none',
-    class: 'shirt',
-    'stroke-width': CONFIG.robot.vertebraBaseCm * ctx.scale
-  }, robotState.bodyG);
-  robotState.spineBones = Array.from({
-    length: 4
-  }, () => el('path', {
-    fill: 'none',
-    class: 'shirt',
-    'stroke-width': CONFIG.robot.vertebraBaseCm * ctx.scale
-  }, robotState.bodyG));
-  robotState.neck = el('path', {
-    'stroke-width': 3 * ctx.scale
-  }, robotState.bodyG);
-  robotState.head = el('ellipse', {
-    class: 'head'
-  }, robotState.bodyG);
-  robotState.nose = el('path', {
-    'stroke-width': 2 * ctx.scale,
-    fill: 'none'
-  }, robotState.bodyG);
-  robotState.mouth = el('ellipse', {
-    fill: 'var(--foreground)',
-    stroke: 'none'
-  }, robotState.bodyG);
-  robotState.pelvicBar = el('path', {
-    'stroke-width': 3 * ctx.scale
-  }, robotState.bodyG);
-  robotState.shoulderBar = el('path', {
-    class: 'shirt',
-    fill: 'none',
-    'stroke-width': 3 * ctx.scale,
-    'stroke-linecap': 'round'
-  }, robotState.bodyG);
-  robotState.horns = robotState.id === 1 ? [-1, 1].map(() => el('path', {
-    class: 'robot-horn',
-    fill: 'none',
-    'stroke-width': 3 * ctx.scale,
-    'stroke-linejoin': 'round',
-    'stroke-linecap': 'round'
-  }, robotState.bodyG)) : [];
-  robotState.spheres = robotState.id === 2 ? [-1, 1].map(() => el('circle', {
-    class: 'head robot-sphere',
-    r: CONFIG.robot.sphereRadiusCm,
-    'stroke-width': 3 * ctx.scale
-  }, robotState.sphereLayer)) : [];
-  robotState.spineDots = Array.from({
-    length: 5
-  }, () => el('circle', {
-    r: 2 * ctx.scale,
-    fill: 'var(--background)'
-  }, robotState.bodyG));
-  for (const side of [-1, 1]) for (const kind of ['arm', 'leg']) {
-    const l = {
-      kind,
-      side,
-      phase: 1,
-      foot: {
-        x: 0,
-        y: 0
-      },
-      from: {
-        x: 0,
-        y: 0
-      },
-      to: {
-        x: 0,
-        y: 0
-      },
-      upper: el('path', {
-        'stroke-width': 3 * ctx.scale,
-        fill: 'none'
-      }, robotState.limbG),
-      lower: el('path', {
-        'stroke-width': 3 * ctx.scale,
-        fill: 'none'
-      }, robotState.limbG),
-      joint: el('circle', {
-        r: 3 * ctx.scale
-      }, robotState.limbG),
-      endShape: el('circle', {
-        r: 3 * ctx.scale
-      }, robotState.limbG),
-      contact: el('circle', {
-        r: 4 * ctx.scale
-      }, robotState.floor)
-    };
-    (kind === 'arm' ? robotState.arms : robotState.legs).push(l);
+  robotState.neck = el('path', {'stroke-width':3*ctx.scale}, robotState.bodyG);
+  for (const side of [-1,1]) for (const kind of ['arm','leg']) {
+    const l={kind,side,phase:1,foot:{x:0,y:0},from:{x:0,y:0},to:{x:0,y:0}};
+    (kind==='arm'?robotState.arms:kind==='leg'?robotState.legs:robotState.extraLimbs).push(l);
   }
-  // Третья пара раскрывается из середины позвоночника; длины звеньев не меняются.
-  for (const side of [-1, 1]) {
-    robotState.extraLimbs.push({
-      kind: 'extra',
-      side,
-      phase: 1,
-      foot: {
-        x: 0,
-        y: 0
-      },
-      from: {
-        x: 0,
-        y: 0
-      },
-      to: {
-        x: 0,
-        y: 0
-      },
-      upper: el('path', {
-        'stroke-width': 3 * ctx.scale,
+  robotState.horns=[];robotState.spheres=[];robotState.spineBones=[];robotState.spineDots=[];
+  robotState.tailPath=null;robotState.tailDots=[];robotState.tailBones=[];
+  robotState.ensureFallback=()=>{
+    if(!robotState.fallbackBody){
+      robotState.fallbackBody=el('g',{'data-robot-fallback':'body'},robotState.bodyG);
+      robotState.fallbackLimbs=el('g',{'data-robot-fallback':'limbs'},robotState.limbG);
+      robotState.sphereLayer = el('g', {
+        class: 'sphere-under-spine'
+      }, robotState.fallbackBody);
+      robotState.torso = el('path', {
+        fill: 'none',
+        class: 'shirt',
+        'stroke-width': CONFIG.robot.vertebraBaseCm * ctx.scale
+      }, robotState.fallbackBody);
+      robotState.spineBones = Array.from({
+        length: 4
+      }, () => el('path', {
+        fill: 'none',
+        class: 'shirt',
+        'stroke-width': CONFIG.robot.vertebraBaseCm * ctx.scale
+      }, robotState.fallbackBody));
+      robotState.head = el('ellipse', {
+        class: 'head'
+      }, robotState.fallbackBody);
+      robotState.nose = el('path', {
+        'stroke-width': 2 * ctx.scale,
         fill: 'none'
-      }, robotState.extraG),
-      lower: el('path', {
+      }, robotState.fallbackBody);
+      robotState.mouth = el('ellipse', {
+        fill: 'var(--foreground)',
+        stroke: 'none'
+      }, robotState.fallbackBody);
+      robotState.pelvicBar = el('path', {
+        'stroke-width': 3 * ctx.scale
+      }, robotState.fallbackBody);
+      robotState.shoulderBar = el('path', {
+        class: 'shirt',
+        fill: 'none',
         'stroke-width': 3 * ctx.scale,
-        fill: 'none'
-      }, robotState.extraG),
-      joint: el('circle', {
-        r: 3 * ctx.scale
-      }, robotState.extraG),
-      endShape: el('circle', {
-        r: 3 * ctx.scale
-      }, robotState.extraG),
-      contact: el('circle', {
-        r: 4 * ctx.scale,
-        opacity: 0
-      }, robotState.floor)
-    });
-  }
-  robotState.tailPath = robotState.id === 3 ? el('path', {
-    fill: 'none',
-    'stroke-width': 3 * ctx.scale
-  }, robotState.limbG) : null;
-  robotState.tailDots = robotState.id === 3 ? Array.from({
-    length: CONFIG.robot.tailSegments
-  }, () => el('circle', {
-    r: 2.2 * ctx.scale
-  }, robotState.limbG)) : [];
-  robotState.tailBones = robotState.id === 3 ? Array.from({
-    length: CONFIG.robot.tailSegments
-  }, () => el('path', {
-    fill: 'none',
-    'stroke-width': 3 * ctx.scale
-  }, robotState.limbG)) : [];
+        'stroke-linecap': 'round'
+      }, robotState.fallbackBody);
+      robotState.horns = robotState.id === 1 ? [-1, 1].map(() => el('path', {
+        class: 'robot-horn',
+        fill: 'none',
+        'stroke-width': 3 * ctx.scale,
+        'stroke-linejoin': 'round',
+        'stroke-linecap': 'round'
+      }, robotState.fallbackBody)) : [];
+      robotState.spheres = robotState.id === 2 ? [-1, 1].map(() => el('circle', {
+        class: 'head robot-sphere',
+        r: CONFIG.robot.sphereRadiusCm,
+        'stroke-width': 3 * ctx.scale
+      }, robotState.sphereLayer)) : [];
+      robotState.spineDots = Array.from({
+        length: 5
+      }, () => el('circle', {
+        r: 2 * ctx.scale,
+        fill: 'var(--background)'
+      }, robotState.fallbackBody));
+      for(const l of [...robotState.arms,...robotState.legs])Object.assign(l,{
+        upper:el('path',{'stroke-width':3*ctx.scale,fill:'none'},robotState.fallbackLimbs),
+        lower:el('path',{'stroke-width':3*ctx.scale,fill:'none'},robotState.fallbackLimbs),
+        joint:el('circle',{r:3*ctx.scale},robotState.fallbackLimbs),
+        endShape:el('circle',{r:3*ctx.scale},robotState.fallbackLimbs),
+      });
+    }
+    robotState.bodyG.insertBefore(robotState.fallbackBody,robotState.neck);
+    robotState.limbG.insertBefore(robotState.fallbackLimbs,robotState.limbG.firstChild);
+  };
+  robotState.detachFallback=()=>{
+    robotState.fallbackBody?.remove();robotState.fallbackLimbs?.remove();
+  };
+  const skinKey=['robotA','robotB','robotC','robotD'][robotState.id];
+  if(!ctx.textureAssets?.[skinKey]?.loaded)robotState.ensureFallback();
   robotState.boundaryBlockedFor = 0;
   robotState.boundaryRecovery = false;
   robotState.recoveryDirection = null;

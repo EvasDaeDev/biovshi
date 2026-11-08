@@ -1,9 +1,8 @@
-import { clamp, wrap, smooth } from '../utils/math.js';
+import { clamp, wrap } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { strikeProgress } from "../systems/combat.js";
 import { ik } from "../utils/math.js";
 import { CONFIG } from "../config.js";
-import { attr } from "../render/svg.js";
 export function local(robotState, s, a, b) {
   a *= ctx.scale;
   b *= ctx.scale;
@@ -116,31 +115,10 @@ export function hornPoints(robotState, side) {
 export function sphereCenters(robotState) {
   return [-1, 1].map(side => robotState.local(robotState.spine[1], 0, side * CONFIG.robot.sphereOffsetCm / ctx.scale));
 }
-export function updateExtraLimbs(robotState, dt) {
-  const showing = false;
-  const next = clamp(robotState.extraWeight + (showing ? 1 : -1) * dt / CONFIG.robot.extraLimbMorphSec, 0, 1);
-  if (!showing && !robotState.leap) robotState.extraActive = false;
-  if (!robotState.extraActive) {
-    for (const l of robotState.extraLimbs) {
-      const desired = robotState.local(robotState.spine[2], 6, l.side * (14 + 30 * smooth(next)));
-      if (!robotState.limbClear(l, desired)) {
-        // В тесном месте лапа пока остаётся сложенной.
-        const tucked = robotState.local(robotState.spine[2], 0, l.side * 16);
-        l.foot = robotState.limbClear(l, tucked) ? tucked : desired;
-      } else l.foot = desired;
-      l.from = {
-        ...l.foot
-      };
-      l.to = {
-        ...l.foot
-      };
-      l.phase = 1;
-    }
-    if (showing && !robotState.leap && next >= 1 && robotState.extraLimbs.every(l => robotState.limbClear(l) && robotState.validContact(l))) robotState.extraActive = true;
-  }
-  robotState.extraWeight = next;
-  attr(robotState.extraG, 'opacity', smooth(robotState.extraWeight));
-  for (const l of robotState.extraLimbs) if (!robotState.extraActive) attr(l.contact, 'opacity', 0);
+export function updateExtraLimbs(robotState) {
+  // The retired third pair is not part of the current patients.
+  robotState.extraActive = false;
+  robotState.extraWeight = 0;
 }
 export function updateTail(robotState) {
   robotState.tail = [];
