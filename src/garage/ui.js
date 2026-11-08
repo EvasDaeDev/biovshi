@@ -14,10 +14,10 @@ export function garageOpen(){
   <div class="garage-grid">${ctx.betting.garage.map((g,id)=>`<section class="garage-patient" data-patient="${id}"><h3>Пациент ${'ABCD'[id]}</h3><div class="garage-portrait"></div>
   ${['Скорость','Сила','Маневренность'].map((name,i)=>`<label>${name} <select data-stat="${i}">${[2,3,4].map(n=>`<option ${n===g.stats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}
   <small>Скорость / поворот: 80 / 100 / 120%. Мощный удар: 0 / 15 / 30%.</small>
-  <button data-base>Вернуть 3 / 3 / 3</button><p>Голова: ${g.head?'шапка '+g.head.hat+' · '+g.head.price+' фишек':'свободна'}</p>
-  <label>Покупатель <select data-buyer>${ctx.betting.players.map(p=>`<option value="${p.id}">${ctx.betEscape(p.name)} · ${p.balance}</option>`).join('')}</select></label>
+  <button data-base>Вернуть 3 / 3 / 3</button><p>Голова: ${g.head?'шапка '+g.head.hat+' · '+ctx.betFormat(g.head.price):'свободна'}</p>
+  <label>Покупатель <select data-buyer>${ctx.betting.players.map(p=>`<option value="${p.id}">${ctx.betEscape(p.name)} · ${ctx.betFormat(p.balance)}</option>`).join('')}</select></label>
   <div class="garage-hats">${[1,2,3,4].map(h=>`<button data-hat="${h}" aria-label="Установить шапку ${h}"><img src="${assetUrl(ASSETS.textures['hat'+h])}" alt="Шапка ${h}"></button>`).join('')}</div>
-  <label>Цена установки <input data-price type="number" min="${nextPrice(g.head)}" step="1" value="${nextPrice(g.head)}"></label><small>Следующая замена минимум +10%. Оплата полностью, без возврата.</small><p data-error role="status"></p></section>`).join('')}</div>
+  <label>Цена установки <span class="chip-input"><input data-price type="number" min="${nextPrice(g.head)}" step="1" value="${nextPrice(g.head)}"><span aria-label="фишки">🪙</span></span></label><small>Следующая замена минимум +10%. Оплата полностью, без возврата.</small><p data-error role="status"></p></section>`).join('')}</div>
   <div class="bet-actions"><button id="garage-clean">Уборка в помещении</button><button id="garage-next" class="bet-primary">ПРОПУСТИТЬ · К СТАВКАМ</button></div>`;
   ctx.betContent.querySelector('#garage-next').onclick=bettingOpen;
   ctx.betContent.querySelector('#garage-clean').onclick=async event=>{await cleanFloor();event.target.textContent='Пол очищен';};

@@ -504,3 +504,14 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #robot-tag-hops-v22.arena-expanded #bet-hud {display:none !important}
 #robot-tag-hops-v22.arena-expanded .tag7hop-main {width:100%}
 #robot-tag-hops-v22.arena-expanded .arena-expand-button {background:#235361;color:#fff4cc;border-color:#e8c174}
+
+/* The portrait uses the left column; skills occupy the right column. */
+#robot-tag-hops-v22 .robot-card-body{display:grid;grid-template-columns:minmax(0,1fr) 91px;gap:6px;align-items:center}
+#robot-tag-hops-v22 .robot-card-metrics{grid-template-columns:minmax(0,1fr) 91px;gap:6px}
+#robot-tag-hops-v22 .robot-card-score{display:flex;align-items:center;gap:4px;white-space:nowrap}
+#robot-tag-hops-v22 .portrait-wrap{justify-content:flex-start;min-width:0;overflow:hidden}
+#robot-tag-hops-v22 .patient-portrait{width:100%;object-position:left center}
+#robot-tag-hops-v22 .patient-skills{display:flex;flex-direction:column;gap:7px;font-size:12px;font-variant-numeric:tabular-nums}
+#robot-tag-hops-v22 .patient-skills>div{display:flex;align-items:center;gap:6px;white-space:nowrap}
+#robot-tag-hops-v22 .patient-skills>div>span:first-child{width:19px;text-align:center;font-size:16px}
+.biovshi-hint{position:fixed;z-index:100;max-width:240px;padding:5px 7px;border:1px solid #37596b;background:#071320;color:#dff6ff;font:8.6667px/1.45 Arial,sans-serif;pointer-events:none;white-space:normal}

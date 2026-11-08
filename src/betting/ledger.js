@@ -4,6 +4,7 @@ export function betNewSession(names, capital) {
     version: 1,
     garage: newGarage(),
     shopSpent: 0,
+    topUps: 0,
     floorId: globalThis.crypto?.randomUUID?.()??String(Date.now())+Math.random(),
     round: 1,
     capital,
@@ -90,4 +91,11 @@ export function betRefund(s) {
   s.bets = [];
   s.phase = 'betting';
   return true;
+}
+
+// Temporary free top-up; counted separately from the original capital.
+export function betTopUp(s,player,amount){
+  const target=s.players[player],issued=s.players.length*s.capital+(s.topUps??0);
+  if(s.phase!=='betting'||!Number.isInteger(player)||!target||!Number.isSafeInteger(amount)||amount<=0||!Number.isSafeInteger(issued+amount)||issued+amount>16000000)throw Error('Введите целое положительное число. Общий выпуск фишек не может превышать 16 000 000.');
+  target.balance+=amount;s.topUps=(s.topUps??0)+amount;
 }
