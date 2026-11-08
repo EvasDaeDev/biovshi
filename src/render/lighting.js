@@ -22,23 +22,22 @@ export function paintLighting(robotState) {
   const hasHead = robotState.hasHead();
   const previous = robotState.lightCache;
   const force = !previous || previous.profile !== profile || previous.hasHead !== hasHead || previous.spawning !== spawning || time < previous.time;
-  const moved = !previous || previous.x !== origin.x || previous.y !== origin.y ||
-    previous.cx !== center.x || previous.cy !== center.y || previous.heading !== heading;
-  if (!force && (!moved || time - previous.time + 1e-8 < profile.lightInterval)) return;
-  const beam=hasHead?path([origin,...visionOutline(origin,heading,robotState.visionAngle(),profile.coneSamples)])+' Z':'';
-  // The pool and the darkness mask use the exact same geometry: trace it once.
-  const near = path(nearbyLightOutline(center, profile.nearSamples)) + ' Z';
-  attr(robotState.vision,'d',beam);
-  attr(robotState.lightBeam,'d',beam);
-  attr(robotState.nearLight, 'd', near);
-  attr(robotState.pool, 'd', near);
-  for (const gradient of [robotState.gradient, robotState.poolGradient]) {
-    attr(gradient, 'cx', center.x);
-    attr(gradient, 'cy', center.y);
+  const beamMoved=!previous||previous.x!==origin.x||previous.y!==origin.y||previous.heading!==heading;
+  const nearMoved=!previous||previous.cx!==center.x||previous.cy!==center.y;
+  if (!force && ((!beamMoved&&!nearMoved) || time-previous.time+1e-8<profile.lightInterval)) return;
+  if(force||beamMoved){
+    const beam=hasHead?path([origin,...visionOutline(origin,heading,robotState.visionAngle(),profile.coneSamples)])+' Z':'';
+    attr(robotState.vision,'d',beam);attr(robotState.lightBeam,'d',beam);
+    for(const gradient of [robotState.beamFade,robotState.beamTint]){
+      attr(gradient,'cx',origin.x);attr(gradient,'cy',origin.y);
+    }
   }
-  for (const gradient of [robotState.beamFade, robotState.beamTint]) {
-    attr(gradient, 'cx', origin.x);
-    attr(gradient, 'cy', origin.y);
+  if(force||nearMoved){
+    const near=path(nearbyLightOutline(center,profile.nearSamples))+' Z';
+    attr(robotState.nearLight,'d',near);attr(robotState.pool,'d',near);
+    for(const gradient of [robotState.gradient,robotState.poolGradient]){
+      attr(gradient,'cx',center.x);attr(gradient,'cy',center.y);
+    }
   }
   robotState.lightCache = { profile, hasHead, spawning, time, x:origin.x, y:origin.y, cx:center.x, cy:center.y, heading };
 }

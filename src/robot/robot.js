@@ -249,16 +249,26 @@ function createRobot(id, start) {
   robotState.healthy = key => !robotState.broken.has(key);
   robotState.hasHead = () => robotState.healthy('head');
   robotState.healthyLimb = l => robotState.healthy(`${l.kind}-${l.side}-upper`) && robotState.healthy(`${l.kind}-${l.side}-lower`);
-  robotState.movementLimbs = () => [...robotState.arms, ...robotState.legs].filter(robotState.healthyLimb).length;
+  let anatomyRevision=-1,anatomy;
+  const anatomyCounts=()=>{
+    if(anatomyRevision!==robotState.broken.size){
+      anatomyRevision=robotState.broken.size;
+      anatomy={
+        limbs:[...robotState.arms,...robotState.legs].filter(robotState.healthyLimb).length,
+        arms:robotState.arms.filter(l=>robotState.healthy(`arm-${l.side}-upper`)).length,
+        spine:Array.from({length:4},(_,i)=>'spine-'+i).filter(robotState.healthy).length,
+      };
+    }
+    return anatomy;
+  };
+  robotState.movementLimbs = () => anatomyCounts().limbs;
   robotState.bledOut = false;
   robotState.hitReaction = null;
   robotState.recoilX = 0;
   robotState.recoilY = 0;
   robotState.mobile = () => robotState.movementLimbs() > 0 && !robotState.bledOut;
-  robotState.armCount = () => robotState.arms.filter(l => robotState.healthy(`arm-${l.side}-upper`)).length;
-  robotState.spineCount = () => Array.from({
-    length: 4
-  }, (_, i) => 'spine-' + i).filter(robotState.healthy).length;
+  robotState.armCount = () => anatomyCounts().arms;
+  robotState.spineCount = () => anatomyCounts().spine;
   robotState.limbIntegrity = () => robotState.movementLimbs() / 4;
   robotState.anatomyColor = () => limbColor(robotState.movementLimbs(), 4);
   robotState.locomotion = () => clamp((.25 + .75 * robotState.movementLimbs() / 4) * (.50 + .50 * robotState.spineCount() / 4), 0, 1);

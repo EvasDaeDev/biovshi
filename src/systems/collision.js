@@ -66,8 +66,16 @@ export function nearestObstaclePoint(p, b) {
   };
 }
 export function obstacleDistance(p) {
-  let nearest = Infinity;
-  for (const obstacle of ctx.obstacles) nearest = Math.min(nearest,nearestObstaclePoint(p,obstacle).distance);
+  let nearest=Infinity;
+  for(const box of ctx.obstacles){
+    if(containsPoint(box,p))return 0;
+    for(let i=0;i<box.points.length;i++){
+      const a=box.points[i],b=box.points[(i+1)%box.points.length];
+      const dx=b.x-a.x,dy=b.y-a.y;
+      const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy),0,1);
+      nearest=Math.min(nearest,Math.hypot(p.x-(a.x+dx*t),p.y-(a.y+dy*t)));
+    }
+  }
   return nearest;
 }
 export function coreClearCircle(p, r) {

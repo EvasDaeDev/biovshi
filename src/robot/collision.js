@@ -8,6 +8,12 @@ import { ctx } from "../game/state.js";
 export function isSolidBody(capsule) {
   return capsule.segment === 'head' || capsule.segment?.startsWith('spine-');
 }
+const bodyCapsuleCache=new WeakMap();
+function solidCapsules(capsules){
+  let bodies=bodyCapsuleCache.get(capsules);
+  if(!bodies){bodies=capsules.filter(isSolidBody);bodyCapsuleCache.set(capsules,bodies);}
+  return bodies;
+}
 export function clearanceAt(robotState, p) {
   let d = Math.min(arenaClearance(p), obstacleDistance(p));
   for (const r of robotState.peerRobots()) for (const c of r.capsules) d = Math.min(d, pointSegment(p, c.a, c.b) - c.r);
@@ -16,14 +22,17 @@ export function clearanceAt(robotState, p) {
 export function clearCircle(robotState, p, radius, collideWithPeers = true) {
   if (!coreClearCircle(p, radius)) return false;
   if (!collideWithPeers) return true;
-  for (const other of robotState.peerRobots()) for (const c of other.capsules) if (isSolidBody(c) && pointSegment(p, c.a, c.b) < radius + c.r + .15) return false;
+  for(const other of robotState.peerRobots())for(const c of solidCapsules(other.capsules)){
+    const r=radius+c.r+.15;
+    if(p.x+r<c.minX||p.x-r>c.maxX||p.y+r<c.minY||p.y-r>c.maxY)continue;
+    if(pointSegment(p,c.a,c.b)<r)return false;
+  }
   return true;
 }
 export function clearBone(robotState, a, b, radius, collideWithPeers = true) {
   if (!coreClearBone(a, b, radius)) return false;
   if (!collideWithPeers) return true;
-  for (const other of robotState.peerRobots()) for (const c of other.capsules) {
-    if (!isSolidBody(c)) continue;
+  for (const other of robotState.peerRobots()) for (const c of solidCapsules(other.capsules)) {
     const r = radius + c.r + .15;
     if (Math.max(a.x, b.x) + r < c.minX || Math.min(a.x, b.x) - r > c.maxX || Math.max(a.y, b.y) + r < c.minY || Math.min(a.y, b.y) - r > c.maxY) continue;
     if (segmentDistance(a, b, c.a, c.b) < r) return false;

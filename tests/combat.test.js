@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { JSDOM } from 'jsdom';
+import { createInertia, inertiaOffset } from '../src/render/inertia.js';
 import { coreClearBone } from '../src/systems/collision.js';
 import { strikeCandidates } from '../src/systems/combat.js';
 import { createRobot } from '../src/robot/robot.js';
@@ -823,5 +824,96 @@ test('mobile portrait is blocked and pauses game time until landscape resumes',(
   assert.equal(ctx.paused,false,'orientation does not alter the manual pause toggle');
   ctx.root.__disposeTag();
   assert.equal(ctx.root.querySelector('#landscape-required'),null);
+  dom.window.close();
+});
+
+
+test('severed anatomy slides 30 cm with deceleration over 1.5 seconds then stops updating',()=>{
+  const textures=Object.fromEntries(['robotA','robotB','robotC','robotD'].map(key=>[key,{loaded:true}]));
+  const dom=setup({textures});
+  ctx.obstacles=ctx.obstacles.filter(b=>b.left>500);ctx.robots=[];
+  const r=createRobot(0,{x:300,y:250,angle:0}),attacker=createRobot(1,{x:230,y:250,angle:0});
+  ctx.robots=[r,attacker];r.paint(false);
+  for(let i=0;i<3;i++)hit(r,'arm-1-upper');
+  const part=ctx.combat.detached.at(-1),seed=ctx.seed,pose={x:r.x,y:r.y,angle:r.angle};
+  paint();
+  assert.equal(part.node.getAttribute('transform'),'translate(0 0)');
+  const inner=part.node.querySelector('[data-skin-segment]').getAttribute('transform');
+  ctx.game.time=part.inertia.started+.75;paint();
+  const half=inertiaOffset(part.inertia);
+  assert.ok(Math.abs(Math.hypot(half.x,half.y)-22.5)<1e-7);
+  ctx.game.time=part.inertia.started+1.5;paint();
+  const end=inertiaOffset(part.inertia);
+  assert.ok(Math.abs(Math.hypot(end.x,end.y)-30)<1e-7);
+  assert.equal(part.settled,true);
+  const transform=part.node.getAttribute('transform');
+  ctx.game.time+=3;paint();
+  assert.equal(part.node.getAttribute('transform'),transform);
+  assert.equal(part.node.querySelector('[data-skin-segment]').getAttribute('transform'),inner,'skin geometry stays frozen inside the sliding group');
+  assert.equal(ctx.seed,seed);
+  assert.deepEqual({x:r.x,y:r.y,angle:r.angle},pose,'motion does not alter the active skeleton');
+  dom.window.close();
+});
+
+test('an immobilized patient has the same cosmetic slide and inactive remains never block combat',()=>{
+  const dom=setup();ctx.obstacles=ctx.obstacles.filter(b=>b.left>500);ctx.robots=[];
+  const r=createRobot(0,{x:300,y:250,angle:0}),attacker=createRobot(1,{x:230,y:250,angle:0});ctx.robots=[r,attacker];
+  r.paint(false);
+  for(const kind of ['arm','leg'])for(const side of [-1,1])for(let i=0;i<3;i++)hit(r,`${kind}-${side}-upper`);
+  assert.equal(r.mobile,false);assert.equal(r.capsules.length,0);
+  paint();
+  const initial=r.actor.getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1).map(Number);
+  const time=ctx.game.time;
+  ctx.game.time=time+1.5;paint();
+  const final=r.actor.getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1).map(Number);
+  assert.ok(Math.abs(Math.hypot(final[0]-initial[0],final[1]-initial[1])-30)<1e-7);
+  assert.equal(r.x,300);assert.equal(r.y,250);assert.equal(r.capsules.length,0);
+  const transform=r.actor.getAttribute('transform');ctx.game.time+=2;paint();
+  assert.equal(r.actor.getAttribute('transform'),transform);
+  dom.window.close();
+});
+
+test('inertia stops at arena boundaries or obstacles and uses the same endpoint at any sampling rate',()=>{
+  const dom=setup();
+  const cap=(x,y)=>({a:{x,y},b:{x,y},r:5});
+  const wall=createInertia(0,[cap(680,350)]);
+  assert.ok(wall.dx<=15.001&&wall.dx>=14.99);
+  const obstacle=createInertia(0,[cap(280,350)]);
+  assert.ok(obstacle.dx<=15.001&&obstacle.dx>14.9);
+  const free=createInertia(0,[]);
+  let a,b;
+  for(let i=0;i<=90;i++)a=inertiaOffset(free,free.started+i/60);
+  for(let i=0;i<=15;i++)b=inertiaOffset(free,free.started+i/10);
+  assert.deepEqual(a,b);assert.equal(a.x,30);assert.equal(a.settled,true);
+  dom.window.close();
+});
+
+
+test('an unchanged textured frame causes no redundant DOM mutations',()=>{
+  const textures=Object.fromEntries(['robotA','robotB','robotC','robotD'].map(key=>[key,{loaded:true}]));
+  const dom=setup({textures});paint();
+  const observer=new dom.window.MutationObserver(()=>{});
+  observer.observe(ctx.root,{attributes:true,childList:true,characterData:true,subtree:true});
+  for(let i=0;i<10;i++)paint();
+  const mutations=observer.takeRecords();
+  assert.equal(mutations.length,0,mutations.map(m=>(m.target.id||m.target.nodeName)+':'+m.attributeName).join(','));
+  observer.disconnect();dom.window.close();
+});
+
+
+test('opening results stops hidden arena work after the three-second victory presentation',()=>{
+  const dom=setup();
+  for(const r of ctx.robots.slice(1))for(const kind of ['arm','leg'])for(const side of [-1,1])for(let i=0;i<3;i++)hit(r,`${kind}-${side}-upper`);
+  step(1/60);assert.equal(ctx.combat.finished,true);
+  ctx.last=0;ctx.paintAt=0;ctx.debt=0;
+  for(let i=1;i<=181;i++)frame(i*1000/60);
+  assert.equal(ctx.resultsPanel.hidden,false);
+  let paints=0;const original=ctx.robots[0].paint;
+  ctx.robots[0].paint=(...args)=>{paints++;return original(...args);};
+  const time=ctx.game.time,seed=ctx.seed;
+  for(let i=182;i<=300;i++)frame(i*1000/60);
+  assert.equal(paints,0,'covered arena, lights and victory glow are no longer redrawn');
+  assert.equal(ctx.game.time,time);assert.equal(ctx.seed,seed);
+  assert.equal(ctx.fpsOutput.textContent,'— FPS');
   dom.window.close();
 });

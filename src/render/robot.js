@@ -6,11 +6,13 @@ import { paintLighting } from './lighting.js';
 import { attr, dot } from "./svg.js";
 import { ROBOT_COLORS } from "../utils/colors.js";
 import { paintRobotSkin } from './robot-skin.js';
+import { inertiaOffset } from './inertia.js';
 import { spawnAppearance } from './spawn.js';
 import { paintVictoryGlow } from './victory-glow.js';
 import { paintTorsoShadow } from './ground-spots.js';
 export function visualOffset(robotState) {
   if (robotState.spawnVisual?.airborne) return robotState.spawnVisual;
+  if (robotState.corpseInertia) return inertiaOffset(robotState.corpseInertia);
   if (robotState.scene && (robotState.mode === 'cover' || robotState.mode === 'eat') && robotState.attackVisual) {
     const q = robotState.mode === 'eat' ? 1 : smooth((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec);
     return {

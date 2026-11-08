@@ -19,7 +19,7 @@ export function paint() {
   paintHitEffects();
   let text = ctx.startup.phase === 'intro' ? 'Нажмите «начать»' : ctx.startup.phase === 'spawning' ? `Выход на арену · ${ctx.startup.nextIndex} / ${ctx.ROBOT_COUNT}` : 'Все против всех · осталось подвижных: ' + ctx.robots.filter(r => r.mobile).length;
   if (ctx.combat.finished) text = ctx.combat.winner === null ? 'НИЧЬЯ · все обездвижены' : `ПОБЕДИТЕЛЬ — ${String.fromCharCode(65 + ctx.combat.winner)}!`;
-  ctx.status.title = text;
+  if(ctx.status.title!==text)ctx.status.title = text;
   const headerText = ctx.root.dataset.betRound ? 'Раунд ' + ctx.root.dataset.betRound : text;
   if (ctx.status.textContent !== headerText) ctx.status.textContent = headerText;
 }

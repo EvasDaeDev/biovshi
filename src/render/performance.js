@@ -6,6 +6,11 @@ const STORAGE_KEY = 'biovshi.graphics.v1';
 const FULL = Object.freeze({ name:'full', nearSamples:120, coneSamples:48, lightInterval:0 });
 const LIGHT = Object.freeze({ name:'light', nearSamples:40, coneSamples:20, lightInterval:1/15 });
 
+export function detectMobileDevice(nav=globalThis.navigator,media=query=>globalThis.matchMedia?.(query)) {
+  return Boolean(media?.('(any-pointer: coarse)')?.matches || nav?.userAgentData?.mobile ||
+    /Android|iPhone|iPad|iPod/i.test(nav?.userAgent??'') ||
+    (nav?.platform==='MacIntel'&&nav.maxTouchPoints>1));
+}
 export function chooseRenderProfile(mode, touchDevice) {
   return mode === 'light' || (mode === 'auto' && touchDevice) ? LIGHT : FULL;
 }
@@ -15,8 +20,7 @@ export function initializePerformance() {
   let mode = CONFIG.rendering.quality;
   try { mode = localStorage.getItem(STORAGE_KEY) || mode; } catch { /* Storage is optional. */ }
   if (!['auto','full','light'].includes(mode)) mode = 'auto';
-  const touchDevice = globalThis.matchMedia?.('(any-pointer: coarse)').matches ||
-    (globalThis.navigator?.platform === 'MacIntel' && globalThis.navigator.maxTouchPoints > 1);
+  const touchDevice=detectMobileDevice();
   ctx.touchDevice=Boolean(touchDevice);
   const apply = value => {
     ctx.renderProfile = chooseRenderProfile(value, touchDevice);
@@ -45,7 +49,7 @@ export function initializePerformance() {
 export function recordFrame(now, painted) {
   const stats = ctx.frameStats;
   if (!stats) return;
-  const active = ctx.startup.phase === 'running' && !ctx.paused && !ctx.orientationBlocked && !document.hidden;
+  const active = ctx.startup.phase === 'running' && !ctx.paused && !ctx.orientationBlocked && !document.hidden && !(ctx.combat?.finished&&ctx.resultsPanel?.hidden===false);
   const meter = ctx.fpsOutput;
   if (!active) {
     stats.started = null; stats.paints = 0;

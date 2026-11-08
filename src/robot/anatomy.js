@@ -6,6 +6,7 @@ import { burst, createOilDrop, flashSeveredParts } from "../render/effects.js";
 import { note } from "../game/events.js";
 import { random } from "../utils/random.js";
 import { snapshotRobotSkin } from '../render/robot-skin.js';
+import { createInertia } from '../render/inertia.js';
 import { spawnHitEffect } from '../render/hit-effects.js';
 export
 // Children of a severed node detach with it, regardless of remaining HP.
@@ -101,7 +102,8 @@ export function leakOrigin(robotState, key) {
     y: robotState.y
   };
 }
-export function finishMobility(robotState, reason) {
+export function finishMobility(robotState, reason, impact = robotState.lastImpact) {
+  if(impact)robotState.corpseInertia=createInertia(impact.direction,robotState.api.capsules);
   ctx.combat.oilLeaks = ctx.combat.oilLeaks.filter(leak => leak.robot !== robotState.id);
   const center = robotState.api.center;
   createOilDrop(robotState.id, center.x, center.y, 15);
@@ -193,6 +195,7 @@ export function robotDamage(robotState, key, by) {
   const attacker=ctx.robots[by];
   const direction=attacker&&attacker.id!==robotState.id?
     Math.atan2(pivot.y-attacker.y,pivot.x-attacker.x):robotState.angle;
+  robotState.lastImpact={direction,point:{...pivot}};
   spawnHitEffect(pivot.x,pivot.y,direction,robotState.hp.get(key)<=0);
   ctx.pulses.push({
     ...pivot,
@@ -204,7 +207,7 @@ export function robotDamage(robotState, key, by) {
     const attached = robotState.descendants(key).filter(part => robotState.healthy(part));
     flashSeveredParts([key, ...attached].map(part => robotState.segmentGeometry(part)).filter(Boolean));
     // Preserve the detached geometry in world coordinates, as a visible wreck.
-    const wreckKeys=robotState.skin?.ready?[key,...attached]:attached;
+    const wreckKeys=[key,...attached];
     const wreckPieces = wreckKeys.map(part => ({
       key: part,
       geometry: robotState.segmentGeometry(part),
@@ -214,6 +217,7 @@ export function robotDamage(robotState, key, by) {
       id: robotState.id,
       time: ctx.game.time,
       cause: key,
+      inertia:createInertia(direction,robotState.api.capsules.filter(c=>[key,...attached].includes(c.segment))),
       pieces: wreckPieces
     });
     for (const part of [key, ...attached]) {

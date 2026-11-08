@@ -1,3 +1,4 @@
+import { inertiaOffset } from './inertia.js';
 import { enforceOilLimits } from '../systems/oil-limits.js';
 import { clamp, smooth } from '../utils/math.js';
 import { CONFIG } from "../config.js";
@@ -9,6 +10,8 @@ import { oilColor } from "../utils/colors.js";
 import { random } from "../utils/random.js";
 import { drawDetachedSkin } from './robot-skin.js';
 import { createLiquidSprite, paintLiquidSprite } from './liquid-sprites.js';
+
+const announcementColours=new WeakMap();
 export
 // Эффекты Geometry Wars используют отдельные частицы и не влияют на ИИ.
 function burst(x, y) {
@@ -177,32 +180,38 @@ export function paintOil() {
 }
 export function paintDetachedAnatomy() {
   // Remains on the arena for the whole round. World-space snapshot; no collisions.
-  for (let i = ctx.detachedG.childNodes.length; i < ctx.combat.detached.length; i++) {
-    const part = ctx.combat.detached[i];
-    const group = el('g', {
-      'data-owner': String(part.id),
-      'data-detached-by': part.cause
-    }, ctx.detachedG);
-    for (const piece of part.pieces) {
-      if (piece.skin&&drawDetachedSkin(piece.skin,group)) continue;
-      const g = piece.geometry;
-      if (g.kind === 'head') el('circle', {
-        cx: g.x,
-        cy: g.y,
-        r: g.r,
-        fill: '#06141b',
-        stroke: '#7796a0',
-        'stroke-width': 2.2,
-        opacity: .88
-      }, group);else el('path', {
-        d: path([g.a, g.b]),
-        fill: 'none',
-        stroke: '#7796a0',
-        'stroke-width': g.w,
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        opacity: .82
-      }, group);
+  for (const part of ctx.combat.detached) {
+    if(!part.node){
+      const group = part.node = el('g', {
+        'data-owner': String(part.id),
+        'data-detached-by': part.cause
+      }, ctx.detachedG);
+      for (const piece of part.pieces) {
+        if (piece.skin&&drawDetachedSkin(piece.skin,group)) continue;
+        const g = piece.geometry;
+        if (g.kind === 'head') el('circle', {
+          cx: g.x,
+          cy: g.y,
+          r: g.r,
+          fill: '#06141b',
+          stroke: '#7796a0',
+          'stroke-width': 2.2,
+          opacity: .88
+        }, group);else el('path', {
+          d: path([g.a, g.b]),
+          fill: 'none',
+          stroke: '#7796a0',
+          'stroke-width': g.w,
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          opacity: .82
+        }, group);
+      }
+    }
+    if(!part.settled){
+      const slide=inertiaOffset(part.inertia);
+      attr(part.node,'transform',`translate(${slide.x} ${slide.y})`);
+      part.settled=slide.settled;
     }
   }
 }
@@ -254,8 +263,9 @@ export function paintCombatAccents() {
   ctx.scoreNodes.forEach((node, i) => {
     const text = active ? message.lines[i] : '';
     if (node.textContent !== text) node.textContent = text;
-    if (text.length > 11) attr(node, 'textLength', 106);else node.removeAttribute('textLength');
-    node.style.setProperty('fill', active && message.priority === 5 ? '#e1cf9a' : '#d2d5bf');
+    if (text.length > 11) attr(node, 'textLength', 106);else if(node.hasAttribute('textLength'))node.removeAttribute('textLength');
+    const colour=active&&message.priority===5?'#e1cf9a':'#d2d5bf';
+    if(announcementColours.get(node)!==colour){node.style.setProperty('fill',colour);announcementColours.set(node,colour);}
     attr(node, 'opacity', active ? Math.min(1, (message.until - ctx.game.time) / .25) : 0);
   });
   attr(ctx.scoreG, 'aria-label', active ? message.lines.join(' · ') : 'Объявления арены');

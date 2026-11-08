@@ -70,14 +70,17 @@ export function polygonPlanes(b, pad = 0) {
     return {
       nx,
       ny,
-      c: nx * a.x + ny * a.y + pad * Math.hypot(nx, ny)
+      c: nx * a.x + ny * a.y + pad * Math.hypot(nx, ny),
+      length: Math.hypot(nx,ny)
     };
   });
   stored.set(pad, planes);
   return planes;
 }
 export function arenaClearance(p) {
-  return Math.min(...ctx.arenaPlanes.map(n => (n.c - n.nx * p.x - n.ny * p.y) / Math.hypot(n.nx, n.ny)));
+  let nearest=Infinity;
+  for(const n of ctx.arenaPlanes)nearest=Math.min(nearest,(n.c-n.nx*p.x-n.ny*p.y)/(n.length??Math.hypot(n.nx,n.ny)));
+  return nearest;
 }
 export function containsPoint(b, p, pad = 0) {
   return polygonPlanes(b, pad).every(n => n.nx * p.x + n.ny * p.y < n.c - 1e-9);

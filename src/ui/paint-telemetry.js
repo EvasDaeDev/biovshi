@@ -3,6 +3,7 @@ import { ctx } from '../game/state.js';
 import { friendlyAction, oilPressure, segmentDisplayState } from './telemetry.js';
 import { attr } from '../render/svg.js';
 const setText = (node, value) => { if (node.textContent !== value) node.textContent = value; };
+const setClass = (node,key,on) => {if(node.classList.contains(key)!==on)node.classList.toggle(key,on);};
 const setWidth = (node, value) => { if (node.style.width !== value) node.style.width = value; };
 
 export function paintTelemetry() {
@@ -24,8 +25,8 @@ export function paintTelemetry() {
     const mobilityPct = Math.round(r.locomotion * 100);
     setText(card.mobility, `${r.movementLimbs}/4 · ${mobilityPct}%`);
     setWidth(card.mobilityFill, mobilityPct + '%');
-    card.card.classList.toggle('bleeding', ctx.combat.unarmedDeadline[r.id] !== null && r.mobile);
-    card.card.classList.toggle('disabled', !r.mobile);
+    setClass(card.card,'bleeding', ctx.combat.unarmedDeadline[r.id] !== null && r.mobile);
+    setClass(card.card,'disabled', !r.mobile);
     for (const node of card.moduleSegments) {
       const segmentKey = node.getAttribute('data-segment');
       const display = segmentDisplayState(r, segmentKey);

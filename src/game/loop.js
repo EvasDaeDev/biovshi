@@ -90,12 +90,13 @@ export function frame(now) {
   const elapsed = ctx.last === null ? 0 : Math.max(0, (now - ctx.last) / 1000);
   ctx.last = now;
   let painted = false;
+  const resultsOpen=ctx.combat.finished&&!ctx.resultsPanel.hidden;
   ctx.cameraDebt = (ctx.cameraDebt || 0) + elapsed;
   if (ctx.startup.phase !== 'running') {
     if (!document.hidden && !ctx.orientationBlocked) { advanceStartup(elapsed); painted = true; }
     ctx.debt = 0;
     ctx.paintAt = now;
-  } else if (!ctx.paused && !ctx.orientationBlocked && !document.hidden) {
+  } else if (!ctx.paused && !ctx.orientationBlocked && !document.hidden && !resultsOpen) {
     // Physics always advances in 1/60 s steps, independently of the paint cap.
     // Keep excess debt after a long active-frame stall instead of losing time.
     ctx.debt += elapsed * ctx.timeScale;
@@ -122,7 +123,7 @@ export function frame(now) {
   if (painted) {
     cameraUpdate(ctx.cameraDebt);
     ctx.cameraDebt = 0;
-  } else if (ctx.paused || ctx.orientationBlocked || document.hidden) ctx.cameraDebt = 0;
+  } else if (ctx.paused || ctx.orientationBlocked || document.hidden || resultsOpen) ctx.cameraDebt = 0;
   recordFrame(now, painted);
   ctx.frameId = requestAnimationFrame(frame);
 }
