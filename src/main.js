@@ -1,3 +1,5 @@
+import { preparePatientPortraits } from './ui/patient-portrait.js';
+import { paintTelemetry } from './ui/paint-telemetry.js';
 import { initializeGame } from './game/initialize.js';
 import { ctx } from './game/state.js';
 import { createAudio } from './audio/audio.js';
@@ -17,6 +19,9 @@ async function boot() {
   initializeGame({textures});
   await applyTextures();
   if(cancelled||ctx.disposed)return;
+  await preparePatientPortraits();
+  if(cancelled||ctx.disposed)return;
+  paintTelemetry();
   await initializePixiArena();
   if(cancelled||ctx.disposed)return;
   initializeDiagnostics();

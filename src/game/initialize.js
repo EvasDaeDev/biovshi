@@ -1,3 +1,4 @@
+import { initializeSettings } from '../ui/settings.js';
 import { initializeOrientation } from '../ui/orientation.js';
 import { createWalls } from '../render/walls.js';
 import { createObstacleLights } from '../render/ground-spots.js';
@@ -59,6 +60,8 @@ export function initializeGame({textures=null}={}) {
   ctx.intro.hidden = false;
   ctx.disposed = false;
   ctx.paused = false;
+  ctx.settingsOpen = false;
+  ctx.telemetryPortraitsReady = false;
   ctx.frameId = 0;
   ctx.cameraDebt = 0;
   ctx.observer = null;
@@ -391,13 +394,10 @@ export function initializeGame({textures=null}={}) {
   ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = true;
   ctx.startButton.onclick = beginGame;
   attr(ctx.root.querySelector('#tag7hop-darkness'), 'opacity', CONFIG.light.darknessOpacity);
-  // Подпись использует те же настройки, что и симуляция.
-  ctx.root.querySelector('#tag7hop-info').textContent = `7 × 7 м · каждый сам за себя · голова 5 HP · таз 4 HP · грудь неуязвима · остальные сегменты 3 HP · удар −1 HP · ` + `удар: только рука или голова · лапы = скорость · позвоночник = поворот · нет головы = слепота · фланг / слух / отход / погоня`;
   ctx.stage = ctx.root.querySelector('.tag7hop-stage');
-  ctx.info = ctx.root.querySelector('#tag7hop-info');
   ctx.fieldSide = 0;
   ctx.observer = new ResizeObserver(fitField);
-  for (const node of [ctx.root, ctx.root.querySelector('.tag7hop-main'), ctx.info, ctx.root.querySelector('.atmosphere-controls')]) ctx.observer.observe(node);
+  for (const node of [ctx.root, ctx.root.querySelector('.tag7hop-main'), ctx.root.querySelector('.atmosphere-controls')]) ctx.observer.observe(node);
   globalThis.addEventListener?.('resize', fitField);
   globalThis.visualViewport?.addEventListener('resize', fitField);
   fitField();
@@ -463,4 +463,5 @@ export function initializeGame({textures=null}={}) {
     "'": '&#39;'
   })[c]);
   bettingInit();
+  initializeSettings();
 }

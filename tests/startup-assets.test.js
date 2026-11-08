@@ -20,14 +20,11 @@ test('real startup waits for the texture check, reuses images for tinting and cr
       if(released)queueMicrotask(()=>this.onload?.());else pending.push(()=>this.onload?.());}
     async decode(){}
   };
-  const create=document.createElement.bind(document);
-  document.createElement=(name,...args)=>name==='canvas'?{
-    width:0,height:0,
-    getContext(){return {fillRect(){},clearRect(){},drawImage(){},putImageData(){},
-      getImageData(x,y,w,h){return {data:new Uint8ClampedArray(w*h*4).fill(128)};},
-    };},
-    toDataURL(){return 'data:image/png;base64,AAAA';},
-  }:create(name,...args);
+  dom.window.HTMLCanvasElement.prototype.getContext=function(){return {
+    fillRect(){},clearRect(){},drawImage(){},putImageData(){},save(){},restore(){},setTransform(){},transform(){},
+    getImageData(x,y,w,h){return {data:new Uint8ClampedArray(w*h*4).fill(128)};},
+  };};
+  dom.window.HTMLCanvasElement.prototype.toDataURL=()=> 'data:image/png;base64,AAAA';
   await import('../src/main.js');
   const root=document.getElementById('robot-tag-hops-v22');
   assert.equal(root.inert,true,'controls stay inactive while textures are pending');

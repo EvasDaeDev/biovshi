@@ -9,9 +9,10 @@ export function timed(name,work) {
 }
 export function initializeDiagnostics() {
   ctx.telemetryEnabled=true;
-  const details=document.createElement('details');details.className='render-diagnostics';
-  details.innerHTML='<summary>Диагностика производительности</summary><label><input type="checkbox" checked> Телеметрия</label><label class="post-effects-control"><input type="checkbox"> Постэффекты</label><output></output>';
-  ctx.info.after(details);
+  const details=document.createElement('section');details.className='render-diagnostics';
+  details.innerHTML='<label><input type="checkbox" checked> Телеметрия</label><label class="post-effects-control"><input type="checkbox"> Постэффекты</label><details class="performance-details" open><summary>Диагностика производительности</summary><output></output></details>';
+  ctx.root.querySelector('#arena-settings-content').replaceChildren(details);
+  const performanceDetails=details.querySelector('.performance-details');
   const [toggle,effects]=details.querySelectorAll('input'),output=details.querySelector('output');
   const refreshEffects=()=>{
     const post=ctx.arenaRenderer?.postEffects;
@@ -36,15 +37,17 @@ export function initializeDiagnostics() {
   toggle.onchange=()=>setTelemetry(toggle.checked);
   const query=new URL(ctx.svg.ownerDocument.defaultView.location.href).searchParams;
   setTelemetry(query.get('telemetry')!=='0');
-  const stats=ctx.diagnostics={enabled:false,samples:{},last:0};
+  // Retain the latest active measurements: opening Settings pauses the fight.
+  const stats=ctx.diagnostics={enabled:true,samples:{},last:0};
+  output.textContent=(ctx.arenaRenderer?'PixiJS · WebGL':'SVG · резервный рендер')+' · замеры появятся во время боя';
   const update=now=>{
-    if(!stats.enabled||now-stats.last<1000)return;
+    if(!stats.enabled||ctx.paused||ctx.settingsOpen||document.hidden||ctx.startup?.phase!=='running'||now-stats.last<1000)return;
     stats.last=now;
     const value=name=>{const s=stats.samples[name];return s?(s.ms/s.count).toFixed(2):'0.00';};
     output.textContent=`${ctx.arenaRenderer?'PixiJS · WebGL':'SVG · резервный рендер'} | симуляция ${value('simulation')} мс | подготовка ${value('animation')} мс | WebGL ${value('webgl')} мс | карточки ${value('telemetry')} мс`;
     stats.samples={};
   };
-  details.ontoggle=()=>{stats.enabled=details.open;stats.samples={};stats.last=0;update(performance.now());};
+  performanceDetails.ontoggle=()=>{stats.enabled=performanceDetails.open;stats.samples={};stats.last=0;};
   ctx.updateDiagnostics=update;
   const dispose=ctx.root.__disposeTag;
   ctx.root.__disposeTag=()=>{details.remove();ctx.diagnostics=null;ctx.updateDiagnostics=null;ctx.telemetryEnabled=true;ctx.refreshPostEffectsControl=null;dispose();delete ctx.root.dataset.postEffects;};

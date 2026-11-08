@@ -355,8 +355,8 @@ test('every robot uses its own atlas; severed parts, victory halo and load fallb
   assert.equal(label.style.fill,identityFill);
   assert.equal(actor.style.filter,'none');
   assert.equal(ctx.svg.querySelector('#tag7hop-beam-'+id+'-tint'),null);
-  const module=ctx.cardNodes[id].card.querySelector('[data-segment="arm--1-upper"]');
-  const healthyStroke=module.getAttribute('stroke');
+  const healthyState=ctx.cardNodes[id].portraitStates['arm--1-upper'];
+  assert.equal(healthyState,'good');
   for(let i=0;i<4;i++) {
     const node=actor.querySelector('[data-skin-segment="spine-'+i+'"]');
     const [A,B,C,D,E,F]=node.getAttribute('transform').match(/matrix\(([^)]+)\)/)[1].split(' ').map(Number);
@@ -382,7 +382,7 @@ test('every robot uses its own atlas; severed parts, victory halo and load fallb
   paint();
   assert.equal(actor.getAttribute('style'),actorStyle,'damage does not recolour or illuminate the actor');
   assert.equal(label.style.fill,identityFill);
-  assert.notEqual(module.getAttribute('stroke'),healthyStroke,'card retains damage indication');
+  assert.notEqual(ctx.cardNodes[id].portraitStates['arm--1-upper'],healthyState,'textured card retains damage indication');
   assert.equal(actor.querySelector('[data-skin-segment="arm--1-upper"]').getAttribute('display'),'none');
   assert.equal(actor.querySelector('[data-skin-segment="arm--1-lower"]').getAttribute('display'),'none');
   assert.equal(chest.getAttribute('transform'),chestMatrix);

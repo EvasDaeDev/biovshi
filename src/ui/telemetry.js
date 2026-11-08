@@ -1,3 +1,4 @@
+import { TELEMETRY_COLOURS } from './telemetry-colours.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { ROBOT_COLORS } from '../utils/colors.js';
@@ -5,9 +6,8 @@ export function makeRobotCard(id) {
   const card = document.createElement('section');
   card.className = 'robot-card';
   card.style.setProperty('--accent', ROBOT_COLORS[id]);
-  card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${String.fromCharCode(65 + id)}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><div class="robot-card-segments">13/13</div></div></div><div class="robot-card-metrics"><div class="metric-box"><div class="metric-inline"><span class="metric-icon" aria-label="Давление масла" title="Давление масла">💧</span><span class="metric-value js-pressure-value">100%</span></div><div class="mini-track"><div class="mini-fill js-pressure-fill" style="width:100%"></div></div></div><div class="metric-box"><div class="metric-inline"><span class="metric-icon" aria-label="Ходовая часть" title="Ходовая часть">⚙</span><span class="metric-value js-mobility">4/4 · 100%</span></div><div class="mini-track"><div class="mini-fill js-mobility-fill" style="width:100%"></div></div></div></div><div class="robot-card-body"><div class="schematic-wrap"><svg class="robot-schematic" viewBox="0 0 260 106" preserveAspectRatio="xMidYMid meet" aria-label="Схема сегментов робота"><rect class="module-segment module-spine" data-segment="spine-0" x="156" y="40" width="19" height="24"/><rect class="module-segment module-spine" data-segment="spine-1" x="133" y="40" width="19" height="24"/><rect class="module-segment module-spine" data-segment="spine-2" x="110" y="40" width="19" height="24"/><rect class="module-segment module-spine" data-segment="spine-3" x="87" y="40" width="19" height="24"/><path class="module-segment module-limb" data-segment="arm--1-upper" d="M174 40 L198 18"/><path class="module-segment module-limb" data-segment="arm--1-lower" d="M198 18 L237 18"/><path class="module-segment module-limb" data-segment="arm-1-upper" d="M174 64 L198 88"/><path class="module-segment module-limb" data-segment="arm-1-lower" d="M198 88 L237 88"/><path class="module-segment module-limb" data-segment="leg--1-upper" d="M88 40 L64 18"/><path class="module-segment module-limb" data-segment="leg--1-lower" d="M64 18 L22 18"/><path class="module-segment module-limb" data-segment="leg-1-upper" d="M88 64 L64 88"/><path class="module-segment module-limb" data-segment="leg-1-lower" d="M64 88 L22 88"/><circle class="module-segment module-head" data-segment="head" cx="201" cy="52" r="17"/></svg></div></div>`;
+  card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${String.fromCharCode(65 + id)}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><div class="robot-card-segments">13/13</div></div></div><div class="robot-card-metrics"><div class="metric-box"><div class="metric-inline"><span class="metric-icon" aria-label="Давление масла" title="Давление масла">💧</span><span class="metric-value js-pressure-value">100%</span></div><div class="mini-track"><div class="mini-fill js-pressure-fill" style="width:100%"></div></div></div><div class="metric-box"><div class="metric-inline"><span class="metric-icon" aria-label="Ходовая часть" title="Ходовая часть">⚙</span><span class="metric-value js-mobility">4/4 · 100%</span></div><div class="mini-track"><div class="mini-fill js-mobility-fill" style="width:100%"></div></div></div></div><div class="robot-card-body"><div class="portrait-wrap"><canvas class="patient-portrait" width="520" height="224" role="img" aria-label="Пациент ${String.fromCharCode(65+id)}"></canvas></div></div>`;
   ctx.roles.appendChild(card);
-  const moduleSegments = Array.from(card.querySelectorAll('[data-segment]'));
   return {
     card,
     segments: card.querySelector('.robot-card-segments'),
@@ -16,7 +16,7 @@ export function makeRobotCard(id) {
     pressureFill: card.querySelector('.js-pressure-fill'),
     mobility: card.querySelector('.js-mobility'),
     mobilityFill: card.querySelector('.js-mobility-fill'),
-    moduleSegments
+    portrait:card.querySelector('.patient-portrait')
   };
 }
 export function moduleSnapshot(robot, keys) {
@@ -44,7 +44,7 @@ export function classifyModule(snapshot) {
   return 'bad';
 }
 export function moduleVisualColor(state) {
-  return state === 'good' ? '#59f38a' : state === 'warn' ? '#ffd84a' : state === 'bad' ? '#ff6767' : '#738397';
+  return TELEMETRY_COLOURS[state];
 }
 export function segmentDisplayState(robot, key) {
   const group = ctx.schematicModuleMap[key] || [key];
