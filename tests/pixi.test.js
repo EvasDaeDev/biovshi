@@ -75,6 +75,14 @@ test('native Pixi sprites share cropped atlas sources; changed poses preserve le
   const actual=native.object.localTransform;
   native.object.updateLocalTransform();
   assert.ok(Math.abs(actual.a-expected[0])<1e-9);
+  ctx.robots[1].setVisible(true);
+  robot.damage('head',1);paint();arena.flush();
+  assert.equal(arena.records.get(ctx.robots[1].nearLight).object.alpha,.75,'WebGL receives the attacker flash, not just a hidden SVG attribute');
+  assert.equal(arena.records.get(robot.nearLight).object.alpha,.5);
+  ctx.game.time+=.1;paint();arena.flush();
+  assert.equal(arena.records.get(ctx.robots[1].nearLight).object.alpha,.625);
+  ctx.game.time+=.1;paint();arena.flush();
+  assert.equal(arena.records.get(ctx.robots[1].nearLight).object.alpha,.5);
   for(let i=0;i<3;i++){ctx.game.time+=1;robot.damage('arm--1-lower',1);}paint();arena.flush();
   assert.equal(arena.records.get(robot.actor.querySelector('[data-skin-segment="arm--1-lower"]')).object.visible,false);
   assert.equal(arena.records.get(robot.nearLight).visual.blendMode,'erase');

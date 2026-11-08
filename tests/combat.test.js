@@ -997,21 +997,23 @@ test('blocked remains are already stopped and do not wait for a fictitious slide
   dom.window.close();
 });
 
-test('confirmed hits brighten only the target light by 10 percent and fade over 0.2 seconds without stacking',()=>{
-  const dom=setup(),r=ctx.robots[0],other=ctx.robots[1];paint();
-  const base=Number(r.nearLight.getAttribute('opacity')),otherBase=other.nearLight.getAttribute('opacity');
-  const radius=r.nearLight.getAttribute('r');
-  assert.equal(r.damage('head',1),true);paint();
-  assert.equal(Number(r.nearLight.getAttribute('opacity')),base*1.1);
-  assert.equal(Number(document.querySelector('.neon-pool').getAttribute('opacity')),base*1.1);
-  assert.equal(other.nearLight.getAttribute('opacity'),otherBase);
-  ctx.game.time+=.1;paint();assert.equal(Number(r.nearLight.getAttribute('opacity')),base*1.05);
-  assert.equal(r.damage('head',1),false,'invulnerable repeat is not a new hit');paint();
-  assert.equal(Number(r.nearLight.getAttribute('opacity')),base*1.05);
-  assert.equal(r.damage('arm-1-upper',1),true);paint();
-  assert.equal(Number(r.nearLight.getAttribute('opacity')),base*1.1,'another hit restarts the flash without accumulating it');
-  ctx.game.time+=.2;paint();assert.equal(Number(r.nearLight.getAttribute('opacity')),base);
-  assert.equal(r.nearLight.getAttribute('r'),radius);
+test('confirmed hits brighten only the attacker light by 50 percent and fade over 0.2 seconds without stacking',()=>{
+  const dom=setup(),victim=ctx.robots[0],attacker=ctx.robots[1];paint();
+  const base=Number(attacker.nearLight.getAttribute('opacity')),victimBase=victim.nearLight.getAttribute('opacity');
+  const radius=attacker.nearLight.getAttribute('r');
+  assert.equal(victim.damage('head',attacker.id),true);paint();
+  assert.equal(Number(attacker.nearLight.getAttribute('opacity')),base*1.5);
+  assert.equal(Number(document.querySelectorAll('.neon-pool')[attacker.id].getAttribute('opacity')),base*1.5);
+  assert.equal(victim.nearLight.getAttribute('opacity'),victimBase);
+  ctx.game.time+=.1;paint();assert.equal(Number(attacker.nearLight.getAttribute('opacity')),base*1.25);
+  assert.equal(victim.damage('head',attacker.id),false,'invulnerable repeat is not a new hit');paint();
+  assert.equal(Number(attacker.nearLight.getAttribute('opacity')),base*1.25);
+  assert.equal(victim.damage('arm-1-upper',attacker.id),true);paint();
+  assert.equal(Number(attacker.nearLight.getAttribute('opacity')),base*1.5,'another hit restarts the flash without accumulating it');
+  ctx.game.time+=.2;paint();assert.equal(Number(attacker.nearLight.getAttribute('opacity')),base);
+  assert.equal(attacker.nearLight.getAttribute('r'),radius);
+  assert.equal(victim.damage('leg-1-upper',victim.id),true);paint();
+  assert.equal(victim.nearLight.getAttribute('opacity'),victimBase,'self damage never triggers a successful-strike cue');
   assert.equal(ctx.svg.querySelector('#gladiator-swings'),null);
   assert.equal(ctx.svg.querySelector('[stroke="#ffe66d"]'),null,'orange strike helpers are never created');
   dom.window.close();

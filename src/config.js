@@ -202,7 +202,7 @@ const CONFIG = {
     obstacleLightOpacity: 0.12,
     obstacleLightReveal: 0.35,
     staticResolution: 2, // Статичный свет: пикселей на сантиметр при однократной подготовке.
-    hitBoost: 0.1, // Попадание: +10% к свету под целью.
+    hitBoost: 0.5, // Успешное попадание: +50% к свету под атакующим.
     hitFadeSec: 0.2, // Возврат к обычной яркости за 0.2 с игрового времени.
     nearbyIntensity: 0.5, // Яркость простого кругового пятна.
     nearbyRadiusCm: 75,

@@ -181,7 +181,6 @@ export function robotFailFromOilLoss(robotState) {
 export function robotDamage(robotState, key, by) {
   if (!key || !robotState.isDamageable(key) || !robotState.hp.has(key) || robotState.broken.has(key) || ctx.game.time - (robotState.hitAt.get(key) ?? -99) < CONFIG.combat.damageInvulnerabilitySec) return false;
   robotState.hitAt.set(key, ctx.game.time);
-  robotState.lightHitAt = ctx.game.time;
   robotState.hp.set(key, robotState.hp.get(key) - 1);
   const caps = robotState.api.capsules.filter(c => c.segment === key);
   const pivot = caps.length ? {
@@ -193,6 +192,7 @@ export function robotDamage(robotState, key, by) {
   };
   burst(pivot.x, pivot.y);
   const attacker=ctx.robots[by];
+  if(attacker&&attacker.id!==robotState.id)attacker.flashHitLight();
   const direction=attacker&&attacker.id!==robotState.id?
     Math.atan2(pivot.y-attacker.y,pivot.x-attacker.x):robotState.angle;
   robotState.lastImpact={direction,point:{...pivot}};

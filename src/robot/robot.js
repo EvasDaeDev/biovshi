@@ -368,6 +368,7 @@ function createRobot(id, start) {
     label: robotState.label,
     lightBeam: robotState.lightBeam,
     nearLight: robotState.nearLight,
+    flashHitLight() { robotState.lightHitAt = ctx.game.time; },
     gradient: robotState.gradient,
     capsules: [],
     get x() {
