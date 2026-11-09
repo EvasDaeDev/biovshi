@@ -45,18 +45,22 @@ test('wounded opponents cannot keep guarding their heads forever', () => {
   ctx.robots=[a,b];
   a.hp.set('head',2);b.hp.set('head',2);
   ctx.combat.lastHitTime=-100;
-  let guarded=0,engaged=0;
+  let guarded=0,engaged=0,flanking=0,chasing=0;
   for(let tick=0;tick<120;tick++){
     ctx.game.time=100+tick*.1;
     for(const robot of [a,b]){
       const intent=fighterIntent(robot);
       if(intent.mode==='бережёт голову') guarded++;
       else engaged++;
+      if(intent.mode==='обходит с фланга') flanking++;
+      if(intent.mode==='преследует') chasing++;
     }
   }
   assert.ok(guarded>0,'wounded patients do protect themselves occasionally');
   assert.ok(guarded<70,'head protection must be brief, not the whole round');
   assert.ok(engaged>170,'wounded patients must spend most time engaging');
+  assert.equal(flanking,0,'no flanking loop after seven seconds without contact');
+  assert.ok(chasing>0,'wounded patients must resume pursuit');
   dom.window.close();
 });
 
