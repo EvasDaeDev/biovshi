@@ -2,7 +2,7 @@ export const BASE_STATS = [3,3,3];
 export const HATS = [1,2,3,4];
 export function earnedStats(wins=0) {
   const n=Math.max(0,Math.floor(wins));
-  return BASE_STATS.map((base,i)=>base+Math.floor((n+2-i)/3));
+  return BASE_STATS.map((base,i)=>base+Math.floor((n+2-[1,0,2][i])/3));
 }
 export function validStats(stats, wins=0) {
   const base=earnedStats(wins);
