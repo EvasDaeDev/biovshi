@@ -103,7 +103,7 @@ export function combatAttacks() {
       pending.resolved = true;
       const victim = ctx.robots[pending.victim];
       const src = attacker.attackSources.find(s => s.key === pending.source);
-      if (attacker.visible && src && victim?.visible && victim.mobile && victim.segmentCount > 0) {
+      if (attacker.visible && src && victim?.visible && victim.hasHead && victim.segmentCount > 0) {
         const touched = struckSegment(attacker, victim, pending);
         const damage=touched&&random()<critChance(ctx.betting?.garage?.[id]?.stats[1]??3)?2:1;
         if (touched && victim.damage(touched, id, damage)) {
