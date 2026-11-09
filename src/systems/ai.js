@@ -282,7 +282,7 @@ export function fighterIntent(r) {
   // Once used, the patient must re-engage for several seconds before guarding again.
   // This prevents two wounded patients from circling indefinitely without attacking.
   if (actuallySeen && r.hp.get('head') <= 2 && r.movementLimbs >= 1 && d < 140) {
-    if (!ai.headGuardUntil && ctx.game.time >= (ai.headGuardCooldownUntil ?? 0)) {
+    if (ctx.game.time >= (ai.headGuardUntil ?? 0) && ctx.game.time >= (ai.headGuardCooldownUntil ?? 0)) {
       ai.headGuardUntil = ctx.game.time + .8;
       ai.headGuardCooldownUntil = ctx.game.time + 7;
     }
