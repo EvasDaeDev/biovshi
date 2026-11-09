@@ -6,6 +6,7 @@ import { JSDOM } from 'jsdom';
 import { createInertia, inertiaOffset, detachedCenter } from '../src/render/inertia.js';
 import { coreClearBone } from '../src/systems/collision.js';
 import { strikeCandidates } from '../src/systems/combat.js';
+import { fighterIntent } from '../src/systems/ai.js';
 import { createRobot } from '../src/robot/robot.js';
 import { segmentDistance } from '../src/utils/math.js';
 import { initializeGame } from '../src/game/initialize.js';
@@ -35,6 +36,29 @@ function setup({start=true,reduced=false,textures=null}={}) {
   return dom;
 }
 function hit(robot,key) {ctx.game.time+=CONFIG.combat.damageInvulnerabilitySec+.01;return robot.damage(key,1);}
+
+test('wounded opponents cannot keep guarding their heads forever', () => {
+  const dom=setup();
+  const a=createRobot(0,{x:150,y:150,angle:0});
+  const b=createRobot(1,{x:245,y:150,angle:Math.PI});
+  a.setVisible(true);b.setVisible(true);
+  ctx.robots=[a,b];
+  a.hp.set('head',2);b.hp.set('head',2);
+  ctx.combat.lastHitTime=-100;
+  let guarded=0,engaged=0;
+  for(let tick=0;tick<120;tick++){
+    ctx.game.time=100+tick*.1;
+    for(const robot of [a,b]){
+      const intent=fighterIntent(robot);
+      if(intent.mode==='бережёт голову') guarded++;
+      else engaged++;
+    }
+  }
+  assert.ok(guarded>0,'wounded patients do protect themselves occasionally');
+  assert.ok(guarded<70,'head protection must be brief, not the whole round');
+  assert.ok(engaged>170,'wounded patients must spend most time engaging');
+  dom.window.close();
+});
 
 test('chest is invulnerable; destroying the head immediately kills the patient', () => {
   const dom=setup();
