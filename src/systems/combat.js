@@ -90,7 +90,9 @@ export function struckSegment(attacker, victim, p) {
   })).filter(c => c.gap <= 2.2).sort((a, b) => a.gap - b.gap);
   if (!candidates.length) return null;
   if (!sightClear(attacker.center, victim.center)) return null;
-  return candidates.find(c => c.segment === p.segment)?.segment || candidates[0].segment;
+  // The first physically touched segment receives damage, even if the head was aimed at.
+  // This lets arms and legs shield the head without arbitrary dodge chances.
+  return candidates[0].segment;
 }
 export function combatAttacks() {
   if (ctx.combat.finished) return;
@@ -168,7 +170,6 @@ export function combatAttacks() {
     }
   }
   const mobile = ctx.robots.filter(r => r.mobile && r.visible && r.segmentCount > 0);
-  const able = mobile.filter(r=>r.movementLimbs>0);
   if (ctx.robots.every(r => r.visible)) {
     if (mobile.length === 2 && ctx.arenaAccent.lastActive > 2) arenaAnnounce('ОСТАЛИСЬ', 'ДВОЕ', 4, 2.3);
     ctx.arenaAccent.lastActive = mobile.length;
