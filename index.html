@@ -53,6 +53,23 @@
    <label for="music-volume">Музыка <input id="music-volume" type="range" min="0" max="100" step="1" value="10"><output for="music-volume" id="music-volume-value">10%</output></label>
   </div>
   <div id="arena-settings-content"></div>
+  <div class="credits-entry"><button id="arena-credits-open" type="button" aria-controls="arena-credits-view" aria-expanded="false">АВТОРЫ И ЛИЦЕНЗИИ</button></div>
+  <section id="arena-credits-view" class="credits-view" aria-labelledby="arena-credits-title" hidden>
+   <p class="credits-stamp">АРХИВ / ДЕЛО № 001</p>
+   <h3 id="arena-credits-title">АВТОРЫ И ЛИЦЕНЗИИ</h3>
+   <div class="credits-section">
+    <h4>СОЗДАНИЕ ПРОЕКТА</h4>
+    <p><strong>Станислав EvasDae Гирдо</strong><br>Автор идеи, концепции, дизайна, игровых механик и творческий руководитель проекта.</p>
+    <p><strong>ChatGPT (OpenAI)</strong><br>Техническая реализация и программирование по заданию автора проекта.</p>
+   </div>
+   <div class="credits-section">
+    <h4>МУЗЫКАЛЬНОЕ СОПРОВОЖДЕНИЕ</h4>
+    <p><strong>The Flower Duet (из оперы Lakmé)</strong><br>Композитор: Léo Delibes<br>Исполнение: под управлением Philip Milman<br>Источник: <a href="https://www.classicals.de/delibes-flower-duet" target="_blank" rel="noopener noreferrer">classicals.de/delibes-flower-duet</a><br>Лицензия: <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">Creative Commons CC BY 4.0</a>.</p>
+    <p>Если используется отредактированная версия записи: сокращение длительности, регулировка громкости и зацикливание для игры.</p>
+   </div>
+   <p class="credits-footnote">Полный перечень авторов и материалов — в CREDITS.md репозитория.</p>
+   <button id="arena-credits-back" type="button">НАЗАД К НАСТРОЙКАМ</button>
+  </section>
  </div>
 </div>
 
