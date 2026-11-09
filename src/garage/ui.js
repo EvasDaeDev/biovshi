@@ -43,7 +43,9 @@ export function garageOpen(){
   paintPatientPortrait({portrait:canvas,portraitAtlas:source?.portraitAtlas},id,PORTRAIT_BONES.map(b=>({key:b.key,state:'good',opacity:1})));section.querySelector('.garage-portrait').append(canvas);
   section.querySelectorAll('[data-stat]').forEach(select=>select.onchange=()=>{
    const i=Number(select.dataset.stat),value=Number(select.value),base=earnedStats(g.wins),stats=[...base];
-   if(value!==base[i]){const opposite=2*base[i]-value;let other=g.stats.findIndex((n,j)=>j!==i&&n===base[j]+(base[i]-value));if(other<0)other=g.stats.findIndex((n,j)=>j!==i&&n===base[j]);if(other<0)other=(i+1)%3;stats[i]=value;stats[other]+=base[i]-value;}
+   if(value!==base[i]){let other=g.stats.findIndex((n,j)=>j!==i&&n===base[j]+(base[i]-value));if(other<0)other=g.stats.findIndex((n,j)=>j!==i&&n===base[j]);if(other<0)other=(i+1)%3;
+    if(base[other]+base[i]-value<2)other=[0,1,2].find(j=>j!==i&&base[j]+base[i]-value>=2)??other;
+    stats[i]=value;stats[other]+=base[i]-value;}
    try{setPatientStats(ctx.betting,id,ctx.procedureEditor,stats);bettingSave();garageOpen();}catch(error){select.value=g.stats[i];section.querySelector('[data-error]').textContent=error.message;}
   });
   section.querySelector('[data-base]').onclick=()=>{try{setPatientStats(ctx.betting,id,ctx.procedureEditor,earnedStats(g.wins));bettingSave();garageOpen();}catch(error){section.querySelector('[data-error]').textContent=error.message;}};
