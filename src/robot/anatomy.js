@@ -1,3 +1,4 @@
+import {patientDeath} from '../garage/model.js';
 import {bettingSave} from '../betting/storage.js';
 import {showCrit} from '../render/crit.js';
 import { clamp } from '../utils/math.js';
@@ -225,7 +226,7 @@ export function robotDamage(robotState, key, by, damage=1) {
       inertia:createInertia(direction,robotState.api.capsules.filter(c=>[key,...attached].includes(c.segment))),
       pieces: wreckPieces
     });
-    if(wreckKeys.includes('head')&&ctx.betting?.garage?.[robotState.id]){ctx.betting.garage[robotState.id].head=null;bettingSave();}
+    if(wreckKeys.includes('head')&&ctx.betting?.garage?.[robotState.id]){patientDeath(ctx.betting.garage[robotState.id]);bettingSave();}
     for (const part of [key, ...attached]) {
       robotState.broken.add(part);
       robotState.hp.set(part, 0);
