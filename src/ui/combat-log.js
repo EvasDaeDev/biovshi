@@ -12,7 +12,7 @@ export function combatLine(event){
  const spice=['Больно, но бесплатно.','Анестезия в отпуске.','Чек за ремонт растёт.','Доктор промахнулся профессией.'][Math.abs(Math.floor((event.time??0)*10))%4];
  if(event.type==='hit')return `${attacker} → ${target}: ${event.damage===2?'мощный удар':'попадание'} в ${part}. ${event.damage===2?'Гарантия аннулирована.':spice}`;
  if(event.type==='segment-broken')return `${attacker} оторвал ${target} ${part}${event.damage===2?' мощным ударом':''}. Запчасть свободна!`;
- if(event.type==='robot-immobilized')return event.segment?`${patientName(event.robot)} уничтожен точным ударом в ${segmentName(event.segment)}. Выписан навсегда.`:`${patientName(event.robot)} выбыл. Масло кончилось раньше терпения.`;
+ if(event.type==='robot-immobilized')return event.reason==='погиб'?`${target} погиб — голова уничтожена.`:event.reason==='потерял сознание'?`${target} потерял сознание и выбыл из боя.`:`${target} выбыл из боя.`;
  if(event.type==='combat-end')return event.winner===null?'Ничья. Морг просит добавку.':`${patientName(event.winner)} победил. Последний на приёме!`;
  return null;
 }
