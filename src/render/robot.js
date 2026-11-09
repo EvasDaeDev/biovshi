@@ -10,6 +10,7 @@ import { paintRobotSkin,paintHeadDecor } from './robot-skin.js';
 import { inertiaOffset } from './inertia.js';
 import { spawnAppearance } from './spawn.js';
 import { paintVictoryGlow } from './victory-glow.js';
+import { emitGameEvent } from '../game/event-bus.js';
 import { paintTorsoShadow } from './ground-spots.js';
 export function visualOffset(robotState) {
   if (robotState.spawnVisual?.airborne) return robotState.spawnVisual;
@@ -183,6 +184,9 @@ export function robotPaint(robotState, hunter) {
     const grounded = !spawn.airborne && l.phase >= 1 && !robotState.lifted(l),
       previous = robotState.lastFootTouches.get(l);
     const p = robotState.visiblePoint(robotState.handEnd(l));
+    if(grounded&&!previous?.grounded&&l.kind==='leg'&&robotState.mobile()){
+      emitGameEvent('footstep',{robot:robotState.id,time:ctx.game.time});
+    }
     if (grounded && !previous?.grounded && (!previous?.point || Math.hypot(p.x - previous.point.x, p.y - previous.point.y) > .25)) {
       robotState.trail.push({
         x: p.x,

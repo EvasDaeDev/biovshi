@@ -12,7 +12,7 @@ function setup(){
  const sources=[],gains=[];
  const context={state:'suspended',destination:{},resume(){this.state='running';return Promise.resolve();},
   createGain(){const gain={gain:{value:1},connect(){},disconnect(){}};gains.push(gain);return gain;},
-  createBufferSource(){const source={playbackRate:{value:1},connect(){},disconnect(){},start(){this.started=true;},stop(){this.stopped=true;}};sources.push(source);return source;}};
+  createBufferSource(){const source={playbackRate:{value:1},connect(node){this.gain=node;},disconnect(){},start(){this.started=true;},stop(){this.stopped=true;}};sources.push(source);return source;}};
  const state={root:dom.window.document.querySelector('#robot-tag-hops-v22'),startup:{phase:'running'},paused:false,combat:{finished:false,unarmedDeadline:[null,null]},robots:[{id:0,visible:true,mobile:true},{id:1,visible:true,mobile:true}]};
  const target=new EventTarget();
  const audio=createAudio({state,storage:dom.window.localStorage,eventTarget:target,contextFactory:()=>context,bufferLoader:async(_context,path)=>path});
@@ -49,7 +49,7 @@ test('music loops through pause; crawling stops on unconsciousness and every loo
 
 test('volume sliders update independent buses, persist 0–100 values and restore preferences',async()=>{
  const f=setup();await f.unlock();const input=f.dom.window.document.querySelector('#sound-volume');input.value='0';input.dispatchEvent(new f.dom.window.Event('input'));
- assert.equal(f.gains[0].gain.value,0);assert.equal(f.gains[1].gain.value,.3);assert.equal(f.dom.window.document.querySelector('#sound-volume-value').value,'0%');
+ assert.equal(f.gains[0].gain.value,0);assert.equal(f.gains[1].gain.value,.1);assert.equal(f.dom.window.document.querySelector('#sound-volume-value').value,'0%');
  f.audio.setVolume('music',150);assert.equal(f.gains[1].gain.value,1);
  assert.deepEqual(loadAudioSettings(f.dom.window.localStorage),{sounds:0,music:100});
  f.audio.setVolume('music',0);assert.equal(live(f.sources,'music').length,0);
@@ -59,14 +59,30 @@ test('volume sliders update independent buses, persist 0–100 values and restor
 
 test('voice limit bounds bursts; leaving combat cancels sounds still decoding',async()=>{
  const f=setup();await f.unlock();
- for(let i=0;i<50;i++)emitGameEvent('footstep',{robot:1,dragging:true});
- f.state.startup.phase='betting';f.audio.sync();await flush();assert.equal(live(f.sources,'drag').length,0);
+ for(let i=0;i<50;i++)emitGameEvent('footstep',{robot:1});
+ f.state.startup.phase='betting';f.audio.sync();await flush();assert.equal(live(f.sources,'step').length,0);
  f.state.startup.phase='running';f.audio.sync();
- for(let i=0;i<50;i++)emitGameEvent('footstep',{robot:1,dragging:true});await flush();assert.equal(live(f.sources,'drag').length,12);
+ for(let i=0;i<50;i++)emitGameEvent('footstep',{robot:1});await flush();assert.equal(live(f.sources,'step').length,12);
  f.finish();
 });
 
 test('runtime sound manifest resolves all files outside source references and pitch stays subtle',()=>{
  for(const path of Object.values(ASSETS.sounds)){assert.ok(!path.includes('/_src/'));assert.ok(fs.existsSync(new URL('../public/'+path,import.meta.url)));}
  for(let id=0;id<4;id++)assert.ok(playbackRate(id)>.9&&playbackRate(id)<1.1);
+});
+
+test('foot contact uses step_1 at 70%; legless movement loops it at 100% and stops when idle',async()=>{
+ const f=setup();await f.unlock();
+ emitGameEvent('footstep',{robot:0});await flush();
+ const step=live(f.sources,'step')[0];assert.equal(step.loop,false);assert.equal(step.gain.gain.value,.7);assert.match(step.buffer,/step_1\.mp3$/);
+ const robot=f.state.robots[1];robot.limbs=[];robot.velocity={x:3,y:0};f.audio.sync();await flush();
+ const drag=live(f.sources,'drag').find(s=>s.loop);assert.ok(drag);assert.equal(drag.gain.gain.value,1);
+ f.audio.sync();await flush();assert.equal(live(f.sources,'drag').filter(s=>s.loop).length,1);
+ robot.velocity.x=0;f.audio.sync();assert.ok(drag.stopped);
+ robot.velocity.x=3;robot.limbs=[{kind:'leg'}];f.audio.sync();await flush();assert.equal(live(f.sources,'drag').filter(s=>s.loop).length,0);
+ robot.limbs=[];f.audio.sync();await flush();const resumed=live(f.sources,'drag').find(s=>s.loop);assert.ok(resumed);
+ f.state.paused=true;f.audio.sync();assert.ok(resumed.stopped);
+ f.state.paused=false;f.state.robots[1].mobile=false;f.audio.sync();await flush();assert.equal(live(f.sources,'drag').filter(s=>s.loop).length,0);
+ assert.deepEqual(loadAudioSettings(),{sounds:70,music:10});
+ f.finish();
 });

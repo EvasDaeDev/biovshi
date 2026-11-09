@@ -3,7 +3,7 @@ import { onGameEvent } from '../game/event-bus.js';
 import { ctx } from '../game/state.js';
 
 const STORAGE='biovshi.audio.v1';
-const DEFAULTS={sounds:70,music:30};
+const DEFAULTS={sounds:70,music:10};
 const rawFiles=new Map(),decodedFiles=new WeakMap();
 let sharedContext;
 function browserContext(){
@@ -51,7 +51,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     if(voice.slot&&loops.get(voice.slot)===voice)loops.delete(voice.slot);
   }
   function stopAll(){for(const voice of [...voices])stop(voice);}
-  function gainFor(key){return key==='step' ? .25 : key==='drag' ? .45 : key==='crawl' ? .55 : 1;}
+  function gainFor(key){return key==='step' ? .7 : key==='drag' ? 1 : key==='crawl' ? .55 : 1;}
   function play(key,{patient,slot,priority=2}={}){
     if(disposed||!unlocked||!context||context.state!=='running'||!ASSETS.sounds[key]||warnings.has(key))return;
     if(slot&&loops.has(slot))return;
@@ -81,13 +81,17 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     effectsPaused=paused;
     const music=active&&settings.music>0;
     if(music)play('music',{slot:'music'});else if(loops.has('music'))stop(loops.get('music'));
-    const crawling=new Set();
+    const movementLoops=new Set();
     if(active&&!paused&&settings.sounds>0)for(const robot of state.robots??[]){
       if(robot.visible&&robot.mobile&&state.combat.unarmedDeadline?.[robot.id]!=null){
-        const slot='crawl-'+robot.id;crawling.add(slot);play('crawl',{patient:robot.id,slot,priority:3});
+        const slot='crawl-'+robot.id;movementLoops.add(slot);play('crawl',{patient:robot.id,slot,priority:3});
+      }
+      const moving=Math.hypot(robot.velocity?.x??0,robot.velocity?.y??0)>1;
+      if(robot.visible&&robot.mobile&&moving&&!(robot.limbs??[]).some(l=>l.kind==='leg')){
+        const slot='drag-'+robot.id;movementLoops.add(slot);play('drag',{patient:robot.id,slot,priority:1});
       }
     }
-    for(const [slot,voice] of loops)if(slot!=='music'&&!crawling.has(slot))stop(voice);
+    for(const [slot,voice] of loops)if(slot!=='music'&&!movementLoops.has(slot))stop(voice);
   }
   function unlock(){
     if(disposed)return;
@@ -125,7 +129,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       if(type==='segment-broken')play(Math.random()<.5?'detach1':'detach2',{patient:event.robot,priority:4});
     }else if(type==='combat-miss')play(Math.random()<.5?'miss1':'miss2',{patient,priority:1});
     else if(type==='robot-immobilized'&&event.reason==='погиб')play('death',{patient:event.robot,priority:4});
-    else if(type==='footstep'&&!loops.has('crawl-'+event.robot))play(event.dragging?'drag':'step',{patient:event.robot,priority:0});
+    else if(type==='footstep')play('step',{patient:event.robot,priority:0});
   });
   eventTarget.addEventListener('pointerdown',unlock);eventTarget.addEventListener('keydown',unlock);
   // A prior gesture has already unlocked the shared context during this visit.

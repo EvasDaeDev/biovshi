@@ -1098,3 +1098,16 @@ test('powerful contact removes two HP once, expires Crit in .2 seconds and loses
  assert.ok(ctx.detachedG.querySelector('svg[viewBox="0 0 64 64"]'));
  dom.window.close();
 });
+
+test('footstep events follow individual leg landings, never planted feet or hand contacts',()=>{
+ const dom=setup(),robot=ctx.robots[0],events=[],unsubscribe=onGameEvent(e=>{if(e.type==='footstep')events.push(e);});
+ try{
+   const leg=robot.limbs.find(l=>l.kind==='leg'),hand=robot.limbs.find(l=>l.kind==='arm');
+   robot.paint(false);events.length=0;
+   leg.phase=0;robot.paint(false);assert.equal(events.length,0,'a raised foot is silent');
+   leg.phase=1;robot.paint(false);assert.equal(events.length,1);assert.equal(events[0].robot,robot.id);
+   robot.paint(false);assert.equal(events.length,1,'standing still does not repeat the contact');
+   hand.phase=0;robot.paint(false);hand.phase=1;robot.paint(false);assert.equal(events.length,1,'hands do not trigger a footstep');
+   leg.phase=0;robot.paint(false);leg.phase=1;robot.paint(false);assert.equal(events.length,2,'a new contact at the same point still makes a sound');
+ }finally{unsubscribe();ctx.root.__disposeTag();dom.window.close();}
+});

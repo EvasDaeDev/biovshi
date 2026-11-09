@@ -26,7 +26,7 @@ export const ASSETS = {
     miss2: 'assets/sounds/effects/miss_2.mp3',
     crawl: 'assets/sounds/effects/slow_death_run.mp3',
     drag: 'assets/sounds/effects/step_1.mp3',
-    step: 'assets/sounds/effects/udar-kulakom--v-telo.mp3',
+    step: 'assets/sounds/effects/step_1.mp3',
     music: 'assets/sounds/music/music_01.mp3',
   },
 };
