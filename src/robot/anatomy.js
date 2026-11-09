@@ -177,9 +177,9 @@ export function reactToHit(robotState, attacker, segment) {
   });
 }
 export function robotFailFromOilLoss(robotState) {
-  if (!robotState.mobile() || robotState.api.attackSources.length > 0) return false;
+  if (!robotState.mobile() || robotState.movementLimbs() > 0) return false;
   robotState.bledOut = true;
-  robotState.finishMobility('истёк маслом');
+  robotState.finishMobility('потерял сознание');
   robotState.api.capsules = robotState.makeCapsules();
   return true;
 }
@@ -250,7 +250,7 @@ export function robotDamage(robotState, key, by, damage=1) {
       nextAt: ctx.game.time + CONFIG.oil.minIntervalSec + random() * (CONFIG.oil.maxIntervalSec - CONFIG.oil.minIntervalSec)
     });
     if (key === 'head') robotState.currentIntent.lookPoint = null;
-    if (wasMobile && !robotState.mobile()) robotState.finishMobility('потерял конечности');
+    if (wasMobile && !robotState.mobile()) robotState.finishMobility('погиб');
     note('segment-broken', {
       robot: robotState.id,
       segment: key,
