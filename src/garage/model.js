@@ -1,11 +1,37 @@
 export const BASE_STATS = [3,3,3];
 export const HATS = [1,2,3,4];
-export function validStats(stats) {
-  return Array.isArray(stats)&&stats.length===3&&stats.every(n=>Number.isInteger(n)&&n>=2&&n<=4)&&stats.reduce((a,b)=>a+b,0)===9&&stats.filter(n=>n===3).length>=1;
+export function earnedStats(wins=0) {
+  const n=Math.max(0,Math.floor(wins));
+  return BASE_STATS.map((base,i)=>base+Math.floor((n+2-i)/3));
 }
-export function newGarage(){return Array.from({length:4},()=>({stats:[3,3,3],head:null,investments:{},patron:null}));}
-export function statMultiplier(points){return 1+(points-3)*.2;}
-export function critChance(points){return (points-2)*.15;}
+export function validStats(stats, wins=0) {
+  const base=earnedStats(wins);
+  if(!Array.isArray(stats)||stats.length!==3||!stats.every(n=>Number.isInteger(n)&&n>=2))return false;
+  const delta=stats.map((n,i)=>n-base[i]);
+  return delta.every(n=>Math.abs(n)<=1)&&delta.reduce((a,b)=>a+b,0)===0;
+}
+export function normalizePatient(patient) {
+  patient.wins=Number.isSafeInteger(patient.wins)&&patient.wins>=0?patient.wins:0;
+  if(!validStats(patient.stats,patient.wins))patient.stats=earnedStats(patient.wins);
+  return patient;
+}
+export function patientVictory(patient) {
+  normalizePatient(patient);
+  patient.wins++;
+  const next=earnedStats(patient.wins);
+  const old=earnedStats(patient.wins-1);
+  patient.stats=patient.stats.map((n,i)=>n+next[i]-old[i]);
+}
+export function patientDeath(patient) {
+  patient.wins=0;
+  patient.stats=[...BASE_STATS];
+  patient.head=null;
+  // Future decoration slots must also be cleared here.
+  if(patient.decor)patient.decor={};
+}
+export function newGarage(){return Array.from({length:4},()=>({stats:[3,3,3],wins:0,head:null,investments:{},patron:null}));}
+export function statMultiplier(points){return points<=4?1+(points-3)*.2:1.2+[0,.15,.30,.40,.50,.60][Math.min(5,Math.max(0,points-4))];}
+export function critChance(points){return points<=4?Math.max(0,(points-2)*.15):[.30,.38,.45,.50,.55,.60][Math.min(5,Math.max(0,points-4))];}
 export function nextPrice(slot){return slot?slot.price+Math.ceil(slot.price/10):10;}
 export function buyHat(session,patient,player,hat,price){
   if(session.phase!=='betting')throw Error('Покупки доступны до ставок.');
@@ -32,7 +58,7 @@ export function normalizePatronage(session){
 }
 export function setPatientStats(session,patientId,editor,stats){
   const patient=session.garage?.[patientId];
-  if(session.phase!=='betting'||!patient||!session.players[editor]||!validStats(stats))throw Error('Настройка доступна перед ставками: один перенос очка.');
+  if(session.phase!=='betting'||!patient||!session.players[editor]||!validStats(stats,patient.wins))throw Error('Настройка доступна перед ставками: один перенос очка.');
   const patron=resolvePatron(patient);
   if(patron!==null&&patron!==editor)throw Error('Настраивать пациента может только его покровитель.');
   patient.stats=[...stats];
