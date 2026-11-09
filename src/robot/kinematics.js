@@ -55,12 +55,12 @@ export function attackPose(robotState, p) {
       progress
     };
   }
-  const match = /^arm-(-?1)-(lower|upper)$/.exec(p.source);
+  const match = /^(arm|leg)-(-?1)-(lower|upper)$/.exec(p.source);
   if (!match) return null;
-  const l = robotState.arms.find(item => item.side === Number(match[1]));
-  if (!l || !robotState.healthy(`arm-${l.side}-upper`)) return null;
-  const complete = robotState.healthy(`arm-${l.side}-lower`);
-  if (match[2] === 'lower' !== complete) return null;
+  const l = (match[1] === 'arm' ? robotState.arms : robotState.legs).find(item => item.side === Number(match[2]));
+  if (!l || !robotState.healthy(`${l.kind}-${l.side}-upper`)) return null;
+  const complete = robotState.healthy(`${l.kind}-${l.side}-lower`);
+  if ((match[3] === 'lower') !== complete) return null;
   const shoulder = robotState.origin(l),
     [upper, lower] = robotState.lengths(l);
   const restJoint = ik(shoulder, robotState.handEnd(l), upper, lower, l.side).joint;
@@ -100,7 +100,7 @@ export function attackPose(robotState, p) {
     tip.y = shoulder.y + vy / dist * maxReach;
   }
   return {
-    kind: 'arm',
+    kind: l.kind,
     limb: l,
     shoulder,
     tip,
