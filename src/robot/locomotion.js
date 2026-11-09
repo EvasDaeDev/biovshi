@@ -422,6 +422,8 @@ export function robotTick(robotState, dt, intent) {
     if (robotState.idleKinds.includes(robotState.mode)) robotState.updateIdleScene(dt);else robotState.updateScene();
     return;
   }
+  // The victory pose is a one-shot animation, not a return to wandering.
+  if(ctx.combat.finished){robotState.vx=robotState.vy=0;return;}
   if (robotState.leap && robotState.leap.kind === 'rebound') {
     robotState.reboundTick(dt, intent);
     return;
