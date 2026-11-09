@@ -36,7 +36,7 @@ function setup({start=true,reduced=false,textures=null}={}) {
 }
 function hit(robot,key) {ctx.game.time+=CONFIG.combat.damageInvulnerabilitySec+.01;return robot.damage(key,1);}
 
-test('chest is invulnerable; head loss halves turning and removes vision', () => {
+test('chest is invulnerable; destroying the head immediately kills the patient', () => {
   const dom=setup();
   const r=ctx.robots[0],turn=r.turnAbility;
   assert.equal(r.damage('spine-0',1),false);
@@ -47,7 +47,8 @@ test('chest is invulnerable; head loss halves turning and removes vision', () =>
   assert.equal(r.hasHead,false);
   assert.equal(r.turnAbility,turn/2);
   assert.equal(r.canSee({x:r.x,y:r.y}),false);
-  assert.equal(r.mobile,true);
+  assert.equal(r.mobile,false);
+  assert.equal(r.capsules.length,0);
   dom.window.close();
 });
 
@@ -63,12 +64,19 @@ test('severed upper arm takes its lower segment; detached parts cannot be hit ag
   dom.window.close();
 });
 
-test('losing every limb ends mobility; reset restores the anatomy and the betting phase', () => {
+test('losing every limb starts unconsciousness countdown; reset restores anatomy and bets', () => {
   const dom=setup();
   const r=ctx.robots[0];
   for(const kind of ['arm','leg'])for(const side of [-1,1])for(let i=0;i<3;i++)hit(r,`${kind}-${side}-upper`);
-  assert.equal(r.mobile,false);
+  assert.equal(r.mobile,true,'head remains alive and may crawl');
   assert.equal(r.movementLimbs,0);
+  step(1/60);
+  const deadline=ctx.combat.unarmedDeadline[r.id];
+  assert.ok(deadline>ctx.game.time+19&&deadline<=ctx.game.time+30);
+  ctx.game.time=deadline;
+  step(1/60);
+  assert.equal(r.mobile,false,'loss of consciousness ends the escape');
+  assert.equal(r.hasHead,true,'unconsciousness does not destroy the head');
   resetRound();
   assert.equal(ctx.startup.phase,'betting');
   assert.equal(ctx.round.elapsedSec,0);
@@ -83,7 +91,7 @@ test('simulation advances with finite poses; a finished round settles once and o
   paint();
   assert.ok(ctx.robots.every(r=>Number.isFinite(r.x)&&Number.isFinite(r.y)&&Number.isFinite(r.angle)));
   assert.ok(ctx.robots.some((r,i)=>Math.hypot(r.x-before[i].x,r.y-before[i].y)>0));
-  for(const r of ctx.robots.slice(1))for(const kind of ['arm','leg'])for(const side of [-1,1])for(let i=0;i<3;i++)hit(r,`${kind}-${side}-upper`);
+  for(const r of ctx.robots.slice(1))for(let i=0;i<5;i++)hit(r,'head');
   step(1/60);
   assert.equal(ctx.combat.finished,true);
   assert.equal(ctx.combat.winner,0);
@@ -856,11 +864,11 @@ test('severed anatomy slides 30 cm with deceleration over 1.5 seconds then stops
   dom.window.close();
 });
 
-test('an immobilized patient has the same cosmetic slide and inactive remains never block combat',()=>{
+test('a dead patient has the same cosmetic slide and inactive remains never block combat',()=>{
   const dom=setup();ctx.obstacles=ctx.obstacles.filter(b=>b.left>500);ctx.robots=[];
   const r=createRobot(0,{x:300,y:250,angle:0}),attacker=createRobot(1,{x:230,y:250,angle:0});ctx.robots=[r,attacker];
   r.paint(false);
-  for(const kind of ['arm','leg'])for(const side of [-1,1])for(let i=0;i<3;i++)hit(r,`${kind}-${side}-upper`);
+  for(let i=0;i<5;i++)hit(r,'head');
   assert.equal(r.mobile,false);assert.equal(r.capsules.length,0);
   paint();
   const initial=r.actor.getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1).map(Number);
@@ -904,7 +912,7 @@ test('an unchanged textured frame causes no redundant DOM mutations',()=>{
 
 test('opening results stops hidden arena work after the three-second victory presentation',()=>{
   const dom=setup();
-  for(const r of ctx.robots.slice(1))for(const kind of ['arm','leg'])for(const side of [-1,1])for(let i=0;i<3;i++)hit(r,`${kind}-${side}-upper`);
+  for(const r of ctx.robots.slice(1))for(let i=0;i<5;i++)hit(r,'head');
   step(1/60);assert.equal(ctx.combat.finished,true);
   ctx.last=0;ctx.paintAt=0;ctx.debt=0;
   for(let i=1;i<=181;i++)frame(i*1000/60);
@@ -971,11 +979,11 @@ test('detached limbs leave one full-size puddle only at their final rendered ski
   dom.window.close();
 });
 
-test('an immobilized patient leaves its puddle after stopping, at the torso light centre instead of the killing impact',()=>{
+test('a dead patient leaves its puddle after stopping, at the torso light centre instead of the killing impact',()=>{
   const dom=setup();ctx.obstacles=ctx.obstacles.filter(b=>b.left>500);ctx.robots=[];
   const r=createRobot(0,{x:300,y:250,angle:0}),attacker=createRobot(1,{x:230,y:250,angle:0});ctx.robots=[r,attacker];
   r.paint(false);
-  for(const kind of ['arm','leg'])for(const side of [-1,1])for(let i=0;i<3;i++)hit(r,`${kind}-${side}-upper`);
+  for(let i=0;i<5;i++)hit(r,'head');
   assert.equal(r.mobile,false);const stoppedAt=ctx.game.time+CONFIG.effects.inertiaSec;
   const torso={...r.center};paint();
   // Remove earlier fragments to isolate the patient's pending puddle.
