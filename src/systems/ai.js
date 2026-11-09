@@ -122,7 +122,8 @@ export function fighterIntent(r) {
     active = activeOpponents(id);
   if(r.movementLimbs===0){
     const threats=active.filter(o=>o.movementLimbs>0);
-    return {goal:threats.length?fleeAllAttackers(r,threats):here,speed:threats.length?CONFIG.movement.fleeSpeedCm:0,mode:'пытается спастись',lookPoint:threats[0]?.center??null};
+    const nearest=active.slice().sort((a,b)=>Math.hypot(a.x-r.x,a.y-r.y)-Math.hypot(b.x-r.x,b.y-r.y))[0];
+    return {goal:threats.length?fleeAllAttackers(r,threats):here,speed:threats.length?CONFIG.movement.fleeSpeedCm:0,mode:'пытается спастись',lookPoint:nearest?.center??null};
   }
   if (!active.length) return {
     goal: here,
