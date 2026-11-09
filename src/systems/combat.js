@@ -82,17 +82,26 @@ export function strikeCandidates(attacker, victim, source) {
 export function struckSegment(attacker, victim, p) {
   const pose = attacker.attackPose(p);
   if (!pose) return null;
-  const tip = pose.tip;
-  // Контакт проверяется именно в конечной точке выпада по геометрии живых сегментов.
-  const candidates = victim.capsules.filter(c => c.segment && victim.isDamageable(c.segment)).map(c => ({
-    segment: c.segment,
-    gap: pointSegment(tip, c.a, c.b) - c.r
-  })).filter(c => c.gap <= 2.2).sort((a, b) => a.gap - b.gap);
-  if (!candidates.length) return null;
   if (!sightClear(attacker.center, victim.center)) return null;
-  // The first physically touched segment receives damage, even if the head was aimed at.
-  // This lets arms and legs shield the head without arbitrary dodge chances.
-  return candidates[0].segment;
+  const rest = attacker.attackPose({...p, started:ctx.game.time, preview:false});
+  if (!rest) return null;
+  const capsules = victim.capsules.filter(c=>c.segment && victim.isDamageable(c.segment));
+  // Sweep along the actual limb/head thrust rather than teleporting the hit
+  // directly to the aimed segment. The earliest physical collision wins.
+  for (let step=0;step<=12;step++) {
+    const t=step/12;
+    const point={
+      x:rest.tip.x+(pose.tip.x-rest.tip.x)*t,
+      y:rest.tip.y+(pose.tip.y-rest.tip.y)*t
+    };
+    let first=null;
+    for (const c of capsules) {
+      const gap=pointSegment(point,c.a,c.b)-c.r;
+      if (gap<=2.2 && (!first || gap<first.gap)) first={segment:c.segment,gap};
+    }
+    if (first) return first.segment;
+  }
+  return null;
 }
 export function combatAttacks() {
   if (ctx.combat.finished) return;
