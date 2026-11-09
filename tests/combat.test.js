@@ -84,6 +84,46 @@ test('losing every limb starts unconsciousness countdown; reset restores anatomy
   dom.window.close();
 });
 
+
+test('two head-only patients fight the countdown; the later loss of consciousness wins', () => {
+  const dom=setup();
+  for(const r of ctx.robots.slice(2))for(let i=0;i<5;i++)hit(r,'head');
+  for(const r of ctx.robots.slice(0,2))
+    for(const kind of ['arm','leg'])for(const side of [-1,1])
+      for(let i=0;i<3;i++)hit(r,`${kind}-${side}-upper`);
+  step(1/60);
+  assert.equal(ctx.combat.finished,false,'two conscious heads remain in combat');
+  const now=ctx.game.time;
+  ctx.combat.unarmedDeadline[0]=now+1;
+  ctx.combat.unarmedDeadline[1]=now+3;
+  ctx.game.time=now+1;
+  step(1/60);
+  assert.equal(ctx.combat.finished,true);
+  assert.equal(ctx.combat.winner,1);
+  assert.equal(ctx.robots[0].hasHead,true);
+  assert.equal(ctx.robots[0].mobile,false);
+  assert.equal(ctx.robots[1].mobile,true);
+  dom.window.close();
+});
+
+test('simultaneous unconsciousness of last two head-only patients is a draw', () => {
+  const dom=setup();
+  for(const r of ctx.robots.slice(2))for(let i=0;i<5;i++)hit(r,'head');
+  for(const r of ctx.robots.slice(0,2))
+    for(const kind of ['arm','leg'])for(const side of [-1,1])
+      for(let i=0;i<3;i++)hit(r,`${kind}-${side}-upper`);
+  step(1/60);
+  assert.equal(ctx.combat.finished,false);
+  const deadline=ctx.game.time+1;
+  ctx.combat.unarmedDeadline[0]=deadline;
+  ctx.combat.unarmedDeadline[1]=deadline;
+  ctx.game.time=deadline;
+  step(1/60);
+  assert.equal(ctx.combat.finished,true);
+  assert.equal(ctx.combat.winner,null);
+  dom.window.close();
+});
+
 test('simulation advances with finite poses; a finished round settles once and opens results', () => {
   const dom=setup();
   const before=ctx.robots.map(r=>({x:r.x,y:r.y}));
