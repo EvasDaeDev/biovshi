@@ -28,6 +28,7 @@ export function patientDeath(patient) {
   patient.head=null;
   // Future decoration slots must also be cleared here.
   if(patient.decor)patient.decor={};
+  if(patient.decorations)patient.decorations={};
 }
 export function newGarage(){return Array.from({length:4},()=>({stats:[3,3,3],wins:0,head:null,investments:{},patron:null}));}
 export function statMultiplier(points){return points<=4?1+(points-3)*.2:1.2+[0,.15,.30,.40,.50,.60][Math.min(5,Math.max(0,points-4))];}
