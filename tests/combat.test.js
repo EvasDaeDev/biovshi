@@ -43,6 +43,9 @@ test('wounded opponents cannot keep guarding their heads forever', () => {
   const b=createRobot(1,{x:245,y:150,angle:Math.PI});
   a.setVisible(true);b.setVisible(true);
   ctx.robots=[a,b];
+  // Isolate head-guard policy from arena obstacles and vision occlusion.
+  // An invisible opponent cannot trigger defensive tactics by design.
+  a.canSee=()=>true;b.canSee=()=>true;
   a.hp.set('head',2);b.hp.set('head',2);
   ctx.combat.lastHitTime=-100;
   let guarded=0,engaged=0,flanking=0,chasing=0;
