@@ -106,6 +106,15 @@ export // Непрерывная кинематика удара. Урон во�
 function activeOpponents(id) {
   return ctx.robots.filter(o => o.id !== id && o.visible && o.mobile && o.segmentCount > 0);
 }
+// Independent, deterministic cooldown for critical-head tactical cover.
+export function headGuardActive(ai, now, headHp, opponentDistance, visible, movementLimbs) {
+  if (!visible || headHp > 2 || movementLimbs < 1 || opponentDistance >= 140) return false;
+  if (now >= (ai.headGuardUntil ?? 0) && now >= (ai.headGuardCooldownUntil ?? 0)) {
+    ai.headGuardUntil = now + .8;
+    ai.headGuardCooldownUntil = now + 7;
+  }
+  return now < (ai.headGuardUntil ?? 0);
+}
 export function fighterIntent(r) {
   const here = {
     x: r.x,
@@ -281,14 +290,8 @@ export function fighterIntent(r) {
   // Caution is a SHORT manoeuvre, not a permanent state at low head HP.
   // Once used, the patient must re-engage for several seconds before guarding again.
   // This prevents two wounded patients from circling indefinitely without attacking.
-  if (actuallySeen && r.hp.get('head') <= 2 && r.movementLimbs >= 1 && d < 140) {
-    if (ctx.game.time >= (ai.headGuardUntil ?? 0) && ctx.game.time >= (ai.headGuardCooldownUntil ?? 0)) {
-      ai.headGuardUntil = ctx.game.time + .8;
-      ai.headGuardCooldownUntil = ctx.game.time + 7;
-    }
-    if (ctx.game.time < (ai.headGuardUntil ?? 0)) {
-      return {goal:tacticalEscape(r,foe),speed:CONFIG.movement.fleeSpeedCm,mode:'бережёт голову',lookPoint:foe.center};
-    }
+  if (headGuardActive(ai, ctx.game.time, r.hp.get('head'), d, actuallySeen, r.movementLimbs)) {
+    return {goal:tacticalEscape(r,foe),speed:CONFIG.movement.fleeSpeedCm,mode:'бережёт голову',lookPoint:foe.center};
   }
   const foeToUs = Math.atan2(-dy, -dx);
   const exposed = Math.abs(wrap(foeToUs - foe.angle)) < Math.PI * .43;
