@@ -442,20 +442,20 @@ function createRobot(id, start) {
     },
     get attackSources() {
       const result = [];
-      for (const l of robotState.arms) if (robotState.healthy(`arm-${l.side}-upper`)) {
-        const whole = robotState.healthy(`arm-${l.side}-lower`);
+      for (const l of [...robotState.arms,...robotState.legs]) if (robotState.healthy(`${l.kind}-${l.side}-upper`)) {
+        const whole = robotState.healthy(`${l.kind}-${l.side}-lower`);
         const [u, v] = robotState.lengths(l),
           shoulder = robotState.origin(l);
         const joint = ik(shoulder, robotState.handEnd(l), u, v, l.side).joint;
         result.push({
-          kind: 'arm',
+          kind: l.kind,
           side: l.side,
           point: whole ? {
             ...l.foot
           } : {
             ...joint
           },
-          key: `arm-${l.side}-${whole ? 'lower' : 'upper'}`,
+          key: `${l.kind}-${l.side}-${whole ? 'lower' : 'upper'}`,
           reachFactor: whole ? 1 : .5
         });
       }
