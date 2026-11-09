@@ -108,6 +108,8 @@ export async function resetRound(destination='betting') {
     sensedId: null,
     sensedType: null,
     searchHoldUntil: 0,
+    headGuardUntil: 0,
+    headGuardCooldownUntil: 0,
     lastSoundAt: -Infinity
   }));
   ctx.soundEvents.length = 0;
