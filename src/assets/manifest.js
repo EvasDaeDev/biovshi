@@ -15,7 +15,20 @@ export const ASSETS = {
     robotC: 'assets/textures/robots/r_03.png',
     robotD: 'assets/textures/robots/r_04.png',
   },
-  sounds: { hit: null, 'segment-broken': null, 'robot-immobilized': null, 'combat-end': null },
+  sounds: {
+    hit: 'assets/sounds/effects/hit_1.mp3',
+    crit: 'assets/sounds/effects/crit_hit_1.mp3',
+    death: 'assets/sounds/effects/death_body_1.mp3',
+    detach1: 'assets/sounds/effects/detach_limb_1.mp3',
+    detach2: 'assets/sounds/effects/detach_limb_2.mp3',
+    victory: 'assets/sounds/effects/end_01.mp3',
+    miss1: 'assets/sounds/effects/miss_1.mp3',
+    miss2: 'assets/sounds/effects/miss_2.mp3',
+    crawl: 'assets/sounds/effects/slow_death_run.mp3',
+    drag: 'assets/sounds/effects/step_1.mp3',
+    step: 'assets/sounds/effects/udar-kulakom--v-telo.mp3',
+    music: 'assets/sounds/music/music_01.mp3',
+  },
 };
 export function assetUrl(file) {
   if (!file) return null;

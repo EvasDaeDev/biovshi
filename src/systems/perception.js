@@ -1,5 +1,6 @@
 import { ctx } from "../game/state.js";
 import { sightClear } from "./collision.js";
+import { emitGameEvent } from '../game/event-bus.js';
 import { random } from "../utils/random.js";
 export function updateFootsteps() {
   for (const r of ctx.robots) {
@@ -7,6 +8,7 @@ export function updateFootsteps() {
     const v = Math.hypot(r.velocity.x, r.velocity.y);
     if (v < ctx.HEARING.minMoveCmSec) continue;
     if (ctx.game.time < ctx.nextFootstepAt[r.id]) continue;
+    emitGameEvent('footstep',{robot:r.id,dragging:!r.limbs.some(l=>l.kind==='leg'),time:ctx.game.time});
     ctx.soundEvents.push({
       robot: r.id,
       x: r.x,

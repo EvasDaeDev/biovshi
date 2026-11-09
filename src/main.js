@@ -20,8 +20,9 @@ async function prepare({textures,session,entry='auto',arenaId='ward'}){
  if(cancelled||ctx.disposed)return;
  if(ctx.startup.phase==='garage')garageOpen();
  initializeDiagnostics();
- const audio=createAudio(),dispose=ctx.root.__disposeTag;
- ctx.root.__disposeTag=()=>{audio.dispose();dispose();};
+ const audio=createAudio();ctx.audio=audio;
+ const dispose=ctx.root.__disposeTag;
+ ctx.root.__disposeTag=()=>{audio.dispose();if(ctx.audio===audio)ctx.audio=null;dispose();};
  if(ctx.startup.phase==='demo')startSpawnSequence();
 }
 async function boot(){

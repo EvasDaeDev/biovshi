@@ -33,6 +33,7 @@ export function setPaused(paused) {
   resetFrameClock();
   ctx.button.textContent = ctx.paused ? 'Продолжить' : 'Пауза';
   attr(ctx.button, 'aria-pressed', String(ctx.paused));
+  ctx.audio?.sync();
 }
 export function togglePause() {
   if (ctx.startup.phase !== 'running' || ctx.settingsOpen) return;

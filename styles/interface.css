@@ -532,3 +532,8 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #robot-tag-hops-v22 #gladiator-results-procedure:hover{background:#1b4056}
 
 #robot-tag-hops-v22 #combat-log[data-full="true"]{-webkit-mask-image:linear-gradient(to bottom,transparent,#000 28px);mask-image:linear-gradient(to bottom,transparent,#000 28px)}
+
+#robot-tag-hops-v22 .audio-controls{margin:16px 0}
+#robot-tag-hops-v22 .audio-controls label{display:grid;grid-template-columns:65px minmax(0,1fr) 45px;align-items:center;gap:12px;margin:12px 0;font-size:14px}
+#robot-tag-hops-v22 .audio-controls input{width:100%;min-width:0;accent-color:#5eeaff}
+#robot-tag-hops-v22 .audio-controls output{text-align:right;font-variant-numeric:tabular-nums}
