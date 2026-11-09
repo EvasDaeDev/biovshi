@@ -278,10 +278,17 @@ export function fighterIntent(r) {
       lookPoint: null
     };
   }
-  // Critical head integrity changes tactics, never head HP or hit probability.
-  // Retreat only from a visible nearby foe and keep using real navigation/collisions.
+  // Caution is a SHORT manoeuvre, not a permanent state at low head HP.
+  // Once used, the patient must re-engage for several seconds before guarding again.
+  // This prevents two wounded patients from circling indefinitely without attacking.
   if (actuallySeen && r.hp.get('head') <= 2 && r.movementLimbs >= 1 && d < 140) {
-    return {goal:tacticalEscape(r,foe),speed:CONFIG.movement.fleeSpeedCm,mode:'бережёт голову',lookPoint:foe.center};
+    if (!ai.headGuardUntil && ctx.game.time >= (ai.headGuardCooldownUntil ?? 0)) {
+      ai.headGuardUntil = ctx.game.time + .8;
+      ai.headGuardCooldownUntil = ctx.game.time + 7;
+    }
+    if (ctx.game.time < (ai.headGuardUntil ?? 0)) {
+      return {goal:tacticalEscape(r,foe),speed:CONFIG.movement.fleeSpeedCm,mode:'бережёт голову',lookPoint:foe.center};
+    }
   }
   const foeToUs = Math.atan2(-dy, -dx);
   const exposed = Math.abs(wrap(foeToUs - foe.angle)) < Math.PI * .43;
@@ -328,12 +335,18 @@ export function fighterIntent(r) {
       mode = 'обходит с фланга';
     } else if (d < 36.75) {
       const canStrike = r.attackSources.some(source => strikeCandidates(r, foe, source).length > 0);
-      if (canStrike && ctx.game.time - ctx.combat.lastHitTime < 5) {
+      if (canStrike) {
+        // Remain in physical striking range regardless of the last global hit.
         goal = here;
-        mode = 'держит дистанцию';
-      } else {
+        mode = 'атакует';
+      } else if (ctx.game.time - ctx.combat.lastHitTime < 3) {
         goal = tacticalEscape(r, foe);
         mode = 'ищет угол атаки';
+      } else {
+        // Without recent contact, stop backing away: turn toward the enemy
+        // and actively close the gap so a new geometric attack is possible.
+        goal = foe.center;
+        mode = 'сближается для удара';
       }
     }
   }
