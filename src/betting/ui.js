@@ -1,4 +1,4 @@
-import {patientVictory,patientDeath} from '../garage/model.js';
+import {patientVictory} from '../garage/model.js';
 import {arenaPicker} from '../game/arenas.js';
 import {patientName,skillSummary} from '../ui/patient.js';
 import {ROBOT_COLORS} from '../utils/colors.js';
@@ -186,7 +186,7 @@ export function bettingOpen() {
 }
 export function bettingSettle(winner) {
   if (!ctx.betting || ctx.betting.phase !== 'running') return;
-  ctx.betting.garage?.forEach((g,id)=>{if(ctx.robots[id]&&!ctx.robots[id].hasHead)patientDeath(g);else if(id===winner)patientVictory(g);});
+  ctx.betting.garage?.forEach((g,id)=>{if(id===winner && ctx.robots[id]?.hasHead)patientVictory(g);});
   betResolve(ctx.betting, winner);
   bettingSave();
   bettingHud();
