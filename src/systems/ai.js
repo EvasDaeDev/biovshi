@@ -186,7 +186,7 @@ export function fighterIntent(r) {
   }
   const visible = active.filter(o => r.hasHead ? notices(r, o) : Math.hypot(r.x - o.x, r.y - o.y) < CONFIG.combat.contactSenseCm);
   visible.sort((a, b) => {
-    const rank = o => Math.hypot(o.x - r.x, o.y - r.y) + o.armCount * 12 + o.movementLimbs * 5 - (ctx.combat.focus[id] === o.id && ctx.game.time < ctx.combat.focusUntil[id] ? 50 : 0);
+    const rank = o => {const distance=Math.hypot(o.x-r.x,o.y-r.y);const stats=ctx.betting?.garage?.[o.id]?.stats??[3,3,3];const leader=stats.reduce((a,b)=>a+b,0)-9;const threat=o.attackSources.length;return distance*.40 - leader*11*.35 - threat*12*.25 - (ctx.combat.focus[id]===o.id&&ctx.game.time<ctx.combat.focusUntil[id]?50:0);};
     return rank(a) - rank(b);
   });
   const target = visible[0] || null;
@@ -316,7 +316,7 @@ export function fighterIntent(r) {
       goal = sideGoal;
       mode = 'обходит с фланга';
     } else if (d < 36.75) {
-      const canStrike = r.attackSources.some(source => (source.kind !== 'head' || r.armCount === 0) && strikeCandidates(r, foe, source).length > 0);
+      const canStrike = r.attackSources.some(source => strikeCandidates(r, foe, source).length > 0);
       if (canStrike && ctx.game.time - ctx.combat.lastHitTime < 5) {
         goal = here;
         mode = 'держит дистанцию';
