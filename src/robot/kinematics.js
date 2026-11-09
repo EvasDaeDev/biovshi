@@ -31,7 +31,7 @@ export function handEnd(robotState, l) {
   if (robotState.healthy(`${l.kind}-${l.side}-upper`) && !robotState.healthy(`${l.kind}-${l.side}-lower`)) return robotState.rest(l);
   return l.renderEnd || l.foot;
 }
-// Видимая кисть движется относительно плеча, но другие лапы остаются опорными.
+// The striking hand or foot moves relative to its limb root; other limbs stay planted.
 export function attackPose(robotState, p) {
   if (!p || p.source === 'head') {
     if (!p || !robotState.hasHead()) return null;
