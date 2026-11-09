@@ -278,6 +278,11 @@ export function fighterIntent(r) {
       lookPoint: null
     };
   }
+  // Critical head integrity changes tactics, never head HP or hit probability.
+  // Retreat only from a visible nearby foe and keep using real navigation/collisions.
+  if (actuallySeen && r.hp.get('head') <= 2 && r.movementLimbs >= 1 && d < 140) {
+    return {goal:tacticalEscape(r,foe),speed:CONFIG.movement.fleeSpeedCm,mode:'бережёт голову',lookPoint:foe.center};
+  }
   const foeToUs = Math.atan2(-dy, -dx);
   const exposed = Math.abs(wrap(foeToUs - foe.angle)) < Math.PI * .43;
   // Retreat is time-limited and triggered by actual damage (combatAttacks),
