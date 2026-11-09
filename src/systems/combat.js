@@ -173,9 +173,9 @@ export function combatAttacks() {
     if (mobile.length === 2 && ctx.arenaAccent.lastActive > 2) arenaAnnounce('ОСТАЛИСЬ', 'ДВОЕ', 4, 2.3);
     ctx.arenaAccent.lastActive = mobile.length;
   }
-  if ((mobile.length <= 1 || able.length === 0) && ctx.robots.every(r => r.visible)) {
+  if (mobile.length <= 1 && ctx.robots.every(r => r.visible)) {
     ctx.combat.finished = true;
-    ctx.combat.winner = mobile.length === 1 ? mobile[0].id : able.length===0 && mobile.length>1 ? mobile.slice().sort((a,b)=>(ctx.combat.unarmedDeadline[b.id]??-Infinity)-(ctx.combat.unarmedDeadline[a.id]??-Infinity))[0].id : null;
+    ctx.combat.winner = mobile.length === 1 ? mobile[0].id : null;
     ctx.combat.finishedAt = ctx.game.time;
     ctx.combat.pending.fill(null); // Замахи больше не рисуются после финального удара.
     bettingSettle(ctx.combat.winner);
