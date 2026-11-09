@@ -58,7 +58,7 @@ test('camera uses viewport-axis margins, follows outside walls and never exceeds
 });
 test('combat log keeps ten colourful, short messages and records critical hits and destruction',()=>{
  const dom=setup();for(let i=0;i<15;i++)note('hit',{robot:1,by:0,segment:'head',damage:i===14?2:1});assert.equal(ctx.combatLog.children.length,10);assert.match(ctx.combatLog.lastElementChild.textContent,/мощный удар.*голову/);
- note('robot-immobilized',{robot:1,by:0,segment:'head'});assert.match(ctx.combatLog.lastElementChild.textContent,/уничтожен точным ударом в голову/);assert.equal(ctx.combatLog.lastElementChild.querySelector('.patient-name').style.color,'rgb(255, 179, 107)');note('combat-end',{winner:0});assert.match(ctx.combatLog.lastElementChild.textContent,/Пациент A победил/);close(dom);
+ note('robot-immobilized',{robot:1,by:0,reason:'погиб',segment:'head'});assert.match(ctx.combatLog.lastElementChild.textContent,/погиб.*голова уничтожена/);assert.equal(ctx.combatLog.lastElementChild.querySelector('.patient-name').style.color,'rgb(255, 179, 107)');note('combat-end',{winner:0});assert.match(ctx.combatLog.lastElementChild.textContent,/Пациент A победил/);close(dom);
 });
 
 test('a full ring battle remains finite inside its own boundary',async()=>{

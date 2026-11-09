@@ -120,6 +120,12 @@ export function fighterIntent(r) {
   const id = r.id,
     ai = ctx.agentAI[id],
     active = activeOpponents(id);
+  if(r.movementLimbs===0){
+    const threats=active.filter(o=>o.movementLimbs>0);
+    const nearest=active.slice().sort((a,b)=>Math.hypot(a.x-r.x,a.y-r.y)-Math.hypot(b.x-r.x,b.y-r.y))[0];
+    const close=nearest&&Math.hypot(nearest.x-r.x,nearest.y-r.y)<20;
+    return {goal:close?nearest.center:threats.length?fleeAllAttackers(r,threats):here,speed:close?0:threats.length?CONFIG.movement.fleeSpeedCm:0,mode:close?'защищается головой':'пытается спастись',lookPoint:nearest?.center??null};
+  }
   if (!active.length) return {
     goal: here,
     speed: 0,
@@ -165,7 +171,7 @@ export function fighterIntent(r) {
     ctx.combat.escapeGoal[id] = null;
   }
   const warning = ctx.combat.pending.findIndex(p => p?.victim === id && p.at > ctx.game.time && ctx.robots[p.victim]?.mobile);
-  if (warning >= 0 && r.hasHead && r.movementLimbs >= 2) {
+  if (warning >= 0 && r.hasHead && r.movementLimbs >= 1) {
     const enemy = ctx.robots[warning];
     if (enemy.mobile && notices(r, enemy)) {
       const dx = r.x - enemy.x,
@@ -186,7 +192,7 @@ export function fighterIntent(r) {
   }
   const visible = active.filter(o => r.hasHead ? notices(r, o) : Math.hypot(r.x - o.x, r.y - o.y) < CONFIG.combat.contactSenseCm);
   visible.sort((a, b) => {
-    const rank = o => Math.hypot(o.x - r.x, o.y - r.y) + o.armCount * 12 + o.movementLimbs * 5 - (ctx.combat.focus[id] === o.id && ctx.game.time < ctx.combat.focusUntil[id] ? 50 : 0);
+    const rank = o => {const distance=Math.hypot(o.x-r.x,o.y-r.y);const stats=ctx.betting?.garage?.[o.id]?.stats??[3,3,3];const leader=stats.reduce((a,b)=>a+b,0)-9;const threat=o.attackSources.length;return distance*.40 - leader*11*.35 - threat*12*.25 - (ctx.combat.focus[id]===o.id&&ctx.game.time<ctx.combat.focusUntil[id]?50:0);};
     return rank(a) - rank(b);
   });
   const target = visible[0] || null;
@@ -272,6 +278,11 @@ export function fighterIntent(r) {
       lookPoint: null
     };
   }
+  // Critical head integrity changes tactics, never head HP or hit probability.
+  // Retreat only from a visible nearby foe and keep using real navigation/collisions.
+  if (actuallySeen && r.hp.get('head') <= 2 && r.movementLimbs >= 1 && d < 140) {
+    return {goal:tacticalEscape(r,foe),speed:CONFIG.movement.fleeSpeedCm,mode:'бережёт голову',lookPoint:foe.center};
+  }
   const foeToUs = Math.atan2(-dy, -dx);
   const exposed = Math.abs(wrap(foeToUs - foe.angle)) < Math.PI * .43;
   // Retreat is time-limited and triggered by actual damage (combatAttacks),
@@ -316,7 +327,7 @@ export function fighterIntent(r) {
       goal = sideGoal;
       mode = 'обходит с фланга';
     } else if (d < 36.75) {
-      const canStrike = r.attackSources.some(source => (source.kind !== 'head' || r.armCount === 0) && strikeCandidates(r, foe, source).length > 0);
+      const canStrike = r.attackSources.some(source => strikeCandidates(r, foe, source).length > 0);
       if (canStrike && ctx.game.time - ctx.combat.lastHitTime < 5) {
         goal = here;
         mode = 'держит дистанцию';

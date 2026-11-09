@@ -1,3 +1,4 @@
+import {patientDeath} from '../garage/model.js';
 import {bettingSave} from '../betting/storage.js';
 import {showCrit} from '../render/crit.js';
 import { clamp } from '../utils/math.js';
@@ -176,9 +177,9 @@ export function reactToHit(robotState, attacker, segment) {
   });
 }
 export function robotFailFromOilLoss(robotState) {
-  if (!robotState.mobile() || robotState.api.attackSources.length > 0) return false;
+  if (!robotState.mobile() || robotState.movementLimbs() > 0) return false;
   robotState.bledOut = true;
-  robotState.finishMobility('истёк маслом');
+  robotState.finishMobility('потерял сознание');
   robotState.api.capsules = robotState.makeCapsules();
   return true;
 }
@@ -225,7 +226,7 @@ export function robotDamage(robotState, key, by, damage=1) {
       inertia:createInertia(direction,robotState.api.capsules.filter(c=>[key,...attached].includes(c.segment))),
       pieces: wreckPieces
     });
-    if(wreckKeys.includes('head')&&ctx.betting?.garage?.[robotState.id]){ctx.betting.garage[robotState.id].head=null;bettingSave();}
+    if(wreckKeys.includes('head')&&ctx.betting?.garage?.[robotState.id]){patientDeath(ctx.betting.garage[robotState.id]);bettingSave();}
     for (const part of [key, ...attached]) {
       robotState.broken.add(part);
       robotState.hp.set(part, 0);
@@ -249,7 +250,7 @@ export function robotDamage(robotState, key, by, damage=1) {
       nextAt: ctx.game.time + CONFIG.oil.minIntervalSec + random() * (CONFIG.oil.maxIntervalSec - CONFIG.oil.minIntervalSec)
     });
     if (key === 'head') robotState.currentIntent.lookPoint = null;
-    if (wasMobile && !robotState.mobile()) robotState.finishMobility('потерял конечности');
+    if (wasMobile && !robotState.mobile()) robotState.finishMobility('погиб');
     note('segment-broken', {
       robot: robotState.id,
       segment: key,

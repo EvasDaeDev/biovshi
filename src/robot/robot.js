@@ -243,12 +243,12 @@ function createRobot(id, start) {
   robotState.hitReaction = null;
   robotState.recoilX = 0;
   robotState.recoilY = 0;
-  robotState.mobile = () => robotState.movementLimbs() > 0 && !robotState.bledOut;
+  robotState.mobile = () => robotState.hasHead() && !robotState.bledOut;
   robotState.armCount = () => anatomyCounts().arms;
   robotState.spineCount = () => anatomyCounts().spine;
   robotState.limbIntegrity = () => robotState.movementLimbs() / 4;
   robotState.anatomyColor = () => limbColor(robotState.movementLimbs(), 4);
-  robotState.locomotion = () => clamp((.25 + .75 * robotState.movementLimbs() / 4) * (.50 + .50 * robotState.spineCount() / 4), 0, 1);
+  robotState.locomotion = () => clamp((robotState.movementLimbs()===0 ? .12 : .25 + .75 * robotState.movementLimbs() / 4) * (.50 + .50 * robotState.spineCount() / 4), 0, 1);
   robotState.turnAbility = () => clamp(.38 + .62 * robotState.spineCount() / 4, 0, 1) * (robotState.hasHead() ? 1 : .5);
   robotState.peerRobots = () => ctx.robots.filter(r => r.id !== robotState.id && r.mobile && Math.hypot(r.x - robotState.x, r.y - robotState.y) < 220 && !(robotState.leap?.kind === 'rebound' && robotState.leap.launched && r.id === robotState.leap.victim) && !(r.actualPose.leap?.kind === 'rebound' && r.actualPose.leap.launched && r.actualPose.leap.victim === robotState.id));
   robotState.extraWeight = 0;
@@ -416,7 +416,8 @@ function createRobot(id, start) {
     get segmentTotal() {
       return robotState.segments.length;
     },
-    get movementLimbs() {
+    get unconscious() { return robotState.bledOut; },
+     get movementLimbs() {
       return robotState.movementLimbs();
     },
     get armCount() {
@@ -442,20 +443,20 @@ function createRobot(id, start) {
     },
     get attackSources() {
       const result = [];
-      for (const l of robotState.arms) if (robotState.healthy(`arm-${l.side}-upper`)) {
-        const whole = robotState.healthy(`arm-${l.side}-lower`);
+      for (const l of [...robotState.arms,...robotState.legs]) if (robotState.healthy(`${l.kind}-${l.side}-upper`)) {
+        const whole = robotState.healthy(`${l.kind}-${l.side}-lower`);
         const [u, v] = robotState.lengths(l),
           shoulder = robotState.origin(l);
-        const joint = ik(shoulder, robotState.handEnd(l), u, v, l.side).joint;
+        const joint = ik(shoulder, robotState.handEnd(l), u, v, l.kind === 'arm' ? l.side : -l.side).joint;
         result.push({
-          kind: 'arm',
+          kind: l.kind,
           side: l.side,
           point: whole ? {
             ...l.foot
           } : {
             ...joint
           },
-          key: `arm-${l.side}-${whole ? 'lower' : 'upper'}`,
+          key: `${l.kind}-${l.side}-${whole ? 'lower' : 'upper'}`,
           reachFactor: whole ? 1 : .5
         });
       }
