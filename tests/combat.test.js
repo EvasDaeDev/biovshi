@@ -6,6 +6,7 @@ import { JSDOM } from 'jsdom';
 import { createInertia, inertiaOffset, detachedCenter } from '../src/render/inertia.js';
 import { coreClearBone } from '../src/systems/collision.js';
 import { strikeCandidates } from '../src/systems/combat.js';
+import { headGuardActive } from '../src/systems/ai.js';
 import { createRobot } from '../src/robot/robot.js';
 import { segmentDistance } from '../src/utils/math.js';
 import { initializeGame } from '../src/game/initialize.js';
@@ -35,6 +36,20 @@ function setup({start=true,reduced=false,textures=null}={}) {
   return dom;
 }
 function hit(robot,key) {ctx.game.time+=CONFIG.combat.damageInvulnerabilitySec+.01;return robot.damage(key,1);}
+
+test('head protection is short and cannot repeat until its cooldown ends', () => {
+  const ai={headGuardUntil:0,headGuardCooldownUntil:0};
+  assert.equal(headGuardActive(ai,100,2,95,true,4),true,'critical head first triggers cover');
+  assert.equal(ai.headGuardUntil,100.8);
+  assert.equal(ai.headGuardCooldownUntil,107);
+  assert.equal(headGuardActive(ai,100.7,2,95,true,4),true,'guard lasts for a fraction of a second');
+  assert.equal(headGuardActive(ai,100.81,2,95,true,4),false,'patient must re-engage');
+  assert.equal(headGuardActive(ai,104,2,95,true,4),false,'low HP alone cannot restart defense');
+  assert.equal(headGuardActive(ai,107,2,95,true,4),true,'brief guard may recur after cooldown');
+  assert.equal(headGuardActive(ai,108,2,95,false,4),false,'unseen opponent cannot trigger guard');
+  assert.equal(headGuardActive(ai,108,2,95,true,0),false,'head-only patient uses escape behavior');
+  assert.equal(headGuardActive(ai,108,3,95,true,4),false,'healthy head does not trigger emergency guard');
+});
 
 test('chest is invulnerable; destroying the head immediately kills the patient', () => {
   const dom=setup();
