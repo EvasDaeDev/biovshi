@@ -35,7 +35,6 @@ async function prepare({textures,session,entry='auto',arenaId='ward'}){
    launchAccepted=true;
    gate.hidden=true;
    if(ctx.startup.phase==='demo')startSpawnSequence();
-   else if(ctx.startup.phase==='intro')ctx.startButton.click();
  };
  if(launchAccepted&&ctx.startup.phase==='demo')startSpawnSequence();
 }
