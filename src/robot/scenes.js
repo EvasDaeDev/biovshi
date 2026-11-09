@@ -528,6 +528,23 @@ export function robotSetVisible(robotState, value, spawnAt = null) {
   robotState.spawnAt = value ? spawnAt : null;
   for (const node of [robotState.actor, robotState.floor, robotState.pool, robotState.nearLight, ...robotState.trailNodes]) attr(node, 'display', value ? '' : 'none');
 }
+// A one-off victory gesture; reuse the existing idle animation machinery.
+export function robotCelebrateVictory(robotState,random=Math.random) {
+  if(!robotState.mobile())return null;
+  if(robotState.scene)robotState.api.endScene();
+  robotState.leap=null;
+  const kinds=[...robotState.idleKinds];
+  // Uniform random first choice; if limbs/obstacles prevent it, try the others.
+  for(let i=kinds.length-1;i>0;i--){
+    const j=Math.floor(random()*(i+1));
+    [kinds[i],kinds[j]]=[kinds[j],kinds[i]];
+  }
+  for(const kind of kinds){
+    if(kind==='scratch'&&!robotState.arms.some(l=>l.side===1&&robotState.healthy('arm-1-upper')))continue;
+    if(robotState.api.performIdle(kind))return kind;
+  }
+  return null;
+}
 export function robotPerformIdle(robotState, kind) {
   if (!robotState.idleKinds.includes(kind) || robotState.scene || robotState.leap || !robotState.mobile() || !robotState.clearCircle(robotState.api.center, 52)) return false;
   const hopPlan = kind === 'hops' ? robotState.planIdleHops() : null;

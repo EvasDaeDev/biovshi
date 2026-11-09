@@ -188,6 +188,7 @@ export function combatAttacks() {
     ctx.combat.winner = mobile.length === 1 ? mobile[0].id : null;
     ctx.combat.finishedAt = ctx.game.time;
     ctx.combat.pending.fill(null); // Замахи больше не рисуются после финального удара.
+    if(mobile.length===1)mobile[0].celebrateVictory();
     bettingSettle(ctx.combat.winner);
     note('combat-end', {
       winner: ctx.combat.winner

@@ -3,7 +3,7 @@ import { descendants, finishMobility, leakOrigin, reactToHit, robotDamage, robot
 import { allLimbs, attackPose, handEnd, handRest, headFrameAt, hornPoints, layoutBody, legRest, lengths, limbFrame, local, mixPose, origin, rest, savePose, sphereCenters, updateExtraLimbs, updateTail } from "./kinematics.js";
 import { clearBone, clearCircle, clearanceAt, edgeClearance, freeBlockedJoint, limbClear, makeCapsules, nearestSurface, rigClear, validContact } from "./collision.js";
 import { contacts, currentTargetVisible, hasGoal, retreatFromBoundary, robotTick, steerTo, updateHead, watchProgress } from "./locomotion.js";
-import { coverOffset, hopHeight, jumpTick, lifted, planIdleHops, reboundPlan, reboundTick, robotBeginApproach, robotBeginCover, robotBeginScene, robotCanCover, robotCancelCover, robotCoverGap, robotEndScene, robotPerformIdle, robotPounce, robotReboundFrom, robotSetVisible, robotStartle, sceneEnvelope, scheduleIdle, settleHands, updateIdleHops, updateIdleScene, updateScene } from "./scenes.js";
+import { coverOffset, hopHeight, jumpTick, lifted, planIdleHops, reboundPlan, reboundTick, robotBeginApproach, robotBeginCover, robotBeginScene, robotCanCover, robotCancelCover, robotCoverGap, robotCelebrateVictory, robotEndScene, robotPerformIdle, robotPounce, robotReboundFrom, robotSetVisible, robotStartle, sceneEnvelope, scheduleIdle, settleHands, updateIdleHops, updateIdleScene, updateScene } from "./scenes.js";
 import { bodyTransform, draw, robotPaint, visiblePoint, visionAngle, visualOffset, visualRotation } from "../render/robot.js";
 import { el } from "../render/svg.js";
 import { CONFIG } from "../config.js";
@@ -529,6 +529,7 @@ function createRobot(id, start) {
       return robotState.rigClear();
     },
     performIdle: robotPerformIdle.bind(null, robotState),
+    celebrateVictory: robotCelebrateVictory.bind(null, robotState),
     startle: robotStartle.bind(null, robotState),
     canCover: robotCanCover.bind(null, robotState),
     beginApproach: robotBeginApproach.bind(null, robotState),
