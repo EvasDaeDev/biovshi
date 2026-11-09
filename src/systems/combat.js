@@ -138,7 +138,7 @@ export function combatAttacks() {
     const preferredVictims = activeOpponents(id).filter(v => Math.hypot(v.x - attacker.x, v.y - attacker.y) < CONFIG.combat.attackRangeCm + 56.25);
     let best = null;
     for (const v of preferredVictims) for (const source of attacker.attackSources) {
-      if (source.kind === 'head' && attacker.movementLimbs>0 && ctx.robots.some(o=>o.id!==id&&o.visible&&o.mobile&&Math.hypot(o.x-attacker.x,o.y-attacker.y)<40) && attacker.hp?.get?.('head')<=2) continue;
+      // Head strikes remain possible even when other limbs are intact.
       for (const c of strikeCandidates(attacker, v, source)) {
         if (!best || c.score < best.score) best = c;
       }
@@ -168,13 +168,14 @@ export function combatAttacks() {
     }
   }
   const mobile = ctx.robots.filter(r => r.mobile && r.visible && r.segmentCount > 0);
+  const able = mobile.filter(r=>r.movementLimbs>0);
   if (ctx.robots.every(r => r.visible)) {
     if (mobile.length === 2 && ctx.arenaAccent.lastActive > 2) arenaAnnounce('ОСТАЛИСЬ', 'ДВОЕ', 4, 2.3);
     ctx.arenaAccent.lastActive = mobile.length;
   }
-  if (mobile.length <= 1 && ctx.robots.every(r => r.visible)) {
+  if ((mobile.length <= 1 || able.length === 0) && ctx.robots.every(r => r.visible)) {
     ctx.combat.finished = true;
-    ctx.combat.winner = mobile.length === 1 ? mobile[0].id : null;
+    ctx.combat.winner = mobile.length === 1 ? mobile[0].id : able.length===0 && mobile.length>1 ? mobile.slice().sort((a,b)=>(ctx.combat.unarmedDeadline[b.id]??-Infinity)-(ctx.combat.unarmedDeadline[a.id]??-Infinity))[0].id : null;
     ctx.combat.finishedAt = ctx.game.time;
     ctx.combat.pending.fill(null); // Замахи больше не рисуются после финального удара.
     bettingSettle(ctx.combat.winner);
