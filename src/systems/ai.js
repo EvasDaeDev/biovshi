@@ -321,6 +321,8 @@ export function fighterIntent(r) {
       y: sensed.y
     },
     mode = actuallySeen ? 'преследует' : ai.sensedType === 'sound' ? 'идёт на звук' : 'проверяет последнее место';
+  // After seven seconds without a hit, switch from circling to a direct
+  // physical approach; endless moving orbits are not a valid stalemate.
   // Far-away enemies should be approached before any flank manoeuvre.
   if (actuallySeen && d < 185) {
     const side = (id + foe.id) % 2 ? 1 : -1;
@@ -330,7 +332,7 @@ export function fighterIntent(r) {
       x: foe.x + Math.cos(theta) * CONFIG.combat.flankRadiusCm,
       y: foe.y + Math.sin(theta) * CONFIG.combat.flankRadiusCm
     };
-    if (flank && exposed && coreClearCircle(sideGoal, 26) && d > 65) {
+    if (flank && exposed && coreClearCircle(sideGoal, 26) && d > 65 && ctx.game.time - ctx.combat.lastHitTime < 7) {
       goal = sideGoal;
       mode = 'обходит с фланга';
     } else if (d < 36.75) {
