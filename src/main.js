@@ -12,6 +12,8 @@ import {preloadTextures} from './assets/preload.js';
 import {bettingLoad,bettingSave} from './betting/storage.js';
 import {startSpawnSequence} from './game/session.js';
 let cancelled=false;
+// Only a full page load requires the explicit sound/simulation gesture.
+let launchAccepted=false;
 async function prepare({textures,session,entry='auto',arenaId='ward'}){
  initializeGame({textures,session,entry,arenaId});
  await applyTextures();if(cancelled||ctx.disposed)return;
@@ -23,7 +25,18 @@ async function prepare({textures,session,entry='auto',arenaId='ward'}){
  const audio=createAudio();ctx.audio=audio;
  const dispose=ctx.root.__disposeTag;
  ctx.root.__disposeTag=()=>{audio.dispose();if(ctx.audio===audio)ctx.audio=null;dispose();};
- if(ctx.startup.phase==='demo')startSpawnSequence();
+ const gate=ctx.root.querySelector('#launch-overlay');
+ const launchButton=ctx.root.querySelector('#launch-game');
+ gate.hidden=launchAccepted;
+ launchButton.onclick=()=>{
+   if(launchAccepted)return;
+   // AudioContext.resume() must happen synchronously in this user gesture.
+   audio.unlock();
+   launchAccepted=true;
+   gate.hidden=true;
+   if(ctx.startup.phase==='demo')startSpawnSequence();
+ };
+ if(launchAccepted&&ctx.startup.phase==='demo')startSpawnSequence();
 }
 async function boot(){
  const root=document.getElementById('robot-tag-hops-v22');

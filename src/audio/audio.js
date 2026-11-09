@@ -180,7 +180,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
   eventTarget.addEventListener('click',click);
   // A prior gesture has already unlocked the shared context during this visit.
   if(sharedContext?.state==='running')unlock();
-  return {sync,setVolume,stopAll,get settings(){return {...settings};},dispose(){
+  return {sync,unlock,setVolume,stopAll,get settings(){return {...settings};},dispose(){
     if(disposed)return;disposed=true;unsubscribe();stopAll();soundBus?.disconnect();musicBus?.disconnect();
     for(const {input,listener} of controls)input.removeEventListener('input',listener);
     eventTarget.removeEventListener('pointerdown',unlock);eventTarget.removeEventListener('keydown',unlock);
