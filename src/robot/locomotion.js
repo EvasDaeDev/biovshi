@@ -414,7 +414,7 @@ export function robotTick(robotState, dt, intent) {
   if (robotState.scene && robotState.idleKinds.includes(robotState.mode) && intent.mode !== 'wander') robotState.api.endScene();
   if (robotState.scene && robotState.mode === 'hops' && ctx.game.time >= robotState.scene.ends) robotState.updateIdleHops(dt);
   if (robotState.scene && (robotState.mode === 'startle' || robotState.idleKinds.includes(robotState.mode)) && ctx.game.time >= robotState.scene.ends) robotState.api.endScene();
-  if (!robotState.scene && !robotState.leap && intent.mode === 'wander' && ctx.game.time >= robotState.nextIdleAt) {
+  if (!ctx.combat.finished && !robotState.scene && !robotState.leap && intent.mode === 'wander' && ctx.game.time >= robotState.nextIdleAt) {
     if (!robotState.api.performIdle(robotState.idleKinds[robotState.idleSequence % robotState.idleKinds.length])) robotState.nextIdleAt = ctx.game.time + 2;
   }
   if (robotState.scene) {
