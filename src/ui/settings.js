@@ -9,7 +9,7 @@ export function initializeSettings() {
   const creditsView=panel.querySelector('#arena-credits-view');
   const creditsBack=panel.querySelector('#arena-credits-back');
   const settingsHeader=panel.querySelector('header');
-  const settingsMain=[...panel.children].filter(node=>node!==settingsHeader&&node!==creditsView);
+  const settingsMain=[...panel.querySelector('.settings-panel').children].filter(node=>node!==settingsHeader&&node!==creditsView);
   const showCredits=visible=>{
     creditsView.hidden=!visible;
     for(const node of settingsMain)node.hidden=visible;
