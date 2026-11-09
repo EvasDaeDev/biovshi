@@ -125,11 +125,11 @@ export function draw(robotState, dt) {
     }
   }
   for (const l of [...robotState.arms, ...robotState.legs]) {
-    const attackEnd = strikePose?.kind === 'arm' && strikePose.limb === l ? strikePose.tip : robotState.handEnd(l);
+    const attackEnd = (strikePose?.kind === 'arm' || strikePose?.kind === 'leg') && strikePose.limb === l ? strikePose.tip : robotState.handEnd(l);
     const a = robotState.origin(l),
       solved = ik(a, attackEnd, ...robotState.lengths(l), l.kind === 'arm' ? l.side : -l.side);
     const prefix = `${l.kind}-${l.side}-`;
-    const stumpStrike = strikePose?.kind === 'arm' && strikePose.limb === l && !strikePose.complete;
+    const stumpStrike = (strikePose?.kind === 'arm' || strikePose?.kind === 'leg') && strikePose.limb === l && !strikePose.complete;
     if (!skinned || l.kind === 'extra') {
       attr(l.upper, 'd', robotState.healthy(prefix + 'upper') ? path([a, stumpStrike ? strikePose.tip : solved.joint]) : '');
       attr(l.lower, 'd', robotState.healthy(prefix + 'lower') ? path([solved.joint, solved.end]) : '');
