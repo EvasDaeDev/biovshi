@@ -87,3 +87,24 @@ test('opening with a saved session starts a free fight without changing balances
  const s=betNewSession(['A','B'],100);s.jackpot=20;s.players[0].balance=80;const dom=setup({session:s,entry:'auto'});assert.equal(ctx.startup.phase,'demo');assert.equal(ctx.betOverlay.hidden,true);assert.equal(s.phase,'running');assert.deepEqual(s.bets,[]);assert.deepEqual(s.players.map(p=>p.balance),[80,100]);
  betResolve(s,0);assert.equal(s.jackpot,20);assert.deepEqual(s.players.map(p=>p.balance),[80,100]);close(dom);
 });
+
+test('switching arenas rebuilds masks and scene definitions from pristine markup',()=>{
+ const s=betNewSession(['A'],100),dom=setup({session:s});
+ ctx.darkness.setAttribute('fill','#fff');ctx.darkness.setAttribute('transform','translate(300 0) scale(10)');
+ const stale=document.createElementNS(ctx.NS,'rect');stale.id='stale-ring-layer';stale.setAttribute('fill','white');ctx.arenaContent.append(stale);
+ const oldDefs=ctx.defs;ctx.defs.append(ctx.lightHoles.cloneNode(true));
+ for(const arenaId of ['ring','ward','ring']){
+  initializeGame({session:s,arenaId,entry:'betting'});
+  assert.equal(ctx.darkness.getAttribute('fill'),'var(--night-bg)');assert.equal(ctx.darkness.hasAttribute('transform'),false);assert.equal(ctx.svg.querySelector('#stale-ring-layer'),null);assert.notEqual(ctx.defs,oldDefs);
+  const ids=[...ctx.svg.querySelectorAll('[id]')].map(n=>n.id);assert.equal(new Set(ids).size,ids.length,'duplicate SVG IDs must not leak across arenas');
+  assert.equal(ctx.fieldClip.firstElementChild.getAttribute('points'),ctx.arenaBoundary.points.map(p=>p.x+','+p.y).join(' '));
+ }
+ close(dom);
+});
+test('combat log uses a 35-character column at the stage corner and fades only a full oldest edge',()=>{
+ const dom=setup(),style=document.createElement('style');style.textContent=fs.readFileSync(new URL('../styles/interface.css',import.meta.url),'utf8');document.head.append(style);
+ const computed=dom.window.getComputedStyle(ctx.combatLog);assert.ok(Number.parseFloat(computed.width)>0);const rule=[...style.sheet.cssRules].find(r=>r.selectorText==='#robot-tag-hops-v22 #combat-log');assert.equal(rule.style.width,'35ch');assert.equal(computed.right,'0px');assert.equal(computed.top,'0px');
+ for(let i=0;i<10;i++)note('hit',{robot:1,by:0,segment:'head',damage:1});assert.equal(ctx.combatLog.dataset.full,'true');assert.equal(ctx.combatLog.children.length,10);
+ const fade=dom.window.getComputedStyle(ctx.combatLog).getPropertyValue('mask-image');assert.match(fade,/28px/);
+ ctx.resultsAgain.click();assert.equal(ctx.combatLog.children.length,0);assert.equal(ctx.combatLog.dataset.full,'false');close(dom);
+});

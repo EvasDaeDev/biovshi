@@ -35,6 +35,7 @@ export function initializeArenaExpand() {
     ctx.arenaRenderer?.render();
   };
   button.onclick=event=>{event.stopPropagation();setExpanded(!ctx.arenaExpanded);};
+  ctx.setArenaExpanded=setExpanded;
   const onKey=event=>{
     if(event.key==='Escape'&&!event.defaultPrevented&&!ctx.settingsOpen&&ctx.arenaExpanded){
       event.preventDefault();setExpanded(false);button.focus();
@@ -43,6 +44,7 @@ export function initializeArenaExpand() {
   doc.addEventListener('keydown',onKey);updateButton();
   const dispose=root.__disposeTag;
   root.__disposeTag=()=>{
+    if(ctx.setArenaExpanded===setExpanded)ctx.setArenaExpanded=null;
     restoreOverflow();ctx.arenaExpanded=false;root.classList.remove('arena-expanded');updateButton();
     button.onclick=null;doc.removeEventListener('keydown',onKey);dispose();
   };

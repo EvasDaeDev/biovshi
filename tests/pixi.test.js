@@ -181,3 +181,17 @@ test('floor capture excludes labels, preserves world transforms and restores sce
  for(const robot of ctx.robots.slice(1))assert.equal(arena.records.get(robot.label).object.visible,true);
  arena.finish();dom.window.close();
 });
+
+test('arena replacement clears GPU scene resources while retaining the renderer and drawing context',()=>{
+ const dom=setup(),arena=bridge();let appDestroyed=0;
+ arena.app.destroy=()=>{appDestroyed++;};
+ const stage=arena.app.stage,app=arena.app,canvas=document.createElement('canvas');
+ ctx.svg.after(canvas);arena.canvas=canvas;
+ arena.onLost=()=>{};arena.onRestored=()=>{};canvas.addEventListener('webglcontextlost',arena.onLost);canvas.addEventListener('webglcontextrestored',arena.onRestored);
+ let filterDestroyed=0;arena.postEffects={destroy(){filterDestroyed++;}};
+ const oldWorld=arena.world,oldTexture=arena.texture({width:16,height:16});arena.width=900;arena.height=700;
+ arena.suspend();assert.equal(canvas.isConnected,false);assert.equal(arena.suspended,true);assert.equal(arena.disposed,false);
+ arena.resetScene();assert.equal(arena.app,app);assert.equal(arena.app.stage,stage);assert.equal(appDestroyed,0);assert.equal(filterDestroyed,1);assert.ok(oldWorld.destroyed);assert.ok(oldTexture.destroyed);assert.equal(arena.records.size,0);assert.equal(arena.sources.size,0);assert.equal(arena.frames.size,0);assert.equal(arena.gradients.size,0);assert.equal(arena.owned.size,0);assert.equal(arena.width,null);assert.equal(stage.children.length,1);
+ arena.resetScene();assert.equal(stage.children.length,1);assert.equal(appDestroyed,0);
+ arena.destroy();assert.equal(appDestroyed,1);ctx.root.__disposeTag();dom.window.close();
+});

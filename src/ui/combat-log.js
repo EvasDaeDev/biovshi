@@ -23,7 +23,10 @@ export function initializeCombatLog(){
    const line=combatLine(event);if(!line)return;
    const row=document.createElement('li');row.innerHTML=line;log.append(row);
    while(log.children.length>10)log.firstElementChild.remove();
+   // Wrapped messages can fill the viewport before ten entries accumulate.
+   log.dataset.full=String(log.scrollHeight>log.clientHeight||log.children.length===10);
+   log.scrollTop=log.scrollHeight;
  });
  const dispose=ctx.root.__disposeTag;ctx.root.__disposeTag=()=>{unsubscribe();log.remove();dispose();};
 }
-export function resetCombatLog(){ctx.combatLog?.replaceChildren();}
+export function resetCombatLog(){if(ctx.combatLog){ctx.combatLog.replaceChildren();ctx.combatLog.dataset.full='false';}}

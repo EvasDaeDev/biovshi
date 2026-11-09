@@ -106,6 +106,15 @@ export // Непрерывная кинематика удара. Урон во�
 function activeOpponents(id) {
   return ctx.robots.filter(o => o.id !== id && o.visible && o.mobile && o.segmentCount > 0);
 }
+// Independent, deterministic cooldown for critical-head tactical cover.
+export function headGuardActive(ai, now, headHp, opponentDistance, visible, movementLimbs) {
+  if (!visible || headHp > 2 || movementLimbs < 1 || opponentDistance >= 140) return false;
+  if (now >= (ai.headGuardUntil ?? 0) && now >= (ai.headGuardCooldownUntil ?? 0)) {
+    ai.headGuardUntil = now + .8;
+    ai.headGuardCooldownUntil = now + 7;
+  }
+  return now < (ai.headGuardUntil ?? 0);
+}
 export function fighterIntent(r) {
   const here = {
     x: r.x,
@@ -278,9 +287,10 @@ export function fighterIntent(r) {
       lookPoint: null
     };
   }
-  // Critical head integrity changes tactics, never head HP or hit probability.
-  // Retreat only from a visible nearby foe and keep using real navigation/collisions.
-  if (actuallySeen && r.hp.get('head') <= 2 && r.movementLimbs >= 1 && d < 140) {
+  // Caution is a SHORT manoeuvre, not a permanent state at low head HP.
+  // Once used, the patient must re-engage for several seconds before guarding again.
+  // This prevents two wounded patients from circling indefinitely without attacking.
+  if (headGuardActive(ai, ctx.game.time, r.hp.get('head'), d, actuallySeen, r.movementLimbs)) {
     return {goal:tacticalEscape(r,foe),speed:CONFIG.movement.fleeSpeedCm,mode:'бережёт голову',lookPoint:foe.center};
   }
   const foeToUs = Math.atan2(-dy, -dx);
@@ -314,6 +324,8 @@ export function fighterIntent(r) {
       y: sensed.y
     },
     mode = actuallySeen ? 'преследует' : ai.sensedType === 'sound' ? 'идёт на звук' : 'проверяет последнее место';
+  // After seven seconds without a hit, switch from circling to a direct
+  // physical approach; endless moving orbits are not a valid stalemate.
   // Far-away enemies should be approached before any flank manoeuvre.
   if (actuallySeen && d < 185) {
     const side = (id + foe.id) % 2 ? 1 : -1;
@@ -323,17 +335,23 @@ export function fighterIntent(r) {
       x: foe.x + Math.cos(theta) * CONFIG.combat.flankRadiusCm,
       y: foe.y + Math.sin(theta) * CONFIG.combat.flankRadiusCm
     };
-    if (flank && exposed && coreClearCircle(sideGoal, 26) && d > 65) {
+    if (flank && exposed && coreClearCircle(sideGoal, 26) && d > 65 && ctx.game.time - ctx.combat.lastHitTime < 7) {
       goal = sideGoal;
       mode = 'обходит с фланга';
     } else if (d < 36.75) {
       const canStrike = r.attackSources.some(source => strikeCandidates(r, foe, source).length > 0);
-      if (canStrike && ctx.game.time - ctx.combat.lastHitTime < 5) {
+      if (canStrike) {
+        // Remain in physical striking range regardless of the last global hit.
         goal = here;
-        mode = 'держит дистанцию';
-      } else {
+        mode = 'атакует';
+      } else if (ctx.game.time - ctx.combat.lastHitTime < 3) {
         goal = tacticalEscape(r, foe);
         mode = 'ищет угол атаки';
+      } else {
+        // Without recent contact, stop backing away: turn toward the enemy
+        // and actively close the gap so a new geometric attack is possible.
+        goal = foe.center;
+        mode = 'сближается для удара';
       }
     }
   }
