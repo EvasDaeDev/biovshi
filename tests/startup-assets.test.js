@@ -34,6 +34,9 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   for(let i=0;i<100&&document.getElementById('texture-loading');i++)await new Promise(resolve=>setImmediate(resolve));
   assert.equal(document.getElementById('texture-loading'),null);
   assert.equal(root.inert,false);
+  assert.equal(ctx.startup.phase,'demo','simulation remains gated on initial load');
+  assert.equal(root.querySelector('#launch-game').textContent,'В БОЙ!');
+  assert.equal(root.querySelector('#launch-overlay').hidden,false,'first load shows launch gate');
   assert.equal(requests,Object.keys(ASSETS.textures).length,'tint preparation reuses preloaded images');
   assert.ok(Object.values(ctx.textureAssets).every(status=>status.loaded));
   assert.equal(staticRasters,2,'ambient shading and the initial 1024 floor are prepared once');
@@ -45,5 +48,9 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   await bakeStaticLighting();assert.equal(staticRasters,2);
   assert.equal(ctx.actorsG.querySelectorAll('[data-robot-fallback]').length,0);
   assert.equal(ctx.actorsG.querySelectorAll('[data-skin-segment]').length,52);
+  // Starting the simulation requires the explicit launch click, not boot().
+  root.querySelector('#launch-game').click();
+  assert.equal(root.querySelector('#launch-overlay').hidden,true);
+  assert.equal(ctx.startup.phase,'spawning');
   ctx.root.__disposeTag();dom.window.close();
 });
