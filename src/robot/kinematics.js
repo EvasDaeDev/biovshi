@@ -63,7 +63,7 @@ export function attackPose(robotState, p) {
   if ((match[3] === 'lower') !== complete) return null;
   const shoulder = robotState.origin(l),
     [upper, lower] = robotState.lengths(l);
-  const restJoint = ik(shoulder, robotState.handEnd(l), upper, lower, l.side).joint;
+  const restJoint = ik(shoulder, robotState.handEnd(l), upper, lower, l.kind === 'arm' ? l.side : -l.side).joint;
   const base = complete ? {
     ...l.foot
   } : {
