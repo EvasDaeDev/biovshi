@@ -17,6 +17,9 @@ export function step(dt) {
   if (ctx.combat.finished) {
     // Отдельный таймер не нужен: продолжаем время анимации, не меняя итоговую длительность боя.
     ctx.game.time += dt;
+    // Keep the victorious patient's chosen idle gesture moving beneath the glow.
+    const winner=ctx.robots[ctx.combat.winner];
+    if(winner?.mobile)winner.tick(dt,{mode:'wander',speed:0,goal:{x:winner.center.x,y:winner.center.y},lookPoint:null});
     if (ctx.combat.finishedAt !== null && ctx.game.time - ctx.combat.finishedAt >= 3) showResults();
     return;
   }
