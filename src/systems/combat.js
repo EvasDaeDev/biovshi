@@ -138,7 +138,7 @@ export function combatAttacks() {
     const preferredVictims = activeOpponents(id).filter(v => Math.hypot(v.x - attacker.x, v.y - attacker.y) < CONFIG.combat.attackRangeCm + 56.25);
     let best = null;
     for (const v of preferredVictims) for (const source of attacker.attackSources) {
-      if (source.kind === 'head' && attacker.armCount > 0) continue; // Голова — запасное оружие.
+      if (source.kind === 'head' && attacker.movementLimbs>0 && ctx.robots.some(o=>o.id!==id&&o.visible&&o.mobile&&Math.hypot(o.x-attacker.x,o.y-attacker.y)<40) && attacker.hp?.get?.('head')<=2) continue;
       for (const c of strikeCandidates(attacker, v, source)) {
         if (!best || c.score < best.score) best = c;
       }
