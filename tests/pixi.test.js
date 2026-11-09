@@ -168,3 +168,16 @@ test('Pixi resizes a rectangular drawing buffer and post filter while centring a
   assert.equal(sizes.length,2,'swapping width and height must resize even though the short side is unchanged');
   arena.ambient.destroy();arena.nightComposition.destroy();arena.finish();ctx.root.__disposeTag();dom.window.close();
 });
+
+test('floor capture excludes labels, preserves world transforms and restores scene ordering even if extraction fails',()=>{
+ const dom=setup(),arena=bridge();arena.render=arena.flush;
+ const nodes=[ctx.oilG,ctx.detachedG,...ctx.robots.slice(1).map(r=>r.actor)];
+ const contentOrder=[...arena.content.children],actorRecord=arena.records.get(ctx.actorsG),actorOrder=[...actorRecord.object.children];
+ const output={width:1024,height:1024};let captured=0;
+ arena.app.renderer.extract={canvas(options){captured++;assert.equal(options.resolution,1024/700);assert.equal(options.frame.width,700);assert.equal(options.target.children.length,nodes.length);
+  for(const robot of ctx.robots.slice(1))assert.equal(arena.records.get(robot.label).object.visible,false);return output;}};
+ assert.equal(arena.rasterizeRemains(nodes),output);assert.equal(captured,1);assert.deepEqual(arena.content.children,contentOrder);assert.deepEqual(actorRecord.object.children,actorOrder);
+ arena.app.renderer.extract.canvas=()=>{throw Error('readback failed');};assert.throws(()=>arena.rasterizeRemains(nodes),/readback failed/);assert.deepEqual(arena.content.children,contentOrder);assert.deepEqual(actorRecord.object.children,actorOrder);
+ for(const robot of ctx.robots.slice(1))assert.equal(arena.records.get(robot.label).object.visible,true);
+ arena.finish();dom.window.close();
+});

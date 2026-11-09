@@ -10,8 +10,8 @@ export function makeRobotCard(id) {
   <div class="robot-card-metrics"><div class="metric-box"><div class="metric-inline"><span class="metric-icon" aria-label="Давление масла" title="Давление масла">💧</span><span class="metric-value js-pressure-value">100%</span></div><div class="mini-track"><div class="mini-fill js-pressure-fill" style="width:100%"></div></div></div></div>
   <div class="robot-card-body"><div class="portrait-wrap"><canvas class="patient-portrait" width="520" height="224" role="img" aria-label="Пациент ${String.fromCharCode(65+id)}"></canvas></div>
   <div class="patient-skills" aria-label="Умения пациента">
-  <div aria-label="Сила" title="Сила · шанс мощного удара"><span aria-hidden="true">💪</span><span class="js-strength">3 · 15%</span></div>
-  <div aria-label="Скорость" title="Скорость движения"><span aria-hidden="true">⚡</span><span class="js-speed">3 · 100%</span></div>
+  <div aria-label="Сила" title="Сила · шанс мощного удара"><span aria-hidden="true">💪</span><span class="js-strength">3 · 15% crt</span></div>
+  <div aria-label="Скорость" title="Скорость движения"><span aria-hidden="true">→</span><span class="js-speed">3 · 100%</span></div>
   <div aria-label="Маневренность" title="Маневренность · скорость поворота"><span aria-hidden="true">↻</span><span class="js-maneuver">3 · 100%</span></div></div></div>`;
   ctx.roles.appendChild(card);
   return {

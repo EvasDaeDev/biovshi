@@ -1,47 +1,51 @@
+import {accessFloorStore,floorBlob} from './floor-storage.js';
 import {ctx} from '../game/state.js';
 import {staticArenaImage} from './pixi-static.js';
-import {loadTextureImage} from '../assets/preload.js';
+import {loadTextureImage,releaseTextureImage} from '../assets/preload.js';
 import {paint} from './frame.js';
 import {bettingSave} from '../betting/storage.js';
 const SIZE=1024;
 function canvas(){const c=document.createElement('canvas');c.width=c.height=SIZE;return c;}
-function database(){return new Promise((resolve,reject)=>{
-  if(!globalThis.indexedDB)return reject(Error('IndexedDB unavailable'));
-  const request=indexedDB.open('biovshi.floor-history',1);
-  request.onupgradeneeded=()=>request.result.createObjectStore('floors');
-  request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);
-});}
-async function storedFloor(write){
-  const key=ctx.betting?.floorId;if(!key)return null;
-  const db=await database();
-  try{return await new Promise((resolve,reject)=>{
-    const tx=db.transaction('floors',write===undefined?'readonly':'readwrite'),store=tx.objectStore('floors');
-    const request=write===undefined?store.get(key):store.put(write,key);
-    tx.oncomplete=()=>resolve(request.result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
-  });}finally{db.close();}
-}
-async function persist(){
-  try{await storedFloor(ctx.floorCanvas.toDataURL('image/png'));ctx.floorStorageAvailable=true;}
-  catch{ctx.floorStorageAvailable=false;}
+function persist(){
+  const key=ctx.betting?.floorId,source=ctx.floorCanvas;
+  const previous=ctx.floorSavePromise??Promise.resolve();
+  const generation=ctx.floorSaveGeneration=(ctx.floorSaveGeneration??0)+1;
+  ctx.floorSavePromise=previous.catch(()=>{}).then(async()=>{
+    if(generation!==ctx.floorSaveGeneration||!key)return;
+    try{
+      if(!globalThis.indexedDB)throw Error('IndexedDB unavailable');
+      const blob=await floorBlob(source);
+      if(generation!==ctx.floorSaveGeneration)return;
+      await accessFloorStore(key,blob);ctx.floorStorageAvailable=true;
+    }catch{ctx.floorStorageAvailable=false;}
+  });
 }
 function install(next){
   ctx.floorCanvas=next;
   if(!ctx.floorImage){ctx.floorImage=document.createElementNS(ctx.NS,'image');for(const [key,value] of Object.entries({x:0,y:0,width:700,height:700,preserveAspectRatio:'none'}))ctx.floorImage.setAttribute(key,value);ctx.grid.after(ctx.floorImage);}
-  ctx.floorImage.setAttribute('href',next.toDataURL('image/png'));
-  ctx.arenaRenderer?.replaceFloor(next);
+  if(ctx.arenaRenderer)ctx.arenaRenderer.replaceFloor(next);
+  else ctx.floorImage.setAttribute('href',next.toDataURL('image/png'));
 }
 export async function initializeFloor(){
   const {canvas:base}=await staticArenaImage([ctx.arenaContent.querySelector(':scope > rect'),ctx.svg.querySelector('#tag7hop-floor-decals'),ctx.grid],{pixels:SIZE});
   ctx.cleanFloorCanvas=base;ctx.floorImage=null;ctx.floorCanvas=base;ctx.floorRevision=0;
   if(ctx.betting&&!ctx.betting.floorId){ctx.betting.floorId=globalThis.crypto?.randomUUID?.()??String(Date.now())+Math.random();bettingSave();}
   let saved;
-  try{saved=await storedFloor();}catch{ctx.floorStorageAvailable=false;}
-  if(saved){try{const image=await loadTextureImage(saved),next=canvas();next.getContext('2d').drawImage(image,0,0,SIZE,SIZE);install(next);return;}catch{}}
+  try{if(ctx.betting?.floorId)saved=await accessFloorStore(ctx.betting.floorId);}catch{ctx.floorStorageAvailable=false;}
+  if(saved){
+    let url;
+    try{
+      url=typeof saved==='string'?saved:URL.createObjectURL(saved);
+      const image=await loadTextureImage(url,{timeoutMs:3000}),next=canvas();
+      next.getContext('2d').drawImage(image,0,0,SIZE,SIZE);install(next);return;
+    }catch{ctx.floorStorageAvailable=false;}
+    finally{if(url){releaseTextureImage(url);if(typeof saved!=='string')URL.revokeObjectURL(url);}}
+  }
   install(base);
 }
 export async function cleanFloor(){
   if(!ctx.cleanFloorCanvas||ctx.floorBaking)return;
-  install(ctx.cleanFloorCanvas);ctx.floorRevision=(ctx.floorRevision??0)+1;await persist();
+  ctx.lastFloorBakeError='';install(ctx.cleanFloorCanvas);ctx.floorRevision=(ctx.floorRevision??0)+1;persist();
 }
 // Only fresh remains are treated. The existing opaque floor is copied unchanged.
 export function mergeFloorPixels(base,layer){
@@ -57,13 +61,15 @@ export function mergeFloorPixels(base,layer){
   }
   return base;
 }
-export async function bakeRoundFloor(){
+export async function bakeRoundFloor({signal}={}){
   if(!ctx.floorCanvas)return;
   paint();
   const corpses=ctx.robots.filter(r=>r.id!==ctx.combat.winner).map(r=>r.actor);
-  const {canvas:layer}=await staticArenaImage([ctx.oilG,ctx.detachedG,...corpses],{pixels:SIZE,exclude:'.robot-label'});
+  const nodes=[ctx.oilG,ctx.detachedG,...corpses];
+  const layer=ctx.arenaRenderer?.rasterizeRemains?ctx.arenaRenderer.rasterizeRemains(nodes,SIZE):(await staticArenaImage(nodes,{pixels:SIZE,exclude:'.robot-label'})).canvas;
+  if(signal?.aborted)return;
   const next=canvas(),draw=next.getContext('2d',{willReadFrequently:true});
   draw.drawImage(ctx.floorCanvas,0,0,SIZE,SIZE);
   const base=draw.getImageData(0,0,SIZE,SIZE),fresh=layer.getContext('2d').getImageData(0,0,SIZE,SIZE);
-  mergeFloorPixels(base.data,fresh.data);draw.putImageData(base,0,0);install(next);await persist();
+  mergeFloorPixels(base.data,fresh.data);draw.putImageData(base,0,0);install(next);persist();
 }

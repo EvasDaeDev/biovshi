@@ -1,3 +1,4 @@
+import {COIN_ICON} from '../ui/currency.js';
 import {cleanFloor} from '../render/floor-history.js';
 import {garageOpen} from '../garage/ui.js';
 import { ctx } from "../game/state.js";
@@ -23,7 +24,7 @@ export function bettingSetup() {
   ctx.betContent.innerHTML = `<p class="bet-muted">Один компьютер · виртуальные фишки · общий банк без комиссии</p>
  <form id="bet-setup-form">
  <div class="bet-fields"><label>Количество игроков<input id="bet-count" type="number" min="1" max="16" step="1" value="${ctx.betting?.players.length || 2}" required></label>
- <label>Стартовый капитал каждому<span class="chip-input"><input id="bet-capital" type="number" min="1" max="1000000" step="1" value="100" required><span aria-label="фишки">🪙</span></span></label></div>
+ <label>Стартовый капитал каждому<span class="chip-input"><input id="bet-capital" type="number" min="1" max="1000000" step="1" value="100" required>${COIN_ICON}</span></label></div>
  <div id="bet-names" class="bet-names"></div>
  <p class="bet-muted">От 1 до 16 игроков. Капитал выдаётся один раз, при создании игры.</p>
  <div id="bet-error" class="bet-error" role="status"></div>
@@ -87,9 +88,9 @@ export function bettingPreview() {
     sums = [0, 0, 0, 0];
   for (const b of bets) if (Number.isInteger(b.amount) && b.amount >= 0 && b.amount <= ctx.betting.players[b.player].balance) sums[b.robot] += b.amount;
   const bank = ctx.betting.jackpot + sums.reduce((n, x) => n + x, 0);
-  ctx.betContent.querySelector('#bet-bank').textContent = ctx.betFormat(bank);
+  ctx.betContent.querySelector('#bet-bank').innerHTML = ctx.betFormat(bank);
   sums.forEach((sum, i) => {
-    ctx.betContent.querySelector('#bet-pool-' + i).textContent = ctx.betFormat(sum);
+    ctx.betContent.querySelector('#bet-pool-' + i).innerHTML = ctx.betFormat(sum);
     ctx.betContent.querySelector('#bet-odds-' + i).textContent = sum ? '×' + (bank / sum).toLocaleString('ru-RU', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
@@ -98,7 +99,7 @@ export function bettingPreview() {
   for (const [i, row] of [...ctx.betContent.querySelectorAll('[data-bet-player]')].entries()) {
     const b = bets[i],
       valid = Number.isInteger(b.amount) && b.amount >= 0 && b.amount <= ctx.betting.players[i].balance;
-    row.querySelector('[data-remaining]').textContent = valid ? ctx.betFormat(ctx.betting.players[i].balance - b.amount) : '—';
+    row.querySelector('[data-remaining]').innerHTML = valid ? ctx.betFormat(ctx.betting.players[i].balance - b.amount) : '—';
   }
   const any = bets.some(b => b.amount > 0);
   ctx.betContent.querySelector('#bet-fight').textContent = any ? 'ЗАКРЫТЬ СТАВКИ · НАЧАТЬ БОЙ' : 'НАЧАТЬ БОЙ БЕЗ СТАВОК';
@@ -121,7 +122,7 @@ export function bettingOpen() {
  <p>Общий банк: <strong id="bet-bank">0</strong> · Джекпот: <strong>${ctx.betFormat(ctx.betting.jackpot)}</strong></p>
  <div class="bet-pools">${ctx.BET_COLORS.map((c, i) => `<div class="bet-pool" style="--fighter:${c}"><strong>${'ABCD'[i]}</strong><small>${ctx.betting.garage?.[i]?.stats.join(' / ')??'3 / 3 / 3'} · скорость / сила / поворот</small><span id="bet-pool-${i}"></span><small id="bet-odds-${i}"></small></div>`).join('')}</div>
  <form id="bet-stakes-form"><div class="bet-table-wrap"><table class="bet-table"><thead><tr><th>Игрок</th><th>Баланс</th><th>Робот</th><th>Ставка</th><th>Останется</th></tr></thead><tbody>
- ${ctx.betting.players.map((p, i) => `<tr data-bet-player="${i}"><td>${ctx.betEscape(p.name)}</td><td><span data-balance>${ctx.betFormat(p.balance)}</span> <button type="button" class="bet-top-up" data-top-up="${i}" aria-label="Пополнить баланс — ${ctx.betEscape(p.name)}" title="Пополнить баланс">+</button></td><td><select aria-label="Робот — ${ctx.betEscape(p.name)}" ${p.balance === 0 ? 'disabled' : ''}>${['A', 'B', 'C', 'D'].map((r, j) => `<option value="${j}" ${j === i % 4 ? 'selected' : ''}>${r}</option>`).join('')}</select></td><td><input aria-label="Ставка — ${ctx.betEscape(p.name)}" type="number" value="0" min="0" max="${p.balance}" step="1" required ${p.balance === 0 ? 'disabled' : ''}> 🪙</td><td data-remaining></td></tr>`).join('')}
+ ${ctx.betting.players.map((p, i) => `<tr data-bet-player="${i}"><td>${ctx.betEscape(p.name)}</td><td><span data-balance>${ctx.betFormat(p.balance)}</span> <button type="button" class="bet-top-up" data-top-up="${i}" aria-label="Пополнить баланс — ${ctx.betEscape(p.name)}" title="Пополнить баланс">+</button></td><td><select aria-label="Робот — ${ctx.betEscape(p.name)}" ${p.balance === 0 ? 'disabled' : ''}>${['A', 'B', 'C', 'D'].map((r, j) => `<option value="${j}" ${j === i % 4 ? 'selected' : ''}>${r}</option>`).join('')}</select></td><td><input aria-label="Ставка — ${ctx.betEscape(p.name)}" type="number" value="0" min="0" max="${p.balance}" step="1" required ${p.balance === 0 ? 'disabled' : ''}> ${COIN_ICON}</td><td data-remaining></td></tr>`).join('')}
  </tbody></table></div>
  <div id="bet-error" class="bet-error" role="status"></div>
  <p class="bet-muted">Коэффициенты предварительные, выплата включает ставку. Банк делится между поставившими на победителя пропорционально суммам ставок. Ничья / отмена — возврат. Нет ставок на победителя — перенос банка. Остаток округления — в джекпот.</p>
@@ -130,12 +131,12 @@ export function bettingOpen() {
  <p class="bet-muted">${bettingStorageNote()}</p></form>
  ${ctx.betting.history.length ? `<details><summary>История раундов (${ctx.betting.history.length})</summary>${ctx.betting.history.map(r => `<p class="bet-muted">Раунд ${Number(r.round)} · ${r.winner === null ? 'ничья' : 'победитель ' + ('ABCD'[r.winner] || '?')} · банк ${ctx.betFormat(Number(r.bank))}</p>`).join('')}</details>` : ''}`;
   ctx.betContent.querySelectorAll('[data-top-up]').forEach(button=>button.onclick=()=>{
-    const player=Number(button.dataset.topUp),raw=ctx.root.ownerDocument.defaultView.prompt('Сумма пополнения для '+ctx.betting.players[player].name+' (🪙):','100');
+    const player=Number(button.dataset.topUp),raw=ctx.root.ownerDocument.defaultView.prompt('Сумма пополнения для '+ctx.betting.players[player].name+' (фишки):','100');
     if(raw===null)return;
     try{
       betTopUp(ctx.betting,player,Number(raw.trim()));bettingSave();bettingHud();
       const row=button.closest('[data-bet-player]'),balance=ctx.betting.players[player].balance;
-      row.querySelector('[data-balance]').textContent=ctx.betFormat(balance);
+      row.querySelector('[data-balance]').innerHTML=ctx.betFormat(balance);
       row.querySelector('input').max=balance;row.querySelector('input').disabled=false;row.querySelector('select').disabled=false;
       ctx.betContent.querySelector('#bet-error').textContent='';bettingPreview();
       ctx.betContent.querySelector('[data-empty-balances]')?.remove();

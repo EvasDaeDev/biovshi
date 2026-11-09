@@ -49,6 +49,27 @@ export class PixiArena {
     const old=this.floor.texture;this.floor.texture=this.texture(canvas,false);this.floor.width=this.floor.height=700;
     this.owned.delete(old);old.destroy(true);this.render();
   }
+  rasterizeRemains(nodes,size=1024){
+    if(this.disposed||this.contextLost)throw Error('Renderer unavailable');
+    // Synchronize descriptions once, then capture only remains in world coordinates.
+    this.render();
+    const temporary=new this.p.Container(),moved=[],labels=[];
+    try{
+      for(const node of nodes){
+        const object=this.records.get(node)?.object;if(!object?.parent)continue;
+        moved.push({object,parent:object.parent,index:object.parent.getChildIndex(object)});
+        for(const label of node.querySelectorAll('.robot-label')){
+          const visual=this.records.get(label)?.object;if(visual){labels.push([visual,visual.visible]);visual.visible=false;}
+        }
+        temporary.addChild(object);
+      }
+      return this.app.renderer.extract.canvas({target:temporary,frame:new this.p.Rectangle(0,0,700,700),resolution:size/700,clearColor:[0,0,0,0],antialias:false});
+    }finally{
+      for(const item of [...moved].reverse())item.parent.addChildAt(item.object,Math.min(item.index,item.parent.children.length));
+      for(const [object,visible] of labels)object.visible=visible;
+      temporary.destroy({children:false});
+    }
+  }
   async prepare() {
     await this.prepareSources();
     // Order agrees with the original scene: lights behind walls, oil below actors,

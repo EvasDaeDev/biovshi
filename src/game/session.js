@@ -18,12 +18,18 @@ export async function resetRound() {
   if(ctx.combat.finished){
     ctx.floorBaking=true;
     ctx.resultsAgain.disabled=true;
-    try{await bakeRoundFloor();}
+    const controller=new AbortController();let timeout;
+    ctx.lastFloorBakeError='';
+    try{
+      await Promise.race([
+        bakeRoundFloor({signal:controller.signal}),
+        new Promise((_,reject)=>{timeout=setTimeout(()=>{controller.abort();reject(Error('Floor baking timed out'));},5000);})
+      ]);
+    }
     catch(error){
       console.warn('Floor baking:',error);
-      ctx.resultsSummary.textContent='Не удалось сохранить следы раунда. Повторите переход.';
-      return;
-    }finally{ctx.floorBaking=false;ctx.resultsAgain.disabled=false;}
+      ctx.lastFloorBakeError='Следы последнего боя не удалось добавить. Предыдущий пол сохранён; можно продолжить игру.';
+    }finally{clearTimeout(timeout);controller.abort();ctx.floorBaking=false;ctx.resultsAgain.disabled=false;}
   }
   ctx.telemetryDirty = true;
   ctx.lastTelemetryAt = -Infinity;

@@ -26,7 +26,7 @@ export function paintTelemetry() {
     if (card.pressureValue.textContent !== pressurePct + '%') card.pressureValue.textContent = pressurePct + '%';
     setWidth(card.pressureFill, pressurePct + '%');
     const stats=ctx.betting?.garage?.[r.id]?.stats??[3,3,3];
-    setText(card.strength,`${stats[1]} · ${Math.round(critChance(stats[1])*100)}%`);
+    setText(card.strength,`${stats[1]} · ${Math.round(critChance(stats[1])*100)}% crt`);
     setText(card.speed,`${stats[0]} · ${Math.round(statMultiplier(stats[0])*100)}%`);
     setText(card.maneuver,`${stats[2]} · ${Math.round(statMultiplier(stats[2])*100)}%`);
     setClass(card.card,'bleeding', ctx.combat.unarmedDeadline[r.id] !== null && r.mobile);
