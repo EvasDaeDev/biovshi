@@ -28,7 +28,7 @@ export function step(dt) {
       ctx.combat.unarmedDeadline[r.id] = null;
       continue;
     }
-    if (r.attackSources.length > 0) {
+    if (r.movementLimbs > 0) {
       ctx.combat.unarmedDeadline[r.id] = null;
       continue;
     }
