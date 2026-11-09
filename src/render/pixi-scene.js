@@ -71,6 +71,7 @@ export class PixiArena {
     }
   }
   async prepare() {
+    this.svg=ctx.svg;
     await this.prepareSources();
     // Order agrees with the original scene: lights behind walls, oil below actors,
     // darkness above actors, announcements and impact accents above darkness.
@@ -114,6 +115,7 @@ export class PixiArena {
     try {this.postEffects=new ArenaPostEffects(this.p,this.app,ctx.root);}catch(error){
       this.app.stage.filters=null;this.postEffectsError=error.message;ctx.root.dataset.postEffects='off';console.warn('Arena post effects unavailable:',error);
     }
+    this.suspended=false;
     this.render();
   }
   attachRoot(node,parent) {const record=this.create(node,null);parent.addChild(record.object);return record;}
@@ -290,7 +292,7 @@ export class PixiArena {
     for(const record of this.records.values())if(record.tag==='text')this.dirty.add(record);
   }
   render() {
-    if(this.disposed||this.contextLost)return;
+    if(this.disposed||this.suspended||this.contextLost)return;
     this.consume(this.observer?.takeRecords()??[]);
     for(const record of this.dirty){if(record.node!==ctx.svg&&!ctx.svg.contains(record.node))continue;this.sync(record);if(record.structureDirty){record.structureDirty=false;this.children(record);}}
     this.dirty.clear();this.resize();
@@ -307,17 +309,31 @@ export class PixiArena {
       this.postEffects.fail(error);this.app.render();ctx.refreshPostEffectsControl?.();
     }
   }
-  destroy() {
-    if(this.disposed)return;this.disposed=true;this.observer?.disconnect();this.resizeObserver?.disconnect();
+  suspend() {
+    this.suspended=true;this.observer?.disconnect();this.resizeObserver?.disconnect();
     if(this.canvas){this.canvas.onclick=null;this.canvas.removeEventListener('webglcontextlost',this.onLost);this.canvas.removeEventListener('webglcontextrestored',this.onRestored);}
+    this.canvas?.remove();
+    this.svg.style.removeProperty('display');this.svg.removeAttribute('aria-hidden');
+  }
+  clearScene() {
     if(this.halo){this.halo.texture.destroy(true);this.halo.filter.destroy();this.halo.gold.destroy();}
     this.postEffects?.destroy();
     this.nightComposition?.destroy({children:true});
-    this.app.destroy({removeView:true},{children:true});
+    this.world.destroy({children:true});
     for(const frame of this.frames.values())frame.destroy(false);
     for(const texture of this.owned)texture.destroy(true);
     this.records.clear();this.dirty.clear();this.sources.clear();this.frames.clear();this.gradients.clear();this.owned.clear();
-    this.svg.style.removeProperty('display');this.svg.removeAttribute('aria-hidden');
+    this.halo=this.postEffects=this.nightComposition=this.nightLights=this.nightTexture=this.floor=this.ambient=null;
+    this.width=this.height=null;
+  }
+  resetScene() {
+    this.clearScene();
+    this.world=new this.p.Container();this.content=new this.p.Container();
+    this.app.stage.addChild(this.world);this.world.addChild(this.content);
+  }
+  destroy() {
+    if(this.disposed)return;this.disposed=true;this.suspend();this.clearScene();
+    this.app.destroy({removeView:true},{children:true});
   }
 }
 
@@ -331,16 +347,23 @@ export async function initializePixiArena() {
   // Use Pixi's CSP-compatible uniform sync; keep the site's existing CSP intact.
   await import('pixi.js/unsafe-eval');
   if(ctx.disposed||ctx.svg!==svg)return null;
-  const app=new pixi.Application();let arena;
+  const parked=ctx.parkedArenaRenderer;
+  ctx.parkedArenaRenderer=null;
+  const app=parked?.app??new pixi.Application();let arena=parked;
   try{
-    await app.init({width:ctx.fieldWidth||ctx.fieldSide||700,height:ctx.fieldHeight||ctx.fieldSide||700,preference:'webgl',
+    if(parked)parked.resetScene();
+    else await app.init({width:ctx.fieldWidth||ctx.fieldSide||700,height:ctx.fieldHeight||ctx.fieldSide||700,preference:'webgl',
       autoStart:false,sharedTicker:false,autoDensity:true,resolution:Math.min(win.devicePixelRatio||1,CONFIG.rendering.maxPixelRatio),
       antialias:true,backgroundAlpha:0,eventMode:'none',powerPreference:'high-performance'});
-    arena=new PixiArena(pixi,app);await arena.prepare();
+    arena??=new PixiArena(pixi,app);await arena.prepare();
     if(ctx.disposed||ctx.svg!==svg){arena.destroy();return null;}
     ctx.arenaRenderer=arena;ctx.root.dataset.renderer='pixi-webgl';
     const dispose=ctx.root.__disposeTag;
-    ctx.root.__disposeTag=()=>{arena.destroy();ctx.arenaRenderer=null;dispose();};
+    ctx.root.__disposeTag=()=>{
+      if(ctx.keepArenaRenderer&&!arena.contextLost){arena.suspend();ctx.parkedArenaRenderer=arena;}
+      else arena.destroy();
+      ctx.arenaRenderer=null;dispose();
+    };
     return arena;
   }catch(error){
     if(arena)arena.destroy();else if(app.renderer)app.destroy({removeView:true},{children:true});

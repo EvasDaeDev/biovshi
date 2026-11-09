@@ -27,8 +27,15 @@ import { bettingCancel, bettingInit } from "../betting/ui.js";
 import { resetFrameClock } from "./clock.js";
 import { frame } from "./loop.js";
 export function initializeGame({textures=null,arenaId='ward',session=null,entry='auto'}={}) {
+  // Dispose against the old bindings, then start from the original scene markup.
+  // Reusing mutated SVG definitions can bake the previous arena into new layers.
+  const root=document.getElementById('robot-tag-hops-v22');
+  root.__disposeTag?.();
+  const svg=root.querySelector('#tag7hop-field');
+  if(root.__arenaSvgTemplate===undefined)root.__arenaSvgTemplate=svg.innerHTML;
+  else svg.innerHTML=root.__arenaSvgTemplate;
   ctx.textureAssets=textures;
-  ctx.root = document.getElementById('robot-tag-hops-v22');
+  ctx.root = root;
   ctx.svg = ctx.root.querySelector('#tag7hop-field');
   ctx.grid = ctx.root.querySelector('#tag7hop-grid');
   ctx.conesG = ctx.root.querySelector('#tag7hop-cones');
@@ -48,7 +55,6 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.scoreG = ctx.root.querySelector('#tag7hop-score');
   ctx.arenaContent = ctx.root.querySelector('#tag7hop-arena-content');
   ctx.NS = 'http://www.w3.org/2000/svg';
-  ctx.root.__disposeTag?.();
   ctx.floorImage?.remove();ctx.floorImage=null;ctx.floorCanvas=null;
   ctx.arenaId=arenaDefinition(arenaId).id;ctx.arenaDefinition=arenaDefinition(arenaId);
   for (const g of [ctx.grid, ctx.conesG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG, ctx.pulsesG, ctx.sparksG, ctx.scoreG]) g.replaceChildren();

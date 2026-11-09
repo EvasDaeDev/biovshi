@@ -32,9 +32,12 @@ async function boot(){
  ctx.BET_STORAGE='biovshi.local-totalizator.v1';const session=bettingLoad();
  ctx.switchArena=async arenaId=>{
    if(arenaId===ctx.arenaId)return;
-   const session=ctx.betting;session.arenaId=arenaId;bettingSave();root.inert=true;
+   const session=ctx.betting,expanded=ctx.arenaExpanded;
+   session.arenaId=arenaId;bettingSave();root.inert=true;
    const progress=document.createElement('div');progress.id='texture-loading';progress.textContent='Подготовка арены…';progress.setAttribute('role','status');document.body.prepend(progress);
-   try{await prepare({textures,session,entry:'betting',arenaId});}finally{root.inert=false;progress.remove();}
+   ctx.keepArenaRenderer=true;
+   try{await prepare({textures,session,entry:'betting',arenaId});ctx.setArenaExpanded?.(expanded);}
+   finally{ctx.keepArenaRenderer=false;root.inert=false;progress.remove();}
  };
  await prepare({textures,session,arenaId:session?.arenaId??'ward'});
  if(cancelled||ctx.disposed)return;root.inert=false;loading.remove();
