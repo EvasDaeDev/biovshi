@@ -56,3 +56,20 @@
 #robot-tag-hops-v22 .chip-icon{display:inline-block;box-sizing:border-box;width:.85em;height:.85em;border-radius:50%;border:1px solid #a86b0b;background:linear-gradient(135deg,#fff1a3 0%,#f3c442 40%,#d78c14 100%);box-shadow:inset 0 0 0 1px #ffe18a;vertical-align:-.06em;flex:none}
 
 #robot-tag-hops-v22 .bet-pool .chip-icon{display:inline-block;margin-top:0;font-size:inherit}
+#robot-tag-hops-v22 .arena-picker{position:relative;flex:1;min-width:160px}
+#robot-tag-hops-v22 .arena-picker summary{display:flex;justify-content:center;align-items:center;gap:8px;list-style:none;cursor:pointer;min-height:42px;padding:2px 8px;box-sizing:border-box;border:1px solid #39718b;font-size:12px;background:#102b3e}
+#robot-tag-hops-v22 .arena-picker svg{width:36px;height:36px;fill:#122c33;stroke:#f29a43;stroke-width:3;flex:none}
+#robot-tag-hops-v22 .arena-options{position:absolute;bottom:100%;left:0;right:0;z-index:10;display:flex;flex-direction:column;background:#071320;border:1px solid #39718b}
+#robot-tag-hops-v22 .arena-options button{display:flex;gap:8px;align-items:center}
+#robot-tag-hops-v22 .arena-options [aria-pressed="true"]{border-color:#f29a43}
+#robot-tag-hops-v22 .garage-patient{position:relative}
+#robot-tag-hops-v22 .patron-popup{position:absolute;top:52px;left:10px;right:10px;z-index:12;background:#0a2130;border:1px solid #f29a43;padding:10px;font-size:12px;box-shadow:0 4px 18px #000b}
+#robot-tag-hops-v22 .patron-popup[hidden]{display:none}
+#robot-tag-hops-v22 .bet-panel .patron-name{display:inline;padding:0;min-height:0;border:0;background:none;font-size:12px;color:#a8c3d2}
+#robot-tag-hops-v22 .procedure-editor{max-width:360px;margin:0 auto 16px}
+
+#robot-tag-hops-v22 .bet-pool .skill-summary{display:inline-flex;gap:3px;margin:0 2px}
+#robot-tag-hops-v22 .bet-pool .skill-summary>span{display:inline;margin:0;font-size:inherit}
+#robot-tag-hops-v22 .patron-popup>strong{display:block;text-align:center}
+
+#robot-tag-hops-v22 .arena-picker .arena-obstacle{fill:#d78937;stroke:#d78937;stroke-width:1}

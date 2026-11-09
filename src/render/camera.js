@@ -18,8 +18,8 @@ export function cameraBounds(size, outset = 8) {
 }
 
 export function cameraReset() {
-  ctx.camera.x = -ctx.CAMERA_OUTSET;
-  ctx.camera.y = -ctx.CAMERA_OUTSET;
+  ctx.camera.x = (ctx.arenaDefinition?.left??0)-ctx.CAMERA_OUTSET;
+  ctx.camera.y = (ctx.arenaDefinition?.top??0)-ctx.CAMERA_OUTSET;
   ctx.camera.size = ctx.CAMERA_FULL;
   cameraApply();
 }
@@ -70,21 +70,14 @@ export function cameraUpdate(dt) {
     bottom = -Infinity;
 
   for (const r of active) {
-    left = Math.min(left, r.x);
-    right = Math.max(right, r.x);
-    top = Math.min(top, r.y);
-    bottom = Math.max(bottom, r.y);
+    const capsules=r.capsules??[];
+    if(capsules.length){for(const c of capsules){left=Math.min(left,c.a.x-c.r,c.b.x-c.r);right=Math.max(right,c.a.x+c.r,c.b.x+c.r);top=Math.min(top,c.a.y-c.r,c.b.y-c.r);bottom=Math.max(bottom,c.a.y+c.r,c.b.y+c.r);}}
+    else{left=Math.min(left,r.x);right=Math.max(right,r.x);top=Math.min(top,r.y);bottom=Math.max(bottom,r.y);}
   }
 
-  const span = Math.max(right - left, bottom - top);
-
-  // Keep a margin around active fighters.
-  // Never zoom out beyond the full arena size.
-  const targetSize = clamp(
-    span + 2 * ctx.CAMERA_MARGIN,
-    ctx.CAMERA_MIN,
-    ctx.CAMERA_FULL
-  );
+  const width=ctx.fieldWidth||ctx.fieldSide||700,height=ctx.fieldHeight||ctx.fieldSide||700,short=Math.min(width,height);
+  // Screen-axis margins: two metres horizontally and one vertically.
+  const targetSize=clamp(Math.max((right-left+400)*short/width,(bottom-top+200)*short/height),ctx.CAMERA_MIN,ctx.CAMERA_FULL);
 
   const cx = (left + right) / 2,
     cy = (top + bottom) / 2;

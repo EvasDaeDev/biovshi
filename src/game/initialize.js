@@ -1,3 +1,8 @@
+import {arenaDefinition} from './arenas.js';
+import {initializeCombatLog} from '../ui/combat-log.js';
+import {bettingLoad,bettingSave} from '../betting/storage.js';
+import {betCommit,betRefund} from '../betting/ledger.js';
+import {bettingOpen,bettingHud} from '../betting/ui.js';
 import {formatChips} from '../ui/currency.js';
 import {initializeHints} from '../ui/hints.js';
 import { initializeArenaExpand } from '../ui/arena-expand.js';
@@ -21,7 +26,7 @@ import { paint } from "../render/frame.js";
 import { bettingCancel, bettingInit } from "../betting/ui.js";
 import { resetFrameClock } from "./clock.js";
 import { frame } from "./loop.js";
-export function initializeGame({textures=null}={}) {
+export function initializeGame({textures=null,arenaId='ward',session=null,entry='auto'}={}) {
   ctx.textureAssets=textures;
   ctx.root = document.getElementById('robot-tag-hops-v22');
   ctx.svg = ctx.root.querySelector('#tag7hop-field');
@@ -44,12 +49,15 @@ export function initializeGame({textures=null}={}) {
   ctx.arenaContent = ctx.root.querySelector('#tag7hop-arena-content');
   ctx.NS = 'http://www.w3.org/2000/svg';
   ctx.root.__disposeTag?.();
+  ctx.floorImage?.remove();ctx.floorImage=null;ctx.floorCanvas=null;
+  ctx.arenaId=arenaDefinition(arenaId).id;ctx.arenaDefinition=arenaDefinition(arenaId);
   for (const g of [ctx.grid, ctx.conesG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG, ctx.pulsesG, ctx.sparksG, ctx.scoreG]) g.replaceChildren();
   ctx.roles.replaceChildren();
   ctx.intro = ctx.root.querySelector('#tag7hop-intro');
   ctx.startButton = ctx.root.querySelector('#tag7hop-start');
   ctx.resultsPanel = ctx.root.querySelector('#gladiator-results');
   ctx.resultsAgain = ctx.root.querySelector('#gladiator-results-again');
+  ctx.resultsProcedure=ctx.root.querySelector('#gladiator-results-procedure');
   ctx.resultsTitle = ctx.root.querySelector('#gladiator-results-title');
   ctx.resultsSummary = ctx.root.querySelector('#gladiator-results-summary');
   ctx.resultsTotals = ctx.root.querySelector('#gladiator-results-totals');
@@ -74,6 +82,7 @@ export function initializeGame({textures=null}={}) {
     if (ctx.frameId && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(ctx.frameId);
     ctx.startButton.onclick = null;
     ctx.resultsAgain.onclick = null;
+    if(ctx.resultsProcedure)ctx.resultsProcedure.onclick=null;
     ctx.button.onclick = null;
     ctx.speedButton.onclick = null;
     const qualityControl = ctx.root.querySelector('#graphics-quality');
@@ -102,18 +111,18 @@ export function initializeGame({textures=null}={}) {
   ctx.CHASE_SPEED = CONFIG.movement.chaseSpeedCm;
   ctx.ROBOT_COUNT = 4;
   ctx.FLEE_MEMORY = CONFIG.movement.fleeMemorySec;
-  ctx.obstacles = CONFIG.arena.obstacles.map(b => ({
+  ctx.obstacles = ctx.arenaDefinition.obstacles.map(b => ({
     ...b,
     points: obstacleVertices(b)
   }));
   ctx.robots = [];
   ctx.planeCache = new WeakMap();
   ctx.arenaBoundary = {
-    left: 0,
-    right: 700,
-    top: 0,
-    bottom: 700,
-    cut: CONFIG.arena.cornerCutCm
+    left: ctx.arenaDefinition.left,
+    right: ctx.arenaDefinition.left+ctx.arenaDefinition.size,
+    top: ctx.arenaDefinition.top,
+    bottom: ctx.arenaDefinition.top+ctx.arenaDefinition.size,
+    cut: ctx.arenaDefinition.cut
   };
   ctx.arenaBoundary.points = obstacleVertices(ctx.arenaBoundary);
   ctx.arenaPlanes = polygonPlanes(ctx.arenaBoundary);
@@ -168,7 +177,7 @@ export function initializeGame({textures=null}={}) {
     'vector-effect': 'non-scaling-stroke',
     'stroke-linejoin': 'round',
     'stroke-width': 2,
-    'aria-label': 'Внешний периметр 7 на 7 метров со скошенными углами'
+    'aria-label': ctx.arenaDefinition.name
   }, ctx.outlineG);
   for (const b of ctx.obstacles) {
     const bounds = {
@@ -298,6 +307,7 @@ export function initializeGame({textures=null}={}) {
     x: 145,
     y: 555
   }];
+  if(ctx.arenaId==='ring')ctx.patrolPoints=[{x:350,y:230},{x:470,y:350},{x:350,y:470},{x:230,y:350}];
   ctx.pulses = [];
   ctx.pulseNodes = Array.from({
     length: 6
@@ -411,8 +421,8 @@ export function initializeGame({textures=null}={}) {
   // The clock is a screen-space overlay, not part of the clipped floor.
   ctx.svg.appendChild(ctx.timerOutput);
   ctx.CAMERA_OUTSET = Math.max(0, CONFIG.arena.wallThicknessCm) + CONFIG.arena.wallViewMarginCm;
-  ctx.CAMERA_FULL = 700 + 2 * ctx.CAMERA_OUTSET;
-  ctx.CAMERA_MIN = 400;
+  ctx.CAMERA_FULL = ctx.arenaDefinition.size + 2 * ctx.CAMERA_OUTSET;
+  ctx.CAMERA_MIN = 200;
   ctx.CAMERA_MARGIN = 200;
   ctx.camera = {
     x: -ctx.CAMERA_OUTSET,
@@ -429,7 +439,8 @@ export function initializeGame({textures=null}={}) {
       resetRound();
     }
   };
-  ctx.resultsAgain.onclick = () => resetRound();
+  ctx.resultsAgain.onclick = () => resetRound('betting');
+  if(ctx.resultsProcedure)ctx.resultsProcedure.onclick=()=>resetRound('procedure');
   ctx.button.onclick = togglePause;
   ctx.speedButton.onclick = toggleSpeed;
   // click также обрабатывает одиночный тап; отдельный touch-обработчик удвоил бы переключение.
@@ -465,7 +476,19 @@ export function initializeGame({textures=null}={}) {
     '"': '&quot;',
     "'": '&#39;'
   })[c]);
-  bettingInit();
+  ctx.exhibition=false;ctx.afterSetup=entry==='setup'?'procedure':'betting';
+  if(entry==='auto'){
+    ctx.betting=session??bettingLoad();ctx.exhibition=true;
+    if(ctx.betting){
+      betRefund(ctx.betting);
+      if(ctx.betting.phase==='settled'){ctx.betting.round++;ctx.betting.phase='betting';ctx.betting.bets=[];}
+      betCommit(ctx.betting,ctx.betting.players.map(p=>({player:p.id,robot:p.id%4,amount:0})));
+      bettingSave();bettingHud();
+    }else{ctx.betHud.hidden=true;delete ctx.root.dataset.betRound;}
+    ctx.intro.hidden=true;ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;ctx.startup.phase='demo';
+  }else if(session){ctx.betting=session;bettingOpen();}
+  else bettingInit();
+  initializeCombatLog();
   initializeSettings();
   initializeArenaExpand();
   initializeHints();

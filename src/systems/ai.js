@@ -23,8 +23,8 @@ export function patrol(r) {
     const candidates = Array.from({
       length: 30
     }, () => ({
-      x: 60 + random() * 580,
-      y: 60 + random() * 580
+      x: ctx.arenaBoundary.left+60+random()*(ctx.arenaBoundary.right-ctx.arenaBoundary.left-120),
+      y: ctx.arenaBoundary.top+60+random()*(ctx.arenaBoundary.bottom-ctx.arenaBoundary.top-120)
     })).filter(p => coreClearCircle(p, 38));
     ai.goal = candidates.sort((a, b) => Math.hypot(b.x - r.x, b.y - r.y) - Math.hypot(a.x - r.x, a.y - r.y))[0] || {
       x: r.x,

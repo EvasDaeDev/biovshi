@@ -137,7 +137,9 @@ export function finishMobility(robotState, reason, impact = robotState.lastImpac
   ctx.brainDebt = .1;
   note('robot-immobilized', {
     robot: robotState.id,
-    reason
+    reason,
+    segment:reason==='потерял конечности'?impact?.segment:null,
+    by:reason==='потерял конечности'?impact?.by:null
   });
 }
 export function reactToHit(robotState, attacker, segment) {
@@ -198,7 +200,7 @@ export function robotDamage(robotState, key, by, damage=1) {
   if(attacker&&attacker.id!==robotState.id)attacker.flashHitLight();
   const direction=attacker&&attacker.id!==robotState.id?
     Math.atan2(pivot.y-attacker.y,pivot.x-attacker.x):robotState.angle;
-  robotState.lastImpact={direction,point:{...pivot}};
+  robotState.lastImpact={direction,point:{...pivot},segment:key,by};
   spawnHitEffect(pivot.x,pivot.y,direction,robotState.hp.get(key)<=0);
   ctx.pulses.push({
     ...pivot,
@@ -252,13 +254,13 @@ export function robotDamage(robotState, key, by, damage=1) {
       robot: robotState.id,
       segment: key,
       detached: attached,
-      by
+      by,damage
     });
   } else note('hit', {
     robot: robotState.id,
     segment: key,
     hp: robotState.hp.get(key),
-    by
+    by,damage
   });
   robotState.api.capsules = robotState.makeCapsules();
   return true;

@@ -33,7 +33,7 @@ function setup(){
   for(const key of ['document','localStorage','Event'])globalThis[key]=dom.window[key];
   globalThis.matchMedia=()=>({matches:false});globalThis.ResizeObserver=class{observe(){}disconnect(){}};
   globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
-  initializeGame({textures:Object.fromEntries(Object.keys(ASSETS.textures).map(key=>[key,{loaded:true}]))});
+  initializeGame({entry:'setup',textures:Object.fromEntries(Object.keys(ASSETS.textures).map(key=>[key,{loaded:true}]))});
   return dom;
 }
 class TestText extends PIXI.Container {

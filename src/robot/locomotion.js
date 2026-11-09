@@ -537,11 +537,11 @@ export function robotTick(robotState, dt, intent) {
       x: robotState.x,
       y: robotState.y
     }, b).distance;
-    const nearest = ctx.obstacles.reduce((a, b) => distanceTo(b) < distanceTo(a) ? b : a);
-    const closest = nearestObstaclePoint({
+    const nearest = ctx.obstacles.reduce((a, b) => !a || distanceTo(b) < distanceTo(a) ? b : a, null);
+    const closest = nearest ? nearestObstaclePoint({
       x: robotState.x,
       y: robotState.y
-    }, nearest).point;
+    }, nearest).point : {x:robotState.x-Math.cos(robotState.angle),y:robotState.y-Math.sin(robotState.angle)};
     let nx = robotState.x - closest.x,
       ny = robotState.y - closest.y;
     const peer = robotState.peerRobots().sort((a, b) => Math.hypot(a.x - robotState.x, a.y - robotState.y) - Math.hypot(b.x - robotState.x, b.y - robotState.y))[0];

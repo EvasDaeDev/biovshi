@@ -7,7 +7,7 @@ import {bettingSave} from '../betting/storage.js';
 const SIZE=1024;
 function canvas(){const c=document.createElement('canvas');c.width=c.height=SIZE;return c;}
 function persist(){
-  const key=ctx.betting?.floorId,source=ctx.floorCanvas;
+  const key=ctx.betting?.floorId?ctx.betting.floorId+':'+(ctx.arenaId??'ward'):null,source=ctx.floorCanvas;
   const previous=ctx.floorSavePromise??Promise.resolve();
   const generation=ctx.floorSaveGeneration=(ctx.floorSaveGeneration??0)+1;
   ctx.floorSavePromise=previous.catch(()=>{}).then(async()=>{
@@ -22,6 +22,7 @@ function persist(){
 }
 function install(next){
   ctx.floorCanvas=next;
+  ctx.arenaFloors??=new Map();ctx.arenaFloors.set((ctx.betting?.floorId??'demo')+':'+(ctx.arenaId??'ward'),next);
   if(!ctx.floorImage){ctx.floorImage=document.createElementNS(ctx.NS,'image');for(const [key,value] of Object.entries({x:0,y:0,width:700,height:700,preserveAspectRatio:'none'}))ctx.floorImage.setAttribute(key,value);ctx.grid.after(ctx.floorImage);}
   if(ctx.arenaRenderer)ctx.arenaRenderer.replaceFloor(next);
   else ctx.floorImage.setAttribute('href',next.toDataURL('image/png'));
@@ -30,8 +31,10 @@ export async function initializeFloor(){
   const {canvas:base}=await staticArenaImage([ctx.arenaContent.querySelector(':scope > rect'),ctx.svg.querySelector('#tag7hop-floor-decals'),ctx.grid],{pixels:SIZE});
   ctx.cleanFloorCanvas=base;ctx.floorImage=null;ctx.floorCanvas=base;ctx.floorRevision=0;
   if(ctx.betting&&!ctx.betting.floorId){ctx.betting.floorId=globalThis.crypto?.randomUUID?.()??String(Date.now())+Math.random();bettingSave();}
+  const memory=ctx.arenaFloors?.get((ctx.betting?.floorId??'demo')+':'+(ctx.arenaId??'ward'));
+  if(memory){install(memory);return;}
   let saved;
-  try{if(ctx.betting?.floorId)saved=await accessFloorStore(ctx.betting.floorId);}catch{ctx.floorStorageAvailable=false;}
+  try{if(ctx.betting?.floorId){saved=await accessFloorStore(ctx.betting.floorId+':'+(ctx.arenaId??'ward'));if(!saved&&ctx.arenaId==='ward')saved=await accessFloorStore(ctx.betting.floorId);}}catch{ctx.floorStorageAvailable=false;}
   if(saved){
     let url;
     try{

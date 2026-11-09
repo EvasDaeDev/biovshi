@@ -1,4 +1,4 @@
-import {newGarage,validStats} from '../garage/model.js';
+import {newGarage,validStats,normalizePatronage} from '../garage/model.js';
 import { ctx } from "../game/state.js";
 import { betRefund } from "./ledger.js";
 export function bettingSave() {
@@ -20,6 +20,13 @@ export function bettingLoad() {
     s.garage??=newGarage();s.shopSpent??=0;s.topUps??=0;
     if(!Number.isSafeInteger(s.topUps)||s.topUps<0||s.players.length*s.capital+s.topUps>16000000)throw Error();
     if(!Number.isSafeInteger(s.shopSpent)||s.shopSpent<0||!Array.isArray(s.garage)||s.garage.length!==4||!s.garage.every(g=>validStats(g.stats)&&(g.head===null||(g.head&&[1,2,3,4].includes(g.head.hat)&&Number.isSafeInteger(g.head.price)&&g.head.price>=10&&Number.isInteger(g.head.player)&&g.head.player>=0&&g.head.player<s.players.length))))throw Error();
+    if(!['ward','ring'].includes(s.arenaId))s.arenaId='ward';
+    normalizePatronage(s);
+    let invested=0;
+    for(const g of s.garage)for(const [id,sum] of Object.entries(g.investments)){
+      if(!/^(0|[1-9]\d*)$/.test(id)||!s.players[Number(id)]||!Number.isSafeInteger(sum)||sum<0)throw Error();invested+=sum;
+    }
+    if(invested>s.shopSpent)throw Error();
     const total = s.players.reduce((n, p) => n + p.balance, 0) + s.jackpot + (s.phase === 'running' ? s.lockedJackpot + s.bets.reduce((n, b) => n + b.amount, 0) : 0);
     if (total + s.shopSpent !== s.players.length * s.capital + s.topUps) throw Error();
     if (betRefund(s)) ctx.betNotice = 'Предыдущий бой был прерван: ставки возвращены, джекпот сохранён.';

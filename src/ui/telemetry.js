@@ -1,3 +1,4 @@
+import {patientName} from './patient.js';
 import { TELEMETRY_COLOURS } from './telemetry-colours.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "../game/state.js";
@@ -6,7 +7,7 @@ export function makeRobotCard(id) {
   const card = document.createElement('section');
   card.className = 'robot-card';
   card.style.setProperty('--accent', ROBOT_COLORS[id]);
-  card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${String.fromCharCode(65 + id)}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><span aria-hidden="true">🦴</span> <span class="robot-card-segments">13/13</span></div></div>
+  card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${patientName(id,{short:true})}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><span aria-hidden="true">🦴</span> <span class="robot-card-segments">13/13</span></div></div>
   <div class="robot-card-metrics"><div class="metric-box"><div class="metric-inline"><span class="metric-icon" aria-label="Давление масла" title="Давление масла">💧</span><span class="metric-value js-pressure-value">100%</span></div><div class="mini-track"><div class="mini-fill js-pressure-fill" style="width:100%"></div></div></div></div>
   <div class="robot-card-body"><div class="portrait-wrap"><canvas class="patient-portrait" width="520" height="224" role="img" aria-label="Пациент ${String.fromCharCode(65+id)}"></canvas></div>
   <div class="patient-skills" aria-label="Умения пациента">

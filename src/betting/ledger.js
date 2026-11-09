@@ -9,6 +9,7 @@ export function betNewSession(names, capital) {
     round: 1,
     capital,
     phase: 'betting',
+    arenaId:'ward',
     jackpot: 0,
     lockedJackpot: 0,
     players: names.map((name, id) => ({

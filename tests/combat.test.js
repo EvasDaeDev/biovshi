@@ -27,7 +27,7 @@ function setup({start=true,reduced=false,textures=null}={}) {
   globalThis.ResizeObserver=class { observe(){} disconnect(){} };
   globalThis.requestAnimationFrame=()=>1;
   globalThis.cancelAnimationFrame=()=>{};
-  initializeGame({textures});
+  initializeGame({entry:'setup',textures});
   document.querySelector('#bet-setup-form').dispatchEvent(new Event('submit',{cancelable:true}));
   document.querySelector('#garage-next').click();document.querySelector('#bet-fight').click();
   if(start)advanceStartup(3);
@@ -70,7 +70,7 @@ test('losing every limb ends mobility; reset restores the anatomy and the bettin
   assert.equal(r.mobile,false);
   assert.equal(r.movementLimbs,0);
   resetRound();
-  assert.equal(ctx.startup.phase,'garage');
+  assert.equal(ctx.startup.phase,'betting');
   assert.equal(ctx.round.elapsedSec,0);
   assert.ok(ctx.robots.every(r=>r.mobile&&r.movementLimbs===4&&r.hasHead));
   dom.window.close();
@@ -169,7 +169,7 @@ test('operating-room lighting, dark footprints and inward textured obstacle wall
   const dom=setup();
   const geometry=ctx.obstacles.map(b=>structuredClone(b.points));
   for(let pass=0;pass<2;pass++) {
-    if(pass)initializeGame();
+    if(pass)initializeGame({entry:'setup'});
     const walls=ctx.svg.querySelector('#tag7hop-obstacle-walls');
     assert.equal(walls.parentNode,ctx.blockG);
     assert.equal(walls.children.length,CONFIG.arena.obstacles.length);
@@ -777,7 +777,7 @@ test('preloaded patients create no duplicate vector models and only a failed atl
   assert.equal(r.actor.querySelectorAll('[data-robot-fallback]').length,0);
   assert.equal(ctx.root.querySelector('#tag7hop-guide-visuals'),null);
   assert.equal(ctx.root.querySelector('#gladiator-debris'),null);
-  for(let i=0;i<3;i++)initializeGame({textures});
+  for(let i=0;i<3;i++)initializeGame({entry:'setup',textures});
   const ids=[...ctx.svg.querySelectorAll('[id]')].map(n=>n.id);
   assert.equal(new Set(ids).size,ids.length,'reinitialization leaves no duplicate legacy layers');
   dom.window.close();

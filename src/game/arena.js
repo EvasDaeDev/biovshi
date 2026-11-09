@@ -111,23 +111,10 @@ export function chooseHunter() {
 }
 // Фиксированные точки старта. В каждой из них может появиться любой робот.
 export function chooseSpawnLayout() {
-  const slots = [{
-    x: 350,
-    y: 52
-  }, {
-    x: 52,
-    y: 350
-  }, {
-    x: 648,
-    y: 350
-  }, {
-    x: 350,
-    y: 648
-  }].map(p => ({
-    ...p,
-    x: clamp(p.x, CONFIG.startup.spawnMarginCm, 700 - CONFIG.startup.spawnMarginCm),
-    y: clamp(p.y, CONFIG.startup.spawnMarginCm, 700 - CONFIG.startup.spawnMarginCm)
-  }));
+  const boundary=ctx.arenaBoundary;
+  const cx=(boundary.left+boundary.right)/2,cy=(boundary.top+boundary.bottom)/2;
+  const margin=CONFIG.startup.spawnMarginCm;
+  const slots=[{x:cx,y:boundary.top+margin},{x:boundary.left+margin,y:cy},{x:boundary.right-margin,y:cy},{x:cx,y:boundary.bottom-margin}];
   for (const p of slots) if (!coreClearCircle(p, CONFIG.startup.spawnMarginCm)) throw Error('Стартовая точка пересекается с препятствием');
   for (let i = slots.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));

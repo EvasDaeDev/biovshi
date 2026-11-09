@@ -1,4 +1,6 @@
 import {garageOpen} from '../garage/ui.js';
+import {bettingOpen} from '../betting/ui.js';
+import {resetCombatLog} from '../ui/combat-log.js';
 import {bakeRoundFloor} from '../render/floor-history.js';
 import { setTimeScale } from "../ui/controls.js";
 import { resetFrameClock } from "./clock.js";
@@ -13,11 +15,11 @@ import { arenaAnnounce } from "../ui/announcements.js";
 import { paint } from "../render/frame.js";
 import { random } from "../utils/random.js";
 import { resetHitEffects } from '../render/hit-effects.js';
-export async function resetRound() {
+export async function resetRound(destination='betting') {
   if(ctx.floorBaking)return;
   if(ctx.combat.finished){
     ctx.floorBaking=true;
-    ctx.resultsAgain.disabled=true;
+    ctx.resultsAgain.disabled=true;if(ctx.resultsProcedure)ctx.resultsProcedure.disabled=true;
     const controller=new AbortController();let timeout;
     ctx.lastFloorBakeError='';
     try{
@@ -29,8 +31,9 @@ export async function resetRound() {
     catch(error){
       console.warn('Floor baking:',error);
       ctx.lastFloorBakeError='Следы последнего боя не удалось добавить. Предыдущий пол сохранён; можно продолжить игру.';
-    }finally{clearTimeout(timeout);controller.abort();ctx.floorBaking=false;ctx.resultsAgain.disabled=false;}
+    }finally{clearTimeout(timeout);controller.abort();ctx.floorBaking=false;ctx.resultsAgain.disabled=false;if(ctx.resultsProcedure)ctx.resultsProcedure.disabled=false;}
   }
+  ctx.afterSetup=destination;ctx.exhibition=false;resetCombatLog();
   ctx.telemetryDirty = true;
   ctx.lastTelemetryAt = -Infinity;
   ctx.settledOilDrops = new WeakSet();
@@ -121,7 +124,7 @@ export async function resetRound() {
   ctx.paintAt = -Infinity;
   rebuildRobots();
   cameraReset();
-  garageOpen();
+  if(destination==='procedure')garageOpen();else bettingOpen();
   ctx.arenaRenderer?.render();
 }
 // Новая случайная последовательность при каждой загрузке, без фиксированного seed.
