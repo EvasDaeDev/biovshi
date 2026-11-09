@@ -84,8 +84,9 @@ export function moduleBadge(snapshot) {
 export function friendlyAction(robot) {
   const deadline = ctx.combat.unarmedDeadline[robot.id];
   if (!robot.visible) return 'Ожидает выхода на арену';
-  if (!robot.mobile) return 'Обездвижен';
-  if (deadline !== null) return `Истекает маслом · ${Math.ceil(Math.max(0, deadline - ctx.game.time))} с`;
+  if (!robot.hasHead) return 'Погиб';
+  if (!robot.mobile) return 'Без сознания';
+  if (deadline !== null) return `Теряет сознание · ${Math.ceil(Math.max(0, deadline - ctx.game.time))} с`;
   if (ctx.combat.pending[robot.id]) return 'Наносит удар';
   if (!robot.hasHead) return 'Слепой режим';
   const map = {
