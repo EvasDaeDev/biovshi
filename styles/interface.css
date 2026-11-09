@@ -520,7 +520,7 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #robot-tag-hops-v22 .patient-name{font-weight:700;white-space:nowrap}
 #robot-tag-hops-v22 .skill-summary{display:inline-flex;gap:3px;align-items:center;white-space:nowrap}
 #robot-tag-hops-v22 #combat-log{position:absolute;right:0;top:0;z-index:3;box-sizing:border-box;width:35ch;max-width:100%;max-height:140px;overflow:hidden;margin:0;padding:0;list-style:none;color:#f29a43;font:10px/14px ui-monospace,Consolas,monospace;text-shadow:0 1px 2px #000;pointer-events:none}
-#robot-tag-hops-v22 #combat-log li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:14px}
+#robot-tag-hops-v22 #combat-log li{white-space:normal;overflow-wrap:anywhere;min-height:14px}
 #robot-tag-hops-v22 .results-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
 #robot-tag-hops-v22 .results-actions button{flex:1;min-width:180px}
 
