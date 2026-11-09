@@ -170,7 +170,7 @@ export function fighterIntent(r) {
     ctx.combat.escapeGoal[id] = null;
   }
   const warning = ctx.combat.pending.findIndex(p => p?.victim === id && p.at > ctx.game.time && ctx.robots[p.victim]?.mobile);
-  if (warning >= 0 && r.hasHead && r.movementLimbs >= 2) {
+  if (warning >= 0 && r.hasHead && r.movementLimbs >= 1) {
     const enemy = ctx.robots[warning];
     if (enemy.mobile && notices(r, enemy)) {
       const dx = r.x - enemy.x,
