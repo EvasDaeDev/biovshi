@@ -1,0 +1,180 @@
+/* BIOVSHI / WASTELAND: UI-only skin, keeps the arena renderer untouched. */
+html,body,html>body {
+ background:#11130f !important;
+ background-color:#11130f !important;
+ color:#c8b99a !important;
+}
+html body {
+ background-image:radial-gradient(ellipse at 50% 0%,#25261b 0%,#11130f 67%) !important;
+ background-attachment:fixed !important;
+}
+#robot-tag-hops-v22 {
+ --waste-bg:#11130f; --waste-panel:#202219; --waste-panel-hi:#2d3024;
+ --waste-edge:#555643; --waste-text:#d7c8a9; --waste-muted:#a69e83;
+ --waste-rust:#99482d; --waste-rust-hi:#c47745;
+ --paper:#d2bb86; --paper-light:#e5d1a0; --paper-dark:#b6a073;
+ --paper-ink:#2b261b; --paper-rule:#68563a;
+ color:var(--waste-text);
+ font-family:"Arial Narrow","Roboto Condensed",Arial,sans-serif;
+}
+#robot-tag-hops-v22 :is(button,input,select,textarea,summary) {font-family:inherit}
+#robot-tag-hops-v22 :is(button,input,select,textarea):focus-visible {
+ outline:2px solid var(--waste-rust-hi);outline-offset:2px;
+}
+#robot-tag-hops-v22 button:not(.settings-button):not(.arena-expand-button),
+#robot-tag-hops-v22 :is(input,select,textarea),
+#robot-tag-hops-v22 :is(.robot-card,.bet-hud-player,.gladiator-result-total,.bet-pool,.garage-patient,.arena-picker summary,.arena-options,.module-pill,.mini-track,.mini-fill) {
+ border-radius:2px !important;
+}
+#robot-tag-hops-v22 :is(.settings-button,.arena-expand-button) {
+ border-radius:50% !important;
+ border-color:#655944 !important;background:#26281d !important;color:#d6c396 !important;
+}
+#robot-tag-hops-v22 :is(.settings-button,.arena-expand-button):hover {background:#3a3525 !important}
+#robot-tag-hops-v22 .atmosphere-controls {
+ border:1px solid #54513d;
+ background:linear-gradient(180deg,#2e3024,#1b1d17);
+ box-shadow:inset 0 1px rgba(226,204,155,.10),0 4px 18px #0008;
+}
+html body #robot-tag-hops-v22 .viz-controls {color:var(--waste-text)}
+html body #robot-tag-hops-v22 .viz-controls .btn {
+ background:#353428;color:#e2cc9b;border:1px solid #716148;
+ box-shadow:inset 0 1px #ffffff10;
+}
+html body #robot-tag-hops-v22 .viz-controls .btn:hover {background:#4a3b29;color:#fff0c7}
+html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] {
+ background:#723b28;color:#fff1c6;border-color:#ba784b;
+}
+html body #robot-tag-hops-v22 #tag7hop-status {color:#d6bd8b;text-shadow:0 1px #000}
+#robot-tag-hops-v22 #render-fps {color:#a99d7c}
+#robot-tag-hops-v22 .robot-card {
+ background:linear-gradient(180deg,#2c2d23,#191b17);
+ border:1px solid #555743;
+ color:#e2d3b5;
+ box-shadow:inset 0 0 0 1px #ffffff08,0 5px 14px #0007;
+}
+#robot-tag-hops-v22 .robot-card::before {width:3px;box-shadow:none}
+#robot-tag-hops-v22 .robot-card-name strong,
+#robot-tag-hops-v22 .robot-card-segments {color:#efe0bc}
+#robot-tag-hops-v22 :is(.robot-card-sub,.robot-card-score small,.metric-head,.robot-card-action) {color:#b2aa91}
+#robot-tag-hops-v22 .metric-value {color:#e9d9b6}
+#robot-tag-hops-v22 .mini-track {background:#171a16}
+#robot-tag-hops-v22 .mini-fill {box-shadow:none}
+#robot-tag-hops-v22 #bet-hud .bet-hud-bank {color:#dfc8a0}
+#robot-tag-hops-v22 #bet-hud .bet-hud-bank strong {color:#d9ae65}
+#robot-tag-hops-v22 .bet-hud-player {
+ background:linear-gradient(130deg,#2b2d22,#1c1e18);
+ border:1px solid #575440;border-left:3px solid var(--fighter,#71634b);
+ color:#d7c9a8;
+}
+#robot-tag-hops-v22 :is(.bet-hud-player-name,.bet-hud-player-balance) {color:#e0cfae}
+#robot-tag-hops-v22 .settings-overlay,
+#robot-tag-hops-v22 .bet-overlay {background:rgba(9,11,8,.88);backdrop-filter:blur(2px)}
+/* Discolored archival sheets: paper texture uses CSS only (no download or bitmap). */
+#robot-tag-hops-v22 :is(.settings-panel,.bet-panel,.gladiator-results-card,.tag7hop-intro-card,.launch-paper,.patron-popup) {
+ background-color:var(--paper);
+ background-image:
+   repeating-linear-gradient(0deg,transparent 0 3px,#422e1005 4px 5px),
+   radial-gradient(ellipse at 13% 8%,#fff3c342 0,transparent 52%),
+   radial-gradient(ellipse at 91% 96%,#60411934 0,transparent 48%),
+   linear-gradient(105deg,#b29b6c,#e2cd9c 12%,#d6bf8e 75%,#baa476);
+ color:var(--paper-ink);
+ border:1px solid var(--paper-rule);
+ border-radius:1px !important;
+ box-shadow:inset 0 0 0 3px #e5cf9c,inset 0 0 0 4px #5e4a2c44,0 18px 60px #000a;
+}
+#robot-tag-hops-v22 :is(.settings-panel,.bet-panel,.gladiator-results-card) :is(h1,h2,h3,th,strong,label,p,summary,small,span) {text-shadow:none}
+#robot-tag-hops-v22 :is(.settings-panel,.bet-panel,.gladiator-results-card) :is(h1,h2,h3) {
+ color:#38291d;letter-spacing:.065em;font-weight:800;
+}
+#robot-tag-hops-v22 :is(.settings-panel,.bet-panel,.gladiator-results-card) :is(p,label,small,th,td,summary,output) {color:var(--paper-ink)}
+#robot-tag-hops-v22 :is(.bet-muted,.bet-panel .bet-muted,.settings-panel .performance-details output) {color:#69583f}
+#robot-tag-hops-v22 :is(.bet-panel,.settings-panel,.gladiator-results-card) button,
+#robot-tag-hops-v22 :is(.bet-panel,.settings-panel,.gladiator-results-card) .arena-picker summary {
+ background:#4b422d;color:#f3deae;border:1px solid #31291c;
+ border-radius:1px !important;
+ box-shadow:inset 0 1px #ffffff20;
+}
+#robot-tag-hops-v22 :is(.bet-panel,.settings-panel,.gladiator-results-card) button:hover,
+#robot-tag-hops-v22 :is(.bet-panel,.settings-panel,.gladiator-results-card) .arena-picker summary:hover {
+ background:#695037;color:#fff2cd;
+}
+#robot-tag-hops-v22 :is(.bet-panel,.gladiator-results-card) :is(.bet-primary,#gladiator-results-again) {
+ background:#843d29;color:#f5e6c5;border-color:#5b2d21;font-weight:800;
+}
+#robot-tag-hops-v22 :is(.bet-panel,.gladiator-results-card) :is(.bet-primary,#gladiator-results-again):hover {
+ background:#a55330;color:#fff5d9;
+}
+#robot-tag-hops-v22 .bet-panel :is(input,select,textarea),
+#robot-tag-hops-v22 .settings-panel :is(input:not([type=range]),select,textarea) {
+ color:#2b261b;background:#e9d7ad;border:1px solid #796747;border-radius:1px !important;
+}
+#robot-tag-hops-v22 .bet-panel :is(input,select)::placeholder {color:#7b6b50}
+#robot-tag-hops-v22 .bet-panel .bet-pool {
+ background:#c1aa79;border:1px solid #8f7750;border-top:3px solid var(--fighter);
+}
+#robot-tag-hops-v22 .bet-panel .bet-pool :is(span,small) {color:#3b3020}
+#robot-tag-hops-v22 .bet-panel .bet-table {color:#30291d}
+#robot-tag-hops-v22 .bet-panel .bet-table :is(th,td) {border-color:#998260;color:#30291d}
+#robot-tag-hops-v22 .bet-panel .arena-options {background:#cfba8c;border-color:#6b5738}
+#robot-tag-hops-v22 .bet-panel .arena-options button {color:#f2ddb0}
+#robot-tag-hops-v22 :is(.bet-panel,.gladiator-results-card) .bet-error {color:#8a2519}
+#robot-tag-hops-v22 .garage-patient {
+ background:#d8c393;border:1px solid #86714d;color:#33291d;
+}
+#robot-tag-hops-v22 .garage-patient :is(label,small,p) {color:#403421}
+#robot-tag-hops-v22 .patron-popup {z-index:20}
+#robot-tag-hops-v22 #bet-result-summary {border-top-color:#99815c}
+#robot-tag-hops-v22 #bet-result-summary p {color:#443a29}
+#robot-tag-hops-v22 .gladiator-results-summary {color:#58462b}
+#robot-tag-hops-v22 .gladiator-result-total {background:#c4aa77;border:1px solid #826b45}
+#robot-tag-hops-v22 .gladiator-result-total strong {color:#5a311e}
+#robot-tag-hops-v22 .gladiator-result-total small {color:#473923}
+#robot-tag-hops-v22 .gladiator-results-table {color:#332a1a}
+#robot-tag-hops-v22 .gladiator-results-table :is(th,td) {border-color:#93805b;color:#332a1a}
+#robot-tag-hops-v22 .gladiator-results-table tr.is-winner td {color:#70331e;font-weight:800}
+#robot-tag-hops-v22 .settings-panel .render-diagnostics {color:#463a28}
+#robot-tag-hops-v22 .settings-panel .performance-details {border-color:#9c875f}
+#robot-tag-hops-v22 .audio-controls input {accent-color:#87472c}
+#robot-tag-hops-v22 #gladiator-results-procedure {background:#4b422d;color:#f3deae;border-color:#31291c}
+.biovshi-hint {
+ background:#d7c18e;border:1px solid #635237;color:#302719;
+ box-shadow:2px 3px 12px #0008;border-radius:1px;
+}
+/* Full-viewport gate: blocks interaction until the first explicit gesture. */
+#robot-tag-hops-v22 .launch-overlay {
+ position:fixed;inset:0;z-index:1600;display:flex;align-items:center;justify-content:center;
+ box-sizing:border-box;padding:20px;
+ background:radial-gradient(ellipse at center,#333226f0 0,#0a0b08fa 74%);
+}
+#robot-tag-hops-v22 .launch-overlay[hidden] {display:none !important}
+#robot-tag-hops-v22 .launch-paper {
+ box-sizing:border-box;width:min(94vw,470px);
+ padding:clamp(24px,5vw,48px);text-align:center;position:relative;
+}
+#robot-tag-hops-v22 .launch-stamp {
+ margin:0 0 24px;font-size:11px;letter-spacing:.2em;color:#78583c;
+}
+#robot-tag-hops-v22 #launch-title {
+ margin:0;font-size:clamp(42px,9vw,66px);line-height:1;
+ letter-spacing:.1em;color:#372a1b;
+}
+#robot-tag-hops-v22 .launch-subtitle {letter-spacing:.18em;font-size:13px;font-weight:700;color:#56432e}
+#robot-tag-hops-v22 .launch-divider {height:1px;background:#8e744f;margin:25px 0}
+#robot-tag-hops-v22 .launch-instruction {font-size:14px;line-height:1.6;margin:0 0 27px;color:#56442c}
+#robot-tag-hops-v22 #launch-game {
+ width:100%;min-height:64px;padding:14px;border:1px solid #512617;
+ background:linear-gradient(180deg,#a35435,#733620);color:#fff0ce;
+ font-size:clamp(21px,4vw,28px);font-weight:900;letter-spacing:.13em;
+ box-shadow:inset 0 1px #e4b07d66,0 4px 0 #4b2a1c;
+ cursor:pointer;border-radius:1px !important;
+}
+#robot-tag-hops-v22 #launch-game:hover {background:linear-gradient(#b7643d,#8d4127)}
+#robot-tag-hops-v22 .launch-footnote {margin:24px 0 0;font-size:9px;letter-spacing:.14em;color:#795e3d}
+#robot-tag-hops-v22 .tag7hop-intro-card {width:min(78%,370px);height:auto;aspect-ratio:auto;padding:24px}
+#robot-tag-hops-v22 #tag7hop-intro-title {color:#3b3020}
+#robot-tag-hops-v22 #tag7hop-start {background:#853f2a;color:#f2d9a6;border-color:#5d2b20}
+@media(max-width:600px){
+ #robot-tag-hops-v22 .launch-paper {padding:25px 20px}
+ #robot-tag-hops-v22 .launch-stamp {letter-spacing:.1em}
+}
