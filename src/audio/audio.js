@@ -40,11 +40,16 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
   bufferLoader=decodeSound,maxVoices=12}={}){
   const settings=loadAudioSettings(storage),voices=new Set(),loops=new Map(),warnings=new Set();
   let context,soundBus,musicBus,disposed=false,unlocked=false,effectsPaused=false,lastPhase;
+  let musicOffset=0,musicFadeEnd=null;
+  const MUSIC_FADE_SECONDS=10;
   const warn=(key,error)=>{if(!warnings.has(key)){warnings.add(key);console.warn('Audio unavailable:',key,error);}};
   // Fetch ahead without requiring a running audio device. Decode only once a
   // context has been unlocked, and reuse it across arena replacements on iOS.
   if(bufferLoader===decodeSound)for(const [key,file] of Object.entries(ASSETS.sounds))fetchSound(file).catch(error=>warn(key,error));
   function stop(voice){
+    if(voice.key==='music'&&voice.startedAt!=null&&voice.source?.buffer?.duration>0){
+      musicOffset=(voice.offset+Math.max(0,context.currentTime-voice.startedAt))%voice.source.buffer.duration;
+    }
     voice.cancelled=true;
     try{voice.source?.stop();}catch{}
     voice.source?.disconnect();voice.gain?.disconnect();voices.delete(voice);
@@ -68,19 +73,43 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       source.buffer=buffer;source.loop=Boolean(slot);
       source.playbackRate.value=key==='music'||key==='victory'?1:playbackRate(patient,slot?0:(Math.random()-.5)*.4);
       gain.gain.value=gainFor(key);source.connect(gain);gain.connect(key==='music'?musicBus:soundBus);
-      source.onended=()=>stop(voice);source.start();
+      source.onended=()=>stop(voice);
+      if(key==='music'){
+        voice.offset=buffer.duration>0?musicOffset%buffer.duration:0;
+        voice.startedAt=context.currentTime;
+        source.start(0,voice.offset);
+      }else source.start();
     }).catch(error=>{stop(voice);warn(key,error);});
   }
   function sync(){
     if(disposed)return;
     const active=state.startup?.phase==='running'&&!state.combat?.finished;
     const paused=Boolean(state.paused||state.settingsOpen||state.orientationBlocked);
-    if(lastPhase==='running'&&state.startup?.phase!=='running')stopAll();
+    if(lastPhase==='running'&&state.startup?.phase!=='running')for(const voice of [...voices])if(voice.key!=='music')stop(voice);
     lastPhase=state.startup?.phase;
     if(paused&&!effectsPaused)for(const v of [...voices])if(v.key!=='music')stop(v);
     effectsPaused=paused;
     const music=active&&settings.music>0;
-    if(music)play('music',{slot:'music'});else if(loops.has('music'))stop(loops.get('music'));
+    if(music){
+      if(musicFadeEnd!==null){
+        // A new round never inherits a half-faded voice: resume from its current position.
+        if(loops.has('music'))stop(loops.get('music'));
+        musicFadeEnd=null;
+      }
+      play('music',{slot:'music'});
+    }else if(loops.has('music')){
+      const voice=loops.get('music');
+      if(state.combat?.finished&&settings.music>0){
+        if(musicFadeEnd===null){
+          if(voice.gain){
+            musicFadeEnd=context.currentTime+MUSIC_FADE_SECONDS;
+            voice.gain.gain.cancelScheduledValues(context.currentTime);
+            voice.gain.gain.setValueAtTime(voice.gain.gain.value,context.currentTime);
+            voice.gain.gain.linearRampToValueAtTime(0,musicFadeEnd);
+          }else stop(voice);
+        }else if(context.currentTime>=musicFadeEnd){stop(voice);musicFadeEnd=null;}
+      }else{stop(voice);musicFadeEnd=null;}
+    }else musicFadeEnd=null;
     const movementLoops=new Set();
     if(active&&!paused&&settings.sounds>0)for(const robot of state.robots??[]){
       if(robot.visible&&robot.mobile&&state.combat.unarmedDeadline?.[robot.id]!=null){
@@ -104,11 +133,27 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       sync();
     }catch(error){warn('device',error);}
   }
+  function click(event){
+    const target=event.target;
+    const button=target?.closest?.('button,[role="button"]');
+    if(!button||button.disabled||!state.root?.contains(button)||disposed||!unlocked||!context||context.state!=='running'||settings.sounds===0)return;
+    try{
+      const time=context.currentTime,osc=context.createOscillator(),gain=context.createGain();
+      osc.type='sine';osc.frequency.setValueAtTime(850,time);
+      osc.frequency.exponentialRampToValueAtTime(520,time+.035);
+      gain.gain.setValueAtTime(.12,time);
+      gain.gain.exponentialRampToValueAtTime(.001,time+.045);
+      osc.connect(gain);gain.connect(soundBus);
+      osc.onended=()=>{osc.disconnect();gain.disconnect();};
+      osc.start(time);osc.stop(time+.05);
+    }catch(error){warn('click',error);}
+  }
   function applyVolumes(){if(soundBus)soundBus.gain.value=settings.sounds/100;if(musicBus)musicBus.gain.value=settings.music/100;}
   function setVolume(channel,value){
     if(!(channel in settings))return;
     settings[channel]=clamp(value);applyVolumes();
     if(settings[channel]===0)for(const voice of [...voices])if((voice.key==='music')===(channel==='music'))stop(voice);
+    if(channel==='music'&&settings.music===0)musicFadeEnd=null;
     try{storage?.setItem(STORAGE,JSON.stringify(settings));}catch{}
     updateControls();sync();
   }
@@ -132,11 +177,13 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     else if(type==='footstep')play('step',{patient:event.robot,priority:0});
   });
   eventTarget.addEventListener('pointerdown',unlock);eventTarget.addEventListener('keydown',unlock);
+  eventTarget.addEventListener('click',click);
   // A prior gesture has already unlocked the shared context during this visit.
   if(sharedContext?.state==='running')unlock();
   return {sync,setVolume,stopAll,get settings(){return {...settings};},dispose(){
     if(disposed)return;disposed=true;unsubscribe();stopAll();soundBus?.disconnect();musicBus?.disconnect();
     for(const {input,listener} of controls)input.removeEventListener('input',listener);
     eventTarget.removeEventListener('pointerdown',unlock);eventTarget.removeEventListener('keydown',unlock);
+    eventTarget.removeEventListener('click',click);
   }};
 }
