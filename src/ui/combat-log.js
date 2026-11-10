@@ -9,11 +9,12 @@ export function segmentName(key){
 }
 export function combatLine(event){
  const target=patientName(event.robot??event.to,{short:true}),attacker=patientName(event.by??event.from,{short:true}),part=segmentName(event.segment);
- const spice=['Больно, но бесплатно.','Анестезия в отпуске.','Чек за ремонт растёт.','Доктор промахнулся профессией.'][Math.abs(Math.floor((event.time??0)*10))%4];
- if(event.type==='hit')return `${attacker} → ${target}: ${event.damage===2?'мощный удар':'попадание'} в ${part}. ${event.damage===2?'Гарантия аннулирована.':spice}`;
- if(event.type==='segment-broken')return `${attacker} оторвал ${target} ${part}${event.damage===2?' мощным ударом':''}. оторвалось!`;
- if(event.type==='robot-immobilized')return event.reason==='погиб'?`${target} потрачено.`:event.reason==='потерял сознание'?`${target} в отключке.`:`${target} выбыл.`;
- if(event.type==='combat-end')return event.winner===null?'Ничья. Морг просит добавку.':`${patientName(event.winner)} победил. Пилюли ему!`;
+ // Cosmetic variation never consumes the simulation's random sequence.
+ const pick=lines=>lines[Math.abs(Math.floor((event.time??0)*10)+(event.robot??event.to??0))%lines.length];
+ if(event.type==='hit')return `${attacker} → ${target}: ${event.damage===2?'мощный удар':'попадание'} в ${part}. ${event.damage===2?pick(['Вот теперь дошло.','Жалобу можно подать оставшейся рукой.','Бесплатная коррекция личности.']):pick(['Не дёргайся. Это почти медицина.','Страховка такое не покрывает.','Зато без очереди.','Хреновый день для здорового образа жизни.','Доктор сказал: ещё по одной.','Больно? Значит, ещё живой.'])}`;
+ if(event.type==='segment-broken')return `${attacker} оторвал ${target} ${part}${event.damage===2?' мощным ударом':''}. ${pick(['Заберите вещи в регистратуре.','Возврату и обмену не подлежит.','Минус деталь, плюс свободное место.','Теперь чеши другой.','Блядь. А это ещё было нужно.'])}`;
+ if(event.type==='robot-immobilized')return event.reason==='погиб'?`${target} погиб. ${pick(['Голову потерял. Буквально.','Выписан. Ногами вперёд.','Лечение окончено. Пациент тоже.'])}`:event.reason==='потерял сознание'?`${target} в отключке. ${pick(['Наконец-то тихий час.','Нашёл кнопку «пропустить этот ад».','На сегодня хватит бесплатной терапии.'])}`:`${target} выбыл. На сегодня с него хватит.`;
+ if(event.type==='combat-end')return event.winner===null?'Ничья. Все облажались, касса довольна.':`${patientName(event.winner)} победил. ${pick(['Лучший пациент — тот, кто ещё шевелится.','Приз — ещё один день в этом заведении.','Можете забрать выигрыш и остатки знакомых.','Санитар месяца. Без лицензии.'])}`;
  return null;
 }
 export function initializeCombatLog(){

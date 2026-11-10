@@ -37,6 +37,18 @@ export function betCommit(s, bets) {
   s.phase = 'running';
   s.lastResult = null;
 }
+// Joining adds exactly one original starting capital to the issued chips.
+export function betAddPlayer(s,name){
+  if(s.phase!=='betting')throw Error('Добавлять игроков можно только до начала боя.');
+  if(s.players.length>=16)throw Error('За одним столом может быть не больше 16 игроков.');
+  const clean=typeof name==='string'?name.trim():'';
+  if(!clean||clean.length>32)throw Error('Введите имя от 1 до 32 символов.');
+  const issued=(s.players.length+1)*s.capital+(s.topUps??0);
+  if(!Number.isSafeInteger(issued)||issued>16000000)throw Error('Общий выпуск фишек не может превышать 16 000 000.');
+  const player={id:s.players.length,name:clean,balance:s.capital};
+  s.players.push(player);
+  return player;
+}
 export function betResolve(s, winner) {
   if (s.phase !== 'running') return null; // A round is paid exactly once.
   const stakes = s.bets.reduce((n, b) => n + b.amount, 0),
