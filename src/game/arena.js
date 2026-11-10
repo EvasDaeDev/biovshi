@@ -120,9 +120,11 @@ export function chooseSpawnLayout() {
     const j = Math.floor(random() * (i + 1));
     [slots[i], slots[j]] = [slots[j], slots[i]];
   }
+  // Spawn position remains shuffled, but every patient faces the true
+  // centre of the selected arena on every new round.
   return slots.map(p => ({
     ...p,
-    angle: random() * Math.PI * 2
+    angle: Math.atan2(cy - p.y, cx - p.x)
   }));
 }
 export function rebuildRobots() {
