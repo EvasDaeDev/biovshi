@@ -19,7 +19,7 @@ function bettingInputDialog({title,initialValue,numeric=false,maxLength=32}) {
   input.type=numeric?'number':'text';
   input.value=initialValue;
   if(numeric){input.min='1';input.step='1';}else input.maxLength=maxLength;
-  const finish=value=>{dialog.close();dialog.remove();resolve(value);};
+  const finish=value=>{if(typeof dialog.close==='function')dialog.close();dialog.remove();resolve(value);};
   dialog.querySelector('[data-cancel]').onclick=()=>finish(null);
   dialog.querySelector('form').onsubmit=event=>{event.preventDefault();if(input.reportValidity())finish(input.value);};
   dialog.oncancel=event=>{event.preventDefault();finish(null);};
