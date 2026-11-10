@@ -21,14 +21,34 @@ test('patient card shows the three permanent skills and a bone count without mob
  const card=ctx.cardNodes[0];assert.equal(card.strength.textContent,'4 · 30% crt');assert.equal(card.speed.textContent,'2 · 80%');assert.equal(card.maneuver.textContent,'3 · 100%');
  assert.equal(card.card.querySelector('.js-mobility'),null);assert.match(card.card.querySelector('.robot-card-score').textContent,/🦴.*13\/13/);assert.equal(card.card.querySelectorAll('.patient-skills>div').length,3);close(dom);
 });
-test('top-up preserves draft bets, persists the new chip supply and safely rejects invalid input',()=>{
+test('top-up preserves draft bets, persists the new chip supply and safely rejects invalid input',async()=>{
  const dom=setup(),rows=[...document.querySelectorAll('[data-bet-player]')];
+ try{
  rows[0].querySelector('input').value='20';rows[1].querySelector('input').value='30';rows[0].querySelector('select').value='2';
- dom.window.prompt=()=> '50';rows[0].querySelector('[data-top-up]').click();
+ rows[0].querySelector('[data-top-up]').click();
+ const dialog=document.querySelector('.betting-input-dialog');
+ assert.ok(dialog);dialog.querySelector('input').value='50';
+ dialog.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+ await Promise.resolve();assert.equal(dialog.isConnected,false);
  assert.equal(ctx.betting.players[0].balance,150);assert.equal(ctx.betting.topUps,50);assert.equal(rows[0].querySelector('input').value,'20');assert.equal(rows[1].querySelector('input').value,'30');assert.equal(rows[0].querySelector('select').value,'2');assert.equal(rows[0].querySelector('input').max,'150');assert.match(rows[0].querySelector('[data-balance]').textContent,/150/);
  assert.equal(bettingLoad().players[0].balance,150);
- for(const value of ['-10','2.5','',null]){dom.window.prompt=()=>value;rows[0].querySelector('[data-top-up]').click();assert.equal(ctx.betting.players[0].balance,150);}
- betCommit(ctx.betting,[{player:0,robot:0,amount:20},{player:1,robot:1,amount:30}]);assert.throws(()=>betTopUp(ctx.betting,0,10));bettingSave();const reloaded=bettingLoad();assert.equal(reloaded.players[0].balance,150);assert.equal(reloaded.players[1].balance,100);close(dom);
+ const before=JSON.stringify(ctx.betting);
+ for(const value of ['-10','2.5','',null]){
+  rows[0].querySelector('[data-top-up]').click();
+  const invalidDialog=document.querySelector('.betting-input-dialog');assert.ok(invalidDialog);
+  if(value!==null){
+   const input=invalidDialog.querySelector('input');input.value=value;
+   assert.equal(input.checkValidity(),false);
+   invalidDialog.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+   await Promise.resolve();assert.equal(invalidDialog.isConnected,true);
+   assert.equal(JSON.stringify(ctx.betting),before);
+  }
+  invalidDialog.querySelector('[data-cancel]').click();await Promise.resolve();
+  assert.equal(invalidDialog.isConnected,false);assert.equal(JSON.stringify(ctx.betting),before);
+  assert.equal(bettingLoad().players[0].balance,150);
+ }
+ betCommit(ctx.betting,[{player:0,robot:0,amount:20},{player:1,robot:1,amount:30}]);assert.throws(()=>betTopUp(ctx.betting,0,10));bettingSave();const reloaded=bettingLoad();assert.equal(reloaded.players[0].balance,150);assert.equal(reloaded.players[1].balance,100);
+ }finally{close(dom);}
 });
 test('results colour income and losses, show profit and reconcile the actual balance',()=>{
  const dom=setup();betCommit(ctx.betting,[{player:0,robot:0,amount:10},{player:1,robot:1,amount:20}]);betResolve(ctx.betting,0);bettingResults();
