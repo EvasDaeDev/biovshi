@@ -123,6 +123,8 @@ export function combatAttacks() {
           ctx.combat.fighterHits[id]++;
           ctx.combat.fighterTaken[victim.id]++;
           ctx.combat.lastHitTime = ctx.game.time;
+          ctx.agentAI[id].lastHitAt = ctx.game.time;
+          ctx.agentAI[victim.id].lastHitAt = ctx.game.time;
           note('combat-strike', {
             from: id,
             to: victim.id,
