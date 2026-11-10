@@ -4,7 +4,7 @@ import { random } from "../utils/random.js";
 import { coreClearCircle, rectHit } from "./collision.js";
 import { arenaClearance } from "../game/arena.js";
 import { CONFIG } from "../config.js";
-import { newestAudibleEvent, notices } from "./perception.js";
+import { notices } from "./perception.js";
 import { strikeCandidates } from "./combat.js";
 export function eligible(id) {
   return id !== ctx.game.hunter && ctx.game.time >= ctx.game.immune[id] && ctx.game.time >= ctx.game.bans[ctx.game.hunter][id];
@@ -20,17 +20,27 @@ export function setTarget(id) {
 export function patrol(r) {
   const ai = ctx.agentAI[r.id];
   if (!ai.goal || ctx.game.time > ai.goalUntil || Math.hypot(ai.goal.x - r.x, ai.goal.y - r.y) < 28) {
-    const candidates = Array.from({
-      length: 30
-    }, () => ({
-      x: ctx.arenaBoundary.left+60+random()*(ctx.arenaBoundary.right-ctx.arenaBoundary.left-120),
-      y: ctx.arenaBoundary.top+60+random()*(ctx.arenaBoundary.bottom-ctx.arenaBoundary.top-120)
-    })).filter(p => coreClearCircle(p, 38));
-    ai.goal = candidates.sort((a, b) => Math.hypot(b.x - r.x, b.y - r.y) - Math.hypot(a.x - r.x, a.y - r.y))[0] || {
-      x: r.x,
-      y: r.y
+    // Pick reachable medium-distance search points. The old "farthest of 30"
+    // rule sent isolated fighters repeatedly around the outside corners.
+    const candidates = Array.from({length:30}, () => ({
+      x: ctx.arenaBoundary.left+55+random()*(ctx.arenaBoundary.right-ctx.arenaBoundary.left-110),
+      y: ctx.arenaBoundary.top+55+random()*(ctx.arenaBoundary.bottom-ctx.arenaBoundary.top-110)
+    })).filter(p => {
+      const d=Math.hypot(p.x-r.x,p.y-r.y);
+      return d>90 && d<290 && coreClearCircle(p,38)
+        && rectHit({x:r.x,y:r.y},p,null,16)===null;
+    });
+    // Move toward the interior when searching from an empty corner. Do not
+    // reveal other robots' positions or replace perception with omniscience.
+    const centre={x:(ctx.arenaBoundary.left+ctx.arenaBoundary.right)/2,
+                  y:(ctx.arenaBoundary.top+ctx.arenaBoundary.bottom)/2};
+    ai.goal = candidates.sort((a,b)=>
+      Math.hypot(a.x-centre.x,a.y-centre.y)
+      -Math.hypot(b.x-centre.x,b.y-centre.y))[0] || {
+      x: clamp(r.x+(centre.x-r.x)*.45,ctx.arenaBoundary.left+50,ctx.arenaBoundary.right-50),
+      y: clamp(r.y+(centre.y-r.y)*.45,ctx.arenaBoundary.top+50,ctx.arenaBoundary.bottom-50)
     };
-    ai.goalUntil = ctx.game.time + 5 + random() * 5;
+    ai.goalUntil = ctx.game.time + 3.5 + random() * 2;
   }
   return ai.goal;
 }
@@ -315,20 +325,10 @@ export function fighterIntent(r) {
     ai.searchHoldUntil = 0;
     ctx.combat.focus[id] = target.id;
     ctx.combat.focusUntil[id] = ctx.game.time + 2.5;
-  } else {
-    const heard = newestAudibleEvent(r, active);
-    if (heard && heard.time > ai.lastSoundAt) {
-      // A sound preserves the point where the footstep happened; no future tracking.
-      ai.lastSoundAt = heard.time;
-      ai.sensedPoint = {
-        x: heard.x,
-        y: heard.y
-      };
-      ai.sensedUntil = ctx.game.time + ctx.HEARING.memorySec;
-      ai.sensedId = heard.robot;
-      ai.sensedType = 'sound';
-    }
   }
+  // No auditory combat navigation: footsteps repeatedly pulled isolated
+  // patients toward stale locations, where they stopped and spun.
+  // Visual memory is still used briefly after losing line of sight.
   const memoryValid = ai.sensedPoint && ctx.game.time < ai.sensedUntil && active.some(o => o.id === ai.sensedId);
   if (!target && !memoryValid) {
     ai.sensedPoint = null;
@@ -359,31 +359,15 @@ export function fighterIntent(r) {
   const dx = sensed.x - r.x,
     dy = sensed.y - r.y,
     d = Math.hypot(dx, dy) || 1;
-  // Do not indefinitely circle a point where an old noise once happened.
+  // If the enemy has vanished from view and we have reached its last seen
+  // location, keep searching instead of rotating on the spot.
   if (!actuallySeen && d < 35) {
-    if (!ai.searchHoldUntil) ai.searchHoldUntil = ctx.game.time + ctx.HEARING.searchHoldSec;
-    if (ctx.game.time >= ai.searchHoldUntil) {
-      ai.sensedPoint = null;
-      ai.sensedUntil = 0;
-      ai.sensedId = null;
-      ai.sensedType = null;
-      ai.searchHoldUntil = 0;
-      return {
-        goal: patrol(r),
-        speed: CONFIG.movement.walkSpeedCm,
-        mode: 'ищет врага',
-        lookPoint: null
-      };
-    }
-    return {
-      goal: {
-        x: r.x,
-        y: r.y
-      },
-      speed: 0,
-      mode: 'осматривается',
-      lookPoint: null
-    };
+    ai.sensedPoint = null;
+    ai.sensedUntil = 0;
+    ai.sensedId = null;
+    ai.sensedType = null;
+    return {goal:patrol(r),speed:CONFIG.movement.walkSpeedCm,
+      mode:'ищет врага',lookPoint:null};
   }
   ai.profile ??= tacticalProfile();
   // Caution is a SHORT manoeuvre, not a permanent state at low head HP.
@@ -433,7 +417,7 @@ export function fighterIntent(r) {
       x: sensed.x,
       y: sensed.y
     },
-    mode = actuallySeen ? 'преследует' : ai.sensedType === 'sound' ? 'идёт на звук' : 'проверяет последнее место';
+    mode = actuallySeen ? 'преследует' : 'проверяет последнее место';
   // After seven seconds without a hit, switch from circling to a direct
   // physical approach; endless moving orbits are not a valid stalemate.
   // Far-away enemies should be approached before any flank manoeuvre.
