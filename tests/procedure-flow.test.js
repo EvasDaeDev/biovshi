@@ -14,6 +14,7 @@ import {cameraUpdate,cameraApply,fittedCamera} from '../src/render/camera.js';
 import {note} from '../src/game/events.js';
 import {showResults} from '../src/ui/results.js';
 import {ROBOT_COLORS} from '../src/utils/colors.js';
+import {CONFIG} from '../src/config.js';
 function setup(options={}){
  const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://procedure.test/',pretendToBeVisual:true});
  for(const key of ['document','localStorage','Event'])globalThis[key]=dom.window[key];
@@ -44,7 +45,7 @@ test('first boot queues an exhibition, and post-exhibition next round opens acco
 });
 test('ring is a regular 4m octagon with safe spawn points and no internal obstacles',()=>{
  const dom=setup({session:betNewSession(['A'],100),arenaId:'ring'});assert.equal(ctx.obstacles.length,0);assert.equal(ctx.arenaBoundary.right-ctx.arenaBoundary.left,400);assert.equal(ctx.arenaBoundary.points.length,8);
- const p=ctx.arenaBoundary.points,edges=p.map((a,i)=>Math.hypot(a.x-p[(i+1)%8].x,a.y-p[(i+1)%8].y));assert.ok(Math.max(...edges)-Math.min(...edges)<1e-8);assert.ok(chooseSpawnLayout().every(p=>arenaClearance(p)>=60));assert.equal(ctx.CAMERA_FULL,476);close(dom);
+ const p=ctx.arenaBoundary.points,edges=p.map((a,i)=>Math.hypot(a.x-p[(i+1)%8].x,a.y-p[(i+1)%8].y));assert.ok(Math.max(...edges)-Math.min(...edges)<1e-8);assert.ok(chooseSpawnLayout().every(p=>arenaClearance(p)>=60));assert.equal(ctx.CAMERA_FULL,400+2*(CONFIG.arena.wallThicknessCm+CONFIG.arena.outerWallDepthCm+CONFIG.arena.wallViewMarginCm));close(dom);
 });
 test('arena selection preserves drafts while rebuilding the ring before committing stakes',async()=>{
  const s=betNewSession(['A','B'],100),dom=setup({session:s});const fields=[...document.querySelectorAll('[data-bet-player] input')];fields[0].value='10';fields[1].value='20';
