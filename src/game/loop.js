@@ -67,7 +67,7 @@ export function step(dt) {
         const foe = activeOpponents(id).sort((a, b) => Math.hypot(a.x - r.x, a.y - r.y) - Math.hypot(b.x - r.x, b.y - r.y))[0];
         ctx.combat.escapeSide[id] *= -1;
         ctx.combat.escapeGoal[id] = !r.attackSources.length && activeOpponents(id).some(o => o.attackSources.length) ? fleeAllAttackers(r, activeOpponents(id).filter(o => o.attackSources.length)) : foe ? tacticalEscape(r, foe) : patrol(r);
-        ctx.combat.escapeUntil[id] = ctx.game.time + 4;
+        ctx.combat.escapeUntil[id] = ctx.game.time + 1.5 + random() * .5;
         ctx.agentAI[id].goal = null;
         ctx.agentAI[id].searchHoldUntil = 0;
         // Отключаем прежний маршрут и выдаём новое направление без фиксации позиции.
