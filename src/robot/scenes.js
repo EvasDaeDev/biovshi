@@ -514,6 +514,12 @@ export function jumpTick(robotState, dt, intent) {
     }
     robotState.vx = (robotState.x - old.x) / dt;
     robotState.vy = (robotState.y - old.y) / dt;
+    // Trigger the jump effect on the actual first forward movement.
+    if (robotState.leap.kind==='combat-pounce' && !robotState.leap.soundStarted
+        && Math.hypot(robotState.x-old.x,robotState.y-old.y)>.01) {
+      robotState.leap.soundStarted=true;
+      note('pounce-launch',{robot:robotState.id,heading:robotState.chest.angle});
+    }
   }
   robotState.updateHead(dt);
   robotState.api.capsules = robotState.makeCapsules();
