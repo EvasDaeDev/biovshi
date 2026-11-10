@@ -340,9 +340,9 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
 #tag7hop-status span { color:#c9f6ff; border-color:#285c8e; box-shadow:none; }
 #robot-tag-hops-v22 .gladiator-results[hidden] { display: none !important; }
 #robot-tag-hops-v22 .gladiator-results {
-  position: absolute; inset: 0; z-index: 6;
+  position: fixed; inset: 0; z-index: 1100;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(2, 5, 13, .87); padding: 16px;
+  box-sizing: border-box; background: rgba(2, 5, 13, .87); padding: 16px;
   overflow: auto;
 }
 #robot-tag-hops-v22 .gladiator-results-card {
@@ -475,7 +475,7 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #robot-tag-hops-v22 .settings-panel .btn {background:#102039;color:#daf6ff;border:1px solid #284763;min-width:40px;min-height:40px}
 
 /* Fixed matching cards; only the arena viewport grows with the window. */
-#robot-tag-hops-v22 {--card-width:280px;--card-height:164px}
+#robot-tag-hops-v22 {--card-width:260px;--card-height:164px}
 #robot-tag-hops-v22 .tag7hop-stage {aspect-ratio:auto;background:#02050d}
 #robot-tag-hops-v22 .robot-card,
 #robot-tag-hops-v22 .bet-hud-player {box-sizing:border-box;width:var(--card-width);min-width:var(--card-width);height:var(--card-height);min-height:var(--card-height);flex:none;margin:0;overflow:hidden}
