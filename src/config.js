@@ -184,7 +184,16 @@ const CONFIG = {
     // Начинать напрыгивание примерно с метра.
     pounceSpeedCm: 200,
     // Скорость напрыгивания.
-    pounceCooldownSec: 2.4,
+    pounceCooldownSec: 9,
+    // Minimum gap between combat jump attempts.
+    combatPounceChance: .20,
+    combatPounceMinCm: 60,
+    combatPounceMaxCm: 100,
+    combatPounceDamage: 2,
+    combatPounceRetreatCm: 10,
+    combatPounceRetreatSec: .14,
+    combatPounceRecoverSec: .4,
+    combatPounceDecisionSec: 2.4,
     // Пауза между попытками напрыгивания.
     missedTargetCooldownSec: 6,
     // Не атаковать ту же цель после сорванной/заблокированной посадки.

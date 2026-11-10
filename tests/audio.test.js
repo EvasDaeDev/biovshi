@@ -36,6 +36,18 @@ test('effects unlock on gesture, use per-patient pitch, and a critical replaces 
  f.finish();assert.ok(f.sources.every(s=>s.stopped));
 });
 
+test('combat leap sound plays only at takeoff, using the uploaded OGG asset',async()=>{
+ assert.equal(ASSETS.sounds.pounce,'assets/sounds/effects/56_Attack_03.ogg');
+ const f=setup();await f.unlock();
+ emitGameEvent('pounce',{robot:0});await flush();
+ assert.equal(live(f.sources,'pounce').length,0,'preparation is silent');
+ emitGameEvent('pounce-launch',{robot:0});await flush();
+ assert.equal(live(f.sources,'pounce').length,1,'one cue at takeoff');
+ emitGameEvent('pounce-retreat',{robot:0});await flush();
+ assert.equal(live(f.sources,'pounce').length,1,'retreat does not replay jump cue');
+ f.finish();
+});
+
 test('music loops through pause; crawling stops on unconsciousness and music fades at combat end',async()=>{
  const f=setup();await f.unlock();const music=live(f.sources,'music')[0];assert.ok(music.loop);assert.equal(music.playbackRate.value,1);
  f.state.combat.unarmedDeadline[0]=10;f.audio.sync();await flush();assert.equal(live(f.sources,'crawl').length,1);assert.ok(live(f.sources,'crawl')[0].loop);

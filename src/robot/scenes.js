@@ -440,24 +440,51 @@ export function reboundTick(robotState, dt, intent) {
     });
   }
 }
+// No turn on disengagement: retreat opposite the jump's heading, not back
+// to the original start point. Physical movement is collision-clamped.
+export function startCombatPounceRetreat(robotState,completedJump) {
+  const direction={x:-completedJump.direction.x,y:-completedJump.direction.y};
+  robotState.leap={
+    kind:'combat-retreat',started:ctx.game.time,launched:true,
+    origin:{x:robotState.x,y:robotState.y},direction,
+    goal:{x:robotState.x+direction.x*CONFIG.attack.combatPounceRetreatCm,
+          y:robotState.y+direction.y*CONFIG.attack.combatPounceRetreatCm}
+  };
+  note('pounce-retreat',{robot:robotState.id,distance:CONFIG.attack.combatPounceRetreatCm});
+}
 export function jumpTick(robotState, dt, intent) {
+  // Contact interrupts the forward leap immediately, without turning.
+  if(robotState.leap.kind==='combat-pounce' && robotState.leap.impactDone)
+    startCombatPounceRetreat(robotState,robotState.leap);
   const age = ctx.game.time - robotState.leap.started;
+  const rebound = robotState.leap.kind === 'rebound';
+  const combatRetreat = robotState.leap.kind === 'combat-retreat';
   robotState.currentIntent = {
     ...intent,
-    mode: robotState.leap.kind === 'rebound' ? 'rebound' : 'pounce'
+    mode: rebound ? 'rebound' : combatRetreat ? 'отскакивает' : 'напрыгивает'
   };
   robotState.t = ctx.game.time;
   robotState.vx = robotState.vy = 0;
-  const rebound = robotState.leap.kind === 'rebound';
-  if (rebound ? age < .55 : age > .12 && age < .94) {
+  if (combatRetreat ? age < CONFIG.attack.combatPounceRetreatSec : rebound ? age < .55 : age > .12 && age < .94) {
     const old = robotState.savePose(),
       feet = robotState.allLimbs().map(l => ({
         ...l.foot
       })),
-      dx = robotState.leap.goal.x - robotState.x,
-      dy = robotState.leap.goal.y - robotState.y,
-      d = Math.hypot(dx, dy) || 1,
-      move = Math.min(d, (rebound ? 140 : CONFIG.attack.pounceSpeedCm) * dt),
+      // Fixed-heading jumps stop at their intended destination. The old
+      // "distance || 1" moved the patient 1 extra cm each frame once
+      // the goal was reached, causing overshoot and broken retreats.
+      remaining = Math.max(0,
+        (robotState.leap.goal.x-robotState.x)*robotState.leap.direction.x
+        +(robotState.leap.goal.y-robotState.y)*robotState.leap.direction.y),
+      // Ease a 10 cm backward step over its short animation instead of
+      // travelling instantly and then lingering in a redundant hop pose.
+      travelled = combatRetreat ? Math.max(0,
+        (robotState.x-robotState.leap.origin.x)*robotState.leap.direction.x
+        +(robotState.y-robotState.leap.origin.y)*robotState.leap.direction.y) : 0,
+      retreatProgress = combatRetreat ? smooth(clamp((age+dt)/CONFIG.attack.combatPounceRetreatSec,0,1)) : 0,
+      move = combatRetreat
+        ? Math.min(remaining,Math.max(0,CONFIG.attack.combatPounceRetreatCm*retreatProgress-travelled))
+        : Math.min(remaining,(rebound ? 140 : CONFIG.attack.pounceSpeedCm)*dt),
       mx = robotState.leap.direction.x * move,
       my = robotState.leap.direction.y * move;
     function moveTo(q) {
@@ -498,10 +525,32 @@ export function jumpTick(robotState, dt, intent) {
     }
     robotState.vx = (robotState.x - old.x) / dt;
     robotState.vy = (robotState.y - old.y) / dt;
+    // Trigger the jump effect on the actual first forward movement.
+    if (robotState.leap.kind==='combat-pounce' && !robotState.leap.soundStarted
+        && Math.hypot(robotState.x-old.x,robotState.y-old.y)>.01) {
+      robotState.leap.soundStarted=true;
+      note('pounce-launch',{robot:robotState.id,heading:robotState.chest.angle});
+    }
   }
   robotState.updateHead(dt);
   robotState.api.capsules = robotState.makeCapsules();
-  if (age >= (rebound ? .55 : 1)) {
+  if (age >= (combatRetreat ? CONFIG.attack.combatPounceRetreatSec : rebound ? .55 : 1)) {
+    if (!combatRetreat && !rebound) {
+      // If the lunge was completely blocked, it never left the ground:
+      // don't play a landing or an imaginary backwards hop.
+      if (!robotState.leap.soundStarted) {
+        robotState.leap=null;
+        robotState.attackVisual=null;
+        return;
+      }
+      startCombatPounceRetreat(robotState,robotState.leap);
+      robotState.api.capsules = robotState.makeCapsules();
+      return;
+    }
+    if (combatRetreat) {
+      robotState.combatRecoveryUntil = ctx.game.time + CONFIG.attack.combatPounceRecoverSec;
+      note('footstep',{robot:robotState.id,landing:true});
+    }
     if (rebound) robotState.reboundEscape = {
       ...robotState.leap.direction,
       until: ctx.game.time + CONFIG.attack.runAfterLandingSec
@@ -519,7 +568,7 @@ export function jumpTick(robotState, dt, intent) {
     }
     robotState.currentIntent = {
       ...intent,
-      mode: rebound ? 'flee' : 'chase'
+      mode: rebound ? 'flee' : combatRetreat ? 'восстанавливается' : 'chase'
     };
   }
 }
@@ -644,9 +693,13 @@ export function robotPounce(robotState, goal, gap) {
   if (robotState.scene || robotState.leap || ctx.game.time - robotState.lastLeap < CONFIG.attack.pounceCooldownSec) return false;
   robotState.lastLeap = ctx.game.time;
   robotState.leap = {
+    kind: 'combat-pounce',
     started: null,
     prepareAt: ctx.game.time,
     launched: false,
+    victim: gap?.victimId ?? null,
+    impactDone: false,
+    lastHead: null,
     goal: {
       ...goal
     }

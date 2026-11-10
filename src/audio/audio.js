@@ -138,8 +138,12 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       if(!soundBus){soundBus=context.createGain();musicBus=context.createGain();soundBus.connect(context.destination);musicBus.connect(context.destination);applyVolumes();}
       // Predecode short pain clips after user interaction so the first injury
       // can start close to its intended +100 ms audio-clock deadline.
-      if(bufferLoader===decodeSound)for(const group of PAIN_SAMPLES)for(const key of group)
-        bufferLoader(context,ASSETS.sounds[key]).catch(error=>warn(key,error));
+      if(bufferLoader===decodeSound) {
+        for(const group of PAIN_SAMPLES)for(const key of group)
+          bufferLoader(context,ASSETS.sounds[key]).catch(error=>warn(key,error));
+        // The short combat leap must be ready before an unexpected takeoff.
+        bufferLoader(context,ASSETS.sounds.pounce).catch(error=>warn('pounce',error));
+      }
       unlocked=true;
       // resume() must be invoked inside the gesture, before any asynchronous work.
       Promise.resolve(context.resume()).then(sync).catch(error=>warn('unlock',error));
@@ -193,6 +197,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     const {type}=event,patient=event.by??event.from??event.robot;
     if(type==='combat-end'){if(event.winner!==null)play('victory',{priority:5});return;}
     if(state.startup?.phase!=='running'||state.combat?.finished||effectsPaused)return;
+    if(type==='pounce-launch'){play('pounce',{patient:event.robot,priority:4});return;}
     if(type==='hit'||type==='segment-broken'){
       play(event.damage===2?'crit':'hit',{patient,priority:3});
       // The injured patient reacts 100 ms after the impact. This is an
