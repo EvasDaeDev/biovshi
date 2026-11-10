@@ -115,6 +115,55 @@ export function headGuardActive(ai, now, headHp, opponentDistance, visible, move
   }
   return now < (ai.headGuardUntil ?? 0);
 }
+// Tactical preferences are sampled once per round rather than from robot IDs.
+// Preserve each decision briefly to prevent frame-by-frame oscillation.
+export function tacticalSide(ai, now, foeId) {
+  if (ai.sideTarget !== foeId || now >= (ai.sideUntil ?? 0)) {
+    ai.sideTarget = foeId;
+    ai.side = random() < .5 ? -1 : 1;
+    ai.sideUntil = now + 3.5 + random() * 4.5;
+  }
+  return ai.side;
+}
+export function tacticalProfile() {
+  return {
+    flankMin: 60 + random() * 18,
+    flankMax: 153 + random() * 35,
+    closeRange: 32 + random() * 12,
+    flankAngle: .52 + random() * .38,
+    flankQuietSec: 4.5 + random() * 3,
+    approachStallSec: 4.5 + random() * 3,
+    guardTriggerCm: 115 + random() * 35,
+    dodgeSide: random() < .5 ? -1 : 1
+  };
+}
+function pursuitProgress(ai, now, foe, distance, quietSeconds) {
+  if (ai.pursuitTarget !== foe.id || !Number.isFinite(ai.bestPursuitDistance)) {
+    ai.pursuitTarget = foe.id;
+    ai.bestPursuitDistance = distance;
+    ai.progressAt = now;
+    ai.orbitBreakUntil = 0;
+    ai.orbitGoal = null;
+  }
+  // Reset the timer on meaningful approach. Do not classify active melee as stalled.
+  if (distance < ai.bestPursuitDistance - 22 || quietSeconds < 2.5) {
+    ai.bestPursuitDistance = distance;
+    ai.progressAt = now;
+  }
+  if (now - ai.progressAt > ai.profile.approachStallSec && distance > 75 && quietSeconds > 3) {
+    ai.progressAt = now;
+    ai.bestPursuitDistance = distance;
+    ai.side = -ai.side;
+    ai.sideUntil = now + 3 + random() * 3;
+    const angle = Math.atan2(foe.y - ai.actorY, foe.x - ai.actorX) + ai.side * Math.PI / 2;
+    ai.orbitGoal = {
+      x: clamp(ai.actorX + Math.cos(angle) * 100, 42, 658),
+      y: clamp(ai.actorY + Math.sin(angle) * 100, 42, 658)
+    };
+    ai.orbitBreakUntil = coreClearCircle(ai.orbitGoal, 26) ? now + 1.5 + random() * 1.5 : 0;
+  }
+  return now < ai.orbitBreakUntil && ai.orbitGoal && coreClearCircle(ai.orbitGoal, 26) ? ai.orbitGoal : null;
+}
 export function fighterIntent(r) {
   const here = {
     x: r.x,
@@ -186,7 +235,7 @@ export function fighterIntent(r) {
       const dx = r.x - enemy.x,
         dy = r.y - enemy.y,
         dist = Math.hypot(dx, dy) || 1;
-      const side = (id + warning) % 2 ? 1 : -1;
+      const side = tacticalSide(ai, ctx.game.time, warning);
       const goal = {
         x: clamp(r.x - dy / dist * side * 85 + dx / dist * 55, 40, 660),
         y: clamp(r.y + dx / dist * side * 85 + dy / dist * 55, 40, 660)
@@ -287,10 +336,11 @@ export function fighterIntent(r) {
       lookPoint: null
     };
   }
+  ai.profile ??= tacticalProfile();
   // Caution is a SHORT manoeuvre, not a permanent state at low head HP.
   // Once used, the patient must re-engage for several seconds before guarding again.
   // This prevents two wounded patients from circling indefinitely without attacking.
-  if (headGuardActive(ai, ctx.game.time, r.hp.get('head'), d, actuallySeen, r.movementLimbs)) {
+  if (headGuardActive(ai, ctx.game.time, r.hp.get('head'), d * 140 / ai.profile.guardTriggerCm, actuallySeen, r.movementLimbs)) {
     return {goal:tacticalEscape(r,foe),speed:CONFIG.movement.fleeSpeedCm,mode:'бережёт голову',lookPoint:foe.center};
   }
   const foeToUs = Math.atan2(-dy, -dx);
@@ -306,7 +356,7 @@ export function fighterIntent(r) {
       const ax = r.x - threat.x,
         ay = r.y - threat.y,
         mag = Math.hypot(ax, ay) || 1;
-      const side = id % 2 ? 1 : -1;
+      const side = tacticalSide(ai, ctx.game.time, threat.id);
       const goal = {
         x: clamp(r.x + ax / mag * 125 - ay / mag * side * 45, 35, 665),
         y: clamp(r.y + ay / mag * 125 + ax / mag * side * 45, 35, 665)
@@ -319,6 +369,17 @@ export function fighterIntent(r) {
       };
     }
   }
+  const quietSeconds = ctx.game.time - (ai.lastHitAt ?? -100);
+  ai.actorX = r.x;
+  ai.actorY = r.y;
+  tacticalSide(ai, ctx.game.time, foe.id);
+  const orbitGoal = actuallySeen ? pursuitProgress(ai, ctx.game.time, foe, d, quietSeconds) : null;
+  if (orbitGoal) return {
+    goal: orbitGoal,
+    speed: CONFIG.movement.chaseSpeedCm,
+    mode: 'разрывает круг',
+    lookPoint: foe.center
+  };
   let goal = {
       x: sensed.x,
       y: sensed.y
@@ -327,24 +388,24 @@ export function fighterIntent(r) {
   // After seven seconds without a hit, switch from circling to a direct
   // physical approach; endless moving orbits are not a valid stalemate.
   // Far-away enemies should be approached before any flank manoeuvre.
-  if (actuallySeen && d < 185) {
-    const side = (id + foe.id) % 2 ? 1 : -1;
+  if (actuallySeen && d < ai.profile.flankMax) {
+    const side = tacticalSide(ai, ctx.game.time, foe.id);
     const flank = Math.abs(wrap(Math.atan2(r.y - foe.y, r.x - foe.x) - foe.angle)) < 2.25;
-    const theta = foe.angle + Math.PI + side * .72;
+    const theta = foe.angle + Math.PI + side * ai.profile.flankAngle;
     const sideGoal = {
       x: foe.x + Math.cos(theta) * CONFIG.combat.flankRadiusCm,
       y: foe.y + Math.sin(theta) * CONFIG.combat.flankRadiusCm
     };
-    if (flank && exposed && coreClearCircle(sideGoal, 26) && d > 65 && ctx.game.time - ctx.combat.lastHitTime < 7) {
+    if (flank && exposed && coreClearCircle(sideGoal, 26) && d > ai.profile.flankMin && quietSeconds < ai.profile.flankQuietSec) {
       goal = sideGoal;
       mode = 'обходит с фланга';
-    } else if (d < 36.75) {
+    } else if (d < ai.profile.closeRange) {
       const canStrike = r.attackSources.some(source => strikeCandidates(r, foe, source).length > 0);
       if (canStrike) {
         // Remain in physical striking range regardless of the last global hit.
         goal = here;
         mode = 'атакует';
-      } else if (ctx.game.time - ctx.combat.lastHitTime < 3) {
+      } else if (quietSeconds < 3) {
         goal = tacticalEscape(r, foe);
         mode = 'ищет угол атаки';
       } else {
