@@ -3,6 +3,13 @@ import { loadTextureImage,releaseTextureImage } from '../assets/preload.js';
 
 // SVG is used ONLY to prepare the stationary artwork. Never called in paint().
 // Inline styles and images: SVG-as-image cannot load external resources in Safari.
+// Keep the outer masonry in the same static WebGL atlas as the original
+// perimeter. The SVG description alone is not displayed in Pixi mode.
+export function staticWallNodes(svg,outline) {
+  return [svg.querySelector('#tag7hop-walls-outer'),
+    svg.querySelector('#tag7hop-walls'),outline].filter(Boolean);
+}
+
 const PROPERTIES=['fill','fill-opacity','fill-rule','stroke','stroke-width','stroke-opacity',
   'stroke-linecap','stroke-linejoin','opacity','display','filter','clip-path','font-size',
   'font-weight','font-family','text-anchor','mix-blend-mode','image-rendering'];
