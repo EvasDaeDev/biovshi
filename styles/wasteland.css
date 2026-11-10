@@ -357,3 +357,14 @@ html body #robot-tag-hops-v22 #tag7hop-status {color:#d6bd8b;text-shadow:0 1px #
 }
 #robot-tag-hops-v22 .betting-input-actions .bet-primary {background:#843d29}
 #robot-tag-hops-v22 .betting-input-dialog :is(button,input):focus-visible {outline:2px solid #c47745;outline-offset:2px}
+
+/* Keep the winner and payout in view; battle telemetry is an optional detail. */
+#robot-tag-hops-v22 .gladiator-results-details {
+ margin:8px 0;border:1px solid #93805b;background:#cbb482;
+}
+#robot-tag-hops-v22 .gladiator-results-details summary {
+ cursor:pointer;padding:9px 12px;color:#38291d;
+ font-size:12px;font-weight:700;letter-spacing:.06em;text-align:center;
+}
+#robot-tag-hops-v22 .gladiator-results-details[open] summary {border-bottom:1px solid #93805b}
+#robot-tag-hops-v22 .gladiator-results-details .gladiator-results-table-wrap {padding:4px 8px}
