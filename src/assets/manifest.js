@@ -27,6 +27,7 @@ export const ASSETS = {
     womanPain5: 'assets/sounds/combat/woman_pain/female_hurt_05.ogg',
     womanPain6: 'assets/sounds/combat/woman_pain/female_hurt_06.ogg',
     womanPain7: 'assets/sounds/combat/woman_pain/female_hurt_07.ogg',
+    pounce: 'assets/sounds/combat/56_Attack_03.mp3',
     hit: 'assets/sounds/effects/hit_1.mp3',
     crit: 'assets/sounds/effects/crit_hit_1.mp3',
     death: 'assets/sounds/effects/death_body_1.mp3',
