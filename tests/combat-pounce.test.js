@@ -10,7 +10,7 @@ test('combat pounce settings give a 20% chance at 60-100cm and fixed 2HP',()=>{
   assert.equal(CONFIG.attack.combatPounceMinCm,60);
   assert.equal(CONFIG.attack.combatPounceMaxCm,100);
   assert.equal(CONFIG.attack.combatPounceDamage,2);
-  assert.equal(CONFIG.attack.combatPounceRetreatCm,30);
+  assert.equal(CONFIG.attack.combatPounceRetreatCm,10);
   assert.equal(CONFIG.attack.combatPounceRecoverSec,.4);
 });
 
@@ -27,14 +27,14 @@ test('head collision sweep selects actual segment, never fabricates hits',()=>{
   assert.equal(pounceContactSegment({x:0,y:0},{x:8,y:0},edge),null);
 });
 
-test('retreat is 30cm backward with unchanged heading and not a teleport to origin',()=>{
+test('retreat is 10cm backward with unchanged heading and not a teleport to origin',()=>{
   const saved=ctx.game;
   ctx.game={time:14,events:[]};
   const robot={id:0,x:210,y:280,angle:1.2};
   try{
     startCombatPounceRetreat(robot,{direction:{x:0,y:1}});
     assert.equal(robot.leap.kind,'combat-retreat');
-    assert.deepEqual(robot.leap.goal,{x:210,y:250});
+    assert.deepEqual(robot.leap.goal,{x:210,y:270});
     assert.equal(Math.abs(robot.leap.direction.x),0);
     assert.equal(robot.leap.direction.y,-1);
     assert.equal(robot.angle,1.2);
@@ -42,7 +42,7 @@ test('retreat is 30cm backward with unchanged heading and not a teleport to orig
   }finally{ctx.game=saved;}
 });
 
-test('full forward leap sounds at actual movement, hops 30cm back and then recovers',()=>{
+test('full forward leap sounds at actual movement, steps 10cm back and then recovers',()=>{
   const saved=ctx.game;
   ctx.game={time:0,events:[]};
   const startX=260,startY=240;
@@ -64,8 +64,8 @@ test('full forward leap sounds at actual movement, hops 30cm back and then recov
       if(robot.leap)jumpTick(robot,1/60,intent);
     }
     assert.equal(robot.leap,null,'the retreat must finish');
-    assert.ok(Math.abs(robot.x-(startX+45))<.01,
-      'the fighter advances 75cm and backs up only 30cm');
+    assert.ok(Math.abs(robot.x-(startX+65))<.01,
+      'the fighter advances 75cm and backs up only 10cm');
     assert.equal(robot.y,startY);
     assert.equal(robot.angle,0,'the fighter never rotates to retreat');
     assert.ok(robot.combatRecoveryUntil>ctx.game.time-.4);
@@ -83,4 +83,35 @@ test('lethal headbutt finishes retreat and recovery before victory starts',()=>{
  r.actualPose.leap=null;r.combatRecoverUntil=10.4;
  assert.equal(finishingPounceInProgress(r,10),true);
  assert.equal(finishingPounceInProgress(r,10.4),false);
+});
+
+test('10cm retreat eases smoothly with no extra second bounce',()=>{
+ const saved=ctx.game;ctx.game={time:5,events:[]};
+ const robot={id:0,x:380,y:320,angle:0,
+   chest:{x:380,y:320,angle:0},spine:Array.from({length:5},()=>({x:380,y:320})),
+   pelvis:{x:380,y:320},headFrame:{x:400,y:320},
+   allLimbs:()=>[],savePose(){return{x:this.x,y:this.y};},mixPose(){},
+   updateTail(){},rigClear(){return true;},updateHead(){},
+   makeCapsules(){return[];},api:{capsules:[]}};
+ try{
+   startCombatPounceRetreat(robot,{direction:{x:1,y:0}});
+   const points=[robot.x];
+   for(let n=1;n<=20;n++){
+     ctx.game.time=5+n/60;
+     if(robot.leap)jumpTick(robot,1/60,{mode:'преследует',goal:{x:450,y:320},speed:0});
+     points.push(robot.x);
+   }
+   assert.equal(robot.leap,null);
+   assert.ok(Math.abs(robot.x-370)<1e-6,'backstep ends just 10 cm behind impact position');
+   assert.equal(robot.angle,0);
+   assert.ok(points.every(x=>x<=380+1e-6&&x>=370-1e-6));
+   assert.ok(points.every((x,i)=>i===0||x<=points[i-1]+1e-6),
+      'no forward rebound, reversal or second jump');
+   assert.ok(points[1]<380&&points[1]>370,
+      'retreat should not happen in a single frame');
+   assert.ok(Math.abs(points.at(-1)-points.at(-5))<1e-6,
+      'position stays settled after landing');
+   assert.equal(ctx.game.events.filter(e=>e.type==='pounce-retreat').length,1);
+   assert.equal(ctx.game.events.filter(e=>e.type==='footstep').length,1);
+ }finally{ctx.game=saved;}
 });
