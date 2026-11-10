@@ -32,7 +32,7 @@ const ROOM_WET=Object.freeze({
  hit:.07,crit:.08,detach1:.1,detach2:.1,pounce:.08,
  miss1:.05,miss2:.05,death:.12
 });
-function wetFor(key){return key.startsWith('manPain')||key.startsWith('womanPain')?.14:(ROOM_WET[key]??0);}
+function wetFor(key){return (key.startsWith('manPain')||key.startsWith('womanPain')) ? .14 : (ROOM_WET[key]??0);}
 export function makeRoomImpulse(context){
   const rate=context.sampleRate;
   const count=Math.floor(rate*.55),impulse=context.createBuffer(2,count,rate);
