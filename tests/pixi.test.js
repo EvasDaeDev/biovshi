@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
 import * as PIXI from 'pixi.js';
 import {PixiArena} from '../src/render/pixi-scene.js';
+import {staticWallNodes} from '../src/render/pixi-static.js';
 import {transformMatrix,transformPoint} from '../src/render/pixi-math.js';
 import {skinMatrix,ROBOT_PARTS} from '../src/render/robot-skin.js';
 import {initializeGame} from '../src/game/initialize.js';
@@ -15,6 +16,25 @@ import {resetRound} from '../src/game/session.js';
 import {initializeDiagnostics} from '../src/render/diagnostics.js';
 import {victoryGold,goldMatrix} from '../src/render/victory-glow.js';
 import {paintTelemetry} from '../src/ui/paint-telemetry.js';
+
+test('Pixi static wall atlas includes outer masonry underneath the original wall',()=>{
+  const dom=setup();
+  const nodes=staticWallNodes(ctx.svg,ctx.outlineG);
+  assert.deepEqual(nodes.map(node=>node.id),[
+    'tag7hop-walls-outer','tag7hop-walls',ctx.outlineG.id
+  ]);
+  assert.equal(nodes[0].querySelectorAll('path[transform]').length,16,
+    'all eight outer segments are in the static atlas');
+  assert.ok(ctx.defs.querySelector('#texture-arenaOuterWall image'));
+  assert.match(ctx.defs.querySelector('#texture-arenaOuterWall image').getAttribute('href'),/wall_outer\.png/);
+  assert.ok(nodes.every(node=>!ctx.arenaContent.contains(node)),
+    'outer and inner wall must remain outside clipped arena content');
+  const svg=document.createElementNS(ctx.NS,'svg');
+  svg.innerHTML='<g id="tag7hop-walls"></g>';
+  assert.deepEqual(staticWallNodes(svg,null).map(node=>node.id),['tag7hop-walls'],
+    'legacy arenas without outer bricks still render existing walls');
+  ctx.root.__disposeTag();dom.window.close();
+});
 
 test('Pixi transforms preserve skin anchors, head reversal, recoil and spawn scaling',()=>{
   for(const key of Object.keys(ROBOT_PARTS)){
