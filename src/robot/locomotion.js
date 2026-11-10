@@ -381,9 +381,14 @@ export function updateHead(robotState, dt) {
     const p = robotState.currentIntent.lookPoint,
       pivot = robotState.local(robotState.chest, 14, 0),
       desired = Math.atan2(p.y - pivot.y, p.x - pivot.x);
-    robotState.gazeYaw += clamp(wrap(desired - robotState.gazeYaw), -ctx.TRACK_SPEED * dt, ctx.TRACK_SPEED * dt);
-    robotState.look = wrap(robotState.gazeYaw - robotState.chest.angle);
-    robotState.scanAngle = clamp(robotState.look, -ctx.HEAD_LIMIT, ctx.HEAD_LIMIT);
+    // Track in the neck's local frame: global yaw alone could twist the head
+    // far beyond the physical scan limit while the torso was turning.
+    const desiredLocal = clamp(wrap(desired - robotState.chest.angle), -ctx.HEAD_LIMIT, ctx.HEAD_LIMIT);
+    const currentLocal = clamp(wrap(robotState.gazeYaw - robotState.chest.angle), -ctx.HEAD_LIMIT, ctx.HEAD_LIMIT);
+    robotState.look = clamp(currentLocal + clamp(desiredLocal-currentLocal,
+      -ctx.TRACK_SPEED*dt,ctx.TRACK_SPEED*dt), -ctx.HEAD_LIMIT,ctx.HEAD_LIMIT);
+    robotState.gazeYaw = robotState.chest.angle + robotState.look;
+    robotState.scanAngle = robotState.look;
   } else {
     if (Math.abs(robotState.look) > ctx.HEAD_LIMIT + .001) robotState.look += clamp(clamp(robotState.look, -ctx.HEAD_LIMIT, ctx.HEAD_LIMIT) - robotState.look, -ctx.TRACK_SPEED * dt, ctx.TRACK_SPEED * dt);else {
       robotState.scanAngle += robotState.scanDirection * ctx.SCAN_SPEED * dt;
@@ -404,7 +409,8 @@ export function updateHead(robotState, dt) {
   if (!robotState.clearCircle(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13 * ctx.scale) || !robotState.clearCircle(robotState.local(robotState.headFrame, 39 + robotState.headMotion, 0), 2.5 * ctx.scale)) {
     robotState.headFrame = before;
     robotState.gazeYaw = before.angle;
-    robotState.look = wrap(robotState.gazeYaw - robotState.chest.angle);
+    robotState.look = clamp(wrap(robotState.gazeYaw - robotState.chest.angle),-ctx.HEAD_LIMIT,ctx.HEAD_LIMIT);
+    robotState.gazeYaw = robotState.chest.angle + robotState.look;
   }
 }
 // Действия прогулки используют тот же IK; угроза прерывает их сразу.
