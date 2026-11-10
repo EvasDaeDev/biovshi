@@ -5,8 +5,8 @@ import {strikePriority} from '../src/systems/combat.js';
 import {ctx} from '../src/game/state.js';
 
 test('tracking always respects neck limit even with a target behind the body',()=>{
-  const saved={HEAD_LIMIT:ctx.HEAD_LIMIT,TRACK_SPEED:ctx.TRACK_SPEED,scale:ctx.scale};
-  ctx.HEAD_LIMIT=Math.PI/6;ctx.TRACK_SPEED=Math.PI;ctx.scale=1;
+  const saved={HEAD_LIMIT:ctx.HEAD_LIMIT,TRACK_SPEED:ctx.TRACK_SPEED,SCAN_SPEED:ctx.SCAN_SPEED,scale:ctx.scale};
+  ctx.HEAD_LIMIT=Math.PI/6;ctx.TRACK_SPEED=Math.PI;ctx.SCAN_SPEED=Math.PI/18;ctx.scale=1;
   const state={
     chest:{x:100,y:100,angle:0},
     gazeYaw:0,look:0,scanAngle:0,scanDirection:1,headMotion:0,
