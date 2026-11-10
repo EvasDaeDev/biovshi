@@ -153,9 +153,9 @@ export function combatAttacks() {
     for (const v of preferredVictims) for (const source of attacker.attackSources) {
       // Head strikes remain possible even when other limbs are intact.
       for (const c of strikeCandidates(attacker, v, source)) {
-        // A functioning arm/leg is preferred to a head-butt. Physical
-        // reachability is unchanged; the head remains a last-resort weapon.
-        const priority = c.score + (source.kind === 'head' ? 28 : source.kind === 'leg' ? 4 : 0);
+        // Prefer any physically reachable arm or leg strike over a head-butt.
+        // The head is a fallback only when no limb has a valid strike candidate.
+        const priority = c.score + (source.kind === 'head' ? 1000 : source.kind === 'leg' ? 4 : 0);
         if (!best || priority < best.priority) best = {...c, priority};
       }
     }
