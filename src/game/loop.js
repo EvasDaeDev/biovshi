@@ -59,8 +59,13 @@ export function step(dt) {
       old = ctx.combat.lastPositions[id];
     if (old) {
       const moved = Math.hypot(r.x - old.x, r.y - old.y);
+      const pincerActive = ctx.intents[id]?.mode === 'выходит из окружения';
       const wantsMove = ctx.intents[id]?.speed > 5;
-      if (wantsMove && moved < Math.max(.035, r.locomotion * .09) || !wantsMove && ctx.intents[id]?.mode === 'держит дистанцию' && ctx.game.time - ctx.combat.lastHitTime > 2) ctx.combat.stationaryFor[id] += dt;else ctx.combat.stationaryFor[id] = Math.max(0, ctx.combat.stationaryFor[id] - dt * 2);
+      // A short, deliberate pincer escape is NOT a stuck robot. The escape
+      // system must not queue a second, contradictory relocation on top.
+      if(pincerActive)ctx.combat.stationaryFor[id] = 0;
+      else if (wantsMove && moved < Math.max(.035, r.locomotion * .09) || !wantsMove && ctx.intents[id]?.mode === 'держит дистанцию' && ctx.game.time - ctx.combat.lastHitTime > 2) ctx.combat.stationaryFor[id] += dt;
+      else ctx.combat.stationaryFor[id] = Math.max(0, ctx.combat.stationaryFor[id] - dt * 2);
       if (ctx.combat.stationaryFor[id] > 2.5) {
         const foe = activeOpponents(id).sort((a, b) => Math.hypot(a.x - r.x, a.y - r.y) - Math.hypot(b.x - r.x, b.y - r.y))[0];
         ctx.combat.escapeSide[id] *= -1;
