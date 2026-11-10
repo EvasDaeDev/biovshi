@@ -290,7 +290,19 @@ export function fighterIntent(r) {
     const rank = o => {const distance=Math.hypot(o.x-r.x,o.y-r.y);const stats=ctx.betting?.garage?.[o.id]?.stats??[3,3,3];const leader=stats.reduce((a,b)=>a+b,0)-9;const threat=o.attackSources.length;return distance*.40 - leader*11*.35 - threat*12*.25 - (ctx.combat.focus[id]===o.id&&ctx.game.time<ctx.combat.focusUntil[id]?50:0);};
     return rank(a) - rank(b);
   });
-  const target = visible[0] || null;
+  // Keep a recently engaged opponent while it remains visible. A small change
+  // in distance must not reverse the patient's heading every AI tick.
+  const preferred = visible[0] || null;
+  const focused = visible.find(o => o.id === ai.committedTarget);
+  const target = focused && preferred && preferred.id !== focused.id
+    && ctx.game.time < (ai.targetCommitUntil ?? 0)
+    && Math.hypot(focused.x-r.x,focused.y-r.y) < 170
+    ? focused : preferred;
+  if (target && target.id !== ai.committedTarget) {
+    ai.committedTarget = target.id;
+    ai.targetCommitUntil = ctx.game.time + 1.3 + random() * .7;
+  }
+  if (!target) ai.committedTarget = null;
   // Sight gives exact position only while contact remains visible.
   if (target) {
     ai.sensedPoint = {
@@ -443,7 +455,18 @@ export function fighterIntent(r) {
         goal = here;
         mode = 'атакует';
       } else if (quietSeconds < 3) {
-        goal = tacticalEscape(r, foe);
+        // Use one short committed reposition rather than choosing a fresh
+        // lateral point every 100 ms (which made fighters spin in place).
+        if (ai.closeEscapeTarget !== foe.id
+            || ctx.game.time >= (ai.closeEscapeUntil ?? 0)
+            || !ai.closeEscapeGoal
+            || Math.hypot(ai.closeEscapeGoal.x-r.x,ai.closeEscapeGoal.y-r.y) < 22
+            || !coreClearCircle(ai.closeEscapeGoal,24)) {
+          ai.closeEscapeGoal = tacticalEscape(r, foe);
+          ai.closeEscapeTarget = foe.id;
+          ai.closeEscapeUntil = ctx.game.time + .8 + random() * .5;
+        }
+        goal = ai.closeEscapeGoal;
         mode = 'ищет угол атаки';
       } else {
         // Without recent contact, stop backing away: turn toward the enemy
