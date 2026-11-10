@@ -8,12 +8,11 @@ import {ASSETS,assetUrl} from '../assets/manifest.js';
 import {paintPatientPortrait,PORTRAIT_BONES} from '../ui/patient-portrait.js';
 import {cleanFloor} from '../render/floor-history.js';
 export function garageOpen(){
- const previousPanel=ctx.betOverlay?.dataset.view==='garage'?ctx.betContent.querySelector('.bet-panel'):null;
  const priorScroll=ctx.betOverlay?.dataset.view==='garage'?ctx.betOverlay.querySelector('.bet-panel')?.scrollTop??0:0;
- const active=ctx.betContent?.contains(document.activeElement)?document.activeElement:null;
+ const active=ctx.betOverlay?.dataset.view==='garage'&&ctx.betContent?.contains(document.activeElement)?document.activeElement:null;
  const activeSection=active?.closest('[data-patient]');
  const focusPatient=activeSection?.dataset.patient;
- const focusKey=active?.getAttribute('data-stat')!==null&&active?.hasAttribute('data-stat')?'stat':active?.hasAttribute('data-base')?'base':active?.hasAttribute('data-buyer')?'buyer':active?.hasAttribute('data-price')?'price':null;
+ const focusKey=active?.hasAttribute('data-stat')?'stat':active?.hasAttribute('data-base')?'base':active?.hasAttribute('data-buyer')?'buyer':active?.hasAttribute('data-price')?'price':null;
  const focusStat=active?.getAttribute('data-stat');
  if(!ctx.betting){ctx.afterSetup='procedure';return bettingOpen();}
  if(ctx.betting.phase==='settled'){ctx.betting.round++;ctx.betting.phase='betting';ctx.betting.bets=[];}
