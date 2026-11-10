@@ -152,10 +152,21 @@ test('simulation advances with finite poses; a finished round settles once and o
   assert.equal(ctx.combat.winner,0);
   assert.equal(ctx.betting.phase,'settled');
   const elapsed=ctx.round.elapsedSec;
+  const celebrationUntil=ctx.combat.celebrationUntil;
+  assert.ok(celebrationUntil>=ctx.combat.finishedAt,
+    'the winner must have a presentation deadline');
   for(let i=0;i<181;i++)step(1/60);
   assert.equal(ctx.round.elapsedSec,elapsed);
   assert.equal(ctx.betting.history.length,1);
+  if(ctx.game.time<celebrationUntil)
+    assert.equal(ctx.resultsPanel.hidden,true,
+      'results must not interrupt the second or third victory gesture');
+  // Run beyond the longest possible series; assert the screen eventually
+  // opens regardless of the randomly chosen 2-3 full gesture cycles.
+  for(let i=0;i<600&&ctx.resultsPanel.hidden;i++)step(1/60);
   assert.equal(ctx.resultsPanel.hidden,false);
+  assert.equal(ctx.round.elapsedSec,elapsed);
+  assert.equal(ctx.betting.history.length,1);
   dom.window.close();
 });
 
