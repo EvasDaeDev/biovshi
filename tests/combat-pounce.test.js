@@ -20,6 +20,11 @@ test('head collision sweep selects actual segment, never fabricates hits',()=>{
   assert.equal(pounceContactSegment({x:0,y:0},{x:80,y:0},target), 'spine-1');
   assert.equal(pounceContactSegment({x:0,y:45},{x:80,y:45},target), null);
   assert.equal(pounceContactSegment({x:0,y:0},{x:80,y:0},target,k=>k==='head'),null);
+  // Peer collision stops the head at about 13cm from the victim's
+  // capsule surface. This must count as impact, not as a miss.
+  const edge=[{segment:'head',a:{x:30,y:0},b:{x:30,y:0},r:8}];
+  assert.equal(pounceContactSegment({x:0,y:0},{x:9,y:0},edge),'head');
+  assert.equal(pounceContactSegment({x:0,y:0},{x:8,y:0},edge),null);
 });
 
 test('retreat is 30cm backward with unchanged heading and not a teleport to origin',()=>{
