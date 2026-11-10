@@ -13,8 +13,8 @@ export function portraitBones() {
   const bones=[];
   for(const side of [-1,1])for(const kind of ['arm','leg']){
     const a={x:kind==='arm'?3:-45,y:side*(kind==='arm'?15:12)};
-    const end={x:kind==='arm'?30:-63,y:side*(kind==='arm'?27:31)};
-    const solved=ik(a,end,...(kind==='arm'?[27,29]:[32,25]),kind==='arm'?side:-side);
+    const end={x:kind==='arm'?30:-68,y:side*(kind==='arm'?27:31)};
+    const solved=ik(a,end,...(kind==='arm'?[27,29]:[32,33]),kind==='arm'?side:-side);
     bones.push({key:`${kind}-${side}-upper`,a,b:solved.joint},{key:`${kind}-${side}-lower`,a:solved.joint,b:solved.end});
   }
   for(const i of [3,2,1,0])bones.push({key:'spine-'+i,a:{x:-i*10,y:0},b:{x:-(i+1)*10,y:0}});

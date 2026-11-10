@@ -173,13 +173,13 @@ export function handRest(robotState, side) {
   return robotState.local(robotState.chest, 30 + clamp(Math.hypot(robotState.vx, robotState.vy) / ctx.scale * .1, 0, 8), side * (27 + Math.abs(robotState.turnRate) * 2));
 }
 export function legRest(robotState, side) {
-  return robotState.local(robotState.pelvis, -23 + clamp(Math.hypot(robotState.vx, robotState.vy) / ctx.scale * .14, 0, 10), side * 31);
+  return robotState.local(robotState.pelvis, -28 + clamp(Math.hypot(robotState.vx, robotState.vy) / ctx.scale * .14, 0, 10), side * 31);
 }
 export function origin(robotState, l) {
   return l.kind === 'extra' ? robotState.local(robotState.spine[2], 0, l.side * 12) : l.kind === 'arm' ? robotState.local(robotState.chest, 3, l.side * 15) : robotState.local(robotState.pelvis, -5, l.side * 12);
 }
 export function lengths(robotState, l) {
-  return l.kind === 'extra' ? [CONFIG.robot.extraLimbLengthCm, CONFIG.robot.extraLimbLengthCm] : l.kind === 'arm' ? [27 * ctx.scale, 29 * ctx.scale] : [32 * ctx.scale, 25 * ctx.scale];
+  return l.kind === 'extra' ? [CONFIG.robot.extraLimbLengthCm, CONFIG.robot.extraLimbLengthCm] : l.kind === 'arm' ? [27 * ctx.scale, 29 * ctx.scale] : [32 * ctx.scale, 33 * ctx.scale];
 }
 export function rest(robotState, l) {
   return l.kind === 'extra' ? robotState.local(robotState.spine[2], 6, l.side * 44) : l.kind === 'arm' ? robotState.handRest(l.side) : robotState.legRest(l.side);
