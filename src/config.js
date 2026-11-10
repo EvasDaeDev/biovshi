@@ -284,7 +284,7 @@ const CONFIG = {
     // Точка захода за спину противника.
     unarmedFailureMinSec: 10,
     // Время до отказа робота без возможности атаковать.
-    unarmedFailureMaxSec: 30 // Случайная верхняя граница времени отказа.
+    unarmedFailureMaxSec: 15 // Случайная верхняя граница времени отказа.
   },
   effects: {
     inertiaDistanceCm: 30,
