@@ -35,7 +35,7 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   assert.equal(document.getElementById('texture-loading'),null);
   assert.equal(root.inert,false);
   assert.equal(ctx.startup.phase,'demo','simulation remains gated on initial load');
-  assert.equal(root.querySelector('#launch-game').textContent,'В БОЙ!');
+  assert.equal(root.querySelector('#launch-game').textContent,'ПОСМОТРЕТЬ БОЙ!');
   assert.equal(root.querySelector('#launch-overlay').hidden,false,'first load shows launch gate');
   assert.equal(requests,Object.keys(ASSETS.textures).length,'tint preparation reuses preloaded images');
   assert.ok(Object.values(ctx.textureAssets).every(status=>status.loaded));

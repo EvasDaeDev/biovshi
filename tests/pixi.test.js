@@ -126,11 +126,11 @@ test('liquid expiry and repeated round resets release native display objects wit
 
 test('telemetry can be isolated without changing arena dimensions, RNG or simulation and is limited by real time',()=>{
   const dom=setup();initializeDiagnostics();
-  const initialSeed=ctx.seed,side=ctx.fieldSide;
+  const side=ctx.fieldSide;
   const toggle=document.querySelector('.render-diagnostics input');toggle.checked=false;toggle.dispatchEvent(new Event('change'));
   const before=ctx.roles.innerHTML;
-  ctx.robots[0].damage('arm--1-lower',1);paintTelemetry();
-  assert.equal(ctx.roles.innerHTML,before);assert.equal(ctx.fieldSide,side);assert.equal(ctx.seed,initialSeed);
+  ctx.robots[0].damage('arm--1-lower',1,ctx.robots[0].maxHp('arm--1-lower'));const damagedSeed=ctx.seed;paintTelemetry();
+  assert.equal(ctx.roles.innerHTML,before);assert.equal(ctx.fieldSide,side);assert.equal(ctx.seed,damagedSeed);
   assert.equal(ctx.root.querySelector('.tag7hop-sidebar-wrap').style.visibility,'hidden');
   toggle.checked=true;toggle.dispatchEvent(new Event('change'));paintTelemetry();
   assert.notEqual(ctx.roles.innerHTML,before);

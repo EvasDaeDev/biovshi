@@ -1,11 +1,10 @@
 import {statMultiplier,critChance} from '../garage/model.js';
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
-import { friendlyAction, oilPressure, segmentDisplayState } from './telemetry.js';
+import { friendlyAction, segmentDisplayState } from './telemetry.js';
 import { PORTRAIT_BONES,paintPatientPortrait } from './patient-portrait.js';
 const setText = (node, value) => { if (node.textContent !== value) node.textContent = value; };
 const setClass = (node,key,on) => {if(node.classList.contains(key)!==on)node.classList.toggle(key,on);};
-const setWidth = (node, value) => { if (node.style.width !== value) node.style.width = value; };
 
 export function paintTelemetry() {
   if(ctx.telemetryEnabled===false||ctx.arenaExpanded)return;
@@ -21,12 +20,8 @@ export function paintTelemetry() {
     setText(card.segments, `${n}/${r.segmentTotal}`);
     const actionText = friendlyAction(r);
     if (card.action.textContent !== actionText) card.action.textContent = actionText;
-    const pressure = oilPressure(r);
-    const pressurePct = Math.round(pressure * 100);
-    if (card.pressureValue.textContent !== pressurePct + '%') card.pressureValue.textContent = pressurePct + '%';
-    setWidth(card.pressureFill, pressurePct + '%');
     const stats=ctx.betting?.garage?.[r.id]?.stats??[3,3,3];
-    setText(card.strength,`${stats[1]} · ${Math.round(critChance(stats[1])*100)}% crt`);
+    setText(card.strength,`${stats[1]} · ${Math.round(critChance(stats[1])*100)}% КРИТ`);
     setText(card.speed,`${stats[0]} · ${Math.round(statMultiplier(stats[0])*100)}%`);
     setText(card.maneuver,`${stats[2]} · ${Math.round(statMultiplier(stats[2])*100)}%`);
     setClass(card.card,'bleeding', ctx.combat.unarmedDeadline[r.id] !== null && r.mobile);

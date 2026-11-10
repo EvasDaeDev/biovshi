@@ -15,7 +15,7 @@ export function showResults() {
   const winner = ctx.combat.winner;
   const names=betWinnerNames(ctx.betting,winner);
   ctx.resultsTitle.innerHTML=winner===null?'НИЧЬЯ — НЕТ ПОБЕДИТЕЛЯ':`ПОБЕДИТЕЛЬ — ${patientName(winner)}${names==='—'?'':' ('+ctx.betEscape(names)+')'}`;
-  ctx.resultsSummary.textContent = `Бой завершён за ${formatRoundTime(ctx.round.elapsedSec)} · ${ctx.ROBOT_COUNT} гладиатора`;
+  ctx.resultsSummary.textContent = `Бой завершён за ${formatRoundTime(ctx.round.elapsedSec)} · ${ctx.ROBOT_COUNT} пациента`;
   const removed = ctx.robots.reduce((sum, r) => sum + r.segmentTotal - r.segmentCount, 0);
   const totals = [['ЗАМАХОВ', ctx.combat.strikes], ['ПОПАДАНИЙ', ctx.combat.hits], ['ОТОРВАНО ЗВЕНЬЕВ', removed]];
   ctx.resultsTotals.replaceChildren();

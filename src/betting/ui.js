@@ -38,6 +38,7 @@ export function bettingModal(title) {
   ctx.debt = 0;
   ctx.betTitle.textContent = title;
   ctx.betOverlay.dataset.view='betting';
+  ctx.root.querySelector('.arena-pause-label').hidden=true;
   ctx.betOverlay.hidden = false;
 }
 export function bettingStorageNote() {
@@ -129,7 +130,7 @@ export function bettingPreview() {
 }
 function bettingPlayerRow(p){
  const i=p.id;
- return `<tr data-bet-player="${i}"><td>${ctx.betEscape(p.name)}</td><td><span data-balance>${ctx.betFormat(p.balance)}</span> <button type="button" class="bet-top-up" data-top-up="${i}" aria-label="Пополнить баланс — ${ctx.betEscape(p.name)}" title="Пополнить баланс">+</button></td><td><select style="color:${ROBOT_COLORS[i%4]}" aria-label="Робот — ${ctx.betEscape(p.name)}" ${p.balance === 0 ? 'disabled' : ''}>${['A', 'B', 'C', 'D'].map((r, j) => `<option style="color:${ROBOT_COLORS[j]}" value="${j}" ${j === i % 4 ? 'selected' : ''}>${r}</option>`).join('')}</select></td><td><input aria-label="Ставка — ${ctx.betEscape(p.name)}" type="number" value="0" min="0" max="${p.balance}" step="1" required ${p.balance === 0 ? 'disabled' : ''}> ${COIN_ICON}</td><td data-remaining></td></tr>`;
+ return `<tr data-bet-player="${i}"><td>${ctx.betEscape(p.name)}</td><td><span data-balance>${ctx.betFormat(p.balance)}</span> <button type="button" class="bet-top-up" data-top-up="${i}" aria-label="Пополнить баланс — ${ctx.betEscape(p.name)}" title="Пополнить баланс">+</button></td><td><select class="patient-select" style="color:${ROBOT_COLORS[i%4]}" aria-label="Пациент — ${ctx.betEscape(p.name)}" ${p.balance === 0 ? 'disabled' : ''}>${['A', 'B', 'C', 'D'].map((r, j) => `<option style="color:${ROBOT_COLORS[j]}" value="${j}" ${j === i % 4 ? 'selected' : ''}>${r}</option>`).join('')}</select></td><td><input aria-label="Ставка — ${ctx.betEscape(p.name)}" type="number" value="0" min="0" max="${p.balance}" step="1" required ${p.balance === 0 ? 'disabled' : ''}> ${COIN_ICON}<div class="bet-quick">${[[.25,'¼'],[.5,'½'],[1,'Всё']].map(([share,label])=>`<button type="button" data-share="${share}" aria-label="Ставка ${label} баланса — ${ctx.betEscape(p.name)}">${label}</button>`).join('')}</div></td><td data-remaining></td></tr>`;
 }
 export function bettingOpen() {
   if (!ctx.betting) {
@@ -146,16 +147,17 @@ export function bettingOpen() {
   bettingHud();
   ctx.selectedArenaId=ctx.betting.arenaId??ctx.arenaId??'ward';
   ctx.betContent.innerHTML = `${ctx.betNotice ? `<p class="bet-muted">${ctx.betEscape(ctx.betNotice)}</p>` : ''}
- <p class="bet-muted">Выберите робота для каждого игрока и сумму. Ставка 0 — пропустить раунд.</p>
+ <p class="bet-muted">Выберите пациента для каждого игрока и сумму. Ставка 0 — пропустить раунд.</p>
  <p>Общий банк: <strong id="bet-bank">0</strong> · Джекпот: <strong>${ctx.betFormat(ctx.betting.jackpot)}</strong></p>
  <div class="bet-pools">${ctx.BET_COLORS.map((c, i) => `<div class="bet-pool" style="--fighter:${c}"><strong>${patientName(i,{short:true})}</strong><small>${skillSummary(ctx.betting.garage?.[i]?.stats)}</small><span id="bet-pool-${i}"></span><small id="bet-odds-${i}"></small></div>`).join('')}</div>
- <form id="bet-stakes-form"><div class="bet-table-wrap"><table class="bet-table"><thead><tr><th>Игрок <button id="bet-add-player" class="bet-top-up bet-add-player" type="button" aria-label="Добавить игрока" title="Добавить игрока" ${ctx.betting.players.length>=16?'disabled':''}>+</button></th><th>Баланс</th><th>Робот</th><th>Ставка</th><th>Останется</th></tr></thead><tbody>
+ <form id="bet-stakes-form"><div class="bet-table-wrap"><table class="bet-table"><thead><tr><th>Игрок <button id="bet-add-player" class="bet-top-up bet-add-player" type="button" aria-label="Добавить игрока" title="Добавить игрока" ${ctx.betting.players.length>=16?'disabled':''}>+</button></th><th>Баланс</th><th>Пациент</th><th>Ставка</th><th>Останется</th></tr></thead><tbody>
  ${ctx.betting.players.map(bettingPlayerRow).join('')}
  </tbody></table></div>
  <div id="bet-error" class="bet-error" role="status"></div>
- <p class="bet-muted">Коэффициенты предварительные, выплата включает ставку. Банк делится между поставившими на победителя пропорционально суммам ставок. Ничья / отмена — возврат. Нет ставок на победителя — перенос банка. Остаток округления — в джекпот.</p>
+ <details class="bet-rules"><summary>Как считается выигрыш · коэффициенты предварительные</summary><p class="bet-muted">Коэффициенты предварительные, выплата включает ставку. Банк делится между поставившими на победителя пропорционально суммам ставок. Ничья / отмена — возврат. Нет ставок на победителя — перенос банка. Остаток округления — в джекпот.</p></details>
  ${ctx.betting.players.every(p => p.balance === 0) ? '<p class="bet-muted" data-empty-balances>У всех закончились фишки. Можно смотреть бои без ставок или начать новую игру.</p>' : ''}
- <div class="bet-actions"><button id="bet-new" type="button">Новая игра</button>${arenaPicker(ctx.selectedArenaId)}<button id="bet-fight" class="bet-primary" type="button"></button></div>
+ <button id="bet-new" type="button" class="bet-secondary">НОВАЯ ИГРА</button>
+ <div class="bet-actions"><button id="bet-procedure" type="button">В ПРОЦЕДУРНУЮ</button>${arenaPicker(ctx.selectedArenaId)}<button id="bet-fight" class="bet-primary" type="button"></button></div>
  <p class="bet-muted">${bettingStorageNote()}</p></form>
  ${ctx.betting.history.length ? `<details><summary>История раундов (${ctx.betting.history.length})</summary>${ctx.betting.history.map(r => `<p class="bet-muted">Раунд ${Number(r.round)} · ${r.winner === null ? 'ничья' : 'победитель ' + patientName(r.winner)} · банк ${ctx.betFormat(Number(r.bank))}</p>`).join('')}</details>` : ''}`;
   const bindArenas=()=>ctx.betContent.querySelectorAll('[data-arena]').forEach(button=>button.onclick=()=>{
@@ -163,6 +165,7 @@ export function bettingOpen() {
     ctx.betContent.querySelector('.arena-picker').outerHTML=arenaPicker(ctx.selectedArenaId);bindArenas();
   });bindArenas();
   function bindPlayerRows(){
+    ctx.betContent.querySelectorAll('[data-share]').forEach(button=>button.onclick=()=>{const row=button.closest('[data-bet-player]'),input=row.querySelector('input');if(input.disabled)return;input.value=Math.floor(ctx.betting.players[Number(row.dataset.betPlayer)].balance*Number(button.dataset.share));bettingPreview();});
     ctx.betContent.querySelectorAll('[data-bet-player] select').forEach(select=>select.onchange=()=>{select.style.color=ROBOT_COLORS[Number(select.value)];bettingPreview();});
     ctx.betContent.querySelectorAll('[data-top-up]').forEach(button=>button.onclick=async()=>{
       const player=Number(button.dataset.topUp),raw=await bettingInputDialog({title:'ПОПОЛНЕНИЕ · '+ctx.betting.players[player].name,initialValue:'100',numeric:true});
@@ -193,6 +196,7 @@ export function bettingOpen() {
       ctx.betContent.querySelector('[data-bet-player="'+player.id+'"] select').focus();
     }catch(error){ctx.betContent.querySelector('#bet-error').textContent=error.message;}
   };
+  ctx.betContent.querySelector('#bet-procedure').onclick=()=>{ctx.betDraft={session:ctx.betting,round:ctx.betting.round,bets:bettingReadDraft(),arenaId:ctx.selectedArenaId};garageOpen();};
   ctx.betContent.querySelector('#bet-new').onclick = bettingSetup;
   ctx.betContent.querySelector('#bet-stakes-form').oninput = bettingPreview;
   const stakesForm = ctx.betContent.querySelector('#bet-stakes-form');
@@ -211,7 +215,7 @@ export function bettingOpen() {
     try {
       const arenaId=ctx.selectedArenaId??ctx.arenaId??'ward';
       if(arenaId!==ctx.arenaId){if(!ctx.switchArena)throw Error('Подготовка арены недоступна.');await ctx.switchArena(arenaId);}
-      betCommit(ctx.betting, draft);
+      betCommit(ctx.betting, draft);ctx.betDraft=null;
     } catch (err) {
       ctx.betContent.querySelector('#bet-error').textContent = err.message;
       ctx.betContent.querySelector('#bet-fight').disabled=false;
@@ -223,6 +227,11 @@ export function bettingOpen() {
     ctx.betNotice = '';
     startSpawnSequence();
   };
+  if(ctx.betDraft?.session===ctx.betting&&ctx.betDraft.round===ctx.betting.round){
+    for(const draft of ctx.betDraft.bets){const row=ctx.betContent.querySelector(`[data-bet-player="${draft.player}"]`);if(row){row.querySelector('input').value=Number.isNaN(draft.amount)?'':draft.amount;row.querySelector('select').value=draft.robot;row.querySelector('select').style.color=ROBOT_COLORS[draft.robot];}}
+    ctx.selectedArenaId=ctx.betDraft.arenaId;
+    ctx.betContent.querySelector('.arena-picker').outerHTML=arenaPicker(ctx.selectedArenaId);bindArenas();
+  }
   bettingPreview();
   ctx.betContent.querySelector('input:not(:disabled)')?.focus();
 }
@@ -251,7 +260,7 @@ export function bettingResults() {
     const net = p.payout - p.stake;
     const before=p.balance-net;
     const gain=p.payout>0?' bet-net-win':'';
-    return `<tr><td>${ctx.betEscape(p.name)}</td><td>${p.robot === null ? '—' : patientName(p.robot,{short:true}) + ' · ' + ctx.betFormat(p.stake)}</td><td class="${gain}">${ctx.betFormat(p.payout)}</td><td><span class="bet-net${net < 0 ? ' bet-net-loss' : net > 0 ? ' bet-net-win' : ''}">${net > 0 ? '+' : ''}${ctx.betFormat(net)}</span></td><td class="bet-balance-equation"><span>${ctx.betFormat(before)}</span>${p.stake?` <span class="bet-net-loss">−${ctx.betFormat(p.stake)}</span>`:''}${p.payout?` <span class="bet-net-win">+${ctx.betFormat(p.payout)}</span>`:''} = <strong>${ctx.betFormat(p.balance)}</strong></td></tr>`;
+    return `<tr><td>${ctx.betEscape(p.name)}</td><td>${p.robot === null ? '—' : patientName(p.robot,{short:true}) + ' · ' + ctx.betFormat(p.stake)}</td><td class="${gain}">${ctx.betFormat(p.payout)}</td><td><span class="bet-net${net < 0 ? ' bet-net-loss' : net > 0 ? ' bet-net-win' : ''}">${net > 0 ? '+' : ''}${ctx.betFormat(net)}</span></td><td class="bet-balance-equation"><details><summary><strong>${ctx.betFormat(p.balance)}</strong></summary><span>${ctx.betFormat(before)}</span>${p.stake?` <span class="bet-net-loss">−${ctx.betFormat(p.stake)}</span>`:''}${p.payout?` <span class="bet-net-win">+${ctx.betFormat(p.payout)}</span>`:''} = <strong>${ctx.betFormat(p.balance)}</strong></details></td></tr>`;
   }).join('')}
  </tbody></table></div><p>Джекпот следующего раунда: ${ctx.betFormat(r.jackpot)}</p>`;
 }

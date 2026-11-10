@@ -8,6 +8,7 @@ import {ASSETS,assetUrl} from '../assets/manifest.js';
 import {paintPatientPortrait,PORTRAIT_BONES} from '../ui/patient-portrait.js';
 import {cleanFloor} from '../render/floor-history.js';
 export function garageOpen(){
+ const drafts=ctx.betOverlay?.dataset.view==='garage'?[...ctx.betContent.querySelectorAll('[data-patient]')].map(section=>({buyer:section.querySelector('[data-buyer]').value,price:section.querySelector('[data-price]').value,hat:section.querySelector('[data-hat][aria-pressed="true"]')?.dataset.hat})):[];
  const priorScroll=ctx.betOverlay?.dataset.view==='garage'?ctx.betOverlay.querySelector('.bet-panel')?.scrollTop??0:0;
  const active=ctx.betOverlay?.dataset.view==='garage'&&ctx.betContent?.contains(document.activeElement)?document.activeElement:null;
  const activeSection=active?.closest('[data-patient]');
@@ -17,6 +18,8 @@ export function garageOpen(){
  if(!ctx.betting){ctx.afterSetup='procedure';return bettingOpen();}
  if(ctx.betting.phase==='settled'){ctx.betting.round++;ctx.betting.phase='betting';ctx.betting.bets=[];}
  ctx.betting.garage??=newGarage();normalizePatronage(ctx.betting);
+ if(ctx.garageDraftSession!==ctx.betting){ctx.garageDrafts=[];ctx.garageNotices=[];ctx.garageDraftSession=ctx.betting;}
+ if(drafts.length)ctx.garageDrafts=drafts;
  if(!ctx.betting.players[ctx.procedureEditor])ctx.procedureEditor=0;
  bettingSave();bettingModal('Процедурная · раунд '+ctx.betting.round);ctx.startup.phase='garage';ctx.betOverlay.dataset.view='garage';bettingHud();
  ctx.betContent.innerHTML=`<p class="bet-muted garage-intro-note">ПЕРЕРАСПРЕДЕЛЕНИЕ: одно очко между навыками. Изменения доступны покровителю пациента.</p>
@@ -26,13 +29,14 @@ export function garageOpen(){
  const patron=resolvePatron(g),locked=patron!==null&&patron!==ctx.procedureEditor;
  return `<section class="garage-patient" data-patient="${id}"><h3>${patientName(id)} <button type="button" class="patron-name" aria-expanded="false" aria-controls="patron-${id}">(${patron===null?'без покровителя':ctx.betEscape(ctx.betting.players[patron].name)})</button></h3>
  <div id="patron-${id}" class="patron-popup" hidden><strong>Вложения</strong>${ctx.betting.players.map(p=>`<div>${ctx.betEscape(p.name)}: ${ctx.betFormat(g.investments[p.id]??0)}</div>`).join('')}</div>
+ ${locked?`<p class="garage-lock-note">Изменяет только покровитель — ${ctx.betEscape(ctx.betting.players[patron].name)}</p>`:''}
  <div class="garage-core"><div class="garage-portrait"></div><div class="garage-stat-list"><small>Побед: ${g.wins??0} · заработано очков: ${9+(g.wins??0)}</small>
  ${SKILLS.map((skill,i)=>`<label><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select aria-label="${ctx.betEscape(skill.name)} — пациент ${String.fromCharCode(65+id)}" data-stat="${i}" ${locked?'disabled':''}>${[...new Set([earnedStats(g.wins)[i]-1,earnedStats(g.wins)[i],earnedStats(g.wins)[i]+1].filter(n=>n>=2))].map(n=>`<option ${n===g.stats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}
- </div></div><small class="garage-stat-effects">→ / ↻: ${Math.round(statMultiplier(g.stats[0])*100)}% / ${Math.round(statMultiplier(g.stats[2])*100)}%. 💪: ${Math.round(critChance(g.stats[1])*100)}% crt.</small>
- <div class="garage-status-line"><button data-base ${locked?'disabled':''} title="Вернуть исходные характеристики">СБРОС НАВЫКОВ</button><span>ГОЛОВА: ${g.head?'шапка '+g.head.hat+' · '+ctx.betFormat(g.head.price):'свободна'}</span></div>
+ </div></div><small class="garage-stat-effects">Скорость / поворот: ${Math.round(statMultiplier(g.stats[0])*100)}% / ${Math.round(statMultiplier(g.stats[2])*100)}%. Сила: ${Math.round(critChance(g.stats[1])*100)}% КРИТ.</small>
+ <div class="garage-status-line"><button data-base ${locked?'disabled':''} title="Вернуть исходные характеристики">ВЕРНУТЬ ИСХОДНЫЕ</button><span>ГОЛОВА: ${g.head?'шапка '+g.head.hat+' · '+ctx.betFormat(g.head.price):'свободна'}</span></div>
  <label class="garage-buyer">ПОКУПАТЕЛЬ <select data-buyer>${ctx.betting.players.map(p=>`<option value="${p.id}">${ctx.betEscape(p.name)} · ${formatChipsText(p.balance)}</option>`).join('')}</select></label>
- <div class="garage-hats">${[1,2,3,4].map(h=>`<button data-hat="${h}" aria-label="Установить шапку ${h}"><img src="${assetUrl(ASSETS.textures['hat'+h])}" alt="Шапка ${h}"></button>`).join('')}</div>
- <label class="garage-price">ЦЕНА <span class="chip-input"><input data-price type="number" min="${nextPrice(g.head)}" step="1" value="${nextPrice(g.head)}">${COIN_ICON}</span></label><p data-error role="status"></p></section>`;
+ <div class="garage-hats">${[1,2,3,4].map(h=>`<button data-hat="${h}" aria-label="Выбрать шапку ${h}" aria-pressed="false"><img src="${assetUrl(ASSETS.textures['hat'+h])}" alt="Шапка ${h}"></button>`).join('')}</div>
+ <label class="garage-price">ЦЕНА <span class="chip-input"><input data-price type="number" min="${nextPrice(g.head)}" step="1" value="${nextPrice(g.head)}">${COIN_ICON}</span></label><button type="button" data-buy disabled>ВЫБЕРИТЕ ШАПКУ</button><p data-error role="status">${ctx.betEscape(ctx.garageNotices?.[id]??'')}</p></section>`;
  }).join('')}</div>
  <p class="bet-muted garage-purchase-note">Покупка определяет покровительство пациента. Замена экипировки — минимум +10% к предыдущей цене, вложения сохраняются даже после потери вещи.</p>
  <div class="bet-actions garage-actions"><button id="garage-clean">УБОРКА В ПОМЕЩЕНИИ</button><button id="garage-next" class="bet-primary">К СТАВКАМ</button></div>`;
@@ -55,9 +59,25 @@ export function garageOpen(){
    if(value!==base[i]){let other=g.stats.findIndex((n,j)=>j!==i&&n===base[j]+(base[i]-value));if(other<0)other=g.stats.findIndex((n,j)=>j!==i&&n===base[j]);if(other<0)other=(i+1)%3;
     if(base[other]+base[i]-value<2)other=[0,1,2].find(j=>j!==i&&base[j]+base[i]-value>=2)??other;
     stats[i]=value;stats[other]+=base[i]-value;}
-   try{setPatientStats(ctx.betting,id,ctx.procedureEditor,stats);bettingSave();garageOpen();}catch(error){select.value=g.stats[i];section.querySelector('[data-error]').textContent=error.message;}
+   try{const before=[...g.stats];setPatientStats(ctx.betting,id,ctx.procedureEditor,stats);ctx.garageNotices[id]=SKILLS.map((skill,j)=>{const delta=g.stats[j]-before[j];return delta?skill.name+' '+(delta>0?'+':'')+delta:null;}).filter(Boolean).join(' · ');bettingSave();garageOpen();}catch(error){select.value=g.stats[i];section.querySelector('[data-error]').textContent=error.message;}
   });
-  section.querySelector('[data-base]').onclick=()=>{try{setPatientStats(ctx.betting,id,ctx.procedureEditor,earnedStats(g.wins));bettingSave();garageOpen();}catch(error){section.querySelector('[data-error]').textContent=error.message;}};
-  section.querySelectorAll('[data-hat]').forEach(button=>button.onclick=()=>{try{buyHat(ctx.betting,id,Number(section.querySelector('[data-buyer]').value),Number(button.dataset.hat),Number(section.querySelector('[data-price]').value));bettingSave();garageOpen();}catch(error){section.querySelector('[data-error]').textContent=error.message;}});
+  section.querySelector('[data-base]').onclick=()=>{try{setPatientStats(ctx.betting,id,ctx.procedureEditor,earnedStats(g.wins));ctx.garageNotices[id]='Исходные навыки восстановлены.';bettingSave();garageOpen();}catch(error){section.querySelector('[data-error]').textContent=error.message;}};
+  const buyer=section.querySelector('[data-buyer]'),price=section.querySelector('[data-price]'),buy=section.querySelector('[data-buy]');
+  const saved=ctx.garageDrafts?.[id];let hat=saved?.hat??null;
+  if(saved){buyer.value=saved.buyer;price.value=saved.price;}
+  function updatePurchase(){
+   section.querySelectorAll('[data-hat]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.hat===hat)));
+   buy.disabled=!hat;
+   buy.textContent=hat?`КУПИТЬ ШАПКУ ${hat} ЗА ${price.value} · ${ctx.betting.players[Number(buyer.value)].name}`:'ВЫБЕРИТЕ ШАПКУ';
+  }
+  section.querySelectorAll('[data-hat]').forEach(button=>button.onclick=()=>{hat=button.dataset.hat;updatePurchase();});
+  buyer.onchange=price.oninput=updatePurchase;
+  buy.onclick=()=>{try{
+   const buyerId=Number(buyer.value),amount=Number(price.value);
+   buyHat(ctx.betting,id,buyerId,Number(hat),amount);
+   ctx.garageNotices[id]=`${ctx.betting.players[buyerId].name}: шапка ${hat}, ${formatChipsText(amount)}. Покровитель — ${ctx.betting.players[resolvePatron(g)].name}.`;
+   price.value=nextPrice(g.head);hat=null;updatePurchase();bettingSave();bettingHud();garageOpen();
+  }catch(error){section.querySelector('[data-error]').textContent=error.message;}};
+  updatePurchase();
  }
 }

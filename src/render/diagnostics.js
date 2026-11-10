@@ -10,7 +10,7 @@ export function timed(name,work) {
 export function initializeDiagnostics() {
   ctx.telemetryEnabled=true;
   const details=document.createElement('section');details.className='render-diagnostics';
-  details.innerHTML='<label><input type="checkbox" checked> Телеметрия</label><label class="post-effects-control"><input type="checkbox"> Постэффекты</label><details class="performance-details" open><summary>Диагностика производительности</summary><output></output></details>';
+  details.innerHTML='<label><input type="checkbox" checked> Карточки пациентов</label><label class="post-effects-control"><input type="checkbox"> Постэффекты</label><p class="post-effects-note" role="status"></p><details class="performance-details"><summary>Диагностика производительности</summary><output></output></details>';
   ctx.root.querySelector('#arena-settings-content').replaceChildren(details);
   const performanceDetails=details.querySelector('.performance-details');
   const [toggle,effects]=details.querySelectorAll('input'),output=details.querySelector('output');
@@ -20,6 +20,7 @@ export function initializeDiagnostics() {
     effects.title=post?.available?'Резкость, зерно, искажение, цветовое расхождение и виньетка':
       ctx.arenaRenderer?'Постобработка не запустилась: '+(post?.error??ctx.arenaRenderer.postEffectsError??'ошибка фильтра'):'Постэффекты доступны при рендере WebGL';
     effects.closest('label').title=effects.title;
+    details.querySelector('.post-effects-note').textContent=effects.disabled?effects.title:'';
     ctx.root.dataset.postEffects=effects.checked?'on':'off';
   };
   ctx.refreshPostEffectsControl=refreshEffects;refreshEffects();
@@ -30,7 +31,7 @@ export function initializeDiagnostics() {
   };
   const panel=ctx.root.querySelector('.tag7hop-sidebar-wrap');
   const setTelemetry=enabled=>{
-    ctx.telemetryEnabled=enabled;toggle.checked=enabled;
+    ctx.telemetryEnabled=enabled;toggle.checked=enabled;ctx.root.classList.toggle('cards-hidden',!enabled);
     panel.style.visibility=enabled?'':'hidden';
     ctx.telemetryDirty=true;
   };
@@ -38,7 +39,7 @@ export function initializeDiagnostics() {
   const query=new URL(ctx.svg.ownerDocument.defaultView.location.href).searchParams;
   setTelemetry(query.get('telemetry')!=='0');
   // Retain the latest active measurements: opening Settings pauses the fight.
-  const stats=ctx.diagnostics={enabled:true,samples:{},last:0};
+  const stats=ctx.diagnostics={enabled:performanceDetails.open,samples:{},last:0};
   output.textContent=(ctx.arenaRenderer?'PixiJS · WebGL':'SVG · резервный рендер')+' · замеры появятся во время боя';
   const update=now=>{
     if(!stats.enabled||ctx.paused||ctx.settingsOpen||document.hidden||ctx.startup?.phase!=='running'||now-stats.last<1000)return;
@@ -50,5 +51,5 @@ export function initializeDiagnostics() {
   performanceDetails.ontoggle=()=>{stats.enabled=performanceDetails.open;stats.samples={};stats.last=0;};
   ctx.updateDiagnostics=update;
   const dispose=ctx.root.__disposeTag;
-  ctx.root.__disposeTag=()=>{details.remove();ctx.diagnostics=null;ctx.updateDiagnostics=null;ctx.telemetryEnabled=true;ctx.refreshPostEffectsControl=null;dispose();delete ctx.root.dataset.postEffects;};
+  ctx.root.__disposeTag=()=>{details.remove();ctx.diagnostics=null;ctx.updateDiagnostics=null;ctx.telemetryEnabled=true;ctx.refreshPostEffectsControl=null;dispose();delete ctx.root.dataset.postEffects;ctx.root.classList.remove('cards-hidden');};
 }

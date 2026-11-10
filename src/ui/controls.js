@@ -30,6 +30,8 @@ export function sizeLabels() {
 }
 export function setPaused(paused) {
   ctx.paused = Boolean(paused);
+  const label=ctx.root.querySelector('.arena-pause-label');
+  if(label)label.hidden=!ctx.paused;
   resetFrameClock();
   ctx.button.textContent = ctx.paused ? 'Продолжить' : 'Пауза';
   attr(ctx.button, 'aria-pressed', String(ctx.paused));

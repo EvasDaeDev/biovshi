@@ -1,0 +1,71 @@
+/* Patient identity follows the same rule on every paper surface. */
+#robot-tag-hops-v22 :is(.bet-panel,.gladiator-results-card,.settings-panel) .patient-name,
+#robot-tag-hops-v22 .bet-panel .patient-select {
+ display:inline-block;background:#202219;color:inherit;border:1px solid #555643;
+ padding:4px 7px;border-radius:2px;line-height:1.2;
+}
+#robot-tag-hops-v22 .bet-panel .patient-select {min-width:70px;width:100%;max-width:100px}
+#robot-tag-hops-v22 .bet-panel .patient-select option {background:#202219}
+#robot-tag-hops-v22 .bet-pool .patient-name {font-size:17px;margin:0}
+#robot-tag-hops-v22 .bet-panel .bet-top-up {width:32px;height:32px;min-width:32px;min-height:32px;padding:0}
+.biovshi-hint {z-index:2100;font-size:13px;line-height:1.45;max-width:300px}
+#robot-tag-hops-v22 .bet-panel {width:min(100%,900px);padding:18px 22px}
+#robot-tag-hops-v22 .bet-panel h2 {font-size:26px}
+#robot-tag-hops-v22 .bet-panel :is(.bet-muted,.garage-patient small) {font-size:13px}
+#robot-tag-hops-v22 .bet-panel .bet-pool small {font-size:12px}
+#robot-tag-hops-v22 .bet-actions,
+#robot-tag-hops-v22 .results-actions {position:sticky;bottom:0;z-index:25;background:var(--paper);border-top:1px solid var(--paper-rule);padding:10px 0 2px;box-shadow:0 -6px 8px var(--paper)}
+#robot-tag-hops-v22 .bet-panel .bet-secondary {min-height:32px;padding:4px 9px;font-size:12px;margin-top:12px}
+#robot-tag-hops-v22 .bet-quick {display:flex;gap:4px;margin-top:5px}
+#robot-tag-hops-v22 .bet-panel .bet-quick button {min-height:28px;padding:3px 7px;font-size:12px}
+#robot-tag-hops-v22 .bet-rules {font-size:13px;margin-top:10px}
+#robot-tag-hops-v22 .bet-rules summary {cursor:pointer}
+#robot-tag-hops-v22 .bet-panel .garage-lock-note {font-size:12px;margin:0;color:#723721}
+#robot-tag-hops-v22 .garage-buyer {border-top:1px solid #998260;padding-top:8px}
+#robot-tag-hops-v22 .garage-hats [aria-pressed="true"] {outline:3px solid #843d29;outline-offset:-3px;background:#9a6741}
+#robot-tag-hops-v22 .bet-panel [data-buy] {min-height:38px;padding:6px;font-size:12px;overflow-wrap:anywhere}
+#robot-tag-hops-v22 .garage-stat-effects {min-height:34px}
+#robot-tag-hops-v22 .bet-hud-player {height:94px;min-height:94px;padding:9px 10px}
+#robot-tag-hops-v22 .tag7hop-sidebar-wrap {max-height:calc(100dvh - 100px);overflow-y:auto}
+#robot-tag-hops-v22.cards-hidden .tag7hop-sidebar-wrap {display:none}
+#robot-tag-hops-v22.cards-hidden .tag7hop-layout {grid-template-columns:minmax(0,1fr) calc(var(--card-width) + 20px)}
+#robot-tag-hops-v22 .arena-pause-label {position:absolute;inset:0;z-index:4;display:grid;place-items:center;pointer-events:none;background:#0004;color:#f5e6c5;font-size:28px;font-weight:800;letter-spacing:.15em}
+#robot-tag-hops-v22 .arena-pause-label[hidden] {display:none}
+#robot-tag-hops-v22 .arena-pause-help {position:absolute;bottom:12px;left:12px;z-index:2;color:#e5d1a0;background:#111c;padding:4px 7px;font-size:12px;pointer-events:none}
+#robot-tag-hops-v22 #combat-log-toggle {position:absolute;top:145px;right:4px;z-index:4;background:#202219dd;color:#d7c8a9;border:1px solid #555643;padding:4px 7px;font-size:11px;cursor:pointer}
+#robot-tag-hops-v22 #tag7hop-reset {margin-left:18px;border-color:#99482d}
+#robot-tag-hops-v22 .gladiator-results-details {margin-top:20px;font-size:13px}
+#robot-tag-hops-v22 #launch-setup {margin-top:18px;width:100%;padding:12px;background:#4b422d;color:#f3deae;border:1px solid #31291c;cursor:pointer}
+#robot-tag-hops-v22 .post-effects-note {font-size:13px;line-height:1.4}
+@media (max-height:800px) and (min-width:801px) {
+ #robot-tag-hops-v22 {--card-height:clamp(100px,calc((100dvh - 122px) / 4),164px)}
+ #robot-tag-hops-v22 .robot-card {padding:8px 10px}
+ #robot-tag-hops-v22 .robot-card-header {margin-bottom:3px;gap:4px}
+ #robot-tag-hops-v22 .patient-skills {gap:4px}
+ #robot-tag-hops-v22 .patient-portrait {transform:none}
+ #robot-tag-hops-v22 .bet-overlay {padding:10px}
+ #robot-tag-hops-v22 .bet-panel {max-height:calc(100dvh - 20px);padding:12px 16px}
+ #robot-tag-hops-v22 .bet-pools {margin:7px 0}
+ #robot-tag-hops-v22 .bet-panel h2 {margin:0 0 6px;font-size:23px}
+ #robot-tag-hops-v22 .garage-core {min-height:104px}
+ #robot-tag-hops-v22 .garage-patient {gap:4px}
+}
+@media (max-width:1050px) and (min-width:801px) {
+ #robot-tag-hops-v22 {--card-width:215px}
+ #robot-tag-hops-v22 .tag7hop-layout {grid-template-columns:215px minmax(0,1fr) 185px;gap:12px}
+ #robot-tag-hops-v22 #bet-hud {grid-column:auto;flex-direction:column;max-height:calc(100dvh - 100px);overflow-y:auto}
+ #robot-tag-hops-v22 .bet-hud-player {width:185px;min-width:185px;font-size:13px}
+ #robot-tag-hops-v22 .bet-hud-bank {font-size:19px;flex-basis:auto}
+ #robot-tag-hops-v22.cards-hidden .tag7hop-layout {grid-template-columns:minmax(0,1fr) 185px}
+}
+
+.biovshi-hint[popover] {margin:0;inset:auto;box-sizing:border-box}
+#robot-tag-hops-v22 .tag7hop-layout {min-width:0}
+#robot-tag-hops-v22 .robot-card-body {grid-template-columns:minmax(0,1fr) 108px}
+#robot-tag-hops-v22 .patient-skills {font-size:12px}
+#robot-tag-hops-v22 .bet-balance-equation summary {cursor:pointer;text-align:left}
+#robot-tag-hops-v22 .bet-balance-equation details[open] {white-space:normal;min-width:120px}
+#robot-tag-hops-v22 .bet-hud-player-stake {font-size:12px}
+
+#robot-tag-hops-v22 .arena-pause-help[hidden] {display:none}
+#robot-tag-hops-v22 #combat-log-toggle {min-height:28px}

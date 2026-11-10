@@ -1,4 +1,6 @@
 import {initializeFloor} from './render/floor-history.js';
+import {initializeModalFocus} from './ui/modal-focus.js';
+import {bettingSetup} from './betting/ui.js';
 import {garageOpen} from './garage/ui.js';
 import {preparePatientPortraits} from './ui/patient-portrait.js';
 import {paintTelemetry} from './ui/paint-telemetry.js';
@@ -28,6 +30,7 @@ async function prepare({textures,session,entry='auto',arenaId='ward'}){
  const gate=ctx.root.querySelector('#launch-overlay');
  const launchButton=ctx.root.querySelector('#launch-game');
  gate.hidden=launchAccepted;
+ initializeModalFocus();
  launchButton.onclick=()=>{
    if(launchAccepted)return;
    // AudioContext.resume() must happen synchronously in this user gesture.
@@ -36,6 +39,7 @@ async function prepare({textures,session,entry='auto',arenaId='ward'}){
    gate.hidden=true;
    if(ctx.startup.phase==='demo')startSpawnSequence();
  };
+ ctx.root.querySelector('#launch-setup').onclick=()=>{audio.unlock();launchAccepted=true;gate.hidden=true;bettingSetup();};
  if(launchAccepted&&ctx.startup.phase==='demo')startSpawnSequence();
 }
 async function boot(){

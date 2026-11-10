@@ -2,9 +2,10 @@ import {ctx} from '../game/state.js';
 // Native title tooltips do not expose font sizing, so use a small shared hint.
 export function initializeHints(){
   const root=ctx.root,doc=root.ownerDocument,win=doc.defaultView;
-  const tooltip=doc.createElement('div');tooltip.className='biovshi-hint';tooltip.id='biovshi-hint';tooltip.setAttribute('role','tooltip');tooltip.hidden=true;doc.body.append(tooltip);
+  const tooltip=doc.createElement('div');tooltip.className='biovshi-hint';tooltip.id='biovshi-hint';tooltip.setAttribute('role','tooltip');tooltip.hidden=true;tooltip.setAttribute('popover','manual');doc.body.append(tooltip);
   const moved=new Map();let current=null,description=null;
   function hide(){
+    tooltip.hidePopover?.();
     tooltip.hidden=true;
     if(current){if(description===null)current.removeAttribute('aria-describedby');else current.setAttribute('aria-describedby',description);}
     current=null;description=null;
@@ -16,7 +17,7 @@ export function initializeHints(){
     hide();
     if(target.hasAttribute('title')){moved.set(target,message);target.dataset.hint=message;target.removeAttribute('title');}
     current=target;description=target.getAttribute('aria-describedby');target.setAttribute('aria-describedby',[description,tooltip.id].filter(Boolean).join(' '));
-    tooltip.textContent=message;tooltip.hidden=false;
+    tooltip.textContent=message;tooltip.hidden=false;tooltip.showPopover?.();
     const box=target.getBoundingClientRect(),bounds=tooltip.getBoundingClientRect();
     tooltip.style.left=Math.max(4,Math.min(box.left,win.innerWidth-bounds.width-4))+'px';
     tooltip.style.top=Math.max(4,box.bottom+bounds.height+8<win.innerHeight?box.bottom+6:box.top-bounds.height-6)+'px';
