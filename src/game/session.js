@@ -110,10 +110,21 @@ export async function resetRound(destination='betting') {
     searchHoldUntil: 0,
     headGuardUntil: 0,
     headGuardCooldownUntil: 0,
+    lastHitAt: -100,
+    profile: null,
+    side: 0,
+    sideUntil: 0,
+    sideTarget: null,
+    pursuitTarget: null,
+    bestPursuitDistance: null,
+    progressAt: 0,
+    orbitBreakUntil: 0,
+    orbitGoal: null,
     lastSoundAt: -Infinity
   }));
   ctx.soundEvents.length = 0;
   ctx.nextFootstepAt.fill(0);
+  ctx.combat.escapeSide = ctx.combat.escapeSide.map(() => random() < .5 ? -1 : 1);
   ctx.intents = [];
   ctx.brainDebt = 0;
   ctx.pulses.length = 0;
