@@ -45,6 +45,7 @@ const CONFIG = {
   },
   arena: {
     wallThicknessCm: 30, // Стена только снаружи игрового периметра.
+    outerWallDepthCm: 90, // Внешняя кирпичная облицовка за стеной, не игровая зона.
     wallTileLengthCm: 100, // Длина тайла вдоль внутренней кромки стены.
     wallViewMarginCm: 8, // Запас камеры за внешней кромкой.
     cornerCutCm: 25,

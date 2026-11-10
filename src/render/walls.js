@@ -14,7 +14,8 @@ function createWallPattern(key, length, width) {
   },ctx.defs);
   el('image',{
     href:url,x:0,y:0,width:length,height:width,preserveAspectRatio:'none',
-    opacity:CONFIG.rendering.wallTintStrength>0?0:1,
+    // Outer masonry is shown in its original colours, without the green wall tint.
+    opacity:key==='arenaOuterWall'||CONFIG.rendering.wallTintStrength===0?1:0,
     ...(key==='obstacle'?{transform:`rotate(180 ${length/2} ${width/2})`}:{}),
     style:CONFIG.rendering.texturePixelated?'image-rendering:crisp-edges;image-rendering:pixelated':'',
   },pattern);
@@ -34,11 +35,25 @@ function drawRibbon(ribbon, key, group) {
 export function createWalls() {
   ctx.svg.querySelector('#tag7hop-walls')?.remove();
   ctx.svg.querySelector('#texture-arenaWall')?.remove();
+  ctx.svg.querySelector('#tag7hop-walls-outer')?.remove();
+  ctx.svg.querySelector('#texture-arenaOuterWall')?.remove();
   ctx.svg.querySelector('#tag7hop-obstacle-walls')?.remove();
   ctx.svg.querySelector('#texture-obstacle')?.remove();
   const {wallThicknessCm:width,wallTileLengthCm:length}=CONFIG.arena;
   if (!(width>0)) return;
   const ribbon=wallRibbon(ctx.arenaBoundary.points,width);
+  // Lay the brick paving directly BEHIND the existing 30cm wall. Its
+  // unwrapped U coordinate continues around all eight sides, including
+  // chamfered corners. No geometry overlaps the playable arena.
+  const outerDepth=Math.max(0,CONFIG.arena.outerWallDepthCm??0);
+  if(outerDepth>0 && createWallPattern('arenaOuterWall',length,outerDepth)) {
+    const outerGroup=el('g',{
+      id:'tag7hop-walls-outer','pointer-events':'none',
+      'aria-label':'Внешняя кирпичная облицовка',
+    },ctx.svg);
+    ctx.svg.insertBefore(outerGroup,ctx.arenaContent);
+    drawRibbon(wallRibbon(ribbon.outer,outerDepth),'arenaOuterWall',outerGroup);
+  }
   const group=el('g',{id:'tag7hop-walls','pointer-events':'none','aria-label':'Внешняя стена арены'},ctx.svg);
   // This sibling is outside the floor clip and never participates in collisions.
   ctx.svg.insertBefore(group,ctx.arenaContent);
