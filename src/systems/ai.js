@@ -248,6 +248,43 @@ export function fighterIntent(r) {
       };
     }
   }
+  // Brief positional escape from a two-on-one engagement.
+  // Look for a *reachable* step that keeps both armed enemies on the same side,
+  // then return to normal offensive AI; no permanent flee state.
+  const nearbyAttackers = active.filter(o => o.attackSources.length > 0
+    && Math.hypot(o.x - r.x, o.y - r.y) < 100 + (ai.profile?.closeRange ?? 36));
+  if (nearbyAttackers.length >= 2 && r.movementLimbs >= 2) {
+    ai.profile ??= tacticalProfile();
+    const opponents = nearbyAttackers.slice()
+      .sort((a,b)=>Math.hypot(a.x-r.x,a.y-r.y)-Math.hypot(b.x-r.x,b.y-r.y)).slice(0,2);
+    const bearings = opponents.map(o=>Math.atan2(o.y-r.y,o.x-r.x));
+    const surrounded = Math.abs(wrap(bearings[0]-bearings[1])) > 1.15;
+    if (surrounded && ctx.game.time >= (ai.pincerCooldownUntil ?? 0)) {
+      let bestGoal=null, bestScore=-Infinity;
+      for (let i=0;i<12;i++) {
+        const angle=i*Math.PI/6+(ai.side ?? 1)*.17;
+        const p={x:clamp(r.x+Math.cos(angle)*90,36,664),
+                 y:clamp(r.y+Math.sin(angle)*90,36,664)};
+        if (!coreClearCircle(p,26) || rectHit({x:r.x,y:r.y},p,null,16)!==null)continue;
+        const ds=opponents.map(o=>Math.hypot(o.x-p.x,o.y-p.y));
+        const angles=opponents.map(o=>Math.atan2(o.y-p.y,o.x-p.x));
+        const separation=Math.abs(wrap(angles[0]-angles[1]));
+        const score=Math.min(...ds)-separation*52
+          -Math.max(0,55-arenaClearance(p));
+        if(score>bestScore){bestScore=score;bestGoal=p;}
+      }
+      if(bestGoal){
+        ai.pincerGoal=bestGoal;
+        ai.pincerUntil=ctx.game.time+.9+random()*.7;
+        ai.pincerCooldownUntil=ctx.game.time+7+random()*4;
+      }
+    }
+  }
+  if (ai.pincerGoal && ctx.game.time < (ai.pincerUntil ?? 0)
+      && coreClearCircle(ai.pincerGoal,26)) {
+    return {goal:ai.pincerGoal,speed:CONFIG.movement.fleeSpeedCm,
+      mode:'выходит из окружения',lookPoint:null};
+  }
   const visible = active.filter(o => r.hasHead ? notices(r, o) : Math.hypot(r.x - o.x, r.y - o.y) < CONFIG.combat.contactSenseCm);
   visible.sort((a, b) => {
     const rank = o => {const distance=Math.hypot(o.x-r.x,o.y-r.y);const stats=ctx.betting?.garage?.[o.id]?.stats??[3,3,3];const leader=stats.reduce((a,b)=>a+b,0)-9;const threat=o.attackSources.length;return distance*.40 - leader*11*.35 - threat*12*.25 - (ctx.combat.focus[id]===o.id&&ctx.game.time<ctx.combat.focusUntil[id]?50:0);};
