@@ -207,7 +207,7 @@ function createRobot(id, start) {
   }, (_, i) => 'spine-' + i), ...['arm', 'leg'].flatMap(kind => [-1, 1].flatMap(side => [`${kind}-${side}-upper`, `${kind}-${side}-lower`])), ...(robotState.id === 3 ? Array.from({
     length: CONFIG.robot.tailSegments
   }, (_, i) => 'tail-' + i) : [])];
-  robotState.maxHp = key => key === 'head' ? 5 : key === 'spine-3' ? 4 : CONFIG.combat.healthPerSegment;
+  robotState.maxHp = key => key === 'head' ? 6 : key === 'spine-3' ? 4 : CONFIG.combat.healthPerSegment;
   robotState.isDamageable = key => key !== 'spine-0';
   robotState.DAMAGEABLE_HP_TOTAL = robotState.segments.filter(robotState.isDamageable).reduce((sum, key) => sum + robotState.maxHp(key), 0);
   // 39 HP
