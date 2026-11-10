@@ -1,0 +1,27 @@
+name: Combat search validation (20 rounds)
+on:
+  push:
+    branches: [analysis/combat-search-validation]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      ANALYSIS_SEED: '101'
+      ANALYSIS_ROUNDS: '20'
+      ANALYSIS_MAX_SECONDS: '150'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/death-balance-analysis.mjs > mortality.log 2>&1; result=$?; tail -n 5 mortality.log; exit $result
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: search-mortality-20
+          path: mortality.log
