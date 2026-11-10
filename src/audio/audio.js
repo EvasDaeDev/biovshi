@@ -138,8 +138,12 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       if(!soundBus){soundBus=context.createGain();musicBus=context.createGain();soundBus.connect(context.destination);musicBus.connect(context.destination);applyVolumes();}
       // Predecode short pain clips after user interaction so the first injury
       // can start close to its intended +100 ms audio-clock deadline.
-      if(bufferLoader===decodeSound)for(const group of PAIN_SAMPLES)for(const key of group)
-        bufferLoader(context,ASSETS.sounds[key]).catch(error=>warn(key,error));
+      if(bufferLoader===decodeSound) {
+        for(const group of PAIN_SAMPLES)for(const key of group)
+          bufferLoader(context,ASSETS.sounds[key]).catch(error=>warn(key,error));
+        // The short combat leap must be ready before an unexpected takeoff.
+        bufferLoader(context,ASSETS.sounds.pounce).catch(error=>warn('pounce',error));
+      }
       unlocked=true;
       // resume() must be invoked inside the gesture, before any asynchronous work.
       Promise.resolve(context.resume()).then(sync).catch(error=>warn('unlock',error));
