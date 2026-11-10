@@ -162,8 +162,7 @@ test('injured patient plays an additional pain clip 100 ms after hit, crit and s
 test('queued pain voices are cancelled on pause or next round without affecting sound buses',async()=>{
  const f=setup();await f.unlock();
  emitGameEvent('hit',{by:1,robot:3,damage:1});await flush();
- const voice=live(f.sources,'womanPain1').find(s=>s.started)
-   ||f.sources.find(s=>String(s.buffer).includes('womanPain'));
+ const voice=f.sources.find(s=>s.started&&String(s.buffer).includes('/woman_pain/'));
  assert.ok(voice);
  f.state.paused=true;f.audio.sync();assert.equal(voice.stopped,true);
  f.state.paused=false;f.state.startup.phase='betting';f.audio.sync();await flush();
