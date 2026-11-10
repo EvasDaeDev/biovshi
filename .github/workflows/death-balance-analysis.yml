@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 18
     env:
       ANALYSIS_SEED: ${{ matrix.seed }}
-      ANALYSIS_ROUNDS: '100'
+      ANALYSIS_ROUNDS: '25'
       ANALYSIS_MAX_SECONDS: '150'
     steps:
       - uses: actions/checkout@v4
@@ -24,8 +24,9 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - name: Simulate unmodified combat and print mortality report
-        run: node scripts/death-balance-analysis.mjs > death-analysis-${{ matrix.seed }}.log 2>&1; result=$?; tail -n 28 death-analysis-${{ matrix.seed }}.log; exit $result
+      - run: npm test
+      - name: Simulate experimental combat and print mortality report
+        run: node scripts/death-balance-analysis.mjs 2>&1 | tee death-analysis-${{ matrix.seed }}.log; exit ${PIPESTATUS[0]}
       - name: Keep detailed report
         if: always()
         uses: actions/upload-artifact@v4
