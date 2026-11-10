@@ -58,7 +58,7 @@ test('chest is invulnerable; destroying the head immediately kills the patient',
   assert.equal(r.hasHead,true);
   assert.equal(hit(r,'head'),true);
   assert.equal(r.damage('head',1),false,'same-frame damage is rejected');
-  for(let i=0;i<4;i++)hit(r,'head');
+  for(let i=0;i<6;i++)hit(r,'head');
   assert.equal(r.hasHead,false);
   assert.equal(r.turnAbility,turn/2);
   assert.equal(r.canSee({x:r.x,y:r.y}),false);
@@ -87,7 +87,7 @@ test('losing every limb starts unconsciousness countdown; reset restores anatomy
   assert.equal(r.movementLimbs,0);
   step(1/60);
   const deadline=ctx.combat.unarmedDeadline[r.id];
-  assert.ok(deadline>ctx.game.time+19&&deadline<=ctx.game.time+30);
+  assert.ok(deadline>ctx.game.time+9&&deadline<=ctx.game.time+15);
   ctx.game.time=deadline;
   step(1/60);
   assert.equal(r.mobile,false,'loss of consciousness ends the escape');
@@ -102,7 +102,7 @@ test('losing every limb starts unconsciousness countdown; reset restores anatomy
 
 test('two head-only patients fight the countdown; the later loss of consciousness wins', () => {
   const dom=setup();
-  for(const r of ctx.robots.slice(2))for(let i=0;i<5;i++)hit(r,'head');
+  for(const r of ctx.robots.slice(2))for(let i=0;i<6;i++)hit(r,'head');
   for(const r of ctx.robots.slice(0,2))
     for(const kind of ['arm','leg'])for(const side of [-1,1])
       for(let i=0;i<3;i++)hit(r,`${kind}-${side}-upper`);
@@ -123,7 +123,7 @@ test('two head-only patients fight the countdown; the later loss of consciousnes
 
 test('simultaneous unconsciousness of last two head-only patients is a draw', () => {
   const dom=setup();
-  for(const r of ctx.robots.slice(2))for(let i=0;i<5;i++)hit(r,'head');
+  for(const r of ctx.robots.slice(2))for(let i=0;i<6;i++)hit(r,'head');
   for(const r of ctx.robots.slice(0,2))
     for(const kind of ['arm','leg'])for(const side of [-1,1])
       for(let i=0;i<3;i++)hit(r,`${kind}-${side}-upper`);
@@ -146,7 +146,7 @@ test('simulation advances with finite poses; a finished round settles once and o
   paint();
   assert.ok(ctx.robots.every(r=>Number.isFinite(r.x)&&Number.isFinite(r.y)&&Number.isFinite(r.angle)));
   assert.ok(ctx.robots.some((r,i)=>Math.hypot(r.x-before[i].x,r.y-before[i].y)>0));
-  for(const r of ctx.robots.slice(1))for(let i=0;i<5;i++)hit(r,'head');
+  for(const r of ctx.robots.slice(1))for(let i=0;i<6;i++)hit(r,'head');
   step(1/60);
   assert.equal(ctx.combat.finished,true);
   assert.equal(ctx.combat.winner,0);
@@ -267,7 +267,7 @@ test('vision cones stay absent in both qualities; liquid sprites age and fall ba
     assert.equal(ctx.svg.querySelectorAll('[id*="tag7hop-beam-"]').length,0);
     assert.equal(robot.nearLight.tagName,'circle');
   }
-  for(let i=0;i<5;i++)hit(robot,'head');
+  for(let i=0;i<6;i++)hit(robot,'head');
   paint();
   assert.equal(robot.vision,null);
   ctx.liquidAtlasSources=['fresh','early','late','dry'];
@@ -458,7 +458,7 @@ test('every robot uses its own atlas; severed parts, victory halo and load fallb
   for(let i=0;i<30;i++)step(1/60);
   paint();
   assert.equal(severed.getAttribute('transform'),frozen);
-  for(let i=0;i<5;i++)hit(a,'head');
+  for(let i=0;i<6;i++)hit(a,'head');
   paint();
   assert.equal(actor.querySelector('[data-skin-segment="head"]').getAttribute('display'),'none');
   assert.ok(ctx.detachedG.querySelector('[data-skin-segment="head"]'));
@@ -923,7 +923,7 @@ test('a dead patient has the same cosmetic slide and inactive remains never bloc
   const dom=setup();ctx.obstacles=ctx.obstacles.filter(b=>b.left>500);ctx.robots=[];
   const r=createRobot(0,{x:300,y:250,angle:0}),attacker=createRobot(1,{x:230,y:250,angle:0});ctx.robots=[r,attacker];
   r.paint(false);
-  for(let i=0;i<5;i++)hit(r,'head');
+  for(let i=0;i<6;i++)hit(r,'head');
   assert.equal(r.mobile,false);assert.equal(r.capsules.length,0);
   paint();
   const initial=r.actor.getAttribute('transform').match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1).map(Number);
@@ -967,7 +967,7 @@ test('an unchanged textured frame causes no redundant DOM mutations',()=>{
 
 test('opening results stops hidden arena work after the three-second victory presentation',()=>{
   const dom=setup();
-  for(const r of ctx.robots.slice(1))for(let i=0;i<5;i++)hit(r,'head');
+  for(const r of ctx.robots.slice(1))for(let i=0;i<6;i++)hit(r,'head');
   step(1/60);assert.equal(ctx.combat.finished,true);
   ctx.last=0;ctx.paintAt=0;ctx.debt=0;
   for(let i=1;i<=181;i++)frame(i*1000/60);
@@ -1038,7 +1038,7 @@ test('a dead patient leaves its puddle after stopping, at the torso light centre
   const dom=setup();ctx.obstacles=ctx.obstacles.filter(b=>b.left>500);ctx.robots=[];
   const r=createRobot(0,{x:300,y:250,angle:0}),attacker=createRobot(1,{x:230,y:250,angle:0});ctx.robots=[r,attacker];
   r.paint(false);
-  for(let i=0;i<5;i++)hit(r,'head');
+  for(let i=0;i<6;i++)hit(r,'head');
   assert.equal(r.mobile,false);const stoppedAt=ctx.game.time+CONFIG.effects.inertiaSec;
   const torso={...r.center};paint();
   // Remove earlier fragments to isolate the patient's pending puddle.
@@ -1092,7 +1092,7 @@ test('powerful contact removes two HP once, expires Crit in .2 seconds and loses
  assert.equal(r.damage('head',1,2),false);assert.equal(ctx.hitEffects.group.querySelectorAll('.crit-label').length,1);
  ctx.game.time+=.19;paint();assert.equal(ctx.hitEffects.group.querySelectorAll('.crit-label').length,1);
  ctx.game.time+=.02;paint();assert.equal(ctx.hitEffects.group.querySelectorAll('.crit-label').length,0);
- for(let i=0;i<3;i++)hit(r,'head');paint();
+ for(let i=0;i<4;i++)hit(r,'head');paint();
  assert.equal(ctx.betting.garage[0].head,null);
  assert.equal(ctx.combat.detached.find(d=>d.cause==='head').pieces.find(p=>p.key==='head').skin.hat,1);
  assert.ok(ctx.detachedG.querySelector('svg[viewBox="0 0 64 64"]'));

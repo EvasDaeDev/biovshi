@@ -282,9 +282,9 @@ const CONFIG = {
     // Дополнительный выпад сокращён на 25% (ранее 24 см).
     flankRadiusCm: 66,
     // Точка захода за спину противника.
-    unarmedFailureMinSec: 20,
+    unarmedFailureMinSec: 10,
     // Время до отказа робота без возможности атаковать.
-    unarmedFailureMaxSec: 30 // Случайная верхняя граница времени отказа.
+    unarmedFailureMaxSec: 15 // Случайная верхняя граница времени отказа.
   },
   effects: {
     inertiaDistanceCm: 30,
