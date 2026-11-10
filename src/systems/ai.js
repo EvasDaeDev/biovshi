@@ -121,7 +121,7 @@ export function tacticalSide(ai, now, foeId) {
   if (ai.sideTarget !== foeId || now >= (ai.sideUntil ?? 0)) {
     ai.sideTarget = foeId;
     ai.side = random() < .5 ? -1 : 1;
-    ai.sideUntil = now + 3.5 + random() * 4.5;
+    ai.sideUntil = now + 4 + random() * 3;
   }
   return ai.side;
 }
@@ -154,13 +154,13 @@ function pursuitProgress(ai, now, foe, distance, quietSeconds) {
     ai.progressAt = now;
     ai.bestPursuitDistance = distance;
     ai.side = -ai.side;
-    ai.sideUntil = now + 3 + random() * 3;
+    ai.sideUntil = now + 4 + random() * 3;
     const angle = Math.atan2(foe.y - ai.actorY, foe.x - ai.actorX) + ai.side * Math.PI / 2;
     ai.orbitGoal = {
       x: clamp(ai.actorX + Math.cos(angle) * 100, 42, 658),
       y: clamp(ai.actorY + Math.sin(angle) * 100, 42, 658)
     };
-    ai.orbitBreakUntil = coreClearCircle(ai.orbitGoal, 26) ? now + 1.5 + random() * 1.5 : 0;
+    ai.orbitBreakUntil = coreClearCircle(ai.orbitGoal, 26) ? now + .8 + random() * .8 : 0;
   }
   return now < ai.orbitBreakUntil && ai.orbitGoal && coreClearCircle(ai.orbitGoal, 26) ? ai.orbitGoal : null;
 }
@@ -275,13 +275,14 @@ export function fighterIntent(r) {
       }
       if(bestGoal){
         ai.pincerGoal=bestGoal;
-        ai.pincerUntil=ctx.game.time+.9+random()*.7;
+        ai.pincerUntil=ctx.game.time+.6+random()*.6;
         ai.pincerCooldownUntil=ctx.game.time+7+random()*4;
       }
     }
   }
   if (ai.pincerGoal && ctx.game.time < (ai.pincerUntil ?? 0)
-      && coreClearCircle(ai.pincerGoal,26)) {
+      && coreClearCircle(ai.pincerGoal,26)
+      && nearbyAttackers.length >= 2) {
     return {goal:ai.pincerGoal,speed:CONFIG.movement.fleeSpeedCm,
       mode:'выходит из окружения',lookPoint:null};
   }
@@ -433,8 +434,16 @@ export function fighterIntent(r) {
       x: foe.x + Math.cos(theta) * CONFIG.combat.flankRadiusCm,
       y: foe.y + Math.sin(theta) * CONFIG.combat.flankRadiusCm
     };
-    if (flank && exposed && coreClearCircle(sideGoal, 26) && d > ai.profile.flankMin && quietSeconds < ai.profile.flankQuietSec) {
-      goal = sideGoal;
+    if (flank && exposed && coreClearCircle(sideGoal, 26) && d > ai.profile.flankMin && quietSeconds < ai.profile.flankQuietSec
+        && (ctx.game.time < (ai.flankUntil ?? 0) && ai.flankTarget === foe.id
+          || ctx.game.time >= (ai.flankCooldownUntil ?? 0))) {
+      if (!ai.flankUntil || ctx.game.time >= ai.flankUntil || ai.flankTarget !== foe.id) {
+        ai.flankUntil = ctx.game.time + .8 + random() * .8;
+        ai.flankTarget = foe.id;
+        ai.flankGoal = sideGoal;
+        ai.flankCooldownUntil = ai.flankUntil + 1.5 + random() * .5;
+      }
+      goal = ai.flankGoal;
       mode = 'обходит с фланга';
     } else if (d < ai.profile.closeRange) {
       const canStrike = r.attackSources.some(source => strikeCandidates(r, foe, source).length > 0);
