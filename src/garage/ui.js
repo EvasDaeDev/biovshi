@@ -8,28 +8,38 @@ import {ASSETS,assetUrl} from '../assets/manifest.js';
 import {paintPatientPortrait,PORTRAIT_BONES} from '../ui/patient-portrait.js';
 import {cleanFloor} from '../render/floor-history.js';
 export function garageOpen(){
+ const previousPanel=ctx.betOverlay?.dataset.view==='garage'?ctx.betContent.querySelector('.bet-panel'):null;
+ const priorScroll=ctx.betOverlay?.dataset.view==='garage'?ctx.betOverlay.querySelector('.bet-panel')?.scrollTop??0:0;
+ const active=ctx.betContent?.contains(document.activeElement)?document.activeElement:null;
+ const activeSection=active?.closest('[data-patient]');
+ const focusPatient=activeSection?.dataset.patient;
+ const focusKey=active?.getAttribute('data-stat')!==null&&active?.hasAttribute('data-stat')?'stat':active?.hasAttribute('data-base')?'base':active?.hasAttribute('data-buyer')?'buyer':active?.hasAttribute('data-price')?'price':null;
+ const focusStat=active?.getAttribute('data-stat');
  if(!ctx.betting){ctx.afterSetup='procedure';return bettingOpen();}
  if(ctx.betting.phase==='settled'){ctx.betting.round++;ctx.betting.phase='betting';ctx.betting.bets=[];}
  ctx.betting.garage??=newGarage();normalizePatronage(ctx.betting);
  if(!ctx.betting.players[ctx.procedureEditor])ctx.procedureEditor=0;
  bettingSave();bettingModal('Процедурная · раунд '+ctx.betting.round);ctx.startup.phase='garage';ctx.betOverlay.dataset.view='garage';bettingHud();
- ctx.betContent.innerHTML=`<p class="bet-muted">Перенесите одно очко между навыками. Настройки меняет покровитель пациента. Пока вложений нет — настройка свободная.</p>
- <label class="procedure-editor">Кто настраивает <select id="procedure-editor">${ctx.betting.players.map(p=>`<option value="${p.id}" ${p.id===ctx.procedureEditor?'selected':''}>${ctx.betEscape(p.name)}</option>`).join('')}</select></label>
+ ctx.betContent.innerHTML=`<p class="bet-muted garage-intro-note">ПЕРЕРАСПРЕДЕЛЕНИЕ: одно очко между навыками. Изменения доступны покровителю пациента.</p>
+ <label class="procedure-editor"><span>НАСТРАИВАЕТ</span> <select id="procedure-editor">${ctx.betting.players.map(p=>`<option value="${p.id}" ${p.id===ctx.procedureEditor?'selected':''}>${ctx.betEscape(p.name)}</option>`).join('')}</select></label>
  ${ctx.lastFloorBakeError?`<p class="bet-muted" role="status">${ctx.betEscape(ctx.lastFloorBakeError)}</p>`:''}
  <div class="garage-grid">${ctx.betting.garage.map((g,id)=>{
  const patron=resolvePatron(g),locked=patron!==null&&patron!==ctx.procedureEditor;
  return `<section class="garage-patient" data-patient="${id}"><h3>${patientName(id)} <button type="button" class="patron-name" aria-expanded="false" aria-controls="patron-${id}">(${patron===null?'без покровителя':ctx.betEscape(ctx.betting.players[patron].name)})</button></h3>
  <div id="patron-${id}" class="patron-popup" hidden><strong>Вложения</strong>${ctx.betting.players.map(p=>`<div>${ctx.betEscape(p.name)}: ${ctx.betFormat(g.investments[p.id]??0)}</div>`).join('')}</div>
- <div class="garage-portrait"></div>
- <small>Побед: ${g.wins??0} · заработано очков: ${9+(g.wins??0)}</small>
- ${SKILLS.map((skill,i)=>`<label><span>${skill.icon} ${skill.name}</span><select data-stat="${i}" ${locked?'disabled':''}>${[...new Set([earnedStats(g.wins)[i]-1,earnedStats(g.wins)[i],earnedStats(g.wins)[i]+1].filter(n=>n>=2))].map(n=>`<option ${n===g.stats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}
- <small>→ / ↻: ${Math.round(statMultiplier(g.stats[0])*100)}% / ${Math.round(statMultiplier(g.stats[2])*100)}%. 💪: ${Math.round(critChance(g.stats[1])*100)}% crt.</small>
- <button data-base ${locked?'disabled':''}>Сбросить перераспределение</button><p>Голова: ${g.head?'шапка '+g.head.hat+' · '+ctx.betFormat(g.head.price):'свободна'}</p>
- <label>Покупатель <select data-buyer>${ctx.betting.players.map(p=>`<option value="${p.id}">${ctx.betEscape(p.name)} · ${formatChipsText(p.balance)}</option>`).join('')}</select></label>
+ <div class="garage-core"><div class="garage-portrait"></div><div class="garage-stat-list"><small>Побед: ${g.wins??0} · заработано очков: ${9+(g.wins??0)}</small>
+ ${SKILLS.map((skill,i)=>`<label><span>${skill.icon} ${skill.name}</span><select aria-label="${skill.name} — ${patientName(id,{short:true})}" data-stat="${i}" ${locked?'disabled':''}>${[...new Set([earnedStats(g.wins)[i]-1,earnedStats(g.wins)[i],earnedStats(g.wins)[i]+1].filter(n=>n>=2))].map(n=>`<option ${n===g.stats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}
+ </div></div><small class="garage-stat-effects">→ / ↻: ${Math.round(statMultiplier(g.stats[0])*100)}% / ${Math.round(statMultiplier(g.stats[2])*100)}%. 💪: ${Math.round(critChance(g.stats[1])*100)}% crt.</small>
+ <div class="garage-status-line"><button data-base ${locked?'disabled':''} title="Вернуть исходные характеристики">СБРОС НАВЫКОВ</button><span>ГОЛОВА: ${g.head?'шапка '+g.head.hat+' · '+ctx.betFormat(g.head.price):'свободна'}</span></div>
+ <label class="garage-buyer">ПОКУПАТЕЛЬ <select data-buyer>${ctx.betting.players.map(p=>`<option value="${p.id}">${ctx.betEscape(p.name)} · ${formatChipsText(p.balance)}</option>`).join('')}</select></label>
  <div class="garage-hats">${[1,2,3,4].map(h=>`<button data-hat="${h}" aria-label="Установить шапку ${h}"><img src="${assetUrl(ASSETS.textures['hat'+h])}" alt="Шапка ${h}"></button>`).join('')}</div>
- <label>Цена установки <span class="chip-input"><input data-price type="number" min="${nextPrice(g.head)}" step="1" value="${nextPrice(g.head)}">${COIN_ICON}</span></label><small>Замена минимум +10%. Все покупки учитываются в покровительстве, даже после потери вещи.</small><p data-error role="status"></p></section>`;
+ <label class="garage-price">ЦЕНА <span class="chip-input"><input data-price type="number" min="${nextPrice(g.head)}" step="1" value="${nextPrice(g.head)}">${COIN_ICON}</span></label><p data-error role="status"></p></section>`;
  }).join('')}</div>
- <div class="bet-actions"><button id="garage-clean">Уборка в помещении</button><button id="garage-next" class="bet-primary">К СТАВКАМ</button></div>`;
+ <p class="bet-muted garage-purchase-note">Покупка определяет покровительство пациента. Замена экипировки — минимум +10% к предыдущей цене, вложения сохраняются даже после потери вещи.</p>
+ <div class="bet-actions garage-actions"><button id="garage-clean">УБОРКА В ПОМЕЩЕНИИ</button><button id="garage-next" class="bet-primary">К СТАВКАМ</button></div>`;
+ const panel=ctx.betOverlay.querySelector('.bet-panel');
+ if(panel)panel.scrollTop=priorScroll;
+ if(focusPatient!==undefined&&focusKey){const target=ctx.betContent.querySelector(`[data-patient="${focusPatient}"] ${focusKey==='stat'?`[data-stat="${focusStat}"]`:`[data-${focusKey}]`}`);target?.focus({preventScroll:true});}
  ctx.betContent.querySelector('#procedure-editor').onchange=event=>{ctx.procedureEditor=Number(event.target.value);garageOpen();};
  ctx.betContent.querySelector('#garage-next').onclick=bettingOpen;
  ctx.betContent.querySelector('#garage-clean').onclick=async event=>{await cleanFloor();event.target.textContent='Пол очищен';};
