@@ -38,12 +38,31 @@ function strikeProgress(p) {
     phase: 'finished'
   };
 }
+// Legs strike away from the pelvis: their own side and a shared rear cone.
+export function inStrikeSector(attacker, source, point) {
+  const frame = source.kind === 'leg' ? attacker.actualPose.pelvis : attacker;
+  const angle = wrap(Math.atan2(point.y-frame.y, point.x-frame.x)-frame.angle);
+  if (source.kind !== 'leg') return Math.abs(angle) <= (source.kind === 'head' ? .48 : 1.28);
+  // Own side from 60 degrees back; the rear 40-degree cone is shared.
+  return Math.abs(angle) >= Math.PI*8/9 || angle*source.side >= Math.PI/3;
+}
+export function kickPathClear(attacker, pending) {
+  const cfg=CONFIG.combat;
+  // Check the knee and both bones throughout tuck, extension and return.
+  const duration=cfg.windupSec+cfg.thrustSec+cfg.recoverSec;
+  const ages=[cfg.windupSec,cfg.windupSec+cfg.thrustSec,
+    ...Array.from({length:17},(_,i)=>duration*i/16)];
+  for(const age of ages){
+    const pose=attacker.attackPose({...pending,preview:false,started:ctx.game.time-age});
+    if(!pose || !coreClearBone(pose.shoulder,pose.joint,6.8*ctx.scale)
+      || pose.complete && !coreClearBone(pose.joint,pose.tip,5.8*ctx.scale))return false;
+  }
+  return true;
+}
 export function strikeCandidates(attacker, victim, source) {
   if (!attacker.attackSources.some(s => s.key === source.key)) return [];
   const facing = attacker.angle;
-  const forwardAngle = Math.atan2(victim.y - attacker.y, victim.x - attacker.x);
-  const arc = source.kind === 'head' ? .48 : 1.28;
-  if (Math.abs(wrap(forwardAngle - facing)) > arc) return [];
+  if (!inStrikeSector(attacker,source,source.kind==='leg'?victim.center:victim)) return [];
   if (!sightClear(attacker.center, victim.center)) return [];
   return victim.capsules.filter(c => c.segment && victim.isDamageable(c.segment)).map(c => {
     const dx = c.b.x - c.a.x,
@@ -53,7 +72,12 @@ export function strikeCandidates(attacker, victim, source) {
       x: c.a.x + dx * q,
       y: c.a.y + dy * q
     };
+    if (source.kind==='leg' && !inStrikeSector(attacker,source,aim)) return null;
     const dist = pointSegment(source.point, c.a, c.b) - c.r;
+    if(dist>(CONFIG.combat.strikeReachCm+(source.kind==='head'?9:17.25))*(source.reachFactor||1))return null;
+    // An unseen rear opponent is sensed only near the attacking foot/stump.
+    if(source.kind==='leg' && !attacker.canSee(victim.center)
+      && dist>CONFIG.combat.contactSenseCm)return null;
     const towards = Math.atan2(aim.y - attacker.y, aim.x - attacker.x);
     const off = Math.abs(wrap(towards - facing));
     const maybe = {
@@ -65,8 +89,8 @@ export function strikeCandidates(attacker, victim, source) {
     const physical = attacker.attackPose(maybe);
     if (!physical) return null;
     // Проверяем реальную досягаемость плеча/головы вместо «магической» дистанции.
-    const maxDistance = source.kind === 'head' ? 12 : source.reachFactor === .5 ? 14 : 28;
     const gap = pointSegment(physical.tip, c.a, c.b) - c.r;
+    if(source.kind==='leg' && (gap>3.5 || !kickPathClear(attacker,maybe)))return null;
     const score = dist + off * 15 + Math.max(0, gap) * 3 + (c.segment.startsWith('spine') ? 2 : 0);
     return {
       victim,
@@ -82,8 +106,10 @@ export function strikeCandidates(attacker, victim, source) {
 export function struckSegment(attacker, victim, p) {
   const pose = attacker.attackPose(p);
   if (!pose) return null;
+  if (pose.kind==='leg' && !kickPathClear(attacker,p)) return null;
   if (!sightClear(attacker.center, victim.center)) return null;
-  const rest = attacker.attackPose({...p, started:ctx.game.time, preview:false});
+  const rest = attacker.attackPose({...p,
+    started:ctx.game.time-(pose.kind==='leg'?CONFIG.combat.windupSec:0),preview:false});
   if (!rest) return null;
   const capsules = victim.capsules.filter(c=>c.segment && victim.isDamageable(c.segment));
   // Sweep along the actual limb/head thrust rather than teleporting the hit
@@ -178,6 +204,9 @@ function initiateCombatPounces() {
        ctx.combat.pending[id]||ctx.game.time<ctx.combat.nextStrike[id]||
        ctx.game.time<attacker.combatRecoverUntil||
        ctx.game.time<(ai.nextPounceDecisionAt??0))continue;
+    // A reachable side/rear kick takes precedence over turning around for a leap.
+    if(activeOpponents(id).some(v=>attacker.attackSources.some(source=>
+      source.kind==='leg' && strikeCandidates(attacker,v,source).length>0)))continue;
     const target=activeOpponents(id)
       .filter(v=>pounceOpportunity(attacker,v))
       .sort((a,b)=>Math.hypot(a.x-attacker.x,a.y-attacker.y)
@@ -246,7 +275,8 @@ export function combatAttacks() {
   for (const attacker of ctx.robots) {
     const id = attacker.id;
     if (!attacker.visible || !attacker.mobile || ctx.game.time < ctx.combat.nextStrike[id] || ctx.combat.pending[id] || attacker.actualPose.leap || ctx.game.time < attacker.combatRecoverUntil) continue;
-    const preferredVictims = activeOpponents(id).filter(v => Math.hypot(v.x - attacker.x, v.y - attacker.y) < CONFIG.combat.attackRangeCm + 56.25);
+    // Reach is measured from each attacking limb, including the rear pelvis.
+    const preferredVictims = activeOpponents(id);
     let best = null;
     for (const v of preferredVictims) for (const source of attacker.attackSources) {
       // Head strikes remain possible even when other limbs are intact.

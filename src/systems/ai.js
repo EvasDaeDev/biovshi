@@ -235,6 +235,16 @@ export function fighterIntent(r) {
     };
   }
 
+  // Nearby rear contact can trigger a kick without revealing a distant enemy.
+  // Keep the body facing forward instead of turning the kick target into a hand target.
+  const kicking=ctx.combat.pending[id]?.source.startsWith('leg-');
+  const readyToKick=!r.actualPose.leap && !r.actualPose.scene
+    && !ctx.combat.pending[id] && ctx.game.time>=ctx.combat.nextStrike[id]
+    && ctx.game.time>=r.combatRecoverUntil;
+  if(kicking || readyToKick && active.some(foe=>r.attackSources.some(source=>
+    source.kind==='leg' && strikeCandidates(r,foe,source).length>0))) {
+    return {goal:here,speed:0,mode:'лягается',lookPoint:null};
+  }
   const warning = ctx.combat.pending.findIndex(p => p?.victim === id && p.at > ctx.game.time && ctx.robots[p.victim]?.mobile);
   if (warning >= 0 && r.hasHead && r.movementLimbs >= 1) {
     const enemy = ctx.robots[warning];
