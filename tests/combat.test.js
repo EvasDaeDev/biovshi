@@ -1092,7 +1092,7 @@ test('powerful contact removes two HP once, expires Crit in .2 seconds and loses
  assert.equal(r.damage('head',1,2),false);assert.equal(ctx.hitEffects.group.querySelectorAll('.crit-label').length,1);
  ctx.game.time+=.19;paint();assert.equal(ctx.hitEffects.group.querySelectorAll('.crit-label').length,1);
  ctx.game.time+=.02;paint();assert.equal(ctx.hitEffects.group.querySelectorAll('.crit-label').length,0);
- for(let i=0;i<3;i++)hit(r,'head');paint();
+ for(let i=0;i<4;i++)hit(r,'head');paint();
  assert.equal(ctx.betting.garage[0].head,null);
  assert.equal(ctx.combat.detached.find(d=>d.cause==='head').pieces.find(p=>p.key==='head').skin.hat,1);
  assert.ok(ctx.detachedG.querySelector('svg[viewBox="0 0 64 64"]'));
