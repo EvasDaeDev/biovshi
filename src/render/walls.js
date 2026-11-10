@@ -16,7 +16,7 @@ function createWallPattern(key, length, width) {
     href:url,x:0,y:0,width:length,height:width,preserveAspectRatio:'none',
     // Outer masonry is shown in its original colours, without the green wall tint.
     opacity:key==='arenaOuterWall'||CONFIG.rendering.wallTintStrength===0?1:0,
-    ...(key==='obstacle'?{transform:`rotate(180 ${length/2} ${width/2})`}:{}),
+    ...(['obstacle','arenaOuterWall'].includes(key)?{transform:`rotate(180 ${length/2} ${width/2})`}:{}),
     style:CONFIG.rendering.texturePixelated?'image-rendering:crisp-edges;image-rendering:pixelated':'',
   },pattern);
   return true;
