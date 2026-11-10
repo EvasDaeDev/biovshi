@@ -3,7 +3,7 @@ import { ctx } from '../game/state.js';
 import { CONFIG } from '../config.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { loadTextureImage } from '../assets/preload.js';
-import { staticArenaImage } from './pixi-static.js';
+import { staticArenaImage,staticWallNodes } from './pixi-static.js';
 import { ArenaPostEffects } from './post-effects.js';
 import { victoryGold, goldMatrix } from './victory-glow.js';
 import { transformMatrix } from './pixi-math.js';
@@ -76,7 +76,7 @@ export class PixiArena {
     // Order agrees with the original scene: lights behind walls, oil below actors,
     // darkness above actors, announcements and impact accents above darkness.
     const [walls,floor,obstacles,night,ambient]=await Promise.all([
-      this.staticLayer([ctx.svg.querySelector('#tag7hop-walls'),ctx.outlineG],{outset:ctx.CAMERA_OUTSET}),
+      this.staticLayer(staticWallNodes(ctx.svg,ctx.outlineG),{outset:ctx.CAMERA_OUTSET}),
       ctx.floorCanvas?Promise.resolve(this.floorSprite(ctx.floorCanvas)):this.staticLayer([ctx.arenaContent.querySelector(':scope > rect'),ctx.svg.querySelector('#tag7hop-floor-decals'),ctx.grid],{pixels:1024}),
       this.staticLayer([ctx.svg.querySelector('#tag7hop-obstacle-lights'),ctx.blockG]),
       this.staticLayer([ctx.darkness],{night:true}),
