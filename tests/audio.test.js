@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
-import {createAudio,loadAudioSettings,playbackRate} from '../src/audio/audio.js';
+import {createAudio,loadAudioSettings,playbackRate,painSoundKey} from '../src/audio/audio.js';
 import {emitGameEvent} from '../src/game/event-bus.js';
 import {ASSETS} from '../src/assets/manifest.js';
 
@@ -123,5 +123,49 @@ test('clicking enabled buttons produces a short generated cue, never for disable
  assert.equal(f.sources.length,initial+1);
  const disabled=new Event('click');Object.defineProperty(disabled,'target',{value:outside});
  f.target.dispatchEvent(disabled);assert.equal(f.sources.length,initial+1);
+ f.finish();
+});
+
+test('pain samples map A/B to men and C/D to women, with all files selectable',()=>{
+ const male=['manPain1','manPain2','manPain3'],female=['womanPain1','womanPain2','womanPain3','womanPain4','womanPain5','womanPain6','womanPain7'];
+ for(const id of [0,1])assert.deepEqual(male.map((_,i)=>painSoundKey(id,(i+.5)/male.length)),male);
+ for(const id of [2,3])assert.deepEqual(female.map((_,i)=>painSoundKey(id,(i+.5)/female.length)),female);
+ assert.equal(painSoundKey(-1),null);assert.equal(painSoundKey(4),null);
+});
+
+test('injured patient plays an additional pain clip 100 ms after hit, crit and severing',async()=>{
+ const f=setup();await f.unlock();
+ const originalRandom=Math.random;
+ try{
+  Math.random=()=>0;
+  f.context.currentTime=12;
+  emitGameEvent('hit',{by:0,robot:2,damage:1});await flush();
+  const impact=live(f.sources,'hit')[0],voice=live(f.sources,'womanPain1')[0];
+  assert.ok(impact,'existing impact remains audible');
+  assert.ok(voice,'C plays a female vocalisation');
+  assert.deepEqual(impact.startArgs,[12]);
+  assert.ok(Math.abs(voice.startArgs[0]-12.1)<1e-9);
+  assert.equal(voice.playbackRate.value,playbackRate(2,-.2));
+  f.context.currentTime=13;
+  emitGameEvent('hit',{by:3,robot:0,damage:2});await flush();
+  assert.equal(live(f.sources,'crit').length,1,'critical sound not replaced');
+  assert.equal(live(f.sources,'manPain1').length,1,'injured A plays male sample');
+  assert.ok(Math.abs(live(f.sources,'manPain1')[0].startArgs[0]-13.1)<1e-9);
+  f.context.currentTime=14;
+  emitGameEvent('segment-broken',{by:0,robot:1,damage:1});await flush();
+  assert.equal(live(f.sources,'hit').length,2);
+  assert.equal(live(f.sources,'detach1').length,1);
+  assert.equal(live(f.sources,'manPain1').length,2);
+ }finally{Math.random=originalRandom;f.finish();}
+});
+
+test('queued pain voices are cancelled on pause or next round without affecting sound buses',async()=>{
+ const f=setup();await f.unlock();
+ emitGameEvent('hit',{by:1,robot:3,damage:1});await flush();
+ const voice=f.sources.find(s=>s.started&&String(s.buffer).includes('/woman_pain/'));
+ assert.ok(voice);
+ f.state.paused=true;f.audio.sync();assert.equal(voice.stopped,true);
+ f.state.paused=false;f.state.startup.phase='betting';f.audio.sync();await flush();
+ assert.equal(live(f.sources,'womanPain1').length,0);
  f.finish();
 });

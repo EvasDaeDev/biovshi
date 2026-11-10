@@ -16,6 +16,17 @@ export const ASSETS = {
     robotD: 'assets/textures/robots/r_04.png',
   },
   sounds: {
+    // Patient voices are separate from the impact and severing effects.
+    manPain1: 'assets/sounds/combat/man_pain/hurt_01.mp3',
+    manPain2: 'assets/sounds/combat/man_pain/hurt_04.mp3',
+    manPain3: 'assets/sounds/combat/man_pain/hurt_05.mp3',
+    womanPain1: 'assets/sounds/combat/woman_pain/female_hurt_01.ogg',
+    womanPain2: 'assets/sounds/combat/woman_pain/female_hurt_02.ogg',
+    womanPain3: 'assets/sounds/combat/woman_pain/female_hurt_03.ogg',
+    womanPain4: 'assets/sounds/combat/woman_pain/female_hurt_04.ogg',
+    womanPain5: 'assets/sounds/combat/woman_pain/female_hurt_05.ogg',
+    womanPain6: 'assets/sounds/combat/woman_pain/female_hurt_06.ogg',
+    womanPain7: 'assets/sounds/combat/woman_pain/female_hurt_07.ogg',
     hit: 'assets/sounds/effects/hit_1.mp3',
     crit: 'assets/sounds/effects/crit_hit_1.mp3',
     death: 'assets/sounds/effects/death_body_1.mp3',

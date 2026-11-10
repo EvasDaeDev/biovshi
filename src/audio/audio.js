@@ -5,6 +5,15 @@ import { ctx } from '../game/state.js';
 const STORAGE='biovshi.audio.v1';
 const DEFAULTS={sounds:70,music:10};
 const rawFiles=new Map(),decodedFiles=new WeakMap();
+const PAIN_SAMPLES = [
+  ['manPain1','manPain2','manPain3'], // A, B
+  ['womanPain1','womanPain2','womanPain3','womanPain4','womanPain5','womanPain6','womanPain7'] // C, D
+];
+export function painSoundKey(patient,randomValue=Math.random()) {
+  if(!Number.isInteger(patient)||patient<0||patient>3)return null;
+  const samples=PAIN_SAMPLES[patient<2?0:1];
+  return samples[Math.min(samples.length-1,Math.max(0,Math.floor(randomValue*samples.length)))];
+}
 let sharedContext;
 function browserContext(){
   const AudioContext=globalThis.AudioContext||globalThis.webkitAudioContext;
@@ -57,7 +66,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
   }
   function stopAll(){for(const voice of [...voices])stop(voice);}
   function gainFor(key){return key==='step' ? .7 : key==='drag' ? 1 : key==='crawl' ? .55 : 1;}
-  function play(key,{patient,slot,priority=2}={}){
+  function play(key,{patient,slot,priority=2,delaySec=0}={}){
     if(disposed||!unlocked||!context||context.state!=='running'||!ASSETS.sounds[key]||warnings.has(key))return;
     if(slot&&loops.has(slot))return;
     if((key!=='music'&&settings.sounds===0)||(key==='music'&&settings.music===0))return;
@@ -78,7 +87,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
         voice.offset=buffer.duration>0?musicOffset%buffer.duration:0;
         voice.startedAt=context.currentTime;
         source.start(0,voice.offset);
-      }else source.start();
+      }else source.start(context.currentTime+Math.max(0,delaySec));
     }).catch(error=>{stop(voice);warn(key,error);});
   }
   function sync(){
@@ -127,6 +136,10 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     try{
       context??=contextFactory();if(!context)return;
       if(!soundBus){soundBus=context.createGain();musicBus=context.createGain();soundBus.connect(context.destination);musicBus.connect(context.destination);applyVolumes();}
+      // Predecode short pain clips after user interaction so the first injury
+      // can start close to its intended +100 ms audio-clock deadline.
+      if(bufferLoader===decodeSound)for(const group of PAIN_SAMPLES)for(const key of group)
+        bufferLoader(context,ASSETS.sounds[key]).catch(error=>warn(key,error));
       unlocked=true;
       // resume() must be invoked inside the gesture, before any asynchronous work.
       Promise.resolve(context.resume()).then(sync).catch(error=>warn('unlock',error));
@@ -171,6 +184,10 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     if(state.startup?.phase!=='running'||state.combat?.finished||effectsPaused)return;
     if(type==='hit'||type==='segment-broken'){
       play(event.damage===2?'crit':'hit',{patient,priority:3});
+      // The injured patient reacts 100 ms after the impact. This is an
+      // additional voice, never a replacement for hit/crit/detach effects.
+      const painKey=painSoundKey(event.robot);
+      if(painKey)play(painKey,{patient:event.robot,priority:2,delaySec:.1});
       if(type==='segment-broken')play(Math.random()<.5?'detach1':'detach2',{patient:event.robot,priority:4});
     }else if(type==='combat-miss')play(Math.random()<.5?'miss1':'miss2',{patient,priority:1});
     else if(type==='robot-immobilized'&&event.reason==='погиб')play('death',{patient:event.robot,priority:4});
