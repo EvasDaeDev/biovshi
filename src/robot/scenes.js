@@ -413,8 +413,22 @@ export function reboundTick(robotState, dt, intent) {
     };
     robotState.vx = jump.direction.x * 64;
     robotState.vy = jump.direction.y * 64;
+    const completedJump = robotState.leap;
     robotState.leap = null;
     robotState.attackVisual = null;
+    if(completedJump.kind==='combat-pounce') {
+      // A short backwards jump without a 180-degree turn, whether we hit
+      // or missed. The existing collision-aware jumpTick limits wall travel.
+      robotState.leap={
+        kind:'combat-retreat',
+        started:ctx.game.time,
+        launched:true,
+        direction:{x:-completedJump.direction.x,y:-completedJump.direction.y},
+        goal:{x:robotState.x-completedJump.direction.x*CONFIG.attack.combatPounceRetreatCm,
+              y:robotState.y-completedJump.direction.y*CONFIG.attack.combatPounceRetreatCm}
+      };
+      note('pounce-retreat',{robot:robotState.id,distance:CONFIG.attack.combatPounceRetreatCm});
+    }
     for (const l of robotState.allLimbs()) {
       l.phase = 1;
       l.from = {
@@ -449,7 +463,8 @@ export function jumpTick(robotState, dt, intent) {
   robotState.t = ctx.game.time;
   robotState.vx = robotState.vy = 0;
   const rebound = robotState.leap.kind === 'rebound';
-  if (rebound ? age < .55 : age > .12 && age < .94) {
+  const combatRetreat = robotState.leap.kind === 'combat-retreat';
+  if (combatRetreat ? age < CONFIG.attack.combatPounceRetreatSec : rebound ? age < .55 : age > .12 && age < .94) {
     const old = robotState.savePose(),
       feet = robotState.allLimbs().map(l => ({
         ...l.foot
@@ -501,7 +516,8 @@ export function jumpTick(robotState, dt, intent) {
   }
   robotState.updateHead(dt);
   robotState.api.capsules = robotState.makeCapsules();
-  if (age >= (rebound ? .55 : 1)) {
+  if (age >= (combatRetreat ? CONFIG.attack.combatPounceRetreatSec : rebound ? .55 : 1)) {
+    if (combatRetreat) robotState.combatRecoveryUntil = ctx.game.time + CONFIG.attack.combatPounceRecoverSec;
     if (rebound) robotState.reboundEscape = {
       ...robotState.leap.direction,
       until: ctx.game.time + CONFIG.attack.runAfterLandingSec
@@ -644,9 +660,13 @@ export function robotPounce(robotState, goal, gap) {
   if (robotState.scene || robotState.leap || ctx.game.time - robotState.lastLeap < CONFIG.attack.pounceCooldownSec) return false;
   robotState.lastLeap = ctx.game.time;
   robotState.leap = {
+    kind: 'combat-pounce',
     started: null,
     prepareAt: ctx.game.time,
     launched: false,
+    victim: gap?.victimId ?? null,
+    impactDone: false,
+    lastHead: null,
     goal: {
       ...goal
     }
