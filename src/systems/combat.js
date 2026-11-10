@@ -183,7 +183,8 @@ function initiateCombatPounces() {
     ai.nextPounceDecisionAt=ctx.game.time+CONFIG.attack.combatPounceDecisionSec;
     if(random()>=CONFIG.attack.combatPounceChance)continue;
     if(attacker.pounce(target.center,{victimId:target.id})){
-      ctx.combat.nextStrike[id]=ctx.game.time+CONFIG.attack.pounceCooldownSec;
+      // Pounce cooldown restricts only future pounces (lastLeap), not
+      // ordinary punches after the 0.4 s recovery.
       ctx.combat.fighterSwings[id]++;
       ctx.combat.strikes++;
     }
