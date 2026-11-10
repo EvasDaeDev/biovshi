@@ -121,6 +121,7 @@ export async function resetRound(destination='betting') {
     progressAt: 0,
     orbitBreakUntil: 0,
     orbitGoal: null,
+    nextPounceDecisionAt: 0,
     lastSoundAt: -Infinity
   }));
   ctx.soundEvents.length = 0;
