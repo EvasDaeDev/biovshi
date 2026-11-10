@@ -298,7 +298,17 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     sensedId: null,
     sensedType: null,
     searchHoldUntil: 0,
-    lastSoundAt: -Infinity
+    lastSoundAt: -Infinity,
+    lastHitAt: -100,
+    profile: null,
+    side: 0,
+    sideUntil: 0,
+    sideTarget: null,
+    pursuitTarget: null,
+    bestPursuitDistance: null,
+    progressAt: 0,
+    orbitBreakUntil: 0,
+    orbitGoal: null
   }));
   ctx.patrolPoints = [{
     x: 270,
@@ -349,7 +359,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     escapeGoal: Array(ctx.ROBOT_COUNT).fill(null),
     escapeSide: Array.from({
       length: ctx.ROBOT_COUNT
-    }, (_, i) => i % 2 ? 1 : -1),
+    }, () => random() < .5 ? -1 : 1),
     lastHitTime: 0,
     fighterHits: Array(ctx.ROBOT_COUNT).fill(0),
     fighterTaken: Array(ctx.ROBOT_COUNT).fill(0),
