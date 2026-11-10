@@ -5,6 +5,53 @@ import { ctx } from '../game/state.js';
 const STORAGE='biovshi.audio.v1';
 const DEFAULTS={sounds:70,music:10};
 const rawFiles=new Map(),decodedFiles=new WeakMap();
+const vocalGainCache=new WeakMap();
+const PAIN_TARGET_RMS=10**(-19/20);
+// Measure the loudest 100-ms window of a decoded vocal take, not the sample
+// peak. Do it once per buffer; keep natural accents with a restrained gain cap.
+export function painLevelGain(buffer){
+  if(!buffer||typeof buffer.getChannelData!=='function'||!buffer.sampleRate||!buffer.length)return 1;
+  if(vocalGainCache.has(buffer))return vocalGainCache.get(buffer);
+  const window=Math.max(1,Math.round(buffer.sampleRate*.1));
+  const channels=Array.from({length:Math.max(1,buffer.numberOfChannels||1)},(_,i)=>buffer.getChannelData(i));
+  const length=Math.min(buffer.length,Math.round(buffer.sampleRate*4));
+  let peakRms=0;
+  for(let start=0;start<length;start+=Math.max(1,Math.floor(window/2))){
+    const end=Math.min(length,start+window),count=Math.max(1,(end-start)*channels.length);
+    let sum=0;
+    for(const samples of channels)for(let i=start;i<end;i++)sum+=samples[i]*samples[i];
+    peakRms=Math.max(peakRms,Math.sqrt(sum/count));
+  }
+  const value=peakRms>1e-5?Math.max(.45,Math.min(2.4,PAIN_TARGET_RMS/peakRms)):1;
+  vocalGainCache.set(buffer,value);
+  return value;
+}
+// Room is a single lightweight shared 0.55-s convolution tail. Music, UI,
+// footsteps and dragging never enter it.
+const ROOM_WET=Object.freeze({
+ hit:.07,crit:.08,detach1:.1,detach2:.1,pounce:.08,
+ miss1:.05,miss2:.05,death:.12
+});
+function wetFor(key){return (key.startsWith('manPain')||key.startsWith('womanPain')) ? .14 : (ROOM_WET[key]??0);}
+export function makeRoomImpulse(context){
+  const rate=context.sampleRate;
+  const count=Math.floor(rate*.55),impulse=context.createBuffer(2,count,rate);
+  // Fixed seed makes the sound stable across visits and cheap to prepare once.
+  let seed=1337;
+  for(let channel=0;channel<2;channel++){
+    const samples=impulse.getChannelData(channel);
+    let damped=0;
+    for(let i=0;i<count;i++){
+      seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+      const noise=(seed/4294967296)*2-1;
+      damped=damped*.56+noise*.44;
+      const time=i/rate;
+      const early=time>.014&&time<.055?1.55:1;
+      samples[i]=damped*Math.exp(-6.9*time/.55)*early;
+    }
+  }
+  return impulse;
+}
 const PAIN_SAMPLES = [
   ['manPain1','manPain2','manPain3'], // A, B
   ['womanPain1','womanPain2','womanPain3','womanPain4','womanPain5','womanPain6','womanPain7'] // C, D
@@ -48,7 +95,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
   contextFactory=browserContext,
   bufferLoader=decodeSound,maxVoices=12}={}){
   const settings=loadAudioSettings(storage),voices=new Set(),loops=new Map(),warnings=new Set();
-  let context,soundBus,musicBus,disposed=false,unlocked=false,effectsPaused=false,lastPhase;
+  let context,soundBus,musicBus,roomConvolver,disposed=false,unlocked=false,effectsPaused=false,lastPhase;
   let musicOffset=0,musicFadeEnd=null;
   const MUSIC_FADE_SECONDS=10;
   const warn=(key,error)=>{if(!warnings.has(key)){warnings.add(key);console.warn('Audio unavailable:',key,error);}};
@@ -61,11 +108,19 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     }
     voice.cancelled=true;
     try{voice.source?.stop();}catch{}
-    voice.source?.disconnect();voice.gain?.disconnect();voices.delete(voice);
+    voice.source?.disconnect();voice.gain?.disconnect();voice.roomSend?.disconnect();voices.delete(voice);
     if(voice.slot&&loops.get(voice.slot)===voice)loops.delete(voice.slot);
   }
   function stopAll(){for(const voice of [...voices])stop(voice);}
-  function gainFor(key){return key==='step' ? .7 : key==='drag' ? 1 : key==='crawl' ? .55 : 1;}
+  function gainFor(key,buffer){
+    if(key==='step')return .7;
+    if(key==='drag')return 1;
+    if(key==='crawl')return .55;
+    if(key==='hit')return .95;
+    if(key==='crit')return .74;
+    if(key.startsWith('manPain')||key.startsWith('womanPain'))return painLevelGain(buffer);
+    return 1;
+  }
   function play(key,{patient,slot,priority=2,delaySec=0}={}){
     if(disposed||!unlocked||!context||context.state!=='running'||!ASSETS.sounds[key]||warnings.has(key))return;
     if(slot&&loops.has(slot))return;
@@ -81,7 +136,14 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       const source=context.createBufferSource(),gain=context.createGain();voice.source=source;voice.gain=gain;
       source.buffer=buffer;source.loop=Boolean(slot);
       source.playbackRate.value=key==='music'||key==='victory'?1:playbackRate(patient,slot?0:(Math.random()-.5)*.4);
-      gain.gain.value=gainFor(key);source.connect(gain);gain.connect(key==='music'?musicBus:soundBus);
+      gain.gain.value=gainFor(key,buffer);source.connect(gain);
+      gain.connect(key==='music'?musicBus:soundBus);
+      const wet=wetFor(key);
+      if(roomConvolver&&wet>0){
+        const send=context.createGain();
+        send.gain.value=wet;
+        gain.connect(send);send.connect(roomConvolver);voice.roomSend=send;
+      }
       source.onended=()=>stop(voice);
       if(key==='music'){
         voice.offset=buffer.duration>0?musicOffset%buffer.duration:0;
@@ -135,7 +197,21 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     if(disposed)return;
     try{
       context??=contextFactory();if(!context)return;
-      if(!soundBus){soundBus=context.createGain();musicBus=context.createGain();soundBus.connect(context.destination);musicBus.connect(context.destination);applyVolumes();}
+      if(!soundBus){
+        soundBus=context.createGain();musicBus=context.createGain();
+        soundBus.connect(context.destination);musicBus.connect(context.destination);
+        // One shared room effect for combat only; no new files, per-frame work,
+        // or changes to music and footstep dynamics.
+        if(context.createConvolver&&context.createBuffer&&context.sampleRate){
+          try{
+            roomConvolver=context.createConvolver();
+            roomConvolver.normalize=true;
+            roomConvolver.buffer=makeRoomImpulse(context);
+            roomConvolver.connect(soundBus);
+          }catch(error){roomConvolver?.disconnect();roomConvolver=null;warn('room',error);}
+        }
+        applyVolumes();
+      }
       // Predecode short pain clips after user interaction so the first injury
       // can start close to its intended +100 ms audio-clock deadline.
       if(bufferLoader===decodeSound) {
@@ -215,7 +291,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
   // A prior gesture has already unlocked the shared context during this visit.
   if(sharedContext?.state==='running')unlock();
   return {sync,unlock,setVolume,stopAll,get settings(){return {...settings};},dispose(){
-    if(disposed)return;disposed=true;unsubscribe();stopAll();soundBus?.disconnect();musicBus?.disconnect();
+    if(disposed)return;disposed=true;unsubscribe();stopAll();roomConvolver?.disconnect();soundBus?.disconnect();musicBus?.disconnect();
     for(const {input,listener} of controls)input.removeEventListener('input',listener);
     eventTarget.removeEventListener('pointerdown',unlock);eventTarget.removeEventListener('keydown',unlock);
     clickTarget.removeEventListener('click',click,true);
