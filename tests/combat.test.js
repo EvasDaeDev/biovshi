@@ -233,7 +233,8 @@ test('outer wall and clock remain outside the floor clip, with a full-size playa
   const tile=ctx.svg.querySelector('#texture-arenaWall');
   assert.equal(tile.getAttribute('width'),'100');
   assert.equal(tile.getAttribute('height'),'30');
-  assert.equal(ctx.CAMERA_FULL,776);
+  assert.equal(ctx.CAMERA_FULL,700+2*(CONFIG.arena.wallThicknessCm+CONFIG.arena.outerWallDepthCm+CONFIG.arena.wallViewMarginCm));
+  assert.ok(ctx.svg.querySelector('#tag7hop-walls-outer'),'outer brick facade visible behind existing wall');
   assert.equal(ctx.arenaBoundary.right,700);
   assert.equal(ctx.arenaBoundary.bottom,700);
   dom.window.close();
