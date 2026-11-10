@@ -24,6 +24,7 @@ async function answerDialog(value) {
  else {
   dialog.querySelector('input').value=value;
   dialog.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+  if(dialog.isConnected){assert.equal(dialog.querySelector('input').checkValidity(),false);dialog.querySelector('[data-cancel]').click();}
  }
  await Promise.resolve();
 }
