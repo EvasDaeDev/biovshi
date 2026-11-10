@@ -9,6 +9,26 @@ import { ctx } from "../game/state.js";
 import { betCommit, betNewSession, betRefund, betResolve, betTopUp, betAddPlayer } from "./ledger.js";
 import { bettingLoad, bettingSave } from "./storage.js";
 import { startSpawnSequence } from "../game/session.js";
+function bettingInputDialog({title,initialValue,numeric=false,maxLength=32}) {
+ return new Promise(resolve=>{
+  const dialog=document.createElement('dialog');
+  dialog.className='betting-input-dialog';
+  dialog.innerHTML='<form method="dialog"><h3></h3><input required><div class="betting-input-actions"><button type="button" data-cancel>ОТМЕНА</button><button type="submit" class="bet-primary">ПОДТВЕРДИТЬ</button></div></form>';
+  dialog.querySelector('h3').textContent=title;
+  const input=dialog.querySelector('input');
+  input.type=numeric?'number':'text';
+  input.value=initialValue;
+  if(numeric){input.min='1';input.step='1';}else input.maxLength=maxLength;
+  const finish=value=>{dialog.close();dialog.remove();resolve(value);};
+  dialog.querySelector('[data-cancel]').onclick=()=>finish(null);
+  dialog.querySelector('form').onsubmit=event=>{event.preventDefault();if(input.reportValidity())finish(input.value);};
+  dialog.oncancel=event=>{event.preventDefault();finish(null);};
+  ctx.root.appendChild(dialog);
+  if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
+  input.focus();
+  input.select();
+ });
+}
 export function bettingModal(title) {
   ctx.intro.hidden = true;
   ctx.resultsPanel.hidden = true;
@@ -144,8 +164,8 @@ export function bettingOpen() {
   });bindArenas();
   function bindPlayerRows(){
     ctx.betContent.querySelectorAll('[data-bet-player] select').forEach(select=>select.onchange=()=>{select.style.color=ROBOT_COLORS[Number(select.value)];bettingPreview();});
-    ctx.betContent.querySelectorAll('[data-top-up]').forEach(button=>button.onclick=()=>{
-      const player=Number(button.dataset.topUp),raw=ctx.root.ownerDocument.defaultView.prompt('Сумма пополнения для '+ctx.betting.players[player].name+' (фишки):','100');
+    ctx.betContent.querySelectorAll('[data-top-up]').forEach(button=>button.onclick=async()=>{
+      const player=Number(button.dataset.topUp),raw=await bettingInputDialog({title:'ПОПОЛНЕНИЕ · '+ctx.betting.players[player].name,initialValue:'100',numeric:true});
       if(raw===null)return;
       try{
         betTopUp(ctx.betting,player,Number(raw.trim()));bettingSave();bettingHud();
@@ -159,8 +179,8 @@ export function bettingOpen() {
   }
   bindPlayerRows();
   const addPlayer=ctx.betContent.querySelector('#bet-add-player');
-  addPlayer.onclick=()=>{
-    const name=ctx.root.ownerDocument.defaultView.prompt('Имя нового игрока (до 32 символов):','Игрок '+(ctx.betting.players.length+1));
+  addPlayer.onclick=async()=>{
+    const name=await bettingInputDialog({title:'НОВЫЙ ИГРОК',initialValue:'Игрок '+(ctx.betting.players.length+1),maxLength:32});
     if(name===null)return;
     try{
       const player=betAddPlayer(ctx.betting,name);
