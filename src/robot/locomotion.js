@@ -14,6 +14,14 @@ export function currentTargetVisible(robotState) {
   return !!robotState.currentIntent.lookPoint;
 }
 export function steerTo(robotState, goal) {
+  // A stop/attack intent is not a navigation request. Discard stale waypoints
+  // rather than turning toward an old flank point with zero travel speed.
+  if (Math.hypot(goal.x - robotState.x, goal.y - robotState.y) < 4) {
+    robotState.route = [];
+    robotState.routeGoal = null;
+    robotState.routeIndex = 0;
+    return goal;
+  }
   if (!robotState.routeGoal || Math.hypot(robotState.routeGoal.x - goal.x, robotState.routeGoal.y - goal.y) > 18 || !robotState.route.length) {
     robotState.route = planPath({
       x: robotState.x,
@@ -33,6 +41,14 @@ export function steerTo(robotState, goal) {
     return goal;
   }
   return robotState.route[robotState.routeIndex] || goal;
+}
+export function headingForIntent(currentAngle, position, waypoint, intent) {
+  const dx=waypoint.x-position.x,dy=waypoint.y-position.y;
+  if (intent.mode === 'атакует' && intent.lookPoint) {
+    const tx=intent.lookPoint.x-position.x,ty=intent.lookPoint.y-position.y;
+    if(Math.hypot(tx,ty)>1)return Math.atan2(ty,tx);
+  }
+  return Math.hypot(dx,dy)>1 ? Math.atan2(dy,dx) : currentAngle;
 }
 export function retreatFromBoundary(robotState, dt) {
   if (!robotState.boundaryRecovery) return false;
@@ -516,7 +532,7 @@ export function robotTick(robotState, dt, intent) {
     waypoint = robotState.steerTo(goal),
     dx = waypoint.x - robotState.x,
     dy = waypoint.y - robotState.y,
-    heading = robotState.t >= robotState.recoveryUntil && Math.hypot(dx, dy) > .1 ? Math.atan2(dy, dx) : robotState.angle,
+    heading = robotState.t >= robotState.recoveryUntil ? headingForIntent(robotState.angle, robotState, waypoint, intent) : robotState.angle,
     turn = wrap(heading - robotState.angle),
     speed = intent.speed * CONFIG.movement.speedMultiplier * statMultiplier(ctx.betting?.garage?.[robotState.id]?.stats[0]??3) * robotState.locomotion() * clamp(Math.hypot(goal.x - robotState.x, goal.y - robotState.y) / 18, 0, 1) * (robotState.reduced ? 1 : .86 + .14 * Math.sin(robotState.gait * 2 - .5));
   const flinching = robotState.hitReaction && ctx.game.time < robotState.hitReaction.start + robotState.hitReaction.duration;
