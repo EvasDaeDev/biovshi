@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CONFIG} from '../src/config.js';
-import {pounceContactSegment,pounceOpportunity} from '../src/systems/combat.js';
+import {pounceContactSegment,pounceOpportunity,finishingPounceInProgress} from '../src/systems/combat.js';
 import {ctx} from '../src/game/state.js';
 import {startCombatPounceRetreat,jumpTick} from '../src/robot/scenes.js';
 
@@ -73,4 +73,14 @@ test('full forward leap sounds at actual movement, hops 30cm back and then recov
     assert.equal(ctx.game.events.filter(e=>e.type==='pounce-retreat').length,1);
     assert.equal(ctx.game.events.filter(e=>e.type==='footstep').length,1);
   }finally{ctx.game=saved;}
+});
+
+test('lethal headbutt finishes retreat and recovery before victory starts',()=>{
+ const r={actualPose:{leap:{kind:'combat-pounce'}},combatRecoverUntil:0};
+ assert.equal(finishingPounceInProgress(r,10),true);
+ r.actualPose.leap.kind='combat-retreat';
+ assert.equal(finishingPounceInProgress(r,10),true);
+ r.actualPose.leap=null;r.combatRecoverUntil=10.4;
+ assert.equal(finishingPounceInProgress(r,10),true);
+ assert.equal(finishingPounceInProgress(r,10.4),false);
 });
