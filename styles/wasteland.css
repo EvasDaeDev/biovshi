@@ -192,3 +192,48 @@ html body #robot-tag-hops-v22 #tag7hop-status {color:#d6bd8b;text-shadow:0 1px #
 #robot-tag-hops-v22 .credits-view a {color:#59311d;text-decoration:underline;overflow-wrap:anywhere}
 #robot-tag-hops-v22 .credits-footnote {font-size:12px;opacity:.8}
 #robot-tag-hops-v22 #arena-credits-back {width:100%;margin-top:10px;padding:12px}
+
+
+/* UI consistency pass: November 2026. Keep arena telemetry and combat geometry unchanged. */
+#robot-tag-hops-v22 {
+ --waste-success:#38612b;
+ --waste-danger:#872c24;
+ --waste-ink-soft:#69583f;
+}
+/* Compact patient cards: artwork zooms without growing the fixed 260 x 164 card. */
+#robot-tag-hops-v22 .robot-card-name strong,
+#robot-tag-hops-v22 .patient-name {font-size:16px;line-height:1.1}
+#robot-tag-hops-v22 .patient-portrait {transform:scale(1.1);transform-origin:left center}
+/* A deliberate monospace treatment for event messages, not the primary UI font. */
+#robot-tag-hops-v22 #combat-log {font-size:12px;line-height:16px}
+/* Hints are legible but remain visually secondary. */
+.biovshi-hint {font-size:10px;line-height:1.45}
+/* Preserve the existing telemetry sizing; fix only undersized betting annotations. */
+#robot-tag-hops-v22 .bet-muted,
+#robot-tag-hops-v22 .garage-patient small,
+#robot-tag-hops-v22 #bet-result-summary>p {font-size:12px;line-height:1.45}
+#robot-tag-hops-v22 .bet-pool small {font-size:11px;line-height:1.4}
+#robot-tag-hops-v22 .bet-panel .patron-name {color:#493522;font-size:12px}
+#robot-tag-hops-v22 .bet-panel .bet-kicker {color:#713c27}
+#robot-tag-hops-v22 .bet-panel .garage-patient [data-error] {color:var(--waste-danger)}
+#robot-tag-hops-v22 #bet-result-summary .bet-net-win {color:var(--waste-success)}
+#robot-tag-hops-v22 #bet-result-summary .bet-net-loss {color:var(--waste-danger)}
+/* Winner and loss colors stay readable on aged paper rather than dark neon UI. */
+#robot-tag-hops-v22 .gladiator-results-kicker {color:var(--waste-ink-soft)}
+#robot-tag-hops-v22 #gladiator-results-title {color:var(--paper-ink);text-shadow:none}
+#robot-tag-hops-v22 .gladiator-results-table {font-size:clamp(11px,1.75vw,13px)}
+/* Result and wagering dialogs are viewport overlays, not arena-sized panels. */
+#robot-tag-hops-v22 .bet-overlay {position:fixed;inset:0;z-index:1100;overflow-y:auto;box-sizing:border-box;align-items:center}
+#robot-tag-hops-v22 .gladiator-results {position:fixed;inset:0;z-index:1100;box-sizing:border-box}
+#robot-tag-hops-v22 .bet-panel,
+#robot-tag-hops-v22 .gladiator-results-card {max-height:calc(100dvh - 36px);overflow-y:auto;overscroll-behavior:contain}
+@media(max-width:500px) {
+ #robot-tag-hops-v22 .bet-panel,
+ #robot-tag-hops-v22 .gladiator-results-card {max-height:calc(100dvh - 16px)}
+ #robot-tag-hops-v22 .gladiator-results {padding:8px}
+}
+/* Avoid bright cyan remnants in modal controls and field highlights. */
+#robot-tag-hops-v22 .bet-panel .arena-picker svg {fill:#493b2a;stroke:#9a5a32}
+#robot-tag-hops-v22 .bet-panel .arena-options [aria-pressed="true"] {border-color:#a55330}
+#robot-tag-hops-v22 .bet-panel .bet-pool strong {color:#493522}
+#robot-tag-hops-v22 .bet-panel .bet-pool .skill-summary {color:var(--paper-ink)}
