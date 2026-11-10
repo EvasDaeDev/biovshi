@@ -1,7 +1,7 @@
 name: Death balance analysis (diagnostic)
 on:
   push:
-    branches: [analysis/death-balance, experiment/tactical-ranges]
+    branches: [experiment/balance-tactics-v2]
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        seed: [101, 202, 303, 404]
+        seed: [101, 202]
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
@@ -25,7 +25,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - name: Simulate experimental combat and print mortality report
+      - name: Simulate tactics plus anatomy and print mortality report
         run: node scripts/death-balance-analysis.mjs 2>&1 | tee death-analysis-${{ matrix.seed }}.log; exit ${PIPESTATUS[0]}
       - name: Keep detailed report
         if: always()
