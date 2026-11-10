@@ -139,8 +139,14 @@ test('outer masonry renders behind the original wall, survives refresh, without 
    createWalls();
    assert.equal(ctx.svg.querySelectorAll('#tag7hop-walls-outer').length,1);
    assert.equal(ctx.svg.querySelectorAll('#texture-arenaOuterWall').length,1);
+   ctx.textureAssets.arenaOuterWall.loaded=false;
+   createWalls();
+   assert.equal(ctx.svg.querySelector('#tag7hop-walls-outer'),null,
+     'if texture is unavailable, the existing wall still renders normally');
+   assert.ok(ctx.svg.querySelector('#tag7hop-walls'));
  }finally{
-   for(const [key,value] of Object.entries(old))ctx[key]=value;
+   for(const [key,value] of Object.entries(old))
+     if(key!=='document')ctx[key]=value;
    globalThis.document=old.document;dom.window.close();
  }
 });
