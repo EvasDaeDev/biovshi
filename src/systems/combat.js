@@ -119,7 +119,7 @@ export function pounceOpportunity(attacker,victim) {
     && sightClear(attacker.center,victim.center)
     && coreClearBone(attacker.center,victim.center,9);
 }
-export function pounceContactSegment(from,to,capsules,isDamageable=()=>true) {
+export function pounceContactSegment(from,to,capsules,isDamageable=()=>true,headRadius=13.5) {
   if(!from||!to)return null;
   // Sweep the head between physics ticks; even a fast jump cannot tunnel
   // through a victim. Only the actual contacted body segment is damaged.
@@ -129,7 +129,10 @@ export function pounceContactSegment(from,to,capsules,isDamageable=()=>true) {
     for(const c of capsules){
       if(!c.segment||!isDamageable(c.segment))continue;
       const gap=pointSegment(point,c.a,c.b)-c.r;
-      if(gap<=12 && (!closest || gap<closest.gap))
+      // Head collision has a 13 cm solid radius; collision avoidance
+      // prevents centres getting any closer. The attack must use the
+      // same contact envelope or a blocked jump can never damage.
+      if(gap<=headRadius && (!closest || gap<closest.gap))
         closest={segment:c.segment,gap};
     }
     if(closest)return closest.segment;
@@ -146,7 +149,7 @@ function resolvePounceImpacts() {
     const victim=ctx.robots[leap.victim];
     if(!victim?.mobile||!victim.visible||!attacker.hasHead)return;
     const touched=pounceContactSegment(previous,current,victim.capsules,
-      segment=>victim.isDamageable(segment));
+      segment=>victim.isDamageable(segment),13*ctx.scale+.5);
     if(!touched)return;
     leap.impactDone=true;
     const id=attacker.id;
