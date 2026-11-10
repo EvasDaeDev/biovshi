@@ -173,8 +173,9 @@ function createRobot(id, start) {
     y: 0
   };
   robotState.gazeYaw = robotState.start.angle;
-  robotState.scanAngle = 0;
-  robotState.scanDirection = 1;
+  robotState.scanAngle = (id%2 ? -.42 : .42) * ctx.HEAD_LIMIT;
+  // Alternating phase and direction prevents four patients from scanning in sync.
+  robotState.scanDirection = id%2 ? -1 : 1;
   robotState.stuckFor = 0;
   robotState.recoveryUntil = 0;
   robotState.routePadding = 70 * ctx.scale;
