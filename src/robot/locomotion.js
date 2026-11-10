@@ -472,11 +472,8 @@ export function robotTick(robotState, dt, intent) {
       robotState.leap.started = ctx.game.time;
       robotState.leap.lastHead = {...robotState.api.eye};
       robotState.leap.launched = true;
-      note('pounce-launch', {
-        robot: robotState.id,
-        heading: robotState.chest.angle,
-        error
-      });
+      // The sound/event fires in jumpTick on the first actual movement,
+      // not at alignment, which may precede takeoff by 120 ms.
     } else if (ctx.game.time - robotState.leap.prepareAt > CONFIG.attack.pounceTurnTimeoutSec) {
       robotState.leap = null;
     } else {
