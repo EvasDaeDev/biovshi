@@ -13,6 +13,7 @@ import { createObstacleLights } from '../render/ground-spots.js';
 import { initializeHitEffects } from '../render/hit-effects.js';
 import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
+import { random } from '../utils/random.js';
 import { ctx } from "./state.js";
 import { fitField, togglePause, toggleSpeed, setTimeScale } from "../ui/controls.js";
 import { CONFIG } from "../config.js";
@@ -298,7 +299,17 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     sensedId: null,
     sensedType: null,
     searchHoldUntil: 0,
-    lastSoundAt: -Infinity
+    lastSoundAt: -Infinity,
+    lastHitAt: -100,
+    profile: null,
+    side: 0,
+    sideUntil: 0,
+    sideTarget: null,
+    pursuitTarget: null,
+    bestPursuitDistance: null,
+    progressAt: 0,
+    orbitBreakUntil: 0,
+    orbitGoal: null
   }));
   ctx.patrolPoints = [{
     x: 270,
@@ -349,7 +360,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     escapeGoal: Array(ctx.ROBOT_COUNT).fill(null),
     escapeSide: Array.from({
       length: ctx.ROBOT_COUNT
-    }, (_, i) => i % 2 ? 1 : -1),
+    }, () => random() < .5 ? -1 : 1),
     lastHitTime: 0,
     fighterHits: Array(ctx.ROBOT_COUNT).fill(0),
     fighterTaken: Array(ctx.ROBOT_COUNT).fill(0),
