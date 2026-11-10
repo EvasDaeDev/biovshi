@@ -108,11 +108,11 @@ const CONFIG = {
     // Обзор всех свободных роботов, включая бегство.
     rangeCm: 300,
     // Дальность зрения и фонарика.
-    headScanDeg: 30,
+    headScanDeg: 60,
     // Поворот головы при осмотре: ± этот угол.
-    scanSpeedDeg: 10,
+    scanSpeedDeg: 20,
     // Скорость осмотра без цели.
-    trackingSpeedDeg: 20 // Скорость слежения за замеченной целью.
+    trackingSpeedDeg: 40 // Скорость слежения за замеченной целью.
   },
   movement: {
     speedMultiplier: 1.2,
