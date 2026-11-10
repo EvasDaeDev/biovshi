@@ -23,9 +23,7 @@ export function step(dt) {
     // has finished. The recorded round duration was frozen at combat end.
     if (ctx.combat.finishedAt !== null
         && ctx.game.time - ctx.combat.finishedAt >= 3
-        && ctx.game.time >= (ctx.combat.celebrationUntil ?? 0)
-        && (!winner?.scene || !winner.mobile)
-        && !(winner?.victoryRepeatsLeft > 0)) showResults();
+        && ctx.game.time >= (ctx.combat.celebrationUntil ?? 0)) showResults();
     return;
   }
   ctx.round.elapsedSec += dt;
