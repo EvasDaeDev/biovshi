@@ -53,6 +53,18 @@ export function cameraApply() {
   );
 }
 
+export function cameraTargetBounds(robots, silhouetteMargin=42) {
+  let left=Infinity,right=-Infinity,top=Infinity,bottom=-Infinity;
+  for(const r of robots) {
+    if(!Number.isFinite(r.x)||!Number.isFinite(r.y))continue;
+    left=Math.min(left,r.x-silhouetteMargin);
+    right=Math.max(right,r.x+silhouetteMargin);
+    top=Math.min(top,r.y-silhouetteMargin);
+    bottom=Math.max(bottom,r.y+silhouetteMargin);
+  }
+  return {left,right,top,bottom};
+}
+
 export function cameraUpdate(dt) {
   if (
     ctx.startup.phase !== 'running' ||
@@ -64,16 +76,12 @@ export function cameraUpdate(dt) {
   const active = ctx.robots.filter(r => r.visible && r.mobile);
   if (!active.length) return;
 
-  let left = Infinity,
-    right = -Infinity,
-    top = Infinity,
-    bottom = -Infinity;
-
-  for (const r of active) {
-    const capsules=r.capsules??[];
-    if(capsules.length){for(const c of capsules){left=Math.min(left,c.a.x-c.r,c.b.x-c.r);right=Math.max(right,c.a.x+c.r,c.b.x+c.r);top=Math.min(top,c.a.y-c.r,c.b.y-c.r);bottom=Math.max(bottom,c.a.y+c.r,c.b.y+c.r);}}
-    else{left=Math.min(left,r.x);right=Math.max(right,r.x);top=Math.min(top,r.y);bottom=Math.max(bottom,r.y);}
-  }
+  // Follow patients' body positions, not their animated bone capsules.
+  // Head turns, strikes and limb gestures used to make the framing "breathe"
+  // even when every fighter was stationary. Allow a fixed silhouette margin
+  // for the whole rig while keeping the existing arena-space framing margins.
+  const {left,right,top,bottom}=cameraTargetBounds(active);
+  if(!Number.isFinite(left))return;
 
   const width=ctx.fieldWidth||ctx.fieldSide||700,height=ctx.fieldHeight||ctx.fieldSide||700,short=Math.min(width,height);
   // Screen-axis margins: two metres horizontally and one vertically.
