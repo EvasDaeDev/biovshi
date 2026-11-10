@@ -79,7 +79,8 @@ export function attackPose(robotState, p) {
   };
   const progress = p.preview ? {
     wind: 0,
-    reach: 1
+    reach: 1,
+    phase: 'recover'
   } : strikeProgress(p);
   // Подготовка: кисть уходит назад. Выпад: вытягивание к ЗАФИКСИРОВАННОЙ при замахе точке.
   const rear = {
@@ -92,6 +93,16 @@ export function attackPose(robotState, p) {
     x: base.x + (rear.x - base.x) * wind + (desired.x - base.x) * reach,
     y: base.y + (rear.y - base.y) * wind + (desired.y - base.y) * reach
   };
+  if(l.kind==='leg'){
+    // Tuck toward the hip before pushing outward, with continuous phase joins.
+    const tuck={x:base.x+(shoulder.x-base.x)*.25,
+      y:base.y+(shoulder.y-base.y)*.25};
+    const from=progress.phase==='thrust'?tuck:base;
+    const to=progress.phase==='windup'?tuck:desired;
+    const q=progress.phase==='windup'?wind:reach;
+    tip.x=from.x+(to.x-from.x)*q;
+    tip.y=from.y+(to.y-from.y)*q;
+  }
   const vx = tip.x - shoulder.x,
     vy = tip.y - shoulder.y,
     dist = Math.hypot(vx, vy) || 1;
@@ -103,6 +114,7 @@ export function attackPose(robotState, p) {
     kind: l.kind,
     limb: l,
     shoulder,
+    joint: complete ? ik(shoulder,tip,upper,lower,l.kind==='arm'?l.side:-l.side).joint : tip,
     tip,
     base,
     progress,

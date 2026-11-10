@@ -434,6 +434,15 @@ export function robotTick(robotState, dt, intent) {
     robotState.api.capsules = robotState.makeCapsules();
     return;
   }
+  const strike=ctx.combat.pending[robotState.id];
+  if(strike?.source.startsWith('leg-')){
+    // A kick uses the other limbs as fixed supports; do not turn or walk mid-kick.
+    if(robotState.scene)robotState.api.endScene();
+    robotState.vx=robotState.vy=robotState.requestedSpeed=0;
+    robotState.currentIntent={goal:{x:robotState.x,y:robotState.y},speed:0,mode:'лягается',lookPoint:null};
+    robotState.updateHead(dt);
+    return;
+  }
   if (robotState.scene && robotState.idleKinds.includes(robotState.mode) && intent.mode !== 'wander') robotState.api.endScene();
   if (robotState.scene && robotState.mode === 'hops' && ctx.game.time >= robotState.scene.ends) robotState.updateIdleHops(dt);
   if (robotState.scene && (robotState.mode === 'startle' || robotState.idleKinds.includes(robotState.mode)) && ctx.game.time >= robotState.scene.ends) robotState.api.endScene();
