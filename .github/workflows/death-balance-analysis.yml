@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 18
     env:
       ANALYSIS_SEED: ${{ matrix.seed }}
-      ANALYSIS_ROUNDS: '25'
+      ANALYSIS_ROUNDS: '100'
       ANALYSIS_MAX_SECONDS: '150'
     steps:
       - uses: actions/checkout@v4
