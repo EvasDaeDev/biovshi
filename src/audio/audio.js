@@ -193,6 +193,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     const {type}=event,patient=event.by??event.from??event.robot;
     if(type==='combat-end'){if(event.winner!==null)play('victory',{priority:5});return;}
     if(state.startup?.phase!=='running'||state.combat?.finished||effectsPaused)return;
+    if(type==='pounce-launch'){play('pounce',{patient:event.robot,priority:4});return;}
     if(type==='hit'||type==='segment-broken'){
       play(event.damage===2?'crit':'hit',{patient,priority:3});
       // The injured patient reacts 100 ms after the impact. This is an
