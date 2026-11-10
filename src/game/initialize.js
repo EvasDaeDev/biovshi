@@ -13,6 +13,7 @@ import { createObstacleLights } from '../render/ground-spots.js';
 import { initializeHitEffects } from '../render/hit-effects.js';
 import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
+import { random } from '../utils/random.js';
 import { ctx } from "./state.js";
 import { fitField, togglePause, toggleSpeed, setTimeScale } from "../ui/controls.js";
 import { CONFIG } from "../config.js";
