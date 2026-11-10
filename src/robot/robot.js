@@ -396,6 +396,9 @@ function createRobot(id, start) {
         y: robotState.vy
       };
     },
+    get combatRecoverUntil() {
+      return robotState.combatRecoveryUntil??0;
+    },
     get state() {
       return robotState.scene ? robotState.mode : robotState.leap ? robotState.leap.kind === 'rebound' ? ctx.game.time - robotState.leap.started < robotState.leap.turnDuration ? 'turn-rebound' : 'rebound' : robotState.leap.launched ? 'pounce' : 'pounce-turn' : robotState.currentIntent.mode;
     },
