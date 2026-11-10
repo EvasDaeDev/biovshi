@@ -146,10 +146,8 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       sync();
     }catch(error){warn('device',error);}
   }
-  function click(event){
-    const target=event.target;
-    const button=target?.closest?.('button,[role="button"]');
-    if(!button||button.disabled||!state.root?.contains(button)||disposed||!unlocked||!context||context.state!=='running'||settings.sounds===0)return;
+  function playClickTone(){
+    if(disposed||!context||context.state!=='running'||settings.sounds===0)return;
     try{
       const time=context.currentTime,osc=context.createOscillator(),gain=context.createGain();
       osc.type='sine';osc.frequency.setValueAtTime(850,time);
@@ -160,6 +158,19 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       osc.onended=()=>{osc.disconnect();gain.disconnect();};
       osc.start(time);osc.stop(time+.05);
     }catch(error){warn('click',error);}
+  }
+  function click(event){
+    const target=event.target?.nodeType===1?event.target:event.target?.parentElement;
+    const button=target?.closest?.('button,[role="button"],summary,input[type="button"],input[type="submit"],input[type="reset"]');
+    if(!button||!state.root?.contains(button)||disposed||settings.sounds===0
+       ||button.disabled||button.matches?.(':disabled')
+       ||button.getAttribute?.('aria-disabled')==='true')return;
+    // Capture click on the arena root, before a popup/button may stop bubbling
+    // or replace itself. The initial launch button must also be audible.
+    if(!unlocked)unlock();
+    if(!context)return;
+    if(context.state==='running'){playClickTone();return;}
+    Promise.resolve(context.resume()).then(playClickTone).catch(error=>warn('click',error));
   }
   function applyVolumes(){if(soundBus)soundBus.gain.value=settings.sounds/100;if(musicBus)musicBus.gain.value=settings.music/100;}
   function setVolume(channel,value){
@@ -194,13 +205,14 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     else if(type==='footstep')play('step',{patient:event.robot,priority:0});
   });
   eventTarget.addEventListener('pointerdown',unlock);eventTarget.addEventListener('keydown',unlock);
-  eventTarget.addEventListener('click',click);
+  const clickTarget=state.root??eventTarget;
+  clickTarget.addEventListener('click',click,true);
   // A prior gesture has already unlocked the shared context during this visit.
   if(sharedContext?.state==='running')unlock();
   return {sync,unlock,setVolume,stopAll,get settings(){return {...settings};},dispose(){
     if(disposed)return;disposed=true;unsubscribe();stopAll();soundBus?.disconnect();musicBus?.disconnect();
     for(const {input,listener} of controls)input.removeEventListener('input',listener);
     eventTarget.removeEventListener('pointerdown',unlock);eventTarget.removeEventListener('keydown',unlock);
-    eventTarget.removeEventListener('click',click);
+    clickTarget.removeEventListener('click',click,true);
   }};
 }
