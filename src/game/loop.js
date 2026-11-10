@@ -7,7 +7,6 @@ import { CONFIG } from "../config.js";
 import { random } from "../utils/random.js";
 import { note } from "./events.js";
 import { activeOpponents, fighterIntent, fleeAllAttackers, patrol, tacticalEscape } from "../systems/ai.js";
-import { updateFootsteps } from "../systems/perception.js";
 import { combatAttacks } from "../systems/combat.js";
 import { advanceStartup } from "./session.js";
 import { paint } from "../render/frame.js";
@@ -52,7 +51,6 @@ export function step(dt) {
     ctx.intents = ctx.robots.map(fighterIntent);
   }
   for (const r of ctx.robots) r.tick(dt, ctx.intents[r.id]);
-  updateFootsteps();
   // Detect an actual locomotion deadlock (not just lack of a target).
   // Change navigation goal and flank, rather than leaving the AI in speed=0 mode.
   for (const r of ctx.robots) {
