@@ -194,6 +194,11 @@ function initiateCombatPounces() {
     }
   }
 }
+export function finishingPounceInProgress(robot,time) {
+  const kind=robot?.actualPose?.leap?.kind;
+  return kind==='combat-pounce'||kind==='combat-retreat'
+    || time<(robot?.combatRecoverUntil??0);
+}
 export function combatAttacks() {
   if (ctx.combat.finished) return;
   resolvePounceImpacts();
@@ -281,7 +286,10 @@ export function combatAttacks() {
     if (mobile.length === 2 && ctx.arenaAccent.lastActive > 2) arenaAnnounce('ОСТАЛИСЬ', 'ДВОЕ', 4, 2.3);
     ctx.arenaAccent.lastActive = mobile.length;
   }
-  if (mobile.length <= 1 && ctx.robots.every(r => r.visible)) {
+  // A headbutt that wins the fight must still complete its backward hop
+  // and landing recovery before switching to the victory animation.
+  if (mobile.length <= 1 && ctx.robots.every(r => r.visible)
+      && !mobile.some(r=>finishingPounceInProgress(r,ctx.game.time))) {
     ctx.combat.finished = true;
     ctx.combat.winner = mobile.length === 1 ? mobile[0].id : null;
     ctx.combat.finishedAt = ctx.game.time;
