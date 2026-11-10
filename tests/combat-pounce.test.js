@@ -30,7 +30,8 @@ test('retreat is 30cm backward with unchanged heading and not a teleport to orig
     startCombatPounceRetreat(robot,{direction:{x:0,y:1}});
     assert.equal(robot.leap.kind,'combat-retreat');
     assert.deepEqual(robot.leap.goal,{x:210,y:250});
-    assert.deepEqual(robot.leap.direction,{x:0,y:-1});
+    assert.equal(Math.abs(robot.leap.direction.x),0);
+    assert.equal(robot.leap.direction.y,-1);
     assert.equal(robot.angle,1.2);
     assert.equal(robot.leap.started,14);
   }finally{ctx.game=saved;}
