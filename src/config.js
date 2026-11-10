@@ -190,8 +190,8 @@ const CONFIG = {
     combatPounceMinCm: 60,
     combatPounceMaxCm: 100,
     combatPounceDamage: 2,
-    combatPounceRetreatCm: 30,
-    combatPounceRetreatSec: .34,
+    combatPounceRetreatCm: 10,
+    combatPounceRetreatSec: .14,
     combatPounceRecoverSec: .4,
     combatPounceDecisionSec: 2.4,
     // Пауза между попытками напрыгивания.

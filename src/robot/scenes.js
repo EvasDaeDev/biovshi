@@ -446,7 +446,7 @@ export function startCombatPounceRetreat(robotState,completedJump) {
   const direction={x:-completedJump.direction.x,y:-completedJump.direction.y};
   robotState.leap={
     kind:'combat-retreat',started:ctx.game.time,launched:true,
-    direction,
+    origin:{x:robotState.x,y:robotState.y},direction,
     goal:{x:robotState.x+direction.x*CONFIG.attack.combatPounceRetreatCm,
           y:robotState.y+direction.y*CONFIG.attack.combatPounceRetreatCm}
   };
@@ -476,7 +476,15 @@ export function jumpTick(robotState, dt, intent) {
       remaining = Math.max(0,
         (robotState.leap.goal.x-robotState.x)*robotState.leap.direction.x
         +(robotState.leap.goal.y-robotState.y)*robotState.leap.direction.y),
-      move = Math.min(remaining, (rebound ? 140 : CONFIG.attack.pounceSpeedCm) * dt),
+      // Ease a 10 cm backward step over its short animation instead of
+      // travelling instantly and then lingering in a redundant hop pose.
+      travelled = combatRetreat ? Math.max(0,
+        (robotState.x-robotState.leap.origin.x)*robotState.leap.direction.x
+        +(robotState.y-robotState.leap.origin.y)*robotState.leap.direction.y) : 0,
+      retreatProgress = combatRetreat ? smooth(clamp((age+dt)/CONFIG.attack.combatPounceRetreatSec,0,1)) : 0,
+      move = combatRetreat
+        ? Math.min(remaining,Math.max(0,CONFIG.attack.combatPounceRetreatCm*retreatProgress-travelled))
+        : Math.min(remaining,(rebound ? 140 : CONFIG.attack.pounceSpeedCm)*dt),
       mx = robotState.leap.direction.x * move,
       my = robotState.leap.direction.y * move;
     function moveTo(q) {
