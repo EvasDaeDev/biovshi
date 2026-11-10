@@ -96,12 +96,15 @@
       <h2 id="gladiator-results-title">ПОБЕДИТЕЛЬ — A</h2>
       <p id="gladiator-results-summary" class="gladiator-results-summary"></p>
       <div id="gladiator-results-totals" class="gladiator-results-totals"></div>
-      <div class="gladiator-results-table-wrap">
-        <table class="gladiator-results-table" aria-label="Статистика роботов">
-          <thead><tr><th>Робот</th><th>Сегменты</th><th>Попадания</th><th>Получено</th><th>Итог</th></tr></thead>
-          <tbody id="gladiator-results-rows"></tbody>
-        </table>
-      </div>
+      <details class="gladiator-results-details">
+        <summary>ПОДРОБНАЯ СТАТИСТИКА БОЯ</summary>
+        <div class="gladiator-results-table-wrap">
+          <table class="gladiator-results-table" aria-label="Статистика роботов">
+            <thead><tr><th>Робот</th><th>Сегменты</th><th>Попадания</th><th>Получено</th><th>Итог</th></tr></thead>
+            <tbody id="gladiator-results-rows"></tbody>
+          </table>
+        </div>
+      </details>
       <div id="bet-result-summary"></div>
       <div class="results-actions"><button id="gladiator-results-again" type="button">СЛЕДУЮЩИЙ РАУНД</button><button id="gladiator-results-procedure" type="button">ПРОЦЕДУРНАЯ</button></div>
     </div>
