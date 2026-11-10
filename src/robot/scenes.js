@@ -454,6 +454,18 @@ export function reboundTick(robotState, dt, intent) {
     });
   }
 }
+// No turn on disengagement: retreat opposite the jump's heading, not back
+// to the original start point. Physical movement is collision-clamped.
+export function startCombatPounceRetreat(robotState,completedJump) {
+  const direction={x:-completedJump.direction.x,y:-completedJump.direction.y};
+  robotState.leap={
+    kind:'combat-retreat',started:ctx.game.time,launched:true,
+    direction,
+    goal:{x:robotState.x+direction.x*CONFIG.attack.combatPounceRetreatCm,
+          y:robotState.y+direction.y*CONFIG.attack.combatPounceRetreatCm}
+  };
+  note('pounce-retreat',{robot:robotState.id,distance:CONFIG.attack.combatPounceRetreatCm});
+}
 export function jumpTick(robotState, dt, intent) {
   const age = ctx.game.time - robotState.leap.started;
   robotState.currentIntent = {
@@ -462,6 +474,9 @@ export function jumpTick(robotState, dt, intent) {
   };
   robotState.t = ctx.game.time;
   robotState.vx = robotState.vy = 0;
+  if(robotState.leap.kind==='combat-pounce' && robotState.leap.impactDone) {
+    startCombatPounceRetreat(robotState,robotState.leap);
+  }
   const rebound = robotState.leap.kind === 'rebound';
   const combatRetreat = robotState.leap.kind === 'combat-retreat';
   if (combatRetreat ? age < CONFIG.attack.combatPounceRetreatSec : rebound ? age < .55 : age > .12 && age < .94) {
@@ -517,7 +532,15 @@ export function jumpTick(robotState, dt, intent) {
   robotState.updateHead(dt);
   robotState.api.capsules = robotState.makeCapsules();
   if (age >= (combatRetreat ? CONFIG.attack.combatPounceRetreatSec : rebound ? .55 : 1)) {
-    if (combatRetreat) robotState.combatRecoveryUntil = ctx.game.time + CONFIG.attack.combatPounceRecoverSec;
+    if (!combatRetreat && !rebound) {
+      startCombatPounceRetreat(robotState,robotState.leap);
+      robotState.api.capsules = robotState.makeCapsules();
+      return;
+    }
+    if (combatRetreat) {
+      robotState.combatRecoveryUntil = ctx.game.time + CONFIG.attack.combatPounceRecoverSec;
+      note('footstep',{robot:robotState.id,landing:true});
+    }
     if (rebound) robotState.reboundEscape = {
       ...robotState.leap.direction,
       until: ctx.game.time + CONFIG.attack.runAfterLandingSec
@@ -535,7 +558,7 @@ export function jumpTick(robotState, dt, intent) {
     }
     robotState.currentIntent = {
       ...intent,
-      mode: rebound ? 'flee' : 'chase'
+      mode: rebound ? 'flee' : combatRetreat ? 'восстанавливается' : 'chase'
     };
   }
 }
