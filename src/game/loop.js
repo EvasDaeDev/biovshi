@@ -19,7 +19,13 @@ export function step(dt) {
     // Keep the victorious patient's chosen idle gesture moving beneath the glow.
     const winner=ctx.robots[ctx.combat.winner];
     if(winner?.mobile)winner.tick(dt,{mode:'wander',speed:0,goal:{x:winner.center.x,y:winner.center.y},lookPoint:null});
-    if (ctx.combat.finishedAt !== null && ctx.game.time - ctx.combat.finishedAt >= 3) showResults();
+    // Keep the glow and winner visible until the second/third full gesture
+    // has finished. The recorded round duration was frozen at combat end.
+    if (ctx.combat.finishedAt !== null
+        && ctx.game.time - ctx.combat.finishedAt >= 3
+        && ctx.game.time >= (ctx.combat.celebrationUntil ?? 0)
+        && (!winner?.scene || !winner.mobile)
+        && !(winner?.victoryRepeatsLeft > 0)) showResults();
     return;
   }
   ctx.round.elapsedSec += dt;
