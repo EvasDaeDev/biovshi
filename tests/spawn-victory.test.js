@@ -5,7 +5,7 @@ import {robotCelebrateVictory,robotContinueVictory} from '../src/robot/scenes.js
 import {ctx} from '../src/game/state.js';
 
 test('each spawn slot faces arena centre for 7 m ward and 4 m ring',()=>{
-  for(const boundary of [{left:0,top:0,size:700},{left:150,top:150,size:400}]){
+  for(const boundary of [{left:0,top:0,right:700,bottom:700,size:700},{left:150,top:150,right:550,bottom:550,size:400}]){
     const cx=boundary.left+boundary.size/2,cy=boundary.top+boundary.size/2;
     const d=55;
     const slots=[{x:cx,y:boundary.top+d},{x:boundary.left+d,y:cy},
@@ -21,7 +21,8 @@ test('each spawn slot faces arena centre for 7 m ward and 4 m ring',()=>{
 });
 
 test('winning gesture plays exactly two or three complete identical cycles',()=>{
-  const oldCombat=ctx.combat,oldTime=ctx.game.time;
+  const oldCombat=ctx.combat,oldGame=ctx.game;
+  ctx.game={time:100};
   try{
     for(const [choice,expected] of [[0,2],[.99,3]]){
       ctx.game.time=100;
@@ -55,5 +56,5 @@ test('winning gesture plays exactly two or three complete identical cycles',()=>
       assert.equal(count,expected,'celebration never restarts after repeats');
       assert.ok(ctx.combat.celebrationUntil>=100+expected*1.8);
     }
-  }finally{ctx.combat=oldCombat;ctx.game.time=oldTime;}
+  }finally{ctx.combat=oldCombat;ctx.game=oldGame;}
 });
