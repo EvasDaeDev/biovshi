@@ -186,8 +186,9 @@ function initiateCombatPounces() {
     ai.nextPounceDecisionAt=ctx.game.time+CONFIG.attack.combatPounceDecisionSec;
     if(random()>=CONFIG.attack.combatPounceChance)continue;
     if(attacker.pounce(target.center,{victimId:target.id})){
-      // Pounce cooldown restricts only future pounces (lastLeap), not
-      // ordinary punches after the 0.4 s recovery.
+      // A successful leap suspends ONLY subsequent leap decisions, not
+      // ordinary attacks after the 0.4 s recovery.
+      ai.nextPounceDecisionAt=ctx.game.time+CONFIG.attack.pounceCooldownSec;
       ctx.combat.fighterSwings[id]++;
       ctx.combat.strikes++;
     }
