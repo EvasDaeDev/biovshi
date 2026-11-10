@@ -470,10 +470,13 @@ export function jumpTick(robotState, dt, intent) {
       feet = robotState.allLimbs().map(l => ({
         ...l.foot
       })),
-      dx = robotState.leap.goal.x - robotState.x,
-      dy = robotState.leap.goal.y - robotState.y,
-      d = Math.hypot(dx, dy) || 1,
-      move = Math.min(d, (rebound ? 140 : CONFIG.attack.pounceSpeedCm) * dt),
+      // Fixed-heading jumps stop at their intended destination. The old
+      // "distance || 1" moved the patient 1 extra cm each frame once
+      // the goal was reached, causing overshoot and broken retreats.
+      remaining = Math.max(0,
+        (robotState.leap.goal.x-robotState.x)*robotState.leap.direction.x
+        +(robotState.leap.goal.y-robotState.y)*robotState.leap.direction.y),
+      move = Math.min(remaining, (rebound ? 140 : CONFIG.attack.pounceSpeedCm) * dt),
       mx = robotState.leap.direction.x * move,
       my = robotState.leap.direction.y * move;
     function moveTo(q) {
