@@ -2,22 +2,24 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
-import {createAudio,loadAudioSettings,playbackRate,painSoundKey} from '../src/audio/audio.js';
+import {createAudio,loadAudioSettings,playbackRate,painSoundKey,painLevelGain,makeRoomImpulse} from '../src/audio/audio.js';
 import {emitGameEvent} from '../src/game/event-bus.js';
 import {ASSETS} from '../src/assets/manifest.js';
 
 const flush=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve();};
 function setup(){
  const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://audio.test/'});
- const sources=[],gains=[];
- const context={state:'suspended',currentTime:0,destination:{},resume(){this.state='running';return Promise.resolve();},
-  createGain(){const param={value:1,events:[],cancelScheduledValues(t){this.events.push(['cancel',t]);},setValueAtTime(v,t){this.value=v;this.events.push(['set',v,t]);},linearRampToValueAtTime(v,t){this.events.push(['ramp',v,t]);},exponentialRampToValueAtTime(v,t){this.events.push(['exp',v,t]);}};const gain={gain:param,connect(){},disconnect(){}};gains.push(gain);return gain;},
+ const sources=[],gains=[],convolvers=[];
+ const context={state:'suspended',currentTime:0,sampleRate:48000,destination:{},resume(){this.state='running';return Promise.resolve();},
+  createBuffer(channels,length,rate){const data=Array.from({length:channels},()=>new Float32Array(length));return {numberOfChannels:channels,length,sampleRate:rate,getChannelData:i=>data[i]};},
+  createConvolver(){const node={connect(destination){this.destination=destination;},disconnect(){this.disconnected=true;}};convolvers.push(node);return node;},
+  createGain(){const param={value:1,events:[],cancelScheduledValues(t){this.events.push(['cancel',t]);},setValueAtTime(v,t){this.value=v;this.events.push(['set',v,t]);},linearRampToValueAtTime(v,t){this.events.push(['ramp',v,t]);},exponentialRampToValueAtTime(v,t){this.events.push(['exp',v,t]);}};const gain={gain:param,connections:[],connect(node){this.connections.push(node);},disconnect(){this.disconnected=true;}};gains.push(gain);return gain;},
   createBufferSource(){const source={playbackRate:{value:1},connect(node){this.gain=node;},disconnect(){},start(...args){this.started=true;this.startArgs=args;},stop(){this.stopped=true;}};sources.push(source);return source;}};
  context.createOscillator=()=>{const oscillator={frequency:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){},start(){this.started=true;},stop(){this.stopped=true;this.onended?.();}};sources.push(oscillator);return oscillator;};
  const state={root:dom.window.document.querySelector('#robot-tag-hops-v22'),startup:{phase:'running'},paused:false,combat:{finished:false,unarmedDeadline:[null,null]},robots:[{id:0,visible:true,mobile:true},{id:1,visible:true,mobile:true}]};
  const target=new EventTarget();
  const audio=createAudio({state,storage:dom.window.localStorage,eventTarget:target,contextFactory:()=>context,bufferLoader:async(_context,path)=>path===ASSETS.sounds.music?{duration:120}:path});
- return {audio,state,context,sources,gains,dom,target,unlock:async()=>{target.dispatchEvent(new Event('pointerdown'));await flush();},finish(){audio.dispose();dom.window.close();}};
+ return {audio,state,context,sources,gains,convolvers,dom,target,unlock:async()=>{target.dispatchEvent(new Event('pointerdown'));await flush();},finish(){audio.dispose();dom.window.close();}};
 }
 const live=(sources,key)=>sources.filter(s=>s.started&&!s.stopped&&(key==='music'?s.buffer?.duration===120:s.buffer===ASSETS.sounds[key]));
 
@@ -198,4 +200,50 @@ test('queued pain voices are cancelled on pause or next round without affecting 
  f.state.paused=false;f.state.startup.phase='betting';f.audio.sync();await flush();
  assert.equal(live(f.sources,'womanPain1').length,0);
  f.finish();
+});
+
+
+test('vocal RMS matching reduces library differences without destroying dynamics',()=>{
+ const fake=(level)=>({numberOfChannels:1,sampleRate:1000,length:300,getChannelData:()=>new Float32Array(300).fill(level)});
+ const loud=fake(.30),quiet=fake(.015),silent=fake(0);
+ assert.equal(painLevelGain(loud),.45,'loud voices attenuated with bounded gain');
+ assert.equal(painLevelGain(quiet),2.4,'quiet voices raised but never excessively amplified');
+ assert.equal(painLevelGain(silent),1,'silence never receives infinite gain');
+ assert.equal(painLevelGain(quiet),2.4,'same decoded buffer reuses measured level');
+});
+
+test('one shared short reverb serves combat and pain but never music, steps or clicks',async()=>{
+ const f=setup();await f.unlock();
+ assert.equal(f.convolvers.length,1,'one reverb node per arena audio instance');
+ const room=f.convolvers[0];assert.ok(room.buffer);
+ assert.equal(room.buffer.numberOfChannels,2);
+ assert.equal(room.buffer.length,26400,'0.55 s at 48 kHz');
+ const music=live(f.sources,'music')[0];
+ assert.equal(music.gain.connections.length,1,'music is dry');
+ emitGameEvent('footstep',{robot:0});await flush();
+ const step=live(f.sources,'step')[0];
+ assert.equal(step.gain.connections.length,1,'shuffling footsteps retain original sound');
+ emitGameEvent('hit',{by:0,robot:1,damage:1});await flush();
+ const hit=live(f.sources,'hit')[0],pain=f.sources.find(s=>s.started&&String(s.buffer).includes('/man_pain/'));
+ assert.equal(hit.gain.connections.length,2,'hit routes to dry mix and room');
+ assert.ok(hit.gain.connections[1].connections.includes(room));
+ assert.equal(hit.gain.connections[1].gain.value,.07);
+ assert.ok(pain,'victim vocal exists');
+ assert.equal(pain.gain.connections[1].gain.value,.14);
+ assert.equal(hit.gain.gain.value,.95);
+ emitGameEvent('hit',{by:0,robot:1,damage:2});await flush();
+ assert.equal(live(f.sources,'crit')[0].gain.gain.value,.74);
+ f.finish();
+ assert.equal(room.disconnected,true,'dispose releases convolution node');
+});
+
+test('shared room impulse has bounded size and decays with time',()=>{
+ const context={sampleRate:8000,createBuffer:(channels,length,rate)=>{
+   const arrays=Array.from({length:channels},()=>new Float32Array(length));
+   return {numberOfChannels:channels,length,sampleRate:rate,getChannelData:i=>arrays[i]};
+ }};
+ const impulse=makeRoomImpulse(context);
+ assert.equal(impulse.length,4400);
+ const samples=impulse.getChannelData(0),rms=(start,end)=>Math.sqrt(samples.slice(start,end).reduce((sum,v)=>sum+v*v,0)/(end-start));
+ assert.ok(rms(0,500)>rms(3500,4400)*15);
 });
