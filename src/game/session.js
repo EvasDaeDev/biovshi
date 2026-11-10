@@ -64,6 +64,7 @@ export async function resetRound(destination='betting') {
   ctx.combat.finished = false;
   ctx.combat.winner = null;
   ctx.combat.finishedAt = null;
+  ctx.combat.celebrationUntil = 0;
   ctx.combat.nextStrike.fill(0);
   ctx.combat.pending.fill(null);
   ctx.combat.retreatUntil.fill(0);

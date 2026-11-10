@@ -342,6 +342,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     finished: false,
     winner: null,
     finishedAt: null,
+    celebrationUntil: 0,
     nextStrike: Array(ctx.ROBOT_COUNT).fill(0),
     debris: [],
     oilLeaks: [],

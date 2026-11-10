@@ -110,6 +110,12 @@ export function chooseHunter() {
   return Math.floor(random() * ctx.ROBOT_COUNT);
 }
 // Фиксированные точки старта. В каждой из них может появиться любой робот.
+export function spawnFacingAngle(point,boundary) {
+  const right=boundary.right??boundary.left+boundary.size;
+  const bottom=boundary.bottom??boundary.top+boundary.size;
+  return Math.atan2((boundary.top+bottom)/2-point.y,
+    (boundary.left+right)/2-point.x);
+}
 export function chooseSpawnLayout() {
   const boundary=ctx.arenaBoundary;
   const cx=(boundary.left+boundary.right)/2,cy=(boundary.top+boundary.bottom)/2;
@@ -120,9 +126,11 @@ export function chooseSpawnLayout() {
     const j = Math.floor(random() * (i + 1));
     [slots[i], slots[j]] = [slots[j], slots[i]];
   }
+  // Spawn position remains shuffled, but every patient faces the true
+  // centre of the selected arena on every new round.
   return slots.map(p => ({
     ...p,
-    angle: random() * Math.PI * 2
+    angle: spawnFacingAngle(p,boundary)
   }));
 }
 export function rebuildRobots() {

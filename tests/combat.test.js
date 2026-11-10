@@ -965,17 +965,22 @@ test('an unchanged textured frame causes no redundant DOM mutations',()=>{
 });
 
 
-test('opening results stops hidden arena work after the three-second victory presentation',()=>{
+test('opening results waits for repeated victory gestures and stops hidden arena work',()=>{
   const dom=setup();
   for(const r of ctx.robots.slice(1))for(let i=0;i<6;i++)hit(r,'head');
   step(1/60);assert.equal(ctx.combat.finished,true);
   ctx.last=0;ctx.paintAt=0;ctx.debt=0;
+  // Full gestures may take longer than the old fixed three-second glow.
+  assert.ok(ctx.combat.celebrationUntil>ctx.combat.finishedAt);
   for(let i=1;i<=181;i++)frame(i*1000/60);
+  if(ctx.combat.celebrationUntil>ctx.game.time)
+    assert.equal(ctx.resultsPanel.hidden,true,'results must not truncate the celebration');
+  for(let i=182;i<=540;i++)frame(i*1000/60);
   assert.equal(ctx.resultsPanel.hidden,false);
   let paints=0;const original=ctx.robots[0].paint;
   ctx.robots[0].paint=(...args)=>{paints++;return original(...args);};
   const time=ctx.game.time,seed=ctx.seed;
-  for(let i=182;i<=300;i++)frame(i*1000/60);
+  for(let i=541;i<=660;i++)frame(i*1000/60);
   assert.equal(paints,0,'covered arena, lights and victory glow are no longer redrawn');
   assert.equal(ctx.game.time,time);assert.equal(ctx.seed,seed);
   assert.equal(ctx.fpsOutput.textContent,'— FPS');

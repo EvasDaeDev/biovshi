@@ -110,19 +110,37 @@ test('starting a new round during fade restores gain and resumes from current pl
  f.finish();
 });
 
-test('clicking enabled buttons produces a short generated cue, never for disabled buttons',async()=>{
- const f=setup();await f.unlock();const button=f.state.root.querySelector('#tag7hop-pause');
- const outside=f.dom.window.document.createElement('button');
- f.state.root.appendChild(outside);outside.disabled=true;
- const event=new Event('click');Object.defineProperty(event,'target',{value:button});
- const initial=f.sources.length;f.audio.setVolume('sounds',70);
- // The event target is the game button; synthesised cues have no audio file.
- const click=new Event('click');Object.defineProperty(click,'target',{value:button});
- // dispatch through the shared listener target (which is not the DOM document in tests)
- f.target.dispatchEvent(click);
- assert.equal(f.sources.length,initial+1);
- const disabled=new Event('click');Object.defineProperty(disabled,'target',{value:outside});
- f.target.dispatchEvent(disabled);assert.equal(f.sources.length,initial+1);
+test('all enabled game buttons including popup, summary and stopped-bubble clicks sound once',async()=>{
+ const f=setup();await f.unlock();
+ const root=f.state.root,button=root.querySelector('#tag7hop-pause');
+ const click=target=>target.dispatchEvent(new f.dom.window.MouseEvent('click',{bubbles:true}));
+ f.audio.setVolume('sounds',70);
+ const initial=f.sources.length;
+ button.addEventListener('click',event=>event.stopPropagation());
+ click(button);
+ assert.equal(f.sources.length,initial+1,'capturing root sees clicks before bubbling is stopped');
+ const nested=f.dom.window.document.createElement('span');button.append(nested);
+ click(nested);
+ assert.equal(f.sources.length,initial+2,'icon/label inside a button is clickable');
+ const popup=f.dom.window.document.createElement('div');
+ const action=f.dom.window.document.createElement('button');popup.append(action);root.append(popup);
+ click(action);assert.equal(f.sources.length,initial+3,'dynamically inserted popup button');
+ const summary=f.dom.window.document.createElement('summary');root.append(summary);
+ click(summary);assert.equal(f.sources.length,initial+4,'arena picker summary');
+ const disabled=f.dom.window.document.createElement('button');disabled.disabled=true;root.append(disabled);
+ click(disabled);assert.equal(f.sources.length,initial+4);
+ const ariaDisabled=f.dom.window.document.createElement('button');ariaDisabled.setAttribute('aria-disabled','true');
+ root.append(ariaDisabled);click(ariaDisabled);assert.equal(f.sources.length,initial+4);
+ const foreign=f.dom.window.document.createElement('button');f.dom.window.document.body.append(foreign);
+ click(foreign);assert.equal(f.sources.length,initial+4,'outside game stays silent');
+ f.finish();
+});
+test('the first game-button click also unlocks and produces its cue',async()=>{
+ const f=setup();const button=f.state.root.querySelector('#tag7hop-pause');
+ button.dispatchEvent(new f.dom.window.MouseEvent('click',{bubbles:true}));
+ await flush();
+ assert.equal(f.context.state,'running');
+ assert.equal(f.sources.filter(s=>s.frequency).length,1);
  f.finish();
 });
 

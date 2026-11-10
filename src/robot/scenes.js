@@ -528,11 +528,14 @@ export function robotSetVisible(robotState, value, spawnAt = null) {
   robotState.spawnAt = value ? spawnAt : null;
   for (const node of [robotState.actor, robotState.floor, robotState.pool, robotState.nearLight, ...robotState.trailNodes]) attr(node, 'display', value ? '' : 'none');
 }
-// A one-off victory gesture; reuse the existing idle animation machinery.
+// Repeat a single randomly selected victory gesture for two or three
+// complete cycles. Keep this cosmetic choice independent of combat RNG.
 export function robotCelebrateVictory(robotState,random=Math.random) {
   if(!robotState.mobile())return null;
   if(robotState.scene)robotState.api.endScene();
   robotState.leap=null;
+  robotState.victoryKind=null;
+  robotState.victoryRepeatsLeft=0;
   const kinds=[...robotState.idleKinds];
   // Uniform random first choice; if limbs/obstacles prevent it, try the others.
   for(let i=kinds.length-1;i>0;i--){
@@ -541,9 +544,31 @@ export function robotCelebrateVictory(robotState,random=Math.random) {
   }
   for(const kind of kinds){
     if(kind==='scratch'&&!robotState.arms.some(l=>l.side===1&&robotState.healthy('arm-1-upper')))continue;
-    if(robotState.api.performIdle(kind))return kind;
+    if(robotState.api.performIdle(kind)){
+      const total=2+Math.floor(random()*2);
+      const duration=robotState.scene.ends-robotState.scene.started;
+      robotState.victoryKind=kind;
+      robotState.victoryRepeatsLeft=total-1;
+      ctx.combat.celebrationUntil=ctx.game.time+total*duration+.25;
+      return kind;
+    }
   }
+  ctx.combat.celebrationUntil=ctx.game.time+3;
   return null;
+}
+// Called after an idle gesture ends. Never start automatic wandering while
+// results are pending, and stop if injury/obstacles make a repeat impossible.
+export function robotContinueVictory(robotState) {
+  if(!ctx.combat.finished||ctx.combat.winner!==robotState.id
+    ||!robotState.victoryKind||robotState.victoryRepeatsLeft<=0
+    ||robotState.scene||!robotState.mobile())return false;
+  const kind=robotState.victoryKind;
+  if(!robotState.api.performIdle(kind)){
+    robotState.victoryRepeatsLeft=0;
+    return false;
+  }
+  robotState.victoryRepeatsLeft--;
+  return true;
 }
 export function robotPerformIdle(robotState, kind) {
   if (!robotState.idleKinds.includes(kind) || robotState.scene || robotState.leap || !robotState.mobile() || !robotState.clearCircle(robotState.api.center, 52)) return false;
