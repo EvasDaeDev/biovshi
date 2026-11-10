@@ -1,0 +1,35 @@
+name: Death balance analysis (diagnostic)
+on:
+  push:
+    branches: [analysis/death-balance]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mortality:
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [101, 202, 303, 404]
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      ANALYSIS_SEED: ${{ matrix.seed }}
+      ANALYSIS_ROUNDS: '25'
+      ANALYSIS_MAX_SECONDS: '150'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Simulate unmodified combat and print mortality report
+        run: node scripts/death-balance-analysis.mjs > death-analysis-${{ matrix.seed }}.log 2>&1; result=$?; tail -n 28 death-analysis-${{ matrix.seed }}.log; exit $result
+      - name: Keep detailed report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mortality-${{ matrix.seed }}
+          path: death-analysis-${{ matrix.seed }}.log
+          if-no-files-found: warn
