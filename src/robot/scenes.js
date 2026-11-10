@@ -413,22 +413,8 @@ export function reboundTick(robotState, dt, intent) {
     };
     robotState.vx = jump.direction.x * 64;
     robotState.vy = jump.direction.y * 64;
-    const completedJump = robotState.leap;
     robotState.leap = null;
     robotState.attackVisual = null;
-    if(completedJump.kind==='combat-pounce') {
-      // A short backwards jump without a 180-degree turn, whether we hit
-      // or missed. The existing collision-aware jumpTick limits wall travel.
-      robotState.leap={
-        kind:'combat-retreat',
-        started:ctx.game.time,
-        launched:true,
-        direction:{x:-completedJump.direction.x,y:-completedJump.direction.y},
-        goal:{x:robotState.x-completedJump.direction.x*CONFIG.attack.combatPounceRetreatCm,
-              y:robotState.y-completedJump.direction.y*CONFIG.attack.combatPounceRetreatCm}
-      };
-      note('pounce-retreat',{robot:robotState.id,distance:CONFIG.attack.combatPounceRetreatCm});
-    }
     for (const l of robotState.allLimbs()) {
       l.phase = 1;
       l.from = {
@@ -467,18 +453,18 @@ export function startCombatPounceRetreat(robotState,completedJump) {
   note('pounce-retreat',{robot:robotState.id,distance:CONFIG.attack.combatPounceRetreatCm});
 }
 export function jumpTick(robotState, dt, intent) {
+  // Contact interrupts the forward leap immediately, without turning.
+  if(robotState.leap.kind==='combat-pounce' && robotState.leap.impactDone)
+    startCombatPounceRetreat(robotState,robotState.leap);
   const age = ctx.game.time - robotState.leap.started;
+  const rebound = robotState.leap.kind === 'rebound';
+  const combatRetreat = robotState.leap.kind === 'combat-retreat';
   robotState.currentIntent = {
     ...intent,
-    mode: robotState.leap.kind === 'rebound' ? 'rebound' : 'pounce'
+    mode: rebound ? 'rebound' : combatRetreat ? 'отскакивает' : 'напрыгивает'
   };
   robotState.t = ctx.game.time;
   robotState.vx = robotState.vy = 0;
-  if(robotState.leap.kind==='combat-pounce' && robotState.leap.impactDone) {
-    startCombatPounceRetreat(robotState,robotState.leap);
-  }
-  const rebound = robotState.leap.kind === 'rebound';
-  const combatRetreat = robotState.leap.kind === 'combat-retreat';
   if (combatRetreat ? age < CONFIG.attack.combatPounceRetreatSec : rebound ? age < .55 : age > .12 && age < .94) {
     const old = robotState.savePose(),
       feet = robotState.allLimbs().map(l => ({
