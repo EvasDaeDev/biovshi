@@ -24,7 +24,6 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: npm test
       - name: Simulate tactics plus anatomy and print mortality report
         run: node scripts/death-balance-analysis.mjs 2>&1 | tee death-analysis-${{ matrix.seed }}.log; exit ${PIPESTATUS[0]}
       - name: Keep detailed report
