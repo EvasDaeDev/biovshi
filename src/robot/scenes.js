@@ -528,6 +528,13 @@ export function jumpTick(robotState, dt, intent) {
   robotState.api.capsules = robotState.makeCapsules();
   if (age >= (combatRetreat ? CONFIG.attack.combatPounceRetreatSec : rebound ? .55 : 1)) {
     if (!combatRetreat && !rebound) {
+      // If the lunge was completely blocked, it never left the ground:
+      // don't play a landing or an imaginary backwards hop.
+      if (!robotState.leap.soundStarted) {
+        robotState.leap=null;
+        robotState.attackVisual=null;
+        return;
+      }
       startCombatPounceRetreat(robotState,robotState.leap);
       robotState.api.capsules = robotState.makeCapsules();
       return;
