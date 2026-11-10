@@ -30,7 +30,7 @@ test('camera stays still for stationary patients despite changing skeletons',()=
               {id:1,x:490,y:480,visible:true,mobile:true,capsules:[capsule(490,480)]}],
       camera:{x:0,y:0,size:700},CAMERA_MIN:200,CAMERA_FULL:716,
       fieldWidth:900,fieldHeight:600,fieldSide:600,svg,timerOutput,cache:new WeakMap()});
-    for(let i=0;i<180;i++)cameraUpdate(1/30);
+    for(let i=0;i<480;i++)cameraUpdate(1/30);
     const before={...ctx.camera};
     const viewBefore=svg.viewBox;
     for(let i=0;i<120;i++){
