@@ -103,6 +103,10 @@ export function struckSegment(attacker, victim, p) {
   }
   return null;
 }
+export function strikePriority(candidate) {
+  return candidate.score + (candidate.source.kind === 'head' ? 1000
+    : candidate.source.kind === 'leg' ? 4 : 0);
+}
 export function combatAttacks() {
   if (ctx.combat.finished) return;
   // Один реальный удар: замах -> движение -> касание -> возврат в опору.
@@ -155,7 +159,7 @@ export function combatAttacks() {
       for (const c of strikeCandidates(attacker, v, source)) {
         // Prefer any physically reachable arm or leg strike over a head-butt.
         // The head is a fallback only when no limb has a valid strike candidate.
-        const priority = c.score + (source.kind === 'head' ? 1000 : source.kind === 'leg' ? 4 : 0);
+        const priority = strikePriority(c);
         if (!best || priority < best.priority) best = {...c, priority};
       }
     }
