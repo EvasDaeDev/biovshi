@@ -470,6 +470,7 @@ export function robotTick(robotState, dt, intent) {
         y: robotState.y + robotState.leap.direction.y * distance
       };
       robotState.leap.started = ctx.game.time;
+      robotState.leap.lastHead = {...robotState.api.eye};
       robotState.leap.launched = true;
       note('pounce-launch', {
         robot: robotState.id,
@@ -489,6 +490,13 @@ export function robotTick(robotState, dt, intent) {
   }
   if (robotState.leap?.launched) {
     robotState.jumpTick(dt, intent);
+    return;
+  }
+  if (ctx.game.time < (robotState.combatRecoveryUntil??0)) {
+    robotState.vx=robotState.vy=0;
+    robotState.currentIntent={goal:{x:robotState.x,y:robotState.y},
+      speed:0,mode:'восстанавливается',lookPoint:intent.lookPoint??null};
+    robotState.updateHead(dt);
     return;
   }
   if (robotState.retreatFromBoundary(dt)) return;
