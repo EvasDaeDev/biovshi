@@ -172,6 +172,8 @@ function resolvePounceImpacts() {
     const current={...attacker.eye};
     const previous=leap.lastHead??current;
     leap.lastHead=current;
+    // Shifting the body back over planted feet is preparation, not impact.
+    if(!leap.soundStarted)continue;
     const victim=ctx.robots[leap.victim];
     if(!victim?.mobile||!victim.visible||!attacker.hasHead)return;
     const touched=pounceContactSegment(previous,current,victim.capsules,

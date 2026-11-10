@@ -442,10 +442,27 @@ export function reboundTick(robotState, dt, intent) {
 }
 // No turn on disengagement: retreat opposite the jump's heading, not back
 // to the original start point. Physical movement is collision-clamped.
+export function jumpHeight(robotState) {
+  const jump=robotState.leap;
+  if (!jump?.launched) return 0;
+  const age=ctx.game.time-jump.started;
+  if (jump.kind==='combat-retreat') {
+    const q=clamp(age/CONFIG.attack.combatPounceRetreatSec,0,1);
+    return (jump.landingHeight||0)*(1-smooth(q));
+  }
+  if (jump.kind==='combat-pounce') {
+    if (jump.takeoffAt==null) return 0;
+    return Math.sin(Math.PI*clamp((ctx.game.time-jump.takeoffAt)
+      /Math.max(.05,jump.started+.94-jump.takeoffAt),0,1));
+  }
+  return Math.sin(Math.PI*clamp((age-jump.turnDuration)/CONFIG.attack.dismountSec,0,1));
+}
 export function startCombatPounceRetreat(robotState,completedJump) {
   const direction={x:-completedJump.direction.x,y:-completedJump.direction.y};
+  const landingHeight=jumpHeight(robotState);
   robotState.leap={
     kind:'combat-retreat',started:ctx.game.time,launched:true,
+    landingHeight,
     origin:{x:robotState.x,y:robotState.y},direction,
     goal:{x:robotState.x+direction.x*CONFIG.attack.combatPounceRetreatCm,
           y:robotState.y+direction.y*CONFIG.attack.combatPounceRetreatCm}
@@ -459,13 +476,21 @@ export function jumpTick(robotState, dt, intent) {
   const age = ctx.game.time - robotState.leap.started;
   const rebound = robotState.leap.kind === 'rebound';
   const combatRetreat = robotState.leap.kind === 'combat-retreat';
+  const pounce = robotState.leap.kind === 'combat-pounce';
+  const jump = robotState.leap;
+  // Keep contacts by limb identity: losing a limb must not swap the feet.
+  if (!jump.contacts) {
+    jump.contacts = new Map(robotState.allLimbs().map(l => [l, {...l.foot}]));
+    jump.preparationOrigin = {x:robotState.x,y:robotState.y};
+  }
+  const preparing = pounce && age <= .24;
   robotState.currentIntent = {
     ...intent,
     mode: rebound ? 'rebound' : combatRetreat ? 'отскакивает' : 'напрыгивает'
   };
   robotState.t = ctx.game.time;
   robotState.vx = robotState.vy = 0;
-  if (combatRetreat ? age < CONFIG.attack.combatPounceRetreatSec : rebound ? age < .55 : age > .12 && age < .94) {
+  if (combatRetreat ? age <= CONFIG.attack.combatPounceRetreatSec : rebound ? age < .55 : age <= 1) {
     const old = robotState.savePose(),
       feet = robotState.allLimbs().map(l => ({
         ...l.foot
@@ -482,7 +507,10 @@ export function jumpTick(robotState, dt, intent) {
         (robotState.x-robotState.leap.origin.x)*robotState.leap.direction.x
         +(robotState.y-robotState.leap.origin.y)*robotState.leap.direction.y) : 0,
       retreatProgress = combatRetreat ? smooth(clamp((age+dt)/CONFIG.attack.combatPounceRetreatSec,0,1)) : 0,
-      move = combatRetreat
+      preparation = -6 * ctx.scale * smooth(age / .24),
+      preparationTravel = (robotState.x-jump.preparationOrigin.x)*jump.direction.x
+        +(robotState.y-jump.preparationOrigin.y)*jump.direction.y,
+      move = preparing ? preparation-preparationTravel : combatRetreat
         ? Math.min(remaining,Math.max(0,CONFIG.attack.combatPounceRetreatCm*retreatProgress-travelled))
         : Math.min(remaining,(rebound ? 140 : CONFIG.attack.pounceSpeedCm)*dt),
       mx = robotState.leap.direction.x * move,
@@ -505,11 +533,27 @@ export function jumpTick(robotState, dt, intent) {
       robotState.headFrame.y += my * q;
       for (let i = 0; i < feet.length; i++) {
         const l = robotState.allLimbs()[i];
-        l.foot = {
+        l.foot = preparing ? {...jump.contacts.get(l)} : {
           x: feet[i].x + mx * q,
           y: feet[i].y + my * q
         };
-        l.phase = .5;
+        if (l.kind === 'leg' && !preparing && (pounce || combatRetreat)) {
+          const hip = robotState.origin(l), [u,v] = robotState.lengths(l);
+          const contact = jump.contacts.get(l);
+          const dx=contact.x-hip.x,dy=contact.y-hip.y,d=Math.hypot(dx,dy)||1;
+          // Grounded during the push; after full extension the foot follows
+          // the hip at 97% reach, keeping a small bend in the knee.
+          const reach=Math.min(d,(u+v)*.97);
+          const extended={x:hip.x+dx/d*reach,y:hip.y+dy/d*reach};
+          const landing=robotState.rest(l);
+          const tuck=combatRetreat ? smooth(age/CONFIG.attack.combatPounceRetreatSec)
+            : smooth((age-.60)/.34);
+          const desired={x:extended.x+(landing.x-extended.x)*tuck,
+                         y:extended.y+(landing.y-extended.y)*tuck};
+          l.foot={x:feet[i].x+(desired.x-feet[i].x)*q,
+                  y:feet[i].y+(desired.y-feet[i].y)*q};
+        }
+        l.phase = preparing ? 1 : .5;
       }
     }
     moveTo(1);
@@ -525,8 +569,15 @@ export function jumpTick(robotState, dt, intent) {
     }
     robotState.vx = (robotState.x - old.x) / dt;
     robotState.vy = (robotState.y - old.y) / dt;
+    if (pounce && !preparing && jump.takeoffAt==null) {
+      const legs=robotState.allLimbs().filter(l=>l.kind==='leg');
+      if (legs.some(l=>{
+        const hip=robotState.origin(l),contact=jump.contacts.get(l),[u,v]=robotState.lengths(l);
+        return Math.hypot(contact.x-hip.x,contact.y-hip.y)>=(u+v)*.97;
+      }) || !legs.length && age>.4) jump.takeoffAt=ctx.game.time;
+    }
     // Trigger the jump effect on the actual first forward movement.
-    if (robotState.leap.kind==='combat-pounce' && !robotState.leap.soundStarted
+    if (pounce && !preparing && !robotState.leap.soundStarted
         && Math.hypot(robotState.x-old.x,robotState.y-old.y)>.01) {
       robotState.leap.soundStarted=true;
       note('pounce-launch',{robot:robotState.id,heading:robotState.chest.angle});
@@ -651,8 +702,7 @@ export function robotCanCover(robotState, victim) {
   return Math.hypot(center.x + offset.x - target.x, center.y + offset.y - target.y) <= CONFIG.attack.coverCenterGapCm + 4 && sightClear(center, target);
 }
 export function robotBeginApproach(robotState, victim) {
-  const age = robotState.leap?.launched ? ctx.game.time - robotState.leap.started : 0;
-  robotState.coverHeightStart = robotState.leap?.launched ? Math.sin(Math.PI * clamp((age - .12) / .82, 0, 1)) : 0;
+  robotState.coverHeightStart = jumpHeight(robotState);
   robotState.api.beginScene('cover', CONFIG.attack.coverApproachSec);
   robotState.api.beginCover(victim);
 }

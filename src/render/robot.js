@@ -1,4 +1,5 @@
 import { clamp, smooth } from '../utils/math.js';
+import { jumpHeight } from '../robot/scenes.js';
 import { ctx } from "../game/state.js";
 import { CONFIG } from "../config.js";
 import { ik, path } from "../utils/math.js";
@@ -43,7 +44,7 @@ export function visiblePoint(robotState, p) {
 }
 export function bodyTransform(robotState, height) {
   if (!height) return '';
-  let factor = 1 + height * .13;
+  let factor = 1 + height * .065;
   const center = robotState.visiblePoint({
     x: robotState.x,
     y: robotState.y
@@ -168,8 +169,7 @@ export function robotPaint(robotState, hunter) {
   const hitPhase = clamp(elapsedHit / (robotState.hitReaction?.duration || 1), 0, 1);
   const recoilTilt = robotState.hitReaction && hitPhase < 1 ? robotState.hitReaction.twist * Math.sin(Math.PI * hitPhase) * (1 - hitPhase) : 0;
   attr(robotState.actor, 'transform', `translate(${robotState.x + offset.x} ${robotState.y + offset.y}) rotate(${robotState.visualRotation() * 180 / Math.PI + recoilTilt}) scale(${spawn.scale}) translate(${-robotState.x} ${-robotState.y})`);
-  const age = robotState.leap && (robotState.leap.launched || robotState.leap.kind === 'rebound') ? ctx.game.time - robotState.leap.started : 0,
-    height = robotState.scene && robotState.mode === 'cover' ? robotState.coverHeightStart * (1 - smooth((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec)) + (1 - robotState.coverHeightStart) * .7 * Math.sin(Math.PI * clamp((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec, 0, 1)) : robotState.scene && robotState.mode === 'hops' ? robotState.hopHeight() : robotState.leap ? Math.sin(Math.PI * clamp(robotState.leap.kind === 'rebound' ? (age - robotState.leap.turnDuration) / CONFIG.attack.dismountSec : (age - .12) / .82, 0, 1)) : robotState.mode === 'startle' && robotState.scene ? Math.sin(Math.PI * clamp((ctx.game.time - robotState.scene.started) / CONFIG.attack.startleSec, 0, 1)) * .55 : 0;
+  const height = robotState.scene && robotState.mode === 'cover' ? robotState.coverHeightStart * (1 - smooth((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec)) + (1 - robotState.coverHeightStart) * .7 * Math.sin(Math.PI * clamp((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec, 0, 1)) : robotState.scene && robotState.mode === 'hops' ? robotState.hopHeight() : robotState.leap ? jumpHeight(robotState) : robotState.mode === 'startle' && robotState.scene ? Math.sin(Math.PI * clamp((ctx.game.time - robotState.scene.started) / CONFIG.attack.startleSec, 0, 1)) * .55 : 0;
   attr(robotState.limbG, 'transform', robotState.bodyTransform(height));
   attr(robotState.bodyG, 'transform', robotState.bodyTransform(height));
   attr(robotState.actor, 'class', hunter ? 'robot hunter' : shield > 0 ? 'robot protected' : 'robot');
@@ -218,3 +218,4 @@ export function robotPaint(robotState, hunter) {
   attr(robotState.label, 'y', robotState.spine[2].y - 18);
   attr(robotState.label, 'opacity', '1');
 }
+

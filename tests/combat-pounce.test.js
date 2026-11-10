@@ -44,6 +44,7 @@ test('retreat is 10cm backward with unchanged heading and not a teleport to orig
 
 test('full forward leap sounds at actual movement, steps 10cm back and then recovers',()=>{
   const saved=ctx.game;
+  const savedScale=ctx.scale;ctx.scale=1;
   ctx.game={time:0,events:[]};
   const startX=260,startY=240;
   const robot={
@@ -72,7 +73,7 @@ test('full forward leap sounds at actual movement, steps 10cm back and then reco
     assert.equal(ctx.game.events.filter(e=>e.type==='pounce-launch').length,1);
     assert.equal(ctx.game.events.filter(e=>e.type==='pounce-retreat').length,1);
     assert.equal(ctx.game.events.filter(e=>e.type==='footstep').length,1);
-  }finally{ctx.game=saved;}
+  }finally{ctx.game=saved;ctx.scale=savedScale;}
 });
 
 test('lethal headbutt finishes retreat and recovery before victory starts',()=>{
@@ -115,3 +116,4 @@ test('10cm retreat eases smoothly with no extra second bounce',()=>{
    assert.equal(ctx.game.events.filter(e=>e.type==='footstep').length,1);
  }finally{ctx.game=saved;}
 });
+
