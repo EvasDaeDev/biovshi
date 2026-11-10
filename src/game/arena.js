@@ -111,8 +111,10 @@ export function chooseHunter() {
 }
 // Фиксированные точки старта. В каждой из них может появиться любой робот.
 export function spawnFacingAngle(point,boundary) {
-  return Math.atan2(boundary.top+boundary.size/2-point.y,
-    boundary.left+boundary.size/2-point.x);
+  const right=boundary.right??boundary.left+boundary.size;
+  const bottom=boundary.bottom??boundary.top+boundary.size;
+  return Math.atan2((boundary.top+bottom)/2-point.y,
+    (boundary.left+right)/2-point.x);
 }
 export function chooseSpawnLayout() {
   const boundary=ctx.arenaBoundary;
