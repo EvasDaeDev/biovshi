@@ -25,7 +25,9 @@ jobs:
           cache: npm
       - uses: actions/configure-pages@v5
       - run: npm ci
-      - run: npm test
+      - name: Run tests with per-test timeout
+        run: npm test -- --test-timeout=30000
+        timeout-minutes: 5
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
