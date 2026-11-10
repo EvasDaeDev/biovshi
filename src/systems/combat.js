@@ -3,7 +3,7 @@ import {random} from '../utils/random.js';
 import { clamp, wrap, smooth } from '../utils/math.js';
 import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
-import { sightClear } from "./collision.js";
+import { sightClear, coreClearBone } from "./collision.js";
 import { pointSegment } from "../utils/math.js";
 import { note } from "../game/events.js";
 import { activeOpponents } from "./ai.js";
@@ -107,8 +107,91 @@ export function strikePriority(candidate) {
   return candidate.score + (candidate.source.kind === 'head' ? 1000
     : candidate.source.kind === 'leg' ? 4 : 0);
 }
+// Every opportunity is considered once, not every frame: otherwise 20%
+// would become effectively certain over a few seconds.
+export function pounceOpportunity(attacker,victim) {
+  const cfg=CONFIG.attack;
+  const distance=Math.hypot(attacker.x-victim.x,attacker.y-victim.y);
+  return attacker.hasHead && attacker.movementLimbs>=2
+    && victim.mobile && victim.visible
+    && distance>=cfg.combatPounceMinCm && distance<=cfg.combatPounceMaxCm
+    && attacker.canSee(victim.center)
+    && sightClear(attacker.center,victim.center)
+    && coreClearBone(attacker.center,victim.center,9);
+}
+export function pounceContactSegment(from,to,capsules,isDamageable=()=>true) {
+  if(!from||!to)return null;
+  // Sweep the head between physics ticks; even a fast jump cannot tunnel
+  // through a victim. Only the actual contacted body segment is damaged.
+  for(let i=0;i<=12;i++){
+    const t=i/12,point={x:from.x+(to.x-from.x)*t,y:from.y+(to.y-from.y)*t};
+    let closest=null;
+    for(const c of capsules){
+      if(!c.segment||!isDamageable(c.segment))continue;
+      const gap=pointSegment(point,c.a,c.b)-c.r;
+      if(gap<=12 && (!closest || gap<closest.gap))
+        closest={segment:c.segment,gap};
+    }
+    if(closest)return closest.segment;
+  }
+  return null;
+}
+function resolvePounceImpacts() {
+  for(const attacker of ctx.robots){
+    const leap=attacker.actualPose.leap;
+    if(!leap?.launched||leap.kind!=='combat-pounce'||leap.impactDone)continue;
+    const current={...attacker.eye};
+    const previous=leap.lastHead??current;
+    leap.lastHead=current;
+    const victim=ctx.robots[leap.victim];
+    if(!victim?.mobile||!victim.visible||!attacker.hasHead)return;
+    const touched=pounceContactSegment(previous,current,victim.capsules,
+      segment=>victim.isDamageable(segment));
+    if(!touched)return;
+    leap.impactDone=true;
+    const id=attacker.id;
+    if(victim.damage(touched,id,CONFIG.attack.combatPounceDamage)){
+      if(victim.mobile)victim.reactToHit(attacker,touched);
+      ctx.combat.hits++;
+      ctx.combat.fighterHits[id]++;
+      ctx.combat.fighterTaken[victim.id]++;
+      ctx.combat.lastHitTime=ctx.game.time;
+      ctx.agentAI[id].lastHitAt=ctx.game.time;
+      ctx.agentAI[victim.id].lastHitAt=ctx.game.time;
+      note('combat-strike',{from:id,to:victim.id,
+        source:'head',segment:touched,pounce:true});
+      if(victim.mobile&&victim.movementLimbs<4){
+        ctx.combat.retreatUntil[victim.id]=ctx.game.time+CONFIG.combat.retreatSec;
+        ctx.combat.retreatFrom[victim.id]=id;
+      }
+    }
+  }
+}
+function initiateCombatPounces() {
+  for(const attacker of ctx.robots){
+    const id=attacker.id,ai=ctx.agentAI[id];
+    if(!attacker.visible||!attacker.mobile||!attacker.hasHead||
+       attacker.actualPose.leap||attacker.actualPose.scene||
+       ctx.combat.pending[id]||ctx.game.time<ctx.combat.nextStrike[id]||
+       ctx.game.time<attacker.combatRecoverUntil||
+       ctx.game.time<(ai.nextPounceDecisionAt??0))continue;
+    const target=activeOpponents(id)
+      .filter(v=>pounceOpportunity(attacker,v))
+      .sort((a,b)=>Math.hypot(a.x-attacker.x,a.y-attacker.y)
+        -Math.hypot(b.x-attacker.x,b.y-attacker.y))[0];
+    if(!target)continue;
+    ai.nextPounceDecisionAt=ctx.game.time+CONFIG.attack.combatPounceDecisionSec;
+    if(random()>=CONFIG.attack.combatPounceChance)continue;
+    if(attacker.pounce(target.center,{victimId:target.id})){
+      ctx.combat.nextStrike[id]=ctx.game.time+CONFIG.attack.pounceCooldownSec;
+      ctx.combat.fighterSwings[id]++;
+      ctx.combat.strikes++;
+    }
+  }
+}
 export function combatAttacks() {
   if (ctx.combat.finished) return;
+  resolvePounceImpacts();
   // Один реальный удар: замах -> движение -> касание -> возврат в опору.
   for (const attacker of ctx.robots) {
     const id = attacker.id,
@@ -148,10 +231,11 @@ export function combatAttacks() {
     }
     if (ctx.game.time >= pending.endsAt) ctx.combat.pending[id] = null;
   }
+  initiateCombatPounces();
   // Удары отдаются по одному каждому бойцу, не автоматически обоим при контакте.
   for (const attacker of ctx.robots) {
     const id = attacker.id;
-    if (!attacker.visible || !attacker.mobile || ctx.game.time < ctx.combat.nextStrike[id] || ctx.combat.pending[id]) continue;
+    if (!attacker.visible || !attacker.mobile || ctx.game.time < ctx.combat.nextStrike[id] || ctx.combat.pending[id] || attacker.actualPose.leap || ctx.game.time < attacker.combatRecoverUntil) continue;
     const preferredVictims = activeOpponents(id).filter(v => Math.hypot(v.x - attacker.x, v.y - attacker.y) < CONFIG.combat.attackRangeCm + 56.25);
     let best = null;
     for (const v of preferredVictims) for (const source of attacker.attackSources) {
