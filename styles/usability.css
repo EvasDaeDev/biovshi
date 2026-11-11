@@ -94,3 +94,10 @@
 #robot-tag-hops-v22 .settings-panel .btn:hover {background:#695037;color:#fff2cd}
 #robot-tag-hops-v22 .settings-panel input[type="checkbox"] {accent-color:#87472c;color-scheme:light}
 #robot-tag-hops-v22 .settings-panel input[type="range"] {accent-color:#87472c;color-scheme:light}
+
+/* Match patient-pool details to the bank summary instead of annotation text. */
+#robot-tag-hops-v22 .bet-panel .bet-pool > small,
+#robot-tag-hops-v22 .bet-panel .bet-pool > span {font-size:16px;line-height:1.4}
+#robot-tag-hops-v22 .bet-panel .bet-pool .skill-summary,
+#robot-tag-hops-v22 .bet-panel .bet-pool .skill-summary > span {font-size:inherit}
+#robot-tag-hops-v22 .bet-panel .bet-pool .patient-name {font-size:20px}
