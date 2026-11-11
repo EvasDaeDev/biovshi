@@ -101,7 +101,7 @@ export function strikeCandidates(attacker, victim, source) {
       aim,
       gap
     };
-  }).filter(c => c && c.dist <= (CONFIG.combat.strikeReachCm + (source.kind === 'head' ? 9 : 17.25)) * (source.reachFactor || 1) && c.gap <= 3.5).sort((a, b) => a.score - b.score);
+  }).filter(c => c && c.dist <= (CONFIG.combat.strikeReachCm + (source.kind === 'head' ? 9 : 17.25)) * (source.reachFactor || 1) && c.gap <= 3.5).sort(compareStrikeCandidates);
 }
 export function struckSegment(attacker, victim, p) {
   const pose = attacker.attackPose(p);
@@ -132,6 +132,12 @@ export function struckSegment(attacker, victim, p) {
 export function strikePriority(candidate) {
   return candidate.score + (candidate.source.kind === 'head' ? 1000
     : candidate.source.kind === 'leg' ? 4 : 0);
+}
+export function compareStrikeCandidates(a,b) {
+  // Rank only physically reachable targets; never reposition to seek a limb.
+  // Other damageable parts (including the tail) share the torso tier.
+  const tier=c=>/^(arm|leg)-/.test(c.segment)?0:c.segment==='head'?2:1;
+  return tier(a)-tier(b) || strikePriority(a)-strikePriority(b);
 }
 // Every opportunity is considered once, not every frame: otherwise 20%
 // would become effectively certain over a few seconds.
@@ -283,10 +289,9 @@ export function combatAttacks() {
     for (const v of preferredVictims) for (const source of attacker.attackSources) {
       // Head strikes remain possible even when other limbs are intact.
       for (const c of strikeCandidates(attacker, v, source)) {
-        // Prefer any physically reachable arm or leg strike over a head-butt.
-        // The head is a fallback only when no limb has a valid strike candidate.
-        const priority = strikePriority(c);
-        if (!best || priority < best.priority) best = {...c, priority};
+        // Target limbs first, torso next, head last. Within a tier retain
+        // geometry scoring and the existing preference for attacking limbs.
+        if (!best || compareStrikeCandidates(c,best)<0) best = c;
       }
     }
     if (best) {
