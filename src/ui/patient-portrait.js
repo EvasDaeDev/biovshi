@@ -25,8 +25,6 @@ export const PORTRAIT_BONES=portraitBones();
 const corners=PORTRAIT_BONES.flatMap(bone=>[[0,0],[64,0],[64,64],[0,64]].map(([x,y])=>transformPoint(bone.matrix,{x,y})));
 const minX=Math.min(...corners.map(p=>p.x)),maxX=Math.max(...corners.map(p=>p.x));
 const minY=Math.min(...corners.map(p=>p.y)),maxY=Math.max(...corners.map(p=>p.y));
-const scale=Math.min((PORTRAIT_WIDTH-12)/(maxX-minX),(PORTRAIT_HEIGHT-8)/(maxY-minY));
-const offset={x:PORTRAIT_WIDTH/2-(minX+maxX)*scale/2,y:PORTRAIT_HEIGHT/2-(minY+maxY)*scale/2};
 const palettes=new Map();
 const hatImages=new Map();
 
@@ -73,7 +71,7 @@ export async function preparePatientPortraits() {
 }
 export function paintPatientPortrait(card,id,states) {
   const hat=ctx.betting?.garage?.[id]?.head?.hat;
-  const key=states.map(s=>s.state+':'+s.opacity).join('|')+'|'+hat;
+  const key=states.map(s=>s.state+':'+s.opacity).join('|')+'|'+hat+'|'+card.portrait.width+'x'+card.portrait.height;
   if(card.portraitStateKey!==key){
     card.portraitStateKey=key;card.portraitStates=Object.fromEntries(states.map(s=>[s.key,s.state]));
     const counts=states.reduce((counts,s)=>(counts[s.state]=(counts[s.state]??0)+1,counts),{});
@@ -82,7 +80,8 @@ export function paintPatientPortrait(card,id,states) {
   if(!ctx.telemetryPortraitsReady||card.portraitPaintKey===key)return;
   const draw=card.portrait.getContext('2d');if(!draw)return;
   draw.setTransform(1,0,0,1,0,0);draw.clearRect(0,0,card.portrait.width,card.portrait.height);
-  draw.setTransform(scale*2,0,0,scale*2,offset.x*2,offset.y*2);draw.imageSmoothingEnabled=false;
+  const portraitScale=Math.min((card.portrait.width-12)/(maxX-minX),(card.portrait.height-8)/(maxY-minY));
+  draw.setTransform(portraitScale,0,0,portraitScale,card.portrait.width/2-(minX+maxX)*portraitScale/2,card.portrait.height/2-(minY+maxY)*portraitScale/2);draw.imageSmoothingEnabled=false;
   for(let i=0;i<PORTRAIT_BONES.length;i++){
     const bone=PORTRAIT_BONES[i],state=states[i];draw.save();draw.globalAlpha=Number(state.opacity);
     if(card.portraitAtlas){

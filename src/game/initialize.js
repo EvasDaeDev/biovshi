@@ -503,12 +503,12 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
       betCommit(ctx.betting,ctx.betting.players.map(p=>({player:p.id,robot:p.id%4,amount:0})));
       bettingSave();bettingHud();
     }else{ctx.betHud.hidden=true;delete ctx.root.dataset.betRound;}
-    ctx.intro.hidden=true;ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;ctx.startup.phase='demo';ctx.status.textContent='Показательный бой';
+    ctx.intro.hidden=true;ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;ctx.startup.phase='demo';
   }else if(session){ctx.betting=session;bettingOpen();}
   else bettingInit();
   initializeCombatLog();
   const logToggle=ctx.root.querySelector('#combat-log-toggle');
-  logToggle.onclick=()=>{ctx.combatLog.hidden=!ctx.combatLog.hidden;logToggle.setAttribute('aria-expanded',String(!ctx.combatLog.hidden));logToggle.textContent=ctx.combatLog.hidden?'ПОКАЗАТЬ ЖУРНАЛ':'СКРЫТЬ ЖУРНАЛ';};
+  logToggle.onclick=()=>{ctx.combatLog.hidden=!ctx.combatLog.hidden;logToggle.setAttribute('aria-expanded',String(!ctx.combatLog.hidden));logToggle.textContent=ctx.combatLog.hidden?'▾':'▴';const label=ctx.combatLog.hidden?'Показать журнал':'Скрыть журнал';logToggle.setAttribute('aria-label',label);if(logToggle.hasAttribute('data-hint'))logToggle.dataset.hint=label;else logToggle.title=label;};
   initializeSettings();
   initializeArenaExpand();
   initializeHints();

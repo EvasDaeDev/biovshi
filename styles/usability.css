@@ -14,7 +14,7 @@
 #robot-tag-hops-v22 .bet-panel :is(.bet-muted,.garage-patient small) {font-size:13px}
 #robot-tag-hops-v22 .bet-panel .bet-pool small {font-size:12px}
 #robot-tag-hops-v22 .bet-actions,
-#robot-tag-hops-v22 .results-actions {position:sticky;bottom:0;z-index:25;background:var(--paper);border-top:1px solid var(--paper-rule);padding:10px 0 2px;box-shadow:0 -6px 8px var(--paper)}
+#robot-tag-hops-v22 .results-actions {position:sticky;bottom:0;z-index:25;background:var(--paper);border-top:1px solid var(--paper-rule);padding:10px 0 2px;box-shadow:none}
 #robot-tag-hops-v22 .bet-panel .bet-secondary {min-height:32px;padding:4px 9px;font-size:12px;margin-top:12px}
 #robot-tag-hops-v22 .bet-quick {display:flex;gap:4px;margin-top:5px}
 #robot-tag-hops-v22 .bet-panel .bet-quick button {min-height:28px;padding:3px 7px;font-size:12px}
@@ -32,7 +32,7 @@
 #robot-tag-hops-v22 .arena-pause-label {position:absolute;inset:0;z-index:4;display:grid;place-items:center;pointer-events:none;background:#0004;color:#f5e6c5;font-size:28px;font-weight:800;letter-spacing:.15em}
 #robot-tag-hops-v22 .arena-pause-label[hidden] {display:none}
 #robot-tag-hops-v22 .arena-pause-help {position:absolute;bottom:12px;left:12px;z-index:2;color:#e5d1a0;background:#111c;padding:4px 7px;font-size:12px;pointer-events:none}
-#robot-tag-hops-v22 #combat-log-toggle {position:absolute;top:145px;right:4px;z-index:4;background:#202219dd;color:#d7c8a9;border:1px solid #555643;padding:4px 7px;font-size:11px;cursor:pointer}
+#robot-tag-hops-v22 #combat-log-toggle {position:absolute;top:142px;right:4px;z-index:4;background:#202219dd;color:#d7c8a9;border:1px solid #555643;padding:0;font-size:16px;cursor:pointer;width:24px;height:24px;line-height:1;}
 #robot-tag-hops-v22 #tag7hop-reset {margin-left:18px;border-color:#99482d}
 #robot-tag-hops-v22 .gladiator-results-details {margin-top:20px;font-size:13px}
 #robot-tag-hops-v22 #launch-setup {margin-top:18px;width:100%;padding:12px;background:#4b422d;color:#f3deae;border:1px solid #31291c;cursor:pointer}
@@ -68,4 +68,29 @@
 #robot-tag-hops-v22 .bet-hud-player-stake {font-size:12px}
 
 #robot-tag-hops-v22 .arena-pause-help[hidden] {display:none}
-#robot-tag-hops-v22 #combat-log-toggle {min-height:28px}
+#robot-tag-hops-v22 #combat-log-toggle {min-height:24px}
+
+/* Match table headings and controls, keeping each wager on one compact row. */
+#robot-tag-hops-v22 .bet-table {table-layout:fixed}
+#robot-tag-hops-v22 .bet-table :is(th,td) {vertical-align:middle;text-align:left;padding:8px 6px}
+#robot-tag-hops-v22 #bet-stakes-form .bet-table :is(th,td):nth-child(1) {width:19%;overflow-wrap:anywhere}
+#robot-tag-hops-v22 #bet-stakes-form .bet-table :is(th,td):nth-child(2) {width:20%;white-space:nowrap}
+#robot-tag-hops-v22 #bet-stakes-form .bet-table :is(th,td):nth-child(3) {width:13%}
+#robot-tag-hops-v22 #bet-stakes-form .bet-table :is(th,td):nth-child(4) {width:32%}
+#robot-tag-hops-v22 #bet-stakes-form .bet-table :is(th,td):nth-child(5) {width:16%;white-space:nowrap}
+#robot-tag-hops-v22 .bet-panel .bet-table :is(input,select) {height:32px;min-height:32px;margin:0;padding:4px 7px;font-size:13px}
+#robot-tag-hops-v22 .bet-panel .bet-table .patient-select {width:66px;min-width:0}
+#robot-tag-hops-v22 .bet-stake-controls {display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+#robot-tag-hops-v22 .bet-panel .bet-stake-controls input {width:70px}
+#robot-tag-hops-v22 .bet-stake-controls .bet-quick {margin:0;gap:3px;flex-wrap:nowrap}
+#robot-tag-hops-v22 .bet-panel .bet-quick button {min-height:28px;padding:3px 5px}
+#robot-tag-hops-v22 .bet-panel .bet-pool {padding:8px 6px}
+#robot-tag-hops-v22 .bet-table-wrap {margin-bottom:12px}
+#robot-tag-hops-v22 .patient-portrait {transform:none;object-position:center}
+#robot-tag-hops-v22 .portrait-wrap {justify-content:center}
+/* Explicit specificity beats the old blue ID/button rules and native accents. */
+#robot-tag-hops-v22 .settings-panel #graphics-quality {background:#e9d7ad;color:#2b261b;border:1px solid #796747;color-scheme:light}
+#robot-tag-hops-v22 .settings-panel .btn {background:#4b422d;color:#f3deae;border:1px solid #31291c;box-shadow:none}
+#robot-tag-hops-v22 .settings-panel .btn:hover {background:#695037;color:#fff2cd}
+#robot-tag-hops-v22 .settings-panel input[type="checkbox"] {accent-color:#87472c;color-scheme:light}
+#robot-tag-hops-v22 .settings-panel input[type="range"] {accent-color:#87472c;color-scheme:light}
