@@ -1,6 +1,7 @@
 // Paths are relative to public/. Use null to keep the current appearance and silence.
 export const ASSETS = {
   textures: {
+    streamer: 'assets/textures/streamer/girl_atlas.png',
     arenaFloor: 'assets/textures/arena/floor_01.webp',
     floorDecals: 'assets/textures/arena/floor_decals.png',
     arenaWall: 'assets/textures/arena/wall_01.webp',

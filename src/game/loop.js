@@ -139,6 +139,7 @@ export function frame(now) {
     timed('webgl',()=>ctx.arenaRenderer?.render());
     ctx.cameraDebt = 0;
   } else if (ctx.paused || ctx.settingsOpen || ctx.orientationBlocked || document.hidden || resultsOpen) ctx.cameraDebt = 0;
+  ctx.streamerMascot?.sync(elapsed,now);
   ctx.audio?.sync();
   recordFrame(now, painted);
   ctx.frameId = requestAnimationFrame(frame);

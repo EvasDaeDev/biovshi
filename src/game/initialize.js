@@ -1,3 +1,4 @@
+import {initializeStreamerMascot} from '../ui/streamer-mascot.js';
 import {towerEnemyCount} from '../tower/model.js';
 import {arenaDefinition} from './arenas.js';
 import {initializeCombatLog} from '../ui/combat-log.js';
@@ -37,6 +38,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   if(root.__arenaSvgTemplate===undefined)root.__arenaSvgTemplate=svg.innerHTML;
   else svg.innerHTML=root.__arenaSvgTemplate;
   ctx.mode=tower?'tower':'spectator';
+  root.dataset.gameMode=ctx.mode;
   if(tower)ctx.betting=session;
   ctx.towerRun=tower;
   ctx.towerGarage=tower?Array.from({length:towerEnemyCount(tower)+1},(_,id)=>({stats:id===0?[...tower.stats]:[3,3,3],head:null})):null;
@@ -517,6 +519,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   }else if(session){ctx.betting=session;bettingOpen();}
   else bettingInit();
   initializeCombatLog();
+  initializeStreamerMascot();
   const logToggle=ctx.root.querySelector('#combat-log-toggle');
   logToggle.onclick=()=>{ctx.combatLog.hidden=!ctx.combatLog.hidden;logToggle.setAttribute('aria-expanded',String(!ctx.combatLog.hidden));logToggle.textContent=ctx.combatLog.hidden?'▾':'▴';const label=ctx.combatLog.hidden?'Показать журнал':'Скрыть журнал';logToggle.setAttribute('aria-label',label);if(logToggle.hasAttribute('data-hint'))logToggle.dataset.hint=label;else logToggle.title=label;};
   initializeSettings();
