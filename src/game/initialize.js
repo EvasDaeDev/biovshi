@@ -471,7 +471,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.button.onclick = togglePause;
   ctx.speedButton.onclick = toggleSpeed;
   // click также обрабатывает одиночный тап; отдельный touch-обработчик удвоил бы переключение.
-  ctx.svg.onclick = ()=>{if(ctx.startup.phase==='running'){ctx.root.querySelector('.arena-pause-help').hidden=true;togglePause();}};
+  ctx.svg.onclick = ()=>{if(ctx.startup.phase==='running'){togglePause();}};
   ctx.svg.style.setProperty('touch-action', 'manipulation');
   ctx.svg.style.setProperty('cursor', 'pointer');
   resetFrameClock();
