@@ -1,3 +1,4 @@
+import {randomArenaId} from './game/arenas.js';
 import {installTowerUI,openMenu} from './tower/ui.js';
 import {towerFor} from './tower/model.js';
 import {bettingSetup,bettingCancel} from './betting/ui.js';
@@ -68,7 +69,7 @@ async function boot(){
  ctx.startTower=async player=>{
    const current=ctx.betting;bettingCancel();ctx.towerPlayer=player;
    const tower=structuredClone(towerFor(current,player));current.towerPlayerId=player;bettingSave();
-   await transition({session:current,entry:'tower',tower,arenaId:Math.random()<.5?'ward':'ring'});
+   await transition({session:current,entry:'tower',tower,arenaId:randomArenaId()});
  };
  ctx.startTotalizator=()=>{bettingCancel();return transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId});};
  ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});ctx.paused=true;ctx.afterSetup='menu';bettingSetup();};

@@ -1,3 +1,4 @@
+import {ARENAS} from '../game/arenas.js';
 import {validTower} from '../tower/model.js';
 import {newGarage,validStats,normalizePatronage,normalizePatient} from '../garage/model.js';
 import { ctx } from "../game/state.js";
@@ -27,7 +28,7 @@ export function bettingLoad() {
     s.garage.forEach(normalizePatient);s.shopSpent??=0;s.topUps??=0;
     if(!Number.isSafeInteger(s.topUps)||s.topUps<0||s.players.length*s.capital+s.topUps+s.towerEarned>16000000)throw Error();
     if(!Number.isSafeInteger(s.shopSpent)||s.shopSpent<0||!Array.isArray(s.garage)||s.garage.length!==4||!s.garage.every(g=>validStats(g.stats,g.wins)&&(g.head===null||(g.head&&[1,2,3,4].includes(g.head.hat)&&Number.isSafeInteger(g.head.price)&&g.head.price>=10&&Number.isInteger(g.head.player)&&g.head.player>=0&&g.head.player<s.players.length))))throw Error();
-    if(!['ward','ring'].includes(s.arenaId))s.arenaId='ward';
+    if(!Object.hasOwn(ARENAS,s.arenaId))s.arenaId='ward';
     normalizePatronage(s);
     let invested=0;
     for(const g of s.garage)for(const [id,sum] of Object.entries(g.investments)){
