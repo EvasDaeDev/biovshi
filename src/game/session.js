@@ -33,7 +33,7 @@ export async function resetRound(destination='betting') {
       ctx.lastFloorBakeError='Следы последнего боя не удалось добавить. Предыдущий пол сохранён; можно продолжить игру.';
     }finally{clearTimeout(timeout);controller.abort();ctx.floorBaking=false;ctx.resultsAgain.disabled=false;if(ctx.resultsProcedure)ctx.resultsProcedure.disabled=false;}
   }
-  ctx.afterSetup=destination;ctx.exhibition=false;resetCombatLog();
+  ctx.afterSetup=destination;ctx.exhibition=false;resetCombatLog();ctx.streamerMascot?.reset();
   ctx.telemetryDirty = true;
   ctx.lastTelemetryAt = -Infinity;
   ctx.settledOilDrops = new WeakSet();
