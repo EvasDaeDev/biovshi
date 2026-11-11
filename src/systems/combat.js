@@ -1,4 +1,3 @@
-import {towerMovementActive} from '../tower/input.js';
 import {settleTower} from '../tower/ui.js';
 import {patientGarage} from '../game/patients.js';
 import {critChance} from '../garage/model.js';
@@ -210,7 +209,7 @@ function resolvePounceImpacts() {
 function initiateCombatPounces() {
   for(const attacker of ctx.robots){
     const id=attacker.id,ai=ctx.agentAI[id];
-    if(towerMovementActive(id)||!attacker.visible||!attacker.mobile||!attacker.hasHead||
+    if(!attacker.visible||!attacker.mobile||!attacker.hasHead||
        attacker.actualPose.leap||attacker.actualPose.scene||
        ctx.combat.pending[id]||ctx.game.time<ctx.combat.nextStrike[id]||
        ctx.game.time<attacker.combatRecoverUntil||
@@ -286,7 +285,7 @@ export function combatAttacks() {
   // Удары отдаются по одному каждому бойцу, не автоматически обоим при контакте.
   for (const attacker of ctx.robots) {
     const id = attacker.id;
-    if (towerMovementActive(id) || !attacker.visible || !attacker.mobile || ctx.game.time < ctx.combat.nextStrike[id] || ctx.combat.pending[id] || attacker.actualPose.leap || ctx.game.time < attacker.combatRecoverUntil) continue;
+    if (!attacker.visible || !attacker.mobile || ctx.game.time < ctx.combat.nextStrike[id] || ctx.combat.pending[id] || attacker.actualPose.leap || ctx.game.time < attacker.combatRecoverUntil) continue;
     // Reach is measured from each attacking limb, including the rear pelvis.
     const preferredVictims = activeOpponents(id);
     let best = null;

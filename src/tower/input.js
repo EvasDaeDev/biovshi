@@ -1,9 +1,5 @@
 import {ctx} from '../game/state.js';
 import {CONFIG} from '../config.js';
-export function towerMovementActive(id){
-  const input=ctx.towerInput??{};
-  return ctx.mode==='tower'&&id===0&&Math.max(Math.hypot(input.x??0,input.y??0),Math.abs(input.drive??0),Math.abs(input.turn??0))>.12;
-}
 export function controlledIntent(robot){
   const input=ctx.towerInput??{};
   if(input.drive!==undefined){

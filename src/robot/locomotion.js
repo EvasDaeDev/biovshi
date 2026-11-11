@@ -436,16 +436,11 @@ export function robotTick(robotState, dt, intent) {
     robotState.api.capsules = robotState.makeCapsules();
     return;
   }
-  if(intent.manual&&(intent.speed>0||intent.manualTurn)&&!ctx.combat.finished){
-    // Player commands cancel windups, kicks, jump preparation and landing recovery.
-    // Once the feet have left the floor, the jump keeps its physical trajectory.
-    const leap=robotState.leap;
-    const airborne=leap&&(leap.kind==='combat-retreat'||leap.kind==='combat-pounce'&&leap.takeoffAt!=null||leap.kind==='rebound'&&leap.launched);
-    if(!airborne){
-      ctx.combat.pending[robotState.id]=null;
-      robotState.leap=null;robotState.attackVisual=null;robotState.combatRecoveryUntil=0;
-      if(robotState.scene)robotState.api.endScene();
-    }
+  // An automatic strike owns the pose until its recovery finishes. Keep input
+  // active so a held command resumes immediately after the strike ends.
+  if(intent.manual&&ctx.combat.pending[robotState.id]){
+    intent={...intent,speed:0,manualDrive:0,manualTurn:0,
+      goal:{x:robotState.x,y:robotState.y},brake:true};
   }
   const strike=ctx.combat.pending[robotState.id];
   if(strike?.source.startsWith('leg-')){
