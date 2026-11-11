@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="./styles/interface.css">
 <link rel="stylesheet" href="./styles/wasteland.css">
 <link rel="stylesheet" href="./styles/usability.css">
+<link rel="stylesheet" href="./styles/tower.css">
 </head>
 <body>
 <div id="texture-loading" role="status">Подготовка арены…</div>
@@ -28,17 +29,32 @@
       <h1 id="launch-title">БИОВШИ</h1>
       <p class="launch-subtitle">ГЛАДИАТОРСКИЕ БОИ</p>
       <div class="launch-divider" aria-hidden="true"></div>
-      <p class="launch-instruction">Бой без ставок. Звук включится после нажатия.</p>
+      <p class="launch-instruction">Выберите режим. Игроки и банк общие.</p>
       <button id="launch-game" type="button" autofocus>ПОСМОТРЕТЬ БОЙ!</button>
+      <div class="tower-menu-block">
+        <label for="menu-player">ИГРОК</label><select id="menu-player" aria-label="Игрок"></select>
+        <p id="menu-bank"></p>
+        <label for="tower-patient">ПАЦИЕНТ БАШНИ</label><select id="tower-patient" aria-label="Пациент башни"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select>
+        <button id="launch-tower" type="button">РЕЖИМ БАШНЯ · УРОВЕНЬ 1</button>
+        <button id="tower-reset" type="button">СБРОС БАШНИ</button>
+      </div>
+      <button id="launch-totalizator" type="button" hidden>ТОТАЛИЗАТОР</button>
       <button id="launch-setup" type="button">СОЗДАТЬ ИГРУ</button>
       <p class="launch-footnote">СИГНАЛ ПОДАН · ПАЦИЕНТЫ ГОТОВЫ</p>
     </div>
   </div>
+  <div id="tower-preparation" class="bet-overlay" role="dialog" aria-modal="true" aria-labelledby="tower-prep-title" hidden><div class="bet-panel">
+    <h2 id="tower-prep-title">БАШНЯ</h2><p id="tower-prep-name"></p>
+    <p>Все конечности восстановлены. Распределите навыки перед боем.</p><div id="tower-stats" class="bet-fields"></div>
+    <p id="tower-prep-error" role="status"></p><div class="bet-actions"><button id="tower-prep-menu" type="button">В МЕНЮ</button><button id="tower-fight" class="bet-primary" type="button">НА АРЕНУ</button></div>
+  </div></div>
+  <div id="tower-controls" hidden><div class="tower-hud"><span id="tower-wallet"></span><span>WASD / СТРЕЛКИ · АТАКИ АВТОМАТИЧЕСКИ</span><button id="tower-leave" type="button">В МЕНЮ</button></div><div id="tower-stick" role="group" aria-label="Джойстик движения"><span></span></div></div>
   <div class="viz-controls atmosphere-controls">
 <button id="tag7hop-pause" class="btn" type="button" aria-pressed="false">Пауза</button>
 <button id="tag7hop-speed" class="btn" type="button" aria-pressed="false" aria-label="Ускорение времени в 2 раза" title="Ускорить бой в 2 раза">×2</button>
 <button id="tag7hop-reset" class="btn" type="button">Сброс</button>
 
+<button id="game-menu" class="btn" type="button">МЕНЮ</button>
 <output id="render-fps" aria-label="Частота отрисовки">— FPS</output>
 <span id="tag7hop-status" class="text-small" aria-live="polite">Гладиаторы · каждый сам за себя</span>
 <button id="arena-settings-button" class="btn settings-button" type="button" aria-label="Настройки" aria-controls="arena-settings" aria-expanded="false" title="Настройки">

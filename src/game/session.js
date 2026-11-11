@@ -154,7 +154,8 @@ export function advanceStartup(dt) {
   if (ctx.startup.nextIndex === ctx.startup.order.length && ctx.startup.elapsed+1e-9 >= landedAt) {
     ctx.startup.phase = 'running';
     arenaAnnounce('БОЙ', 'НАЧАЛСЯ', 1, 1.4);
-    ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = false;
+    ctx.button.disabled = ctx.resetButton.disabled = false;
+    ctx.speedButton.disabled=ctx.mode==='tower';
   }
   paint();
 }

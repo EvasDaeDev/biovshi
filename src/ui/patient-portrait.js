@@ -1,3 +1,4 @@
+import {patientSkin,patientGarage} from '../game/patients.js';
 import {ctx} from '../game/state.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
 import {loadTextureImage} from '../assets/preload.js';
@@ -62,7 +63,7 @@ export async function preparePatientPortraits() {
   const cards=ctx.cardNodes;
   await Promise.all([1,2,3,4].map(async id=>{try{hatImages.set(id,await loadTextureImage(assetUrl(ASSETS.textures['hat'+id])));}catch{}}));
   await Promise.all(cards.map(async(card,id)=>{
-    const key=['robotA','robotB','robotC','robotD'][id];
+    const key=['robotA','robotB','robotC','robotD'][patientSkin(id)];
     try{card.portraitAtlas=ctx.textureAssets?.[key]?.loaded===false?null:await atlasPalette(assetUrl(ASSETS.textures[key]));}
     catch(error){card.portraitAtlas=null;console.warn('Patient portrait:',error);}
   }));
@@ -70,7 +71,7 @@ export async function preparePatientPortraits() {
   ctx.telemetryPortraitsReady=true;ctx.telemetryDirty=true;
 }
 export function paintPatientPortrait(card,id,states) {
-  const hat=ctx.betting?.garage?.[id]?.head?.hat;
+  const hat=patientGarage()?.[id]?.head?.hat;
   const key=states.map(s=>s.state+':'+s.opacity).join('|')+'|'+hat+'|'+card.portrait.width+'x'+card.portrait.height;
   if(card.portraitStateKey!==key){
     card.portraitStateKey=key;card.portraitStates=Object.fromEntries(states.map(s=>[s.key,s.state]));

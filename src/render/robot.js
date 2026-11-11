@@ -1,3 +1,4 @@
+import {fighterLabel} from '../game/patients.js';
 import { clamp, smooth } from '../utils/math.js';
 import { jumpHeight } from '../robot/scenes.js';
 import { ctx } from "../game/state.js";
@@ -163,7 +164,7 @@ export function robotPaint(robotState, hunter) {
   const victorious = ctx.combat.finished && ctx.combat.winner === robotState.id;
   paintVictoryGlow(robotState,victorious);
   attr(robotState.actor, 'style', '--robot-color:#b7ada1;filter:none');
-  attr(robotState.label, 'style', 'fill:'+ROBOT_COLORS[robotState.id]);
+  attr(robotState.label, 'style', 'fill:'+ROBOT_COLORS[robotState.id%4]);
   const offset = robotState.visualOffset();
   const elapsedHit = robotState.hitReaction ? ctx.game.time - robotState.hitReaction.start : Infinity;
   const hitPhase = clamp(elapsedHit / (robotState.hitReaction?.duration || 1), 0, 1);
@@ -212,7 +213,7 @@ export function robotPaint(robotState, hunter) {
     attr(robotState.trailNodes[i], 'fill', 'var(--night-trail)');
     if (sample) dot(robotState.trailNodes[i], sample);
   }
-  const name = String.fromCharCode(65 + robotState.id);
+  const name = fighterLabel(robotState.id);
   if (robotState.label.textContent !== name) robotState.label.textContent = name;
   attr(robotState.label, 'x', robotState.spine[2].x);
   attr(robotState.label, 'y', robotState.spine[2].y - 18);

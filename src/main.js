@@ -1,6 +1,8 @@
+import {installTowerUI,openMenu} from './tower/ui.js';
+import {towerFor} from './tower/model.js';
+import {bettingSetup,bettingCancel} from './betting/ui.js';
 import {initializeFloor} from './render/floor-history.js';
 import {initializeModalFocus} from './ui/modal-focus.js';
-import {bettingSetup} from './betting/ui.js';
 import {garageOpen} from './garage/ui.js';
 import {preparePatientPortraits} from './ui/patient-portrait.js';
 import {paintTelemetry} from './ui/paint-telemetry.js';
@@ -16,8 +18,8 @@ import {startSpawnSequence} from './game/session.js';
 let cancelled=false;
 // Only a full page load requires the explicit sound/simulation gesture.
 let launchAccepted=false;
-async function prepare({textures,session,entry='auto',arenaId='ward'}){
- initializeGame({textures,session,entry,arenaId});
+async function prepare({textures,session,entry='auto',arenaId='ward',tower=null}){
+ initializeGame({textures,session,entry,arenaId,tower});
  await applyTextures();if(cancelled||ctx.disposed)return;
  await preparePatientPortraits();if(cancelled||ctx.disposed)return;
  paintTelemetry();await initializeFloor();await initializePixiArena();
@@ -30,16 +32,17 @@ async function prepare({textures,session,entry='auto',arenaId='ward'}){
  const gate=ctx.root.querySelector('#launch-overlay');
  const launchButton=ctx.root.querySelector('#launch-game');
  gate.hidden=launchAccepted;
+ installTowerUI();
  initializeModalFocus();
  launchButton.onclick=()=>{
-   if(launchAccepted)return;
+   if(launchAccepted){ctx.audio?.unlock();ctx.startDemo();return;}
    // AudioContext.resume() must happen synchronously in this user gesture.
    audio.unlock();
    launchAccepted=true;
    gate.hidden=true;
-   if(ctx.startup.phase==='demo')startSpawnSequence();
+   if(ctx.startup.phase==='demo')startSpawnSequence();else if(ctx.startup.phase==='running'){ctx.paused=false;}
  };
- ctx.root.querySelector('#launch-setup').onclick=()=>{audio.unlock();launchAccepted=true;gate.hidden=true;bettingSetup();};
+ ctx.root.querySelector('#launch-setup').onclick=()=>{audio.unlock();launchAccepted=true;ctx.startSetup();};
  if(launchAccepted&&ctx.startup.phase==='demo')startSpawnSequence();
 }
 async function boot(){
@@ -57,6 +60,19 @@ async function boot(){
    try{await prepare({textures,session,entry:'betting',arenaId});ctx.setArenaExpanded?.(expanded);}
    finally{ctx.keepArenaRenderer=false;root.inert=false;progress.remove();}
  };
+ const transition=async options=>{
+   root.inert=true;ctx.audio?.unlock();launchAccepted=true;ctx.keepArenaRenderer=true;
+   try{await prepare({textures,...options});}finally{ctx.keepArenaRenderer=false;root.inert=false;}
+ };
+ ctx.openMainMenu=openMenu;
+ ctx.startTower=async player=>{
+   const current=ctx.betting;bettingCancel();ctx.towerPlayer=player;
+   const tower=structuredClone(towerFor(current,player));current.towerPlayerId=player;bettingSave();
+   await transition({session:current,entry:'tower',tower,arenaId:Math.random()<.5?'ward':'ring'});
+ };
+ ctx.startTotalizator=()=>{bettingCancel();return transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId});};
+ ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});ctx.paused=true;ctx.afterSetup='menu';bettingSetup();};
+ ctx.startDemo=()=>transition({session:ctx.betting,entry:'auto',arenaId:ctx.betting?.arenaId??'ward'});
  await prepare({textures,session,arenaId:session?.arenaId??'ward'});
  if(cancelled||ctx.disposed)return;root.inert=false;loading.remove();
 }

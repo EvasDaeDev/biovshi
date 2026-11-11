@@ -77,7 +77,7 @@ export function bettingSetup() {
     ctx.betNotice = '';
     ctx.arenaFloors?.clear();cleanFloor();
     bettingSave();
-    if(ctx.afterSetup==='procedure')garageOpen();else bettingOpen();
+    if(ctx.afterSetup==='menu')ctx.openMainMenu();else if(ctx.afterSetup==='procedure')garageOpen();else bettingOpen();
   };
   count.focus();
 }

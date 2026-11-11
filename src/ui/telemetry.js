@@ -6,7 +6,7 @@ import { ROBOT_COLORS } from '../utils/colors.js';
 export function makeRobotCard(id) {
   const card = document.createElement('section');
   card.className = 'robot-card';
-  card.style.setProperty('--accent', ROBOT_COLORS[id]);
+  card.style.setProperty('--accent', ROBOT_COLORS[id%4]);
   card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${patientName(id,{short:true})}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><span aria-hidden="true">🦴</span> <span class="robot-card-segments">13/13</span></div></div>
   <div class="robot-card-body"><div class="portrait-wrap"><canvas class="patient-portrait" width="280" height="224" role="img" aria-label="Пациент ${String.fromCharCode(65+id)}"></canvas></div>
   <div class="patient-skills" aria-label="Умения пациента">
@@ -85,6 +85,7 @@ export function friendlyAction(robot) {
   if (!robot.mobile) return 'Без сознания';
   if (deadline !== null) return `Теряет сознание · ${Math.ceil(Math.max(0, deadline - ctx.game.time))} с`;
   if (ctx.combat.pending[robot.id]) return 'Наносит удар';
+  if(ctx.mode==='tower'&&robot.id===0)return ctx.intents[0]?.speed>0?'Управляется игроком':'Ожидает движения';
   if (!robot.hasHead) return 'Слепой режим';
   const map = {
     wander: 'Ищет врага',

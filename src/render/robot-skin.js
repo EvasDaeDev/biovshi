@@ -1,3 +1,4 @@
+import {patientSkin,patientGarage} from '../game/patients.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
@@ -51,7 +52,7 @@ function createPiece(key,url,parent) {
 }
 
 export function createRobotSkin(robot) {
-  const assetKey=['robotA','robotB','robotC','robotD'][robot.id];
+  const assetKey=['robotA','robotB','robotC','robotD'][patientSkin(robot.id)];
   const url=assetUrl(ASSETS.textures[assetKey]);
   if (!url || ctx.textureAssets?.[assetKey]?.loaded===false) return;
   const limbs=el('g',{'data-skin-layer':'limbs',display:'none'},robot.limbG);
@@ -118,7 +119,7 @@ export function snapshotRobotSkin(robot,key) {
     const transform=node.getAttribute?.('transform');
     if (transform)transforms.unshift(transform);
   }
-  return {key,url:robot.skin.url,transform:transforms.join(' '),hat:key==='head'?ctx.betting?.garage?.[robot.id]?.head?.hat:null};
+  return {key,url:robot.skin.url,transform:transforms.join(' '),hat:key==='head'?patientGarage()?.[robot.id]?.head?.hat:null};
 }
 
 export function drawDetachedSkin(snapshot,parent) {
@@ -135,7 +136,7 @@ export function createHat(hat,parent){
   return viewport;
 }
 export function paintHeadDecor(robot,strikePose){
-  const hat=!robot.mobile()&&robot.decorHatId?robot.decorHatId:ctx.betting?.garage?.[robot.id]?.head?.hat;
+  const hat=!robot.mobile()&&robot.decorHatId?robot.decorHatId:patientGarage()?.[robot.id]?.head?.hat;
   if(robot.decorHatId!==hat){robot.decorHat?.remove();robot.decorHat=hat?createHat(hat,robot.bodyG):null;robot.decorHatId=hat;}
   if(!robot.decorHat)return;
   attr(robot.decorHat,'display',robot.healthy('head')?'':'none');
