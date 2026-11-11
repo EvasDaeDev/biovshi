@@ -114,12 +114,16 @@ export function initializeStreamerMascot(){
   const reaction=track.tick(delta,active),emotion=reaction?.emotion??'neutral';
   const energy=reaction?1:.16,t=elapsed;
   const bob=Math.sin(t*(reaction?9:2.7))*(reaction?2:1);
-  painter.clearRect(0,0,280,310);painter.save();painter.translate(0,Math.round(bob));
+  // The torso ends at y=277; align it with the 288px canvas bottom.
+  // Only the head bobs, so the lower edge never floats above the arena.
+  painter.clearRect(0,0,canvas.width,canvas.height);painter.save();painter.translate(0,11);
   drawPart([10,377,245,135],12,142);
+  // Idle sleeves rest another 12 degrees down; reactions retain their full swings.
+  const restAngle=reaction ? .12 : .33;
   // The straight sleeves deliberately rotate as whole pieces around the shoulders.
-  arm([0,319,104,58],99,165,4,140,-.12-energy*(.3+Math.sin(t*11)*.35));
-  arm([150,319,105,58],165,165,157,140,.12+energy*(.3+Math.sin(t*10+.8)*.35));
-  painter.save();painter.translate(135,153);painter.rotate(Math.sin(t*(reaction?6:2))*(reaction?.045:.012));
+  arm([0,319,104,58],99,165,4,140,-restAngle-energy*(.3+Math.sin(t*11)*.35));
+  arm([150,319,105,58],165,165,157,140,restAngle+energy*(.3+Math.sin(t*10+.8)*.35));
+  painter.save();painter.translate(135,153+Math.round(bob));painter.rotate(Math.sin(t*(reaction?6:2))*(reaction?.045:.012));
   const head=heads[emotion];painter.drawImage(head,-83,-149,165,235);painter.restore();
   if(reaction){
    const effects=EFFECTS[emotion]??[];

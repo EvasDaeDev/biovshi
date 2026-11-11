@@ -1,6 +1,6 @@
 /* Screen-space UI: unaffected by arena camera, lighting or post effects. */
 #robot-tag-hops-v22 #streamer-mascot {
- position:absolute;left:6px;bottom:30px;z-index:5;
+ position:absolute;left:6px;bottom:0;z-index:5;
  width:min(219px,28.5%);height:min(225px,calc(75% - 46.5px));
  pointer-events:none;
 }
@@ -15,6 +15,6 @@
  border:1px solid #555643;background:#202219dd;color:#d7c8a9;
  font-size:16px;line-height:1;cursor:pointer;touch-action:manipulation;
 }
-/* Keep the tower's touch stick clear; the mascot remains in the lower left. */
-#robot-tag-hops-v22[data-game-mode="tower"] #streamer-mascot {bottom:146px;height:min(225px,calc(75% - 133.5px))}
-#robot-tag-hops-v22[data-game-mode="tower"] #streamer-mascot-toggle {bottom:120px}
+/* Keep the bottom edge aligned; clear the tower stick horizontally. */
+#robot-tag-hops-v22[data-game-mode="tower"] #streamer-mascot {left:142px;width:min(219px,28.5%,calc(100% - 148px))}
+#robot-tag-hops-v22[data-game-mode="tower"] #streamer-mascot-toggle {left:144px}
