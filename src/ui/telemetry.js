@@ -8,7 +8,7 @@ export function makeRobotCard(id) {
   card.className = 'robot-card';
   card.style.setProperty('--accent', ROBOT_COLORS[id]);
   card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${patientName(id,{short:true})}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><span aria-hidden="true">🦴</span> <span class="robot-card-segments">13/13</span></div></div>
-  <div class="robot-card-body"><div class="portrait-wrap"><canvas class="patient-portrait" width="520" height="224" role="img" aria-label="Пациент ${String.fromCharCode(65+id)}"></canvas></div>
+  <div class="robot-card-body"><div class="portrait-wrap"><canvas class="patient-portrait" width="280" height="224" role="img" aria-label="Пациент ${String.fromCharCode(65+id)}"></canvas></div>
   <div class="patient-skills" aria-label="Умения пациента">
   <div aria-label="Сила" title="Сила определяет шанс критического урона (КРИТ)"><span aria-hidden="true">💪</span><span class="js-strength">3 · 15% КРИТ</span></div>
   <div aria-label="Скорость" title="Скорость движения"><span aria-hidden="true">→</span><span class="js-speed">3 · 100%</span></div>
