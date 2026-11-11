@@ -1,5 +1,5 @@
 import {ARENAS} from '../game/arenas.js';
-import {validTower} from '../tower/model.js';
+import {validTower,normalizeTower} from '../tower/model.js';
 import {newGarage,validStats,normalizePatronage,normalizePatient} from '../garage/model.js';
 import { ctx } from "../game/state.js";
 import { betRefund } from "./ledger.js";
@@ -22,7 +22,7 @@ export function bettingLoad() {
     s.towerEarned??=0;
     if(!Number.isSafeInteger(s.towerEarned)||s.towerEarned<0||s.towerEarned>16000000)throw Error();
     s.towers??={};
-    if(typeof s.towers!=='object'||Array.isArray(s.towers)||s.towers===null||!Object.entries(s.towers).every(([id,t])=>/^(0|[1-9]\d*)$/.test(id)&&s.players[Number(id)]&&validTower(t)))throw Error();
+    if(typeof s.towers!=='object'||Array.isArray(s.towers)||s.towers===null||!Object.entries(s.towers).every(([id,t])=>/^(0|[1-9]\d*)$/.test(id)&&s.players[Number(id)]&&validTower(normalizeTower(t))))throw Error();
     s.garage??=newGarage();
     if(!Array.isArray(s.garage)||s.garage.length!==4||!s.garage.every(g=>g&&typeof g==='object'))throw Error();
     s.garage.forEach(normalizePatient);s.shopSpent??=0;s.topUps??=0;

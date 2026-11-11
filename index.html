@@ -33,8 +33,8 @@
       <button id="launch-game" type="button" autofocus>ПОСМОТРЕТЬ БОЙ!</button>
       <div class="tower-menu-block">
         <label for="menu-player">ИГРОК</label><select id="menu-player" aria-label="Игрок"></select>
-        <p id="menu-bank"></p>
-        <button id="launch-tower" type="button">РЕЖИМ БАШНЯ · УРОВЕНЬ 1</button>
+        <p id="menu-bank"></p><p id="menu-tower-progress"></p>
+        <button id="launch-tower" type="button">РЕЖИМ БАШНЯ · ЭТАЖ 1</button>
         <button id="tower-reset" type="button">СБРОС БАШНИ</button>
       </div>
       <button id="launch-totalizator" type="button" hidden>ТОТАЛИЗАТОР</button>
@@ -43,7 +43,7 @@
     </div>
   </div>
   <div id="tower-preparation" class="bet-overlay" role="dialog" aria-modal="true" aria-labelledby="tower-prep-title" hidden><div class="bet-panel">
-    <h2 id="tower-prep-title">БАШНЯ</h2><p id="tower-prep-name"></p>
+    <h2 id="tower-prep-title">БАШНЯ</h2><p id="tower-prep-name"></p><div id="tower-floor-preview"></div>
     <p>Все конечности восстановлены. Распределите навыки перед боем.</p><div id="tower-stats" class="bet-fields"></div>
     <p id="tower-prep-error" role="status"></p><div class="bet-actions"><button id="tower-prep-menu" type="button">В МЕНЮ</button><button id="tower-fight" class="bet-primary" type="button">НА АРЕНУ</button></div>
   </div></div>
@@ -103,6 +103,7 @@
     </aside>
     <div class="tag7hop-main">
   <div class="tag7hop-stage">
+  <div id="tower-reward-toast" role="status" aria-live="polite" hidden></div>
   <div class="arena-pause-label" hidden>ПАУЗА</div>
   <span class="arena-pause-help">Нажмите на арену — пауза</span>
   <button id="combat-log-toggle" type="button" aria-expanded="true" aria-controls="combat-log" aria-label="Скрыть журнал" title="Скрыть журнал">▴</button>

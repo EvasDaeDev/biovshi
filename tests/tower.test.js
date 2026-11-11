@@ -1,15 +1,17 @@
+import {compareStrikeCandidates} from '../src/systems/combat.js';
+import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
 import {createRobot} from '../src/robot/robot.js';
 import {combatAttacks} from '../src/systems/combat.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
-import {newTower,towerFor,rewardTower,completeTower,resetTower,validTower} from '../src/tower/model.js';
+import {newTower,towerFor,rewardTower,completeTower,resetTower,validTower,floorEnemyCount,towerEnemyCount,normalizeTower} from '../src/tower/model.js';
 import {betNewSession,betCommit,betResolve,betTopUp,betAddPlayer} from '../src/betting/ledger.js';
 import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 import {initializeGame} from '../src/game/initialize.js';
 import {ctx} from '../src/game/state.js';
-import {installTowerUI,openMenu} from '../src/tower/ui.js';
+import {installTowerUI,openMenu,settleTower} from '../src/tower/ui.js';
 import {controlledIntent} from '../src/tower/input.js';
 import {advanceStartup} from '../src/game/session.js';
 import {step} from '../src/game/loop.js';
@@ -32,7 +34,7 @@ test('rewards survive restart and defeat, are once per enemy per floor and isola
  completeTower(s,0,true);assert.equal(towerFor(s,0).level,2);assert.deepEqual(towerFor(s,0).stats,[3,4,3]);assert.ok(validTower(towerFor(s,0)));
  assert.equal(rewardTower(s,0,1,0),false,'no payouts during preparation');towerFor(s,0).preparing=false;
  assert.equal(rewardTower(s,0,1,0),true);assert.equal(rewardTower(s,0,2,0),true);
- completeTower(s,0,false);assert.deepEqual(towerFor(s,0),newTower(towerFor(s,0).patient));assert.equal(s.players[0].balance,130);
+ completeTower(s,0,false);assert.deepEqual(towerFor(s,0),newTower(towerFor(s,0).patient,1));assert.equal(s.players[0].balance,130);
  assert.deepEqual(towerFor(s,1),newTower(towerFor(s,1).patient));assert.equal(s.players[1].balance,100);
  resetTower(s,0);assert.equal(s.players[0].balance,130);
 });
@@ -47,7 +49,7 @@ test('all arenas spawn variable counts; tower stats and cosmetics never touch re
  const s=betNewSession(['<Игрок>'],100);const t=towerFor(s,0);for(let i=0;i<7;i++)completeTower(s,0,true);t.patient=3;
  const original=structuredClone(s.garage);
  for(const arena of ['ward','ring','annulus']){
-   const dom=setup(s,t,arena);assert.equal(ctx.robots.length,9);assert.equal(ctx.cardNodes.length,9);assert.equal(patientSkin(0),3);assert.equal(patientSkin(8),0);
+   const dom=setup(s,t,arena);assert.equal(ctx.robots.length,6);assert.equal(ctx.cardNodes.length,6);assert.equal(patientSkin(0),3);assert.equal(patientSkin(8),0);
    assert.deepEqual(patientGarage()[1].stats,[3,3,3]);assert.deepEqual(s.garage,original);assert.match(patientName(0),/&lt;Игрок&gt;/);assert.match(patientName(8),/ИИ 8/);
    for(const r of ctx.robots)assert.ok(Number.isFinite(r.x)&&Number.isFinite(r.y));close(dom);
  }
@@ -68,7 +70,7 @@ test('player elimination ends attempt immediately even while several AI remain a
  // Removal of the head exercises real anatomy and permanent-garage isolation.
  ctx.robots[0].damage('head',1,100);step(1/60);
  assert.equal(ctx.combat.finished,true);assert.equal(ctx.combat.winner,null);assert.equal(towerFor(s,0).level,1);assert.equal(s.garage[0].wins,0);
- showResults();assert.equal(ctx.resultsPanel.hidden,false);assert.match(ctx.resultsTitle.textContent,/ЗАВЕРШЕНА/);close(dom);
+ showResults();assert.equal(ctx.resultsPanel.hidden,false);assert.match(ctx.resultsTitle.textContent,/ПРОЙДЕНО ЭТАЖЕЙ/);close(dom);
 });
 test('real final strikes pay once and victory unlocks next floor with one skill point and full recovery',()=>{
  const s=betNewSession(['Первый'],100);let dom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.paused=false;
@@ -82,12 +84,12 @@ test('real final strikes pay once and victory unlocks next floor with one skill 
 test('switching menu player updates floor and balance without changing the active run owner',()=>{
  const s=betNewSession(['Первый','Второй'],100);completeTower(s,1,true);const dom=setup(s,towerFor(s,0));openMenu();
  const select=document.querySelector('#menu-player');select.value='1';select.dispatchEvent(new Event('change'));
- assert.match(document.querySelector('#launch-tower').textContent,/УРОВЕНЬ 2/);assert.equal(ctx.menuPlayer,1);assert.equal(ctx.towerPlayer,0);assert.equal(s.towerPlayerId,1);close(dom);
+ assert.match(document.querySelector('#launch-tower').textContent,/ЭТАЖ 2/);assert.equal(ctx.menuPlayer,1);assert.equal(ctx.towerPlayer,0);assert.equal(s.towerPlayerId,1);close(dom);
 });
-function manualFixture(){
- const s=betNewSession(['Первый'],100),dom=setup(s,towerFor(s,0),'ring');
+function manualFixture(arenaId='ring'){
+ const s=betNewSession(['Первый'],100),dom=setup(s,towerFor(s,0),arenaId);
  document.querySelector('#tower-fight').click();advanceStartup(10);ctx.paused=false;
- ctx.robots=[];const r=createRobot(0,{x:350,y:350,angle:0}),foe=createRobot(1,{x:450,y:450,angle:0});ctx.robots=[r,foe];r.setVisible(true);foe.setVisible(false);
+ ctx.robots=[];const r=createRobot(0,{x:arenaId==='annulus'?170:350,y:350,angle:0}),foe=createRobot(1,{x:450,y:450,angle:0});ctx.robots=[r,foe];r.setVisible(true);foe.setVisible(false);
  return {s,dom,r};
 }
 test('tower selectors automatically transfer a point, show standard effects and reset to earned skills',()=>{
@@ -109,12 +111,12 @@ test('standing manual patient never rotates toward another patient',()=>{
  for(let i=0;i<60;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));}
  assert.equal(r.angle,angle);assert.ok(Math.hypot(r.x-x,r.y-y)<.01);assert.equal(controlledIntent(r).lookPoint,null);close(dom);
 });
-test('automatic strikes retain priority over held movement and turning until completion',()=>{
+test('hands and head strikes allow movement; kicks keep their planted support',()=>{
  for(const source of ['leg-1-upper','arm-1-upper','head']){
   const {dom,r}=manualFixture(),x=r.x,y=r.y,angle=r.angle;
   const strike={source,victim:1,started:0,impactAt:10,endsAt:10,resolved:false};ctx.combat.pending[0]=strike;
   ctx.towerInput={x:0,y:1};tickManual(r,20);
-  assert.equal(ctx.combat.pending[0],strike);assert.equal(r.angle,angle);assert.ok(Math.hypot(r.x-x,r.y-y)<.01);
+  assert.equal(ctx.combat.pending[0],strike);if(source.startsWith('leg-')){assert.equal(r.angle,angle);assert.ok(Math.hypot(r.x-x,r.y-y)<.01);}else{assert.ok(r.angle>angle+.2);assert.ok(Math.hypot(r.x-x,r.y-y)>1);}
   ctx.combat.pending[0]=null;tickManual(r,20);assert.ok(r.angle>angle+.2);assert.ok(Math.hypot(r.x-x,r.y-y)>1);close(dom);
  }
 });
@@ -191,4 +193,53 @@ test('touch joystick supplies directional input and stops after finger release',
  pointer('pointerdown',95,56);assert.ok(ctx.towerInput.x>.9);assert.equal(ctx.towerInput.y,0);assert.ok(controlledIntent(r).goal.x>r.x);
  pointer('pointermove',56,17);assert.ok(ctx.towerInput.y<-.9);assert.equal(ctx.towerInput.x,0);
  pointer('pointerup',56,17);assert.equal(controlledIntent(r).speed,0);close(dom);
+});
+test('floors use 1,2,2,3,3 enemies and personal records survive defeat and reset',()=>{
+ assert.deepEqual([1,2,3,4,5,6,7,8].map(floorEnemyCount),[1,2,2,3,3,4,4,5]);
+ const s=betNewSession(['Первый','Второй'],100);for(let i=0;i<7;i++)completeTower(s,0,true);
+ assert.equal(towerFor(s,0).record,7);completeTower(s,0,false);assert.equal(towerFor(s,0).record,7);assert.equal(towerFor(s,0).level,1);
+ resetTower(s,0);assert.equal(towerFor(s,0).record,7);assert.equal(towerFor(s,1).record,0);
+});
+test('legacy runs keep the current fight, skill points and paid enemies, then adopt the new floor curve',()=>{
+ const old={level:4,patient:2,stats:[4,4,4],wins:3,rewarded:[1,4],preparing:false};
+ const s=betNewSession(['Первый'],100);s.towers[0]=old;normalizeTower(old);assert.ok(validTower(old));assert.equal(towerEnemyCount(old),4);assert.equal(old.record,3);assert.equal(old.runCoins,null);
+ assert.equal(rewardTower(s,0,4,0),false);assert.equal(rewardTower(s,0,2,0),true);completeTower(s,0,true);
+ assert.equal(towerFor(s,0).record,4);assert.equal(towerEnemyCount(towerFor(s,0)),3);assert.equal(towerFor(s,0).legacyEnemyCount,undefined);
+ const dom=setup(s,towerFor(s,0));bettingSave();assert.equal(bettingLoad().towers[0].record,4);close(dom);
+});
+test('floor result distinguishes a cleared floor from a reached floor and marks a new personal record',()=>{
+ const s=betNewSession(['Первый'],100),dom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);
+ ctx.robots[1].damage('head',0,100);ctx.combat.finished=true;ctx.combat.winner=0;settleTower(0);showResults();
+ assert.equal(ctx.resultsTitle.textContent,'ЭТАЖ 1 ПРОЙДЕН');assert.match(document.querySelector('#bet-result-summary').textContent,/НОВЫЙ ЛИЧНЫЙ РЕКОРД/);assert.equal(ctx.resultsAgain.textContent,'НА ЭТАЖ 2');
+ assert.match(document.querySelector('#bet-result-summary').textContent,/10/);assert.equal(towerFor(s,0).record,1);assert.equal(towerFor(s,0).runCoins,10);
+ openMenu();assert.match(document.querySelector('#menu-tower-progress').textContent,/ПРОЙДЕНО: 1 · РЕКОРД: 1/);close(dom);
+ const lossDom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.robots[0].damage('head',1,100);ctx.combat.finished=true;ctx.combat.winner=null;settleTower(null);showResults();
+ assert.equal(ctx.resultsTitle.textContent,'ПРОЙДЕНО ЭТАЖЕЙ: 1');assert.match(ctx.resultsSummary.textContent,/на этаже 2/);assert.equal(towerFor(s,0).level,1);assert.equal(towerFor(s,0).record,1);assert.equal(s.players[0].balance,110);close(lossDom);
+});
+test('a five-floor milestone is celebrated without awarding extra money',()=>{
+ const s=betNewSession(['Первый'],100);for(let i=0;i<4;i++)completeTower(s,0,true);
+ const dom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.combat.finished=true;ctx.combat.winner=0;settleTower(0);showResults();
+ assert.equal(ctx.resultsTitle.textContent,'ЭТАЖ 5 ПРОЙДЕН');assert.match(document.querySelector('.tower-milestone').textContent,/5 ЭТАЖЕЙ/);assert.equal(s.players[0].balance,100);assert.equal(towerFor(s,0).wins,5);close(dom);
+});
+test('moving attack selection prefers a reachable hand; stable selection retains target and strike priorities',()=>{
+ const hand={source:{kind:'arm'},segment:'head',score:50},kick={source:{kind:'leg'},segment:'leg-1-upper',score:0};
+ assert.ok(compareStrikeCandidates(hand,kick,{moving:true})<0);assert.ok(compareStrikeCandidates(hand,kick)>0);
+});
+test('manual and autonomous patients can leave a perimeter contact and slide without losing a limb',()=>{
+ for(const manual of [true,false]){
+  const {dom,r}=manualFixture();const tick=(goal,frames)=>{for(let i=0;i<frames;i++){ctx.game.time+=1/60;r.tick(1/60,{manual,goal,speed:45,mode:'chase',lookPoint:null});}};
+  tick({x:620,y:350},240);const contact={x:r.x,y:r.y};tick({x:450,y:440},120);tick({x:350,y:350},100);
+  assert.equal(r.segmentCount,r.segmentTotal);assert.ok(Math.hypot(r.x-contact.x,r.y-contact.y)>15,'patient frees itself without dismemberment');
+  for(const c of r.capsules)for(const hit of staticContacts(c))assert.ok(hit.depth<=(isLimb(c)?5:0)+.01,`${c.segment}: penetration ${hit.depth}`);
+  close(dom);
+ }
+});
+test('manual and autonomous patients can leave the annulus obstacle without losing a limb',()=>{
+ for(const manual of [true,false]){
+  const {dom,r}=manualFixture('annulus');const tick=(goal,frames)=>{for(let i=0;i<frames;i++){ctx.game.time+=1/60;r.tick(1/60,{manual,goal,speed:45,mode:'chase',lookPoint:null});}};
+  tick({x:350,y:350},240);const contact={x:r.x,y:r.y};tick({x:190,y:450},120);tick({x:150,y:350},100);
+  assert.equal(r.segmentCount,r.segmentTotal);assert.ok(Math.hypot(r.x-contact.x,r.y-contact.y)>15,'patient leaves the central obstacle');
+  for(const c of r.capsules)for(const hit of staticContacts(c))assert.ok(hit.depth<=(isLimb(c)?5:0)+.01,`${c.segment}: penetration ${hit.depth}`);
+  close(dom);
+ }
 });

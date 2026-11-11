@@ -1,3 +1,4 @@
+import {limbCapsuleClear} from '../systems/surface-contact.js';
 import { clamp } from '../utils/math.js';
 import { arenaClearance } from "../game/arena.js";
 import { coreClearBone, coreClearCircle, obstacleDistance } from "../systems/collision.js";
@@ -44,8 +45,9 @@ export function limbClear(robotState, l, endpoint = robotState.handEnd(l)) {
     [u, v] = robotState.lengths(l),
     solved = ik(a, endpoint, u, v, l.kind === 'arm' ? l.side : -l.side),
     r = l.kind === 'arm' ? [4.8, 3.8, 4.8] : [6.8, 4.8, 5.8];
-  if (!robotState.healthy(`${l.kind}-${l.side}-lower`)) return robotState.clearBone(a, solved.joint, r[0] * ctx.scale, false);
-  return robotState.clearBone(a, solved.joint, r[0] * ctx.scale, false) && robotState.clearBone(solved.joint, solved.end, r[1] * ctx.scale, false) && robotState.clearCircle(solved.end, r[2] * ctx.scale, false);
+  const clear=(from,to,radius)=>robotState.clearBone(from,to,radius*ctx.scale,false)||limbCapsuleClear(from,to,radius*ctx.scale,5);
+  if (!robotState.healthy(`${l.kind}-${l.side}-lower`)) return clear(a,solved.joint,r[0]);
+  return clear(a,solved.joint,r[0])&&clear(solved.joint,solved.end,r[1])&&clear(solved.end,solved.end,r[2]);
 }
 export function rigClear(robotState) {
   // Проверяем только физически сохранившиеся части. Отделённый таз,
