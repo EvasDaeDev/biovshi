@@ -135,7 +135,7 @@ export function chooseSpawnLayout() {
     for(let i=slots.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[slots[i],slots[j]]=[slots[j],slots[i]];}
     return slots.map(p=>({...p,angle:spawnFacingAngle(p,boundary)}));
   }
-  const slots=[{x:cx,y:boundary.top+margin},{x:boundary.left+margin,y:cy},{x:boundary.right-margin,y:cy},{x:cx,y:boundary.bottom-margin}];
+  const slots=ctx.arenaDefinition?.spawnPoints?.map(p=>({...p}))??[{x:cx,y:boundary.top+margin},{x:boundary.left+margin,y:cy},{x:boundary.right-margin,y:cy},{x:cx,y:boundary.bottom-margin}];
   for (const p of slots) if (!coreClearCircle(p, CONFIG.startup.spawnMarginCm)) throw Error('Стартовая точка пересекается с препятствием');
   for (let i = slots.length - 1; i > 0; i--) {
     const j = Math.floor(random() * (i + 1));

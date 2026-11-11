@@ -43,10 +43,10 @@ test('tower rewards remain valid in shared betting storage after spending, settl
  bettingSave();const loaded=bettingLoad();assert.ok(loaded);assert.equal(loaded.towerEarned,10);assert.deepEqual(loaded.towers,s.towers);assert.deepEqual(loaded.players,s.players);
  close(dom);
 });
-test('two existing arenas spawn variable counts; tower stats and cosmetics never touch regular patients',()=>{
+test('all arenas spawn variable counts; tower stats and cosmetics never touch regular patients',()=>{
  const s=betNewSession(['<Игрок>'],100);const t=towerFor(s,0);for(let i=0;i<7;i++)completeTower(s,0,true);t.patient=3;
  const original=structuredClone(s.garage);
- for(const arena of ['ward','ring']){
+ for(const arena of ['ward','ring','annulus']){
    const dom=setup(s,t,arena);assert.equal(ctx.robots.length,9);assert.equal(ctx.cardNodes.length,9);assert.equal(patientSkin(0),3);assert.equal(patientSkin(8),0);
    assert.deepEqual(patientGarage()[1].stats,[3,3,3]);assert.deepEqual(s.garage,original);assert.match(patientName(0),/&lt;Игрок&gt;/);assert.match(patientName(8),/ИИ 8/);
    for(const r of ctx.robots)assert.ok(Number.isFinite(r.x)&&Number.isFinite(r.y));close(dom);
