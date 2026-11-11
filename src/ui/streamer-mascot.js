@@ -3,6 +3,8 @@ import {onGameEvent} from '../game/event-bus.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
 
 const STORAGE='biovshi.streamer-hidden.v1';
+// Match the chin-to-collar placement in girl_prv.png for every expression.
+const HEAD_OFFSET_Y=22;
 // Rectangles use the original, transparent atlas. Heads and effects stay independent.
 const HEADS={
  neutral:[13,10,157,233], admire:[198,9,156,236], fear:[388,10,156,235],
@@ -123,12 +125,12 @@ export function initializeStreamerMascot(){
   // The straight sleeves deliberately rotate as whole pieces around the shoulders.
   arm([0,319,104,58],99,165,4,140,-restAngle-energy*(.3+Math.sin(t*11)*.35));
   arm([150,319,105,58],165,165,157,140,restAngle+energy*(.3+Math.sin(t*10+.8)*.35));
-  painter.save();painter.translate(135,153+Math.round(bob));painter.rotate(Math.sin(t*(reaction?6:2))*(reaction?.045:.012));
+  painter.save();painter.translate(135,153+HEAD_OFFSET_Y+Math.round(bob));painter.rotate(Math.sin(t*(reaction?6:2))*(reaction?.045:.012));
   const head=heads[emotion];painter.drawImage(head,-83,-149,165,235);painter.restore();
   if(reaction){
    const effects=EFFECTS[emotion]??[];
    for(let i=0;i<effects.length;i++){
-    const effect=effects[i],x=i===0?22:222,y=42+Math.sin(t*13+i*2)*5;
+    const effect=effects[i],x=i===0?22:222,y=42+HEAD_OFFSET_Y+Math.sin(t*13+i*2)*5;
     painter.save();painter.translate(x+effect[2]/2,y+effect[3]/2);painter.rotate(Math.sin(t*9+i)*.12);
     const pulse=1+Math.sin(t*14+i)*.09;painter.scale(pulse,pulse);
     drawPart(effect,-effect[2]/2,-effect[3]/2,effect[2],effect[3],iconAtlas);painter.restore();
