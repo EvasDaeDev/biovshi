@@ -120,6 +120,21 @@ export function chooseSpawnLayout() {
   const boundary=ctx.arenaBoundary;
   const cx=(boundary.left+boundary.right)/2,cy=(boundary.top+boundary.bottom)/2;
   const margin=CONFIG.startup.spawnMarginCm;
+  if(ctx.mode==='tower'){
+    // A low-discrepancy sequence fills usable floor for arbitrary participant counts.
+    // Prefer generous spacing, then relax it for crowded late floors.
+    const slots=[];const count=ctx.ROBOT_COUNT;
+    for(const separation of [65,48,32,16,0]){
+      for(let i=0;i<Math.max(3000,count*100)&&slots.length<count;i++){
+        const p={x:boundary.left+margin+((i*.61803398875)%1)*(boundary.right-boundary.left-2*margin),
+          y:boundary.top+margin+((i*.75487766625)%1)*(boundary.bottom-boundary.top-2*margin)};
+        if(coreClearCircle(p,margin)&&slots.every(q=>Math.hypot(q.x-p.x,q.y-p.y)>=separation))slots.push(p);
+      }
+      if(slots.length===count)break;
+    }
+    for(let i=slots.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[slots[i],slots[j]]=[slots[j],slots[i]];}
+    return slots.map(p=>({...p,angle:spawnFacingAngle(p,boundary)}));
+  }
   const slots=[{x:cx,y:boundary.top+margin},{x:boundary.left+margin,y:cy},{x:boundary.right-margin,y:cy},{x:cx,y:boundary.bottom-margin}];
   for (const p of slots) if (!coreClearCircle(p, CONFIG.startup.spawnMarginCm)) throw Error('Стартовая точка пересекается с препятствием');
   for (let i = slots.length - 1; i > 0; i--) {

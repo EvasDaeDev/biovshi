@@ -1,3 +1,4 @@
+import {fighterLabel} from '../game/patients.js';
 import {paintCrit} from './crit.js';
 import { timed } from './diagnostics.js';
 import { formatRoundTime } from "../ui/results.js";
@@ -18,7 +19,8 @@ export function paint() {
   paintHitEffects();
   paintCrit();
   let text = ctx.startup.phase === 'intro' ? 'Нажмите «начать»' : ctx.startup.phase === 'spawning' ? `Выход на арену · ${ctx.startup.nextIndex} / ${ctx.ROBOT_COUNT}` : 'Все против всех · осталось подвижных: ' + ctx.robots.filter(r => r.mobile).length;
-  if (ctx.combat.finished) text = ctx.combat.winner === null ? 'НИЧЬЯ · все обездвижены' : `ПОБЕДИТЕЛЬ — ${String.fromCharCode(65 + ctx.combat.winner)}!`;
+  if (ctx.combat.finished) text = ctx.combat.winner === null ? 'НИЧЬЯ · все обездвижены' : `ПОБЕДИТЕЛЬ — ${fighterLabel(ctx.combat.winner)}!`;
+  if(ctx.mode==='tower')text=`БАШНЯ · УРОВЕНЬ ${ctx.towerRun.level} · ${ctx.combat.finished?(ctx.combat.winner===0?'ПОБЕДА':'ПОРАЖЕНИЕ'):'ПРОТИВНИКОВ: '+ctx.robots.filter(r=>r.id!==0&&r.mobile).length}`;
   if(ctx.status.title!==text)ctx.status.title = text;
   const headerText = ctx.root.dataset.betRound ? 'Раунд ' + ctx.root.dataset.betRound : text;
   if (ctx.status.textContent !== headerText) ctx.status.textContent = headerText;

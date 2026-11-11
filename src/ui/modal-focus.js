@@ -4,7 +4,7 @@ import {ctx} from '../game/state.js';
 // their browser focus handling. Settings owns its pause/close lifecycle.
 export function initializeModalFocus(){
  const root=ctx.root,doc=root.ownerDocument,win=doc.defaultView;
- const sheets=['#launch-overlay','#arena-settings','#bet-overlay','#gladiator-results'].map(id=>root.querySelector(id));
+ const sheets=['#launch-overlay','#tower-preparation','#arena-settings','#bet-overlay','#gladiator-results'].map(id=>root.querySelector(id));
  let current=null,previous=null,background=[];
  const controls=sheet=>[...sheet.querySelectorAll('button,input,select,summary,[tabindex="0"]')].filter(node=>!node.disabled&&!node.closest('[hidden]')&&!(node.closest('details')?.open===false&&node.tagName!=='SUMMARY'));
  function sync(){

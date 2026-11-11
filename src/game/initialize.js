@@ -27,7 +27,7 @@ import { paint } from "../render/frame.js";
 import { bettingCancel, bettingInit } from "../betting/ui.js";
 import { resetFrameClock } from "./clock.js";
 import { frame } from "./loop.js";
-export function initializeGame({textures=null,arenaId='ward',session=null,entry='auto'}={}) {
+export function initializeGame({textures=null,arenaId='ward',session=null,entry='auto',tower=null}={}) {
   // Dispose against the old bindings, then start from the original scene markup.
   // Reusing mutated SVG definitions can bake the previous arena into new layers.
   const root=document.getElementById('robot-tag-hops-v22');
@@ -35,6 +35,10 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   const svg=root.querySelector('#tag7hop-field');
   if(root.__arenaSvgTemplate===undefined)root.__arenaSvgTemplate=svg.innerHTML;
   else svg.innerHTML=root.__arenaSvgTemplate;
+  ctx.mode=tower?'tower':'spectator';
+  if(tower)ctx.betting=session;
+  ctx.towerRun=tower;
+  ctx.towerGarage=tower?Array.from({length:tower.level+1},(_,id)=>({stats:id===0?[...tower.stats]:[3,3,3],head:null})):null;
   ctx.textureAssets=textures;
   ctx.root = root;
   ctx.svg = ctx.root.querySelector('#tag7hop-field');
@@ -116,7 +120,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.TRACK_SPEED = CONFIG.vision.trackingSpeedDeg * Math.PI / 180;
   ctx.TRACK_LIMIT = Math.PI / 2;
   ctx.CHASE_SPEED = CONFIG.movement.chaseSpeedCm;
-  ctx.ROBOT_COUNT = 4;
+  ctx.ROBOT_COUNT = tower?tower.level+1:4;
   ctx.FLEE_MEMORY = CONFIG.movement.fleeMemorySec;
   ctx.obstacles = ctx.arenaDefinition.obstacles.map(b => ({
     ...b,
@@ -495,7 +499,10 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     "'": '&#39;'
   })[c]);
   ctx.exhibition=false;ctx.afterSetup=entry==='setup'?'procedure':'betting';
-  if(entry==='auto'){
+  if(tower){
+    delete ctx.root.dataset.betRound;
+    ctx.betting=session;ctx.betHud.hidden=true;ctx.intro.hidden=true;ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;ctx.startup.phase='tower-ready';
+  }else if(entry==='auto'){
     ctx.betting=session??bettingLoad();ctx.exhibition=true;
     if(ctx.betting){
       betRefund(ctx.betting);

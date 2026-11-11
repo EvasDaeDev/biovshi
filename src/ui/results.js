@@ -1,3 +1,4 @@
+import {towerResults} from '../tower/ui.js';
 import {patientName} from './patient.js';
 import { ctx } from "../game/state.js";
 import { betWinnerNames } from "../betting/ledger.js";
@@ -12,6 +13,7 @@ export function resultPatientStatus(robot, isWinner = false) {
 }
 export function showResults() {
   if (!ctx.combat.finished || !ctx.resultsPanel.hidden) return;
+  if(ctx.mode==='tower'){towerResults();return;}
   const winner = ctx.combat.winner;
   const names=betWinnerNames(ctx.betting,winner);
   ctx.resultsTitle.innerHTML=winner===null?'НИЧЬЯ — НЕТ ПОБЕДИТЕЛЯ':`ПОБЕДИТЕЛЬ — ${patientName(winner)}${names==='—'?'':' ('+ctx.betEscape(names)+')'}`;

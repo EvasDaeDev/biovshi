@@ -1,0 +1,18 @@
+#robot-tag-hops-v22 .launch-paper{max-height:calc(100dvh - 24px);overflow-y:auto;padding-top:22px;padding-bottom:22px}
+#robot-tag-hops-v22 .tower-menu-block{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;margin-top:14px;text-align:left}
+#robot-tag-hops-v22 .tower-menu-block label{font-size:12px;font-weight:bold}
+#robot-tag-hops-v22 .tower-menu-block select{min-height:36px;background:#d9d0b6;color:#27291f;border:1px solid #645d47;padding:5px;width:100%}
+#robot-tag-hops-v22 #menu-bank{grid-column:1/-1;margin:0;font-size:13px}
+#robot-tag-hops-v22 :is(#launch-tower,#tower-reset,#launch-totalizator){grid-column:1/-1;width:100%;padding:12px;background:#4b422d;color:#f3deae;border:1px solid #31291c;cursor:pointer;font-weight:bold}
+#robot-tag-hops-v22 #tower-reset{background:transparent;color:#393b30;padding:5px;font-size:11px}
+#robot-tag-hops-v22 #launch-totalizator{margin-top:12px}
+#robot-tag-hops-v22 #tower-controls[hidden]{display:none}
+#robot-tag-hops-v22 .tower-hud{position:fixed;bottom:10px;right:12px;z-index:15;display:flex;gap:10px;flex-wrap:wrap;max-width:65vw;align-items:center;background:#20251de8;color:#eee2bf;border:1px solid #7d7957;padding:8px;font-size:12px}
+#robot-tag-hops-v22 .tower-hud button{background:#4b422d;color:#f3deae;padding:8px;border:1px solid #8d805b;cursor:pointer}
+#robot-tag-hops-v22 #tower-stick{position:fixed;bottom:18px;left:18px;width:112px;height:112px;border:2px solid #93896c;border-radius:50%;background:#24271dbb;z-index:16;touch-action:none;display:flex;align-items:center;justify-content:center;user-select:none}
+#robot-tag-hops-v22 #tower-stick span{width:48px;height:48px;border-radius:50%;background:#aca17a;border:2px solid #d2c398;pointer-events:none}
+#robot-tag-hops-v22 #tower-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+#robot-tag-hops-v22 #tower-stats label{display:grid;gap:8px;font-size:12px}
+#robot-tag-hops-v22 #tower-stats select{min-height:44px}
+#robot-tag-hops-v22 #tower-prep-error{color:#9d2929}
+@media(max-height:600px){#robot-tag-hops-v22 .launch-paper{padding:12px 20px}#robot-tag-hops-v22 .launch-paper h1{font-size:32px;margin:4px}#robot-tag-hops-v22 .launch-divider,#robot-tag-hops-v22 .launch-footnote,#robot-tag-hops-v22 .launch-stamp{display:none}}

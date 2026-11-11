@@ -30,6 +30,7 @@ export function sizeLabels() {
 }
 export function setPaused(paused) {
   ctx.paused = Boolean(paused);
+  ctx.clearTowerInput?.();
   const label=ctx.root.querySelector('.arena-pause-label');
   if(label)label.hidden=!ctx.paused;
   resetFrameClock();
@@ -48,6 +49,6 @@ export function setTimeScale(value) {
   attr(ctx.speedButton, 'title', value === 2 ? 'Вернуть обычную скорость' : 'Ускорить бой в 2 раза');
 }
 export function toggleSpeed() {
-  if (ctx.startup.phase !== 'running') return;
+  if (ctx.startup.phase !== 'running'||ctx.mode==='tower') return;
   setTimeScale(ctx.timeScale === 2 ? 1 : 2);
 }

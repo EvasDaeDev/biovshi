@@ -1,3 +1,4 @@
+import {patientSkin} from '../game/patients.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { onGameEvent } from '../game/event-bus.js';
 import { ctx } from '../game/state.js';
@@ -278,7 +279,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       play(event.damage===2?'crit':'hit',{patient,priority:3});
       // The injured patient reacts 100 ms after the impact. This is an
       // additional voice, never a replacement for hit/crit/detach effects.
-      const painKey=painSoundKey(event.robot);
+      const painKey=painSoundKey(patientSkin(event.robot));
       if(painKey)play(painKey,{patient:event.robot,priority:2,delaySec:.1});
       if(type==='segment-broken')play(Math.random()<.5?'detach1':'detach2',{patient:event.robot,priority:4});
     }else if(type==='combat-miss')play(Math.random()<.5?'miss1':'miss2',{patient,priority:1});

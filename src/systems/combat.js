@@ -1,3 +1,5 @@
+import {settleTower} from '../tower/ui.js';
+import {patientGarage} from '../game/patients.js';
 import {critChance} from '../garage/model.js';
 import {random} from '../utils/random.js';
 import { clamp, wrap, smooth } from '../utils/math.js';
@@ -250,7 +252,7 @@ export function combatAttacks() {
       const src = attacker.attackSources.find(s => s.key === pending.source);
       if (attacker.visible && src && victim?.visible && victim.hasHead && victim.segmentCount > 0) {
         const touched = struckSegment(attacker, victim, pending);
-        const damage=touched&&random()<critChance(ctx.betting?.garage?.[id]?.stats[1]??3)?2:1;
+        const damage=touched&&random()<critChance(patientGarage()?.[id]?.stats[1]??3)?2:1;
         if (touched && victim.damage(touched, id, damage)) {
           if (victim.mobile) victim.reactToHit(attacker, touched);
           ctx.combat.hits++;
@@ -325,14 +327,14 @@ export function combatAttacks() {
   }
   // A headbutt that wins the fight must still complete its backward hop
   // and landing recovery before switching to the victory animation.
-  if (mobile.length <= 1 && ctx.robots.every(r => r.visible)
+  if ((mobile.length <= 1 || ctx.mode==='tower'&&!ctx.robots[0].mobile) && ctx.robots.every(r => r.visible)
       && !mobile.some(r=>finishingPounceInProgress(r,ctx.game.time))) {
     ctx.combat.finished = true;
-    ctx.combat.winner = mobile.length === 1 ? mobile[0].id : null;
+    ctx.combat.winner = ctx.mode==='tower'&&!ctx.robots[0].mobile?null:mobile.length === 1 ? mobile[0].id : null;
     ctx.combat.finishedAt = ctx.game.time;
     ctx.combat.pending.fill(null); // Замахи больше не рисуются после финального удара.
-    if(mobile.length===1)mobile[0].celebrateVictory();
-    bettingSettle(ctx.combat.winner);
+    if(mobile.length===1&&ctx.combat.winner!==null)mobile[0].celebrateVictory();
+    if(ctx.mode==='tower')settleTower(ctx.combat.winner);else bettingSettle(ctx.combat.winner);
     note('combat-end', {
       winner: ctx.combat.winner
     });

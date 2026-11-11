@@ -138,6 +138,7 @@ export function finishMobility(robotState, reason, impact = robotState.lastImpac
   ctx.brainDebt = .1;
   note('robot-immobilized', {
     robot: robotState.id,
+    lastAttacker:robotState.lastTowerAttacker,
     reason,
     segment:reason==='потерял конечности'?impact?.segment:null,
     by:reason==='потерял конечности'?impact?.by:null
@@ -185,6 +186,7 @@ export function robotFailFromOilLoss(robotState) {
 }
 export function robotDamage(robotState, key, by, damage=1) {
   if (!key || !robotState.isDamageable(key) || !robotState.hp.has(key) || robotState.broken.has(key) || ctx.game.time - (robotState.hitAt.get(key) ?? -99) < CONFIG.combat.damageInvulnerabilitySec) return false;
+  robotState.lastTowerAttacker=by;
   robotState.hitAt.set(key, ctx.game.time);
   robotState.hp.set(key, Math.max(0,robotState.hp.get(key) - damage));
   const caps = robotState.api.capsules.filter(c => c.segment === key);
@@ -226,7 +228,7 @@ export function robotDamage(robotState, key, by, damage=1) {
       inertia:createInertia(direction,robotState.api.capsules.filter(c=>[key,...attached].includes(c.segment))),
       pieces: wreckPieces
     });
-    if(wreckKeys.includes('head')&&ctx.betting?.garage?.[robotState.id]){patientDeath(ctx.betting.garage[robotState.id]);bettingSave();}
+    if(ctx.mode!=='tower'&&wreckKeys.includes('head')&&ctx.betting?.garage?.[robotState.id]){patientDeath(ctx.betting.garage[robotState.id]);bettingSave();}
     for (const part of [key, ...attached]) {
       robotState.broken.add(part);
       robotState.hp.set(part, 0);

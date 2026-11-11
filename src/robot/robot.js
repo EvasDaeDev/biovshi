@@ -1,3 +1,4 @@
+import {patientSkin} from '../game/patients.js';
 import { clamp } from '../utils/math.js';
 import { descendants, finishMobility, leakOrigin, reactToHit, robotDamage, robotFailFromOilLoss, segmentGeometry } from "./anatomy.js";
 import { allLimbs, attackPose, handEnd, handRest, headFrameAt, hornPoints, layoutBody, legRest, lengths, limbFrame, local, mixPose, origin, rest, savePose, sphereCenters, updateExtraLimbs, updateTail } from "./kinematics.js";
@@ -354,7 +355,7 @@ function createRobot(id, start) {
   robotState.detachFallback=()=>{
     robotState.fallbackBody?.remove();robotState.fallbackLimbs?.remove();
   };
-  const skinKey=['robotA','robotB','robotC','robotD'][robotState.id];
+  const skinKey=['robotA','robotB','robotC','robotD'][patientSkin(robotState.id)];
   if(!ctx.textureAssets?.[skinKey]?.loaded)robotState.ensureFallback();
   robotState.boundaryBlockedFor = 0;
   robotState.boundaryRecovery = false;

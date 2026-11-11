@@ -9,6 +9,8 @@ export function betNewSession(names, capital) {
     garage: newGarage(),
     shopSpent: 0,
     topUps: 0,
+    towerEarned: 0,
+    towers: {},
     floorId: globalThis.crypto?.randomUUID?.()??String(Date.now())+Math.random(),
     round: 1,
     capital,
@@ -47,7 +49,7 @@ export function betAddPlayer(s,name){
   if(s.players.length>=16)throw Error('За одним столом может быть не больше 16 игроков.');
   const clean=typeof name==='string'?name.trim():'';
   if(!clean||clean.length>32)throw Error('Введите имя от 1 до 32 символов.');
-  const issued=(s.players.length+1)*s.capital+(s.topUps??0);
+  const issued=(s.players.length+1)*s.capital+(s.topUps??0)+(s.towerEarned??0);
   if(!Number.isSafeInteger(issued)||issued>16000000)throw Error('Общий выпуск фишек не может превышать 16 000 000.');
   const player={id:s.players.length,name:clean,balance:s.capital};
   s.players.push(player);
@@ -120,7 +122,7 @@ export function betRefund(s) {
 
 // Temporary free top-up; counted separately from the original capital.
 export function betTopUp(s,player,amount){
-  const target=s.players[player],issued=s.players.length*s.capital+(s.topUps??0);
+  const target=s.players[player],issued=s.players.length*s.capital+(s.topUps??0)+(s.towerEarned??0);
   if(s.phase!=='betting'||!Number.isInteger(player)||!target||!Number.isSafeInteger(amount)||amount<=0||!Number.isSafeInteger(issued+amount)||issued+amount>16000000)throw Error('Введите целое положительное число. Общий выпуск фишек не может превышать 16 000 000.');
   target.balance+=amount;s.topUps=(s.topUps??0)+amount;
 }

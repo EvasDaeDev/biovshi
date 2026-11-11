@@ -1,3 +1,4 @@
+import {controlledIntent} from '../tower/input.js';
 import { timed } from '../render/diagnostics.js';
 import { updateOilLeaks } from '../render/effects.js';
 import { recordFrame } from '../render/performance.js';
@@ -52,13 +53,14 @@ export function step(dt) {
   }
   if (ctx.brainDebt >= .1 || !ctx.intents.length) {
     ctx.brainDebt = 0;
-    ctx.intents = ctx.robots.map(fighterIntent);
+    ctx.intents = ctx.robots.map(r=>ctx.mode==='tower'&&r.id===0?controlledIntent(r):fighterIntent(r));
   }
+  if(ctx.mode==='tower')ctx.intents[0]=controlledIntent(ctx.robots[0]);
   for (const r of ctx.robots) r.tick(dt, ctx.intents[r.id]);
   // Detect an actual locomotion deadlock (not just lack of a target).
   // Change navigation goal and flank, rather than leaving the AI in speed=0 mode.
   for (const r of ctx.robots) {
-    if (!r.visible || !r.mobile) continue;
+    if (!r.visible || !r.mobile || ctx.mode==='tower'&&r.id===0) continue;
     const id = r.id,
       old = ctx.combat.lastPositions[id];
     if (old) {
@@ -129,6 +131,7 @@ export function frame(now) {
   } else {
     ctx.debt = 0;
     ctx.paintAt = now;
+    if(ctx.mode==='tower')ctx.clearTowerInput?.();
   }
   // Changing viewBox repaints the whole arena. Do it only with a new game frame.
   if (painted) {
