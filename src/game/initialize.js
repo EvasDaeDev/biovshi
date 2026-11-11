@@ -1,3 +1,4 @@
+import {towerEnemyCount} from '../tower/model.js';
 import {arenaDefinition} from './arenas.js';
 import {initializeCombatLog} from '../ui/combat-log.js';
 import {bettingLoad,bettingSave} from '../betting/storage.js';
@@ -38,7 +39,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.mode=tower?'tower':'spectator';
   if(tower)ctx.betting=session;
   ctx.towerRun=tower;
-  ctx.towerGarage=tower?Array.from({length:tower.level+1},(_,id)=>({stats:id===0?[...tower.stats]:[3,3,3],head:null})):null;
+  ctx.towerGarage=tower?Array.from({length:towerEnemyCount(tower)+1},(_,id)=>({stats:id===0?[...tower.stats]:[3,3,3],head:null})):null;
   ctx.textureAssets=textures;
   ctx.root = root;
   ctx.svg = ctx.root.querySelector('#tag7hop-field');
@@ -120,7 +121,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.TRACK_SPEED = CONFIG.vision.trackingSpeedDeg * Math.PI / 180;
   ctx.TRACK_LIMIT = Math.PI / 2;
   ctx.CHASE_SPEED = CONFIG.movement.chaseSpeedCm;
-  ctx.ROBOT_COUNT = tower?tower.level+1:4;
+  ctx.ROBOT_COUNT = tower?towerEnemyCount(tower)+1:4;
   ctx.FLEE_MEMORY = CONFIG.movement.fleeMemorySec;
   ctx.obstacles = ctx.arenaDefinition.obstacles.map(b => ({
     ...b,

@@ -135,7 +135,8 @@ export function strikePriority(candidate) {
   return candidate.score + (candidate.source.kind === 'head' ? 1000
     : candidate.source.kind === 'leg' ? 4 : 0);
 }
-export function compareStrikeCandidates(a,b) {
+export function compareStrikeCandidates(a,b,{moving=false}={}) {
+  if(moving){const rank=c=>c.source.kind==='arm'?0:c.source.kind==='head'?1:2;const preference=rank(a)-rank(b);if(preference)return preference;}
   // Rank only physically reachable targets; never reposition to seek a limb.
   // Other damageable parts (including the tail) share the torso tier.
   const tier=c=>/^(arm|leg)-/.test(c.segment)?0:c.segment==='head'?2:1;
@@ -288,13 +289,13 @@ export function combatAttacks() {
     if (!attacker.visible || !attacker.mobile || ctx.game.time < ctx.combat.nextStrike[id] || ctx.combat.pending[id] || attacker.actualPose.leap || ctx.game.time < attacker.combatRecoverUntil) continue;
     // Reach is measured from each attacking limb, including the rear pelvis.
     const preferredVictims = activeOpponents(id);
+    const moving=Math.hypot(attacker.velocity?.x??0,attacker.velocity?.y??0)>5||ctx.intents[id]?.speed>5;
     let best = null;
     for (const v of preferredVictims) for (const source of attacker.attackSources) {
       // Head strikes remain possible even when other limbs are intact.
       for (const c of strikeCandidates(attacker, v, source)) {
-        // Target limbs first, torso next, head last. Within a tier retain
-        // geometry scoring and the existing preference for attacking limbs.
-        if (!best || compareStrikeCandidates(c,best)<0) best = c;
+        // Prefer hands on the move, then retain target tiers and geometry scores.
+        if (!best || compareStrikeCandidates(c,best,{moving})<0) best = c;
       }
     }
     if (best) {

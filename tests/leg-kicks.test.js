@@ -85,11 +85,12 @@ test('a rear kick holds body and planted feet even under a forward movement inte
  const {dom,r}=setup();try{
   const foe=target(pointAt(r,180,48));ctx.robots=[r,foe];
   const initial={x:r.x,y:r.y,angle:r.angle,pelvis:{...r.actualPose.pelvis},feet:r.limbs.map(l=>({...l.foot}))};
-  const intent=fighterIntent(r);
-  assert.equal(intent.mode,'лягается');assert.equal(intent.speed,0);assert.equal(intent.lookPoint,null);
+  assert.notEqual(fighterIntent(r).mode,'лягается','a reachable kick alone does not stop locomotion before attack selection');
   ctx.seed=1972; // The next random roll would allow a pounce; the kick must win first.
   combatAttacks();
   const pending=ctx.combat.pending[r.id];assert.ok(pending?.source.startsWith('leg-'));
+  const intent=fighterIntent(r);
+  assert.equal(intent.mode,'лягается');assert.equal(intent.speed,0);assert.equal(intent.lookPoint,null);
   assert.equal(r.actualPose.leap,null,'a reachable rear kick wins over a leap requiring a turn');
   const source=r.attackSources.find(s=>s.key===pending.source);
   assert.equal(lifted({id:r.id,mode:'normal'},{kind:'leg',side:source.side}),true);

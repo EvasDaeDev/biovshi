@@ -1,3 +1,4 @@
+import {resolveSurfaceContacts} from '../systems/surface-contact.js';
 import {patientGarage} from '../game/patients.js';
 import {statMultiplier} from '../garage/model.js';
 import { clamp, wrap, smooth } from '../utils/math.js';
@@ -436,9 +437,9 @@ export function robotTick(robotState, dt, intent) {
     robotState.api.capsules = robotState.makeCapsules();
     return;
   }
-  // An automatic strike owns the pose until its recovery finishes. Keep input
-  // active so a held command resumes immediately after the strike ends.
-  if(intent.manual&&ctx.combat.pending[robotState.id]){
+  // Kicks need planted support. Hands can strike while walking; a held command
+  // resumes after a kick finishes without cancelling the attack.
+  if(intent.manual&&ctx.combat.pending[robotState.id]?.source.startsWith('leg-')){
     intent={...intent,speed:0,
       goal:{x:robotState.x,y:robotState.y},brake:true};
   }
@@ -625,7 +626,9 @@ export function robotTick(robotState, dt, intent) {
   robotState.y += robotState.vy * dt;
   robotState.gait += Math.hypot(robotState.vx, robotState.vy) * dt / (7 * ctx.scale);
   robotState.layoutBody(dt);
+  resolveSurfaceContacts(robotState);
   robotState.contacts(dt, old);
+  resolveSurfaceContacts(robotState);
   robotState.updateHead(dt);
   robotState.gaitBlend += ((Math.hypot(robotState.vx, robotState.vy) > 1 ? 1 : 0) - robotState.gaitBlend) * (1 - Math.exp(-dt * 10));
   robotState.updateTail(); // Проверяем хвост с уже обновлённой амплитудой шага.
