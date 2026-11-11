@@ -1,4 +1,8 @@
 import {newGarage} from '../garage/model.js';
+export const BET_WIN_PERCENT = 85;
+export function betOdds(stakes, winningTotal) {
+  return winningTotal ? 1 + (stakes - winningTotal) * BET_WIN_PERCENT / (100 * winningTotal) : null;
+}
 export function betNewSession(names, capital) {
   return {
     version: 1,
@@ -32,8 +36,8 @@ export function betCommit(s, bets) {
     ...b
   }));
   for (const b of s.bets) s.players[b.player].balance -= b.amount;
-  s.lockedJackpot = s.jackpot;
-  s.jackpot = 0;
+  // Kept for version-1 saves; new rounds never put the jackpot at stake.
+  s.lockedJackpot = 0;
   s.phase = 'running';
   s.lastResult = null;
 }
@@ -52,23 +56,29 @@ export function betAddPlayer(s,name){
 export function betResolve(s, winner) {
   if (s.phase !== 'running') return null; // A round is paid exactly once.
   const stakes = s.bets.reduce((n, b) => n + b.amount, 0),
-    bank = stakes + s.lockedJackpot;
+    bank = stakes,
+    jackpotBefore = s.jackpot + s.lockedJackpot;
   const winning = s.bets.filter(b => b.robot === winner),
     winningTotal = winning.reduce((n, b) => n + b.amount, 0);
   const payouts = s.players.map(() => 0);
   let message;
   if (winner === null) {
     for (const b of s.bets) payouts[b.player] = b.amount;
-    s.jackpot = s.lockedJackpot;
     message = 'Ничья: все ставки возвращены. Джекпот сохранён.';
   } else if (!winningTotal) {
-    s.jackpot = bank;
-    message = 'На победителя никто не поставил. Весь банк переходит в джекпот.';
+    message = 'На победителя никто не поставил. Все ставки переходят в джекпот.';
   } else {
-    for (const b of winning) payouts[b.player] = Math.floor(bank * b.amount / winningTotal);
-    s.jackpot = bank - payouts.reduce((n, x) => n + x, 0);
-    message = 'Банк распределён пропорционально ставкам на победителя.' + (s.jackpot ? ' Остаток округления — в джекпоте.' : '');
+    const lost = BigInt(stakes - winningTotal);
+    for (const b of winning) {
+      const profit = lost * BigInt(BET_WIN_PERCENT) * BigInt(b.amount) / (100n * BigInt(winningTotal));
+      payouts[b.player] = b.amount + Number(profit);
+    }
+    message = stakes === winningTotal
+      ? 'Все ставки сделаны на победителя: ставки возвращены полностью. Джекпот сохранён.'
+      : 'Ставки победителей возвращены. 85% проигравших ставок распределены пропорционально; 15% и остатки округления — в джекпот.';
   }
+  const jackpotAdded = stakes - payouts.reduce((n, x) => n + x, 0);
+  s.jackpot = jackpotBefore + jackpotAdded;
   payouts.forEach((amount, i) => s.players[i].balance += amount);
   s.lastResult = {
     round: s.round,
@@ -76,6 +86,7 @@ export function betResolve(s, winner) {
     bank,
     stakes,
     jackpot: s.jackpot,
+    jackpotAdded,
     message,
     rows: s.players.map((p, i) => ({
       name: p.name,
@@ -99,7 +110,8 @@ export function betWinnerNames(s, winner) {
 export function betRefund(s) {
   if (s.phase !== 'running') return false;
   for (const b of s.bets) s.players[b.player].balance += b.amount;
-  s.jackpot = s.lockedJackpot;
+  // Old interrupted rounds held their jackpot in lockedJackpot.
+  s.jackpot += s.lockedJackpot;
   s.lockedJackpot = 0;
   s.bets = [];
   s.phase = 'betting';

@@ -29,6 +29,7 @@ export function bettingLoad() {
       if(!/^(0|[1-9]\d*)$/.test(id)||!s.players[Number(id)]||!Number.isSafeInteger(sum)||sum<0)throw Error();invested+=sum;
     }
     if(invested>s.shopSpent)throw Error();
+    // Accept both legacy locked jackpots and separately carried jackpots.
     const total = s.players.reduce((n, p) => n + p.balance, 0) + s.jackpot + (s.phase === 'running' ? s.lockedJackpot + s.bets.reduce((n, b) => n + b.amount, 0) : 0);
     if (total + s.shopSpent !== s.players.length * s.capital + s.topUps) throw Error();
     if (betRefund(s)) ctx.betNotice = 'Предыдущий бой был прерван: ставки возвращены, джекпот сохранён.';

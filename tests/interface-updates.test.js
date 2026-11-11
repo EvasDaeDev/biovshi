@@ -53,7 +53,7 @@ test('top-up preserves draft bets, persists the new chip supply and safely rejec
 test('results colour income and losses, show profit and reconcile the actual balance',()=>{
  const dom=setup();betCommit(ctx.betting,[{player:0,robot:0,amount:10},{player:1,robot:1,amount:20}]);betResolve(ctx.betting,0);bettingResults();
  const root=document.querySelector('#bet-result-summary'),rows=root.querySelectorAll('tbody tr');assert.match(root.querySelector('thead').textContent,/Прибыль/);
- assert.equal(rows[0].children[2].textContent,'30 ');assert.ok(rows[0].children[2].querySelector('.chip-icon'));assert.equal(root.querySelectorAll('img').length,0);assert.ok(rows[0].children[2].classList.contains('bet-net-win'));assert.equal(rows[0].children[3].textContent,'+20 ');assert.equal(rows[0].children[4].querySelector('summary').textContent,'120 ');assert.match(rows[0].children[4].textContent,/100  −10  \+30  = 120 /);
+ assert.equal(rows[0].children[2].textContent,'27 ');assert.ok(rows[0].children[2].querySelector('.chip-icon'));assert.equal(root.querySelectorAll('img').length,0);assert.ok(rows[0].children[2].classList.contains('bet-net-win'));assert.equal(rows[0].children[3].textContent,'+17 ');assert.equal(rows[0].children[4].querySelector('summary').textContent,'117 ');assert.match(rows[0].children[4].textContent,/100  −10  \+27  = 117 /);
  assert.equal(rows[1].children[3].textContent,'-20 ');assert.ok(rows[1].children[3].firstElementChild.classList.contains('bet-net-loss'));assert.equal(rows[1].children[4].querySelector('summary').textContent,'80 ');assert.match(rows[1].children[4].textContent,/100  −20  = 80 /);close(dom);
 });
 test('shared hints replace native titles, support keyboard focus and clean up on dispose',()=>{

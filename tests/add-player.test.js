@@ -44,7 +44,8 @@ test('joining a later round preserves existing money and history, survives reloa
   bettingSave();const loaded=bettingLoad();assert.ok(loaded);assert.deepEqual(loaded,s);
   betCommit(loaded,[{player:0,robot:0,amount:10},{player:1,robot:1,amount:10},{player:2,robot:0,amount:20}]);
   const result=betResolve(loaded,0);
-  assert.equal(result.rows[0].payout,30);assert.equal(result.rows[2].payout,60);
+  assert.equal(result.rows[0].payout,12);assert.equal(result.rows[2].payout,25);
+  assert.equal(loaded.jackpot,53);
   assert.equal(total(loaded),loaded.players.length*loaded.capital+loaded.topUps);
  }finally{dom.window.close();}
 });
