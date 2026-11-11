@@ -1,6 +1,6 @@
 import {BASE_STATS,patientVictory,validStats} from '../garage/model.js';
 export const TOWER_REWARD=10;
-export function newTower(patient=0){return {level:1,patient,stats:[...BASE_STATS],wins:0,rewarded:[],preparing:false};}
+export function newTower(patient=Math.floor(Math.random()*4)){return {level:1,patient,stats:[...BASE_STATS],wins:0,rewarded:[],preparing:false};}
 export function towerFor(session,player){
   if(!session.players[player])throw Error('Игрок не найден.');
   session.towers??={};
@@ -24,7 +24,7 @@ export function rewardTower(session,player,victim,by){
 export function completeTower(session,player,won){
   const t=towerFor(session,player);
   if(won){patientVictory(t);t.level++;t.rewarded=[];t.preparing=true;}
-  else session.towers[player]=newTower(t.patient);
+  else session.towers[player]=newTower();
   return session.towers[player];
 }
-export function resetTower(session,player){const t=towerFor(session,player);return session.towers[player]=newTower(t.patient);}
+export function resetTower(session,player){towerFor(session,player);return session.towers[player]=newTower();}

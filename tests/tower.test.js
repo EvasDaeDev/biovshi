@@ -32,8 +32,8 @@ test('rewards survive restart and defeat, are once per enemy per floor and isola
  completeTower(s,0,true);assert.equal(towerFor(s,0).level,2);assert.deepEqual(towerFor(s,0).stats,[3,4,3]);assert.ok(validTower(towerFor(s,0)));
  assert.equal(rewardTower(s,0,1,0),false,'no payouts during preparation');towerFor(s,0).preparing=false;
  assert.equal(rewardTower(s,0,1,0),true);assert.equal(rewardTower(s,0,2,0),true);
- completeTower(s,0,false);assert.deepEqual(towerFor(s,0),newTower());assert.equal(s.players[0].balance,130);
- assert.deepEqual(towerFor(s,1),newTower());assert.equal(s.players[1].balance,100);
+ completeTower(s,0,false);assert.deepEqual(towerFor(s,0),newTower(towerFor(s,0).patient));assert.equal(s.players[0].balance,130);
+ assert.deepEqual(towerFor(s,1),newTower(towerFor(s,1).patient));assert.equal(s.players[1].balance,100);
  resetTower(s,0);assert.equal(s.players[0].balance,130);
 });
 test('tower rewards remain valid in shared betting storage after spending, settlement, joining and topups',()=>{
@@ -56,7 +56,7 @@ test('manual patient stays still with no input and responds to keyboard with aut
  const s=betNewSession(['Первый'],100);const dom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.paused=false;
  const r=ctx.robots[0];ctx.robots[1].setVisible(false);const start={x:r.x,y:r.y};
  assert.equal(controlledIntent(r).speed,0);for(let i=0;i<90;i++)step(1/60);assert.ok(Math.hypot(r.x-start.x,r.y-start.y)<.01);
- document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{code:'KeyD',bubbles:true}));assert.equal(ctx.towerInput.turn,1);assert.equal(controlledIntent(r).manualTurn,1);assert.equal(controlledIntent(r).speed,0);
+ document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{code:'KeyD',bubbles:true}));assert.equal(ctx.towerInput.x,1);assert.ok(controlledIntent(r).speed>0);
  document.dispatchEvent(new dom.window.KeyboardEvent('keyup',{code:'KeyD',bubbles:true}));assert.equal(controlledIntent(r).speed,0);
  note('robot-immobilized',{robot:1,lastAttacker:0});note('robot-immobilized',{robot:1,lastAttacker:0});assert.equal(s.players[0].balance,110);
  openMenu();assert.equal(document.querySelector('#launch-overlay').hidden,false);assert.match(document.querySelector('#menu-bank').textContent,/110/);close(dom);
@@ -113,7 +113,7 @@ test('automatic strikes retain priority over held movement and turning until com
  for(const source of ['leg-1-upper','arm-1-upper','head']){
   const {dom,r}=manualFixture(),x=r.x,y=r.y,angle=r.angle;
   const strike={source,victim:1,started:0,impactAt:10,endsAt:10,resolved:false};ctx.combat.pending[0]=strike;
-  ctx.towerInput={drive:1,turn:1};tickManual(r,20);
+  ctx.towerInput={x:0,y:1};tickManual(r,20);
   assert.equal(ctx.combat.pending[0],strike);assert.equal(r.angle,angle);assert.ok(Math.hypot(r.x-x,r.y-y)<.01);
   ctx.combat.pending[0]=null;tickManual(r,20);assert.ok(r.angle>angle+.2);assert.ok(Math.hypot(r.x-x,r.y-y)>1);close(dom);
  }
@@ -136,28 +136,21 @@ test('uncommanded pounce preparation cannot turn a standing player automatically
 });
 test('automatic strikes can start while the player holds movement',()=>{
  const {dom,r}=manualFixture();ctx.robots=[r];const foe=createRobot(1,{x:350,y:380,angle:0});ctx.robots.push(foe);foe.setVisible(true);ctx.combat.nextStrike[1]=Infinity;
- ctx.towerInput={drive:1,turn:1};combatAttacks();assert.ok(ctx.combat.pending[0],'attack takes priority even with held input');close(dom);
+ ctx.towerInput={x:0,y:1};combatAttacks();assert.ok(ctx.combat.pending[0],'attack takes priority even with held input');close(dom);
 });
 function pressTowerKey(dom,type,code){document.dispatchEvent(new dom.window.KeyboardEvent(type,{code,bubbles:true}));}
 function tickManual(r,frames=20){for(let i=0;i<frames;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));}}
-test('keyboard forward and reverse follow body heading without turning around',()=>{
- for(const [code,sign] of [['ArrowUp',1],['KeyW',1],['ArrowDown',-1],['KeyS',-1]]){
-  const {dom,r}=manualFixture(),x=r.x,y=r.y,angle=r.angle;
-  pressTowerKey(dom,'keydown',code);tickManual(r);
-  assert.ok((r.x-x)*sign>1,`${code} moves along the body axis`);assert.ok(Math.abs(r.y-y)<.01);assert.equal(r.angle,angle,'reverse does not turn the patient 180 degrees');
+test('WASD and arrow keys command the same screen directions and stop on release',()=>{
+ for(const [code,x,y] of [['KeyW',0,-1],['ArrowUp',0,-1],['KeyS',0,1],['ArrowDown',0,1],['KeyA',-1,0],['ArrowLeft',-1,0],['KeyD',1,0],['ArrowRight',1,0]]){
+  const {dom,r}=manualFixture();pressTowerKey(dom,'keydown',code);
+  assert.deepEqual(ctx.towerInput,{x,y});const intent=controlledIntent(r);
+  assert.ok(intent.speed>0);assert.equal(Math.sign(intent.goal.x-r.x),x);assert.equal(Math.sign(intent.goal.y-r.y),y);
   pressTowerKey(dom,'keyup',code);assert.equal(controlledIntent(r).speed,0);close(dom);
  }
 });
-test('keyboard turns in place; forward and turn can be combined',()=>{
- for(const [code,sign] of [['ArrowRight',1],['KeyD',1],['ArrowLeft',-1],['KeyA',-1]]){
-  const {dom,r}=manualFixture(),x=r.x,y=r.y;
-  pressTowerKey(dom,'keydown',code);tickManual(r);
-  assert.ok(r.angle*sign>.2,`${code} changes heading`);assert.ok(Math.hypot(r.x-x,r.y-y)<.01,'turn alone does not walk');
-  close(dom);
- }
- const {dom,r}=manualFixture(),x=r.x,y=r.y;
- pressTowerKey(dom,'keydown','KeyW');pressTowerKey(dom,'keydown','KeyD');tickManual(r);
- assert.ok(r.angle>.2);assert.ok(r.x>x&&r.y>y,'forward plus right follows a curve');close(dom);
+test('diagonal keyboard speed is capped at the cardinal speed',()=>{
+ const {dom,r}=manualFixture();pressTowerKey(dom,'keydown','KeyD');const speed=controlledIntent(r).speed;
+ pressTowerKey(dom,'keydown','KeyW');const intent=controlledIntent(r);assert.equal(intent.speed,speed);assert.ok(intent.goal.x>r.x&&intent.goal.y<r.y);close(dom);
 });
 test('tower detailed statistics show totals and every patient after victory and defeat',()=>{
  for(const won of [true,false]){
@@ -173,13 +166,29 @@ test('tower detailed statistics show totals and every patient after victory and 
   assert.equal(rows[1][4],won?'ПОГИБ':'ПОДВИЖЕН');close(dom);
  }
 });
-test('forward key follows the heading chosen by keyboard turning, not a screen axis',()=>{
- const {dom,r}=manualFixture();pressTowerKey(dom,'keydown','KeyD');tickManual(r);pressTowerKey(dom,'keyup','KeyD');
- const angle=r.angle,x=r.x,y=r.y;pressTowerKey(dom,'keydown','ArrowUp');tickManual(r);
- const dx=r.x-x,dy=r.y-y;
- assert.equal(r.angle,angle);assert.ok(dx*Math.cos(angle)+dy*Math.sin(angle)>1);assert.ok(Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle))<.01);close(dom);
+test('keyboard changes direction in screen coordinates regardless of current heading',()=>{
+ const {dom,r}=manualFixture();pressTowerKey(dom,'keydown','KeyS');tickManual(r,40);pressTowerKey(dom,'keyup','KeyS');
+ assert.ok(r.angle>.2);pressTowerKey(dom,'keydown','KeyD');const intent=controlledIntent(r);
+ assert.equal(intent.goal.y,r.y);assert.ok(intent.goal.x>r.x);assert.equal(intent.manualDrive,undefined);close(dom);
 });
 test('tower has one toolbar menu button and restores cancel-fight control in totalizator',()=>{
  const {dom,s}=manualFixture();assert.equal(document.querySelector('#tag7hop-reset').hidden,true);assert.equal(document.querySelector('#game-menu').hidden,false);
  initializeGame({session:s,entry:'betting'});installTowerUI();assert.equal(document.querySelector('#tag7hop-reset').hidden,false);assert.equal(document.querySelector('#tag7hop-reset').textContent,'Отменить бой');close(dom);
+});
+test('new tower patient is random, retained across levels and continued saves, rerolled on reset or defeat',()=>{
+ const originalRandom=Math.random;
+ try{
+  for(const [value,patient] of [[0,0],[.25,1],[.5,2],[.999,3]]){Math.random=()=>value;assert.equal(newTower().patient,patient);}
+  const s=betNewSession(['Первый'],100);Math.random=()=>.1;assert.equal(towerFor(s,0).patient,0);
+  Math.random=()=>.99;assert.equal(towerFor(s,0).patient,0);completeTower(s,0,true);assert.equal(towerFor(s,0).patient,0);
+  assert.equal(resetTower(s,0).patient,3);Math.random=()=>.26;assert.equal(completeTower(s,0,false).patient,1);
+  const dom=setup(s,towerFor(s,0));assert.equal(document.querySelector('#tower-patient'),null);bettingSave();assert.equal(bettingLoad().towers[0].patient,1);close(dom);
+ }finally{Math.random=originalRandom;}
+});
+test('touch joystick supplies directional input and stops after finger release',()=>{
+ const {dom,r}=manualFixture(),stick=document.querySelector('#tower-stick');stick.getBoundingClientRect=()=>({left:0,top:0,width:112,height:112});stick.setPointerCapture=()=>{};
+ const pointer=(type,x,y)=>{const event=new dom.window.Event(type,{bubbles:true});Object.assign(event,{pointerId:7,clientX:x,clientY:y});stick.dispatchEvent(event);};
+ pointer('pointerdown',95,56);assert.ok(ctx.towerInput.x>.9);assert.equal(ctx.towerInput.y,0);assert.ok(controlledIntent(r).goal.x>r.x);
+ pointer('pointermove',56,17);assert.ok(ctx.towerInput.y<-.9);assert.equal(ctx.towerInput.x,0);
+ pointer('pointerup',56,17);assert.equal(controlledIntent(r).speed,0);close(dom);
 });

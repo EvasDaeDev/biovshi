@@ -18,7 +18,6 @@ export function refreshMenu(){
   ctx.root.querySelector('#menu-bank').textContent=s?`БАНК: ${s.players[ctx.menuPlayer].balance} МОНЕТ`:'Создайте игроков для обоих режимов';
   ctx.root.querySelector('#launch-tower').textContent=`РЕЖИМ БАШНЯ · УРОВЕНЬ ${t?.level??1}`;
   ctx.root.querySelector('#tower-reset').disabled=!s;
-  const skin=ctx.root.querySelector('#tower-patient');skin.value=t?.patient??0;skin.disabled=!!t&&(t.level>1||t.rewarded.length>0);
   ctx.root.querySelector('#launch-totalizator').hidden=!s;
   ctx.root.querySelector('#launch-setup').textContent=s?'НОВАЯ ИГРА':'СОЗДАТЬ ИГРУ';
 }
@@ -77,12 +76,10 @@ export function installTowerUI(){
   ctx.resetButton.hidden=false;
   const menu=ctx.root.querySelector('#launch-overlay');
   ctx.root.querySelector('#menu-player').onchange=e=>{ctx.betting.towerPlayerId=Number(e.target.value);bettingSave();refreshMenu();};
-  ctx.root.querySelector('#tower-patient').onchange=e=>{if(ctx.betting){towerFor(ctx.betting,ctx.menuPlayer).patient=Number(e.target.value);bettingSave();}};
   ctx.root.querySelector('#tower-reset').onclick=()=>{if(confirm('Сбросить башню выбранного игрока? Банк монет сохранится.')){resetTower(ctx.betting,ctx.menuPlayer);bettingSave();refreshMenu();}};
   ctx.root.querySelector('#launch-tower').onclick=()=>{
     ctx.audio?.unlock();
     if(!ctx.betting){menu.hidden=true;ctx.afterSetup='menu';bettingSetup();return;}
-    towerFor(ctx.betting,ctx.menuPlayer).patient=Number(ctx.root.querySelector('#tower-patient').value);
     ctx.startTower(ctx.menuPlayer);
   };
   ctx.root.querySelector('#launch-totalizator').onclick=async()=>{ctx.audio?.unlock();await ctx.startTotalizator();};
