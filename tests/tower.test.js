@@ -56,7 +56,7 @@ test('manual patient stays still with no input and responds to keyboard with aut
  const s=betNewSession(['Первый'],100);const dom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.paused=false;
  const r=ctx.robots[0];ctx.robots[1].setVisible(false);const start={x:r.x,y:r.y};
  assert.equal(controlledIntent(r).speed,0);for(let i=0;i<90;i++)step(1/60);assert.ok(Math.hypot(r.x-start.x,r.y-start.y)<.01);
- document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{code:'KeyD',bubbles:true}));assert.equal(ctx.towerInput.x,1);assert.ok(controlledIntent(r).speed>0);
+ document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{code:'KeyD',bubbles:true}));assert.equal(ctx.towerInput.turn,1);assert.equal(controlledIntent(r).manualTurn,1);assert.equal(controlledIntent(r).speed,0);
  document.dispatchEvent(new dom.window.KeyboardEvent('keyup',{code:'KeyD',bubbles:true}));assert.equal(controlledIntent(r).speed,0);
  note('robot-immobilized',{robot:1,lastAttacker:0});note('robot-immobilized',{robot:1,lastAttacker:0});assert.equal(s.players[0].balance,110);
  openMenu();assert.equal(document.querySelector('#launch-overlay').hidden,false);assert.match(document.querySelector('#menu-bank').textContent,/110/);close(dom);
@@ -136,4 +136,45 @@ test('automatic strikes resume after the player releases movement',()=>{
  const {dom,r}=manualFixture();ctx.robots=[r];const foe=createRobot(1,{x:350,y:380,angle:0});ctx.robots.push(foe);foe.setVisible(true);ctx.combat.nextStrike[1]=Infinity;
  ctx.towerInput={x:1,y:0};combatAttacks();assert.equal(ctx.combat.pending[0],null);assert.equal(r.actualPose.leap,null);
  ctx.towerInput={x:0,y:0};combatAttacks();assert.ok(ctx.combat.pending[0],'standing player automatically attacks within reach');close(dom);
+});
+function pressTowerKey(dom,type,code){document.dispatchEvent(new dom.window.KeyboardEvent(type,{code,bubbles:true}));}
+function tickManual(r,frames=20){for(let i=0;i<frames;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));}}
+test('keyboard forward and reverse follow body heading without turning around',()=>{
+ for(const [code,sign] of [['ArrowUp',1],['KeyW',1],['ArrowDown',-1],['KeyS',-1]]){
+  const {dom,r}=manualFixture(),x=r.x,y=r.y,angle=r.angle;
+  pressTowerKey(dom,'keydown',code);tickManual(r);
+  assert.ok((r.x-x)*sign>1,`${code} moves along the body axis`);assert.ok(Math.abs(r.y-y)<.01);assert.equal(r.angle,angle,'reverse does not turn the patient 180 degrees');
+  pressTowerKey(dom,'keyup',code);assert.equal(controlledIntent(r).speed,0);close(dom);
+ }
+});
+test('keyboard turns in place; forward and turn can be combined',()=>{
+ for(const [code,sign] of [['ArrowRight',1],['KeyD',1],['ArrowLeft',-1],['KeyA',-1]]){
+  const {dom,r}=manualFixture(),x=r.x,y=r.y;
+  pressTowerKey(dom,'keydown',code);ctx.combat.pending[0]={source:'leg-1-upper',victim:1,endsAt:10};tickManual(r);
+  assert.ok(r.angle*sign>.2,`${code} changes heading`);assert.ok(Math.hypot(r.x-x,r.y-y)<.01,'turn alone does not walk');assert.equal(ctx.combat.pending[0],null,'turning cancels the attack too');
+  combatAttacks();assert.equal(ctx.combat.pending[0],null,'AI cannot restart an attack while turning');close(dom);
+ }
+ const {dom,r}=manualFixture(),x=r.x,y=r.y;
+ pressTowerKey(dom,'keydown','KeyW');pressTowerKey(dom,'keydown','KeyD');tickManual(r);
+ assert.ok(r.angle>.2);assert.ok(r.x>x&&r.y>y,'forward plus right follows a curve');close(dom);
+});
+test('tower detailed statistics show totals and every patient after victory and defeat',()=>{
+ for(const won of [true,false]){
+  const s=betNewSession(['Статистик'],100),dom=setup(s,towerFor(s,0),'ring');
+  document.querySelector('#tower-fight').click();advanceStartup(10);
+  ctx.combat.strikes=7;ctx.combat.hits=4;ctx.combat.fighterHits=[3,1];ctx.combat.fighterTaken=[1,3];
+  ctx.robots[won?1:0].damage('head',won?0:1,100);
+  ctx.combat.finished=true;ctx.combat.winner=won?0:null;showResults();
+  const details=document.querySelector('.gladiator-results-details');details.open=true;
+  assert.equal(ctx.resultsTotals.children.length,3);assert.deepEqual([...ctx.resultsTotals.querySelectorAll('strong')].map(n=>n.textContent),['7','4','1']);
+  assert.equal(ctx.resultsRows.children.length,2);const rows=[...ctx.resultsRows.querySelectorAll('tr')].map(row=>[...row.cells].map(cell=>cell.textContent));
+  assert.deepEqual(rows[0].slice(0,4),['Статистик',won?'13/13':'12/13','3','1']);assert.equal(rows[0][4],won?'ПОБЕДИЛ':'ПОГИБ');assert.equal(rows[1][0],'ИИ 1');
+  assert.equal(rows[1][4],won?'ПОГИБ':'ПОДВИЖЕН');close(dom);
+ }
+});
+test('forward key follows the heading chosen by keyboard turning, not a screen axis',()=>{
+ const {dom,r}=manualFixture();pressTowerKey(dom,'keydown','KeyD');tickManual(r);pressTowerKey(dom,'keyup','KeyD');
+ const angle=r.angle,x=r.x,y=r.y;pressTowerKey(dom,'keydown','ArrowUp');tickManual(r);
+ const dx=r.x-x,dy=r.y-y;
+ assert.equal(r.angle,angle);assert.ok(dx*Math.cos(angle)+dy*Math.sin(angle)>1);assert.ok(Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle))<.01);close(dom);
 });

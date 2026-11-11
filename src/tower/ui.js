@@ -66,7 +66,6 @@ export function towerResults(){
   const won=ctx.combat.winner===0;
   ctx.resultsTitle.textContent=won?'УРОВЕНЬ ПРОЙДЕН':'БАШНЯ ЗАВЕРШЕНА';
   ctx.resultsSummary.textContent=won?`Уровень ${ctx.towerRun.level} · получено очко навыков. Дальше: ${ctx.towerRun.level+1} противников.`:'Прогресс сброшен. Заработанные монеты остались в банке.';
-  ctx.resultsTotals.replaceChildren();ctx.resultsRows.replaceChildren();
   ctx.root.querySelector('#bet-result-summary').textContent=`БАНК: ${ctx.betting.players[ctx.towerPlayer].balance} МОНЕТ`;
   ctx.resultsAgain.textContent=won?'СЛЕДУЮЩИЙ УРОВЕНЬ':'НОВАЯ ПОПЫТКА';
   ctx.resultsAgain.onclick=()=>ctx.startTower(ctx.towerPlayer);
