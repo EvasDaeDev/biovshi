@@ -13,11 +13,19 @@ export function resultPatientStatus(robot, isWinner = false) {
 }
 export function showResults() {
   if (!ctx.combat.finished || !ctx.resultsPanel.hidden) return;
-  if(ctx.mode==='tower'){towerResults();return;}
+  if(ctx.mode==='tower'){renderBattleStatistics();towerResults();return;}
   const winner = ctx.combat.winner;
   const names=betWinnerNames(ctx.betting,winner);
   ctx.resultsTitle.innerHTML=winner===null?'НИЧЬЯ — НЕТ ПОБЕДИТЕЛЯ':`ПОБЕДИТЕЛЬ — ${patientName(winner)}${names==='—'?'':' ('+ctx.betEscape(names)+')'}`;
   ctx.resultsSummary.textContent = `Бой завершён за ${formatRoundTime(ctx.round.elapsedSec)} · ${ctx.ROBOT_COUNT} пациента`;
+  renderBattleStatistics();
+  bettingResults();
+  ctx.resultsPanel.hidden = false;
+  ctx.resultsAgain.focus?.();
+}
+// Both modes expose the same completed battle totals and per-patient rows.
+export function renderBattleStatistics(){
+  const winner=ctx.combat.winner;
   const removed = ctx.robots.reduce((sum, r) => sum + r.segmentTotal - r.segmentCount, 0);
   const totals = [['ЗАМАХОВ', ctx.combat.strikes], ['ПОПАДАНИЙ', ctx.combat.hits], ['ОТОРВАНО ЗВЕНЬЕВ', removed]];
   ctx.resultsTotals.replaceChildren();
@@ -43,9 +51,6 @@ export function showResults() {
     }
     ctx.resultsRows.appendChild(row);
   }
-  bettingResults();
-  ctx.resultsPanel.hidden = false;
-  ctx.resultsAgain.focus?.();
 }
 export function formatRoundTime(seconds) {
   const total = Math.max(0, Math.floor(seconds * 100 + 1e-7));

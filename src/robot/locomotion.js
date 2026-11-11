@@ -436,7 +436,7 @@ export function robotTick(robotState, dt, intent) {
     robotState.api.capsules = robotState.makeCapsules();
     return;
   }
-  if(intent.manual&&intent.speed>0&&!ctx.combat.finished){
+  if(intent.manual&&(intent.speed>0||intent.manualTurn)&&!ctx.combat.finished){
     // Player commands cancel windups, kicks, jump preparation and landing recovery.
     // Once the feet have left the floor, the jump keeps its physical trajectory.
     const leap=robotState.leap;
@@ -570,7 +570,7 @@ export function robotTick(robotState, dt, intent) {
     waypoint = intent.manual?goal:robotState.steerTo(goal),
     dx = waypoint.x - robotState.x,
     dy = waypoint.y - robotState.y,
-    heading = intent.manual || robotState.t >= robotState.recoveryUntil ? headingForIntent(robotState.angle, robotState, waypoint, intent) : robotState.angle,
+    heading = intent.manualDrive!==undefined ? robotState.angle : intent.manual || robotState.t >= robotState.recoveryUntil ? headingForIntent(robotState.angle, robotState, waypoint, intent) : robotState.angle,
     turn = wrap(heading - robotState.angle),
     speed = intent.speed * CONFIG.movement.speedMultiplier * statMultiplier(patientGarage()?.[robotState.id]?.stats[0]??3) * robotState.locomotion() * clamp(Math.hypot(goal.x - robotState.x, goal.y - robotState.y) / 18, 0, 1) * (robotState.reduced ? 1 : .86 + .14 * Math.sin(robotState.gait * 2 - .5));
   const flinching = robotState.hitReaction && ctx.game.time < robotState.hitReaction.start + robotState.hitReaction.duration;
@@ -578,12 +578,13 @@ export function robotTick(robotState, dt, intent) {
   const flinchSlow = flinching ? .18 + .82 * smooth(flinchTime) : 1;
   robotState.requestedSpeed = speed * flinchSlow;
   const turning = robotState.turnAbility() * flinchSlow * CONFIG.movement.turnSpeedMultiplier * statMultiplier(patientGarage()?.[robotState.id]?.stats[2]??3);
-  const rotate = clamp(turn * dt * 5 * turning, -3.4 * dt * turning, 3.4 * dt * turning);
+  const rotate = intent.manualTurn!==undefined ? clamp(intent.manualTurn,-1,1)*3.4*dt*turning : clamp(turn * dt * 5 * turning, -3.4 * dt * turning, 3.4 * dt * turning);
   robotState.angle += rotate;
   robotState.turnRate += (rotate / dt - robotState.turnRate) * (1 - Math.exp(-dt * 8));
   const ease = 1 - Math.exp(-dt * (intent.brake ? 18 : 7));
   let tx = Math.cos(robotState.angle) * speed * Math.max(.15, 1 - Math.abs(turn) / Math.PI),
     ty = Math.sin(robotState.angle) * speed * Math.max(.15, 1 - Math.abs(turn) / Math.PI);
+  if(intent.manualDrive!==undefined){tx*=Math.sign(intent.manualDrive);ty*=Math.sign(intent.manualDrive);}
   if (intent.retreat) {
     tx = intent.retreat.x * speed;
     ty = intent.retreat.y * speed;
