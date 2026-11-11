@@ -18,3 +18,5 @@
 #robot-tag-hops-v22 #tower-stats select{min-height:44px}
 #robot-tag-hops-v22 #tower-prep-error{color:#9d2929}
 @media(max-height:600px){#robot-tag-hops-v22 .launch-paper{padding:12px 20px}#robot-tag-hops-v22 .launch-paper h1{font-size:32px;margin:4px}#robot-tag-hops-v22 .launch-divider,#robot-tag-hops-v22 .launch-footnote,#robot-tag-hops-v22 .launch-stamp{display:none}}
+
+#robot-tag-hops-v22 #tag7hop-reset[hidden]{display:none}

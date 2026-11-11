@@ -109,33 +109,34 @@ test('standing manual patient never rotates toward another patient',()=>{
  for(let i=0;i<60;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));}
  assert.equal(r.angle,angle);assert.ok(Math.hypot(r.x-x,r.y-y)<.01);assert.equal(controlledIntent(r).lookPoint,null);close(dom);
 });
-test('player direction interrupts a kick before damage and moves instead; AI cannot restart it during input',()=>{
- const {dom,r}=manualFixture();const start={x:r.x,y:r.y};
- ctx.combat.pending[0]={source:'leg-1-upper',victim:1,started:0,impactAt:0,endsAt:10,resolved:false};
- ctx.towerInput={x:0,y:1};
- for(let i=0;i<30;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));combatAttacks();}
- assert.equal(ctx.combat.pending[0],null);assert.ok(r.angle>.2);assert.ok(Math.hypot(r.x-start.x,r.y-start.y)>1);assert.equal(ctx.combat.hits,0);close(dom);
+test('automatic strikes retain priority over held movement and turning until completion',()=>{
+ for(const source of ['leg-1-upper','arm-1-upper','head']){
+  const {dom,r}=manualFixture(),x=r.x,y=r.y,angle=r.angle;
+  const strike={source,victim:1,started:0,impactAt:10,endsAt:10,resolved:false};ctx.combat.pending[0]=strike;
+  ctx.towerInput={drive:1,turn:1};tickManual(r,20);
+  assert.equal(ctx.combat.pending[0],strike);assert.equal(r.angle,angle);assert.ok(Math.hypot(r.x-x,r.y-y)<.01);
+  ctx.combat.pending[0]=null;tickManual(r,20);assert.ok(r.angle>angle+.2);assert.ok(Math.hypot(r.x-x,r.y-y)>1);close(dom);
+ }
 });
-test('manual input cancels preflight preparation but preserves an airborne jump until landing',()=>{
+test('held input preserves jump preparation, flight and recovery before movement resumes',()=>{
  let fixture=manualFixture();let {dom,r}=fixture;
- assert.equal(r.pounce({x:425,y:350},{victimId:1}),true);ctx.towerInput={x:0,y:1};r.tick(1/60,controlledIntent(r));assert.equal(r.actualPose.leap,null);close(dom);
+ assert.equal(r.pounce({x:425,y:350},{victimId:1}),true);ctx.towerInput={x:0,y:1};r.tick(1/60,controlledIntent(r));assert.ok(r.actualPose.leap);assert.equal(r.actualPose.leap.launched,true);close(dom);
  fixture=manualFixture();({dom,r}=fixture);assert.equal(r.pounce({x:425,y:350},{victimId:1}),true);
  const leap=r.actualPose.leap;Object.assign(leap,{launched:true,started:ctx.game.time-.5,takeoffAt:ctx.game.time-.1,direction:{x:1,y:0},lastHead:{...r.eye}});
  ctx.towerInput={x:0,y:1};const angle=r.angle;r.tick(1/60,controlledIntent(r));assert.equal(r.actualPose.leap,leap);assert.equal(r.angle,angle);
- // End the forward flight and backward landing, then input must override recovery.
+ // End the forward flight and backward landing, then wait for recovery.
  for(let i=0;i<120&&r.actualPose.leap;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));}
  assert.equal(r.actualPose.leap,null);const landing={x:r.x,y:r.y};
- for(let i=0;i<20;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));}
+ for(let i=0;i<60;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));}
  assert.ok(r.angle>angle+.2);assert.ok(Math.hypot(r.x-landing.x,r.y-landing.y)>1);close(dom);
 });
 test('uncommanded pounce preparation cannot turn a standing player automatically',()=>{
  const {dom,r}=manualFixture();assert.equal(r.pounce({x:350,y:425},{victimId:1}),true);const angle=r.angle;
  r.tick(1/60,controlledIntent(r));assert.equal(r.angle,angle);assert.equal(r.actualPose.leap,null);close(dom);
 });
-test('automatic strikes resume after the player releases movement',()=>{
+test('automatic strikes can start while the player holds movement',()=>{
  const {dom,r}=manualFixture();ctx.robots=[r];const foe=createRobot(1,{x:350,y:380,angle:0});ctx.robots.push(foe);foe.setVisible(true);ctx.combat.nextStrike[1]=Infinity;
- ctx.towerInput={x:1,y:0};combatAttacks();assert.equal(ctx.combat.pending[0],null);assert.equal(r.actualPose.leap,null);
- ctx.towerInput={x:0,y:0};combatAttacks();assert.ok(ctx.combat.pending[0],'standing player automatically attacks within reach');close(dom);
+ ctx.towerInput={drive:1,turn:1};combatAttacks();assert.ok(ctx.combat.pending[0],'attack takes priority even with held input');close(dom);
 });
 function pressTowerKey(dom,type,code){document.dispatchEvent(new dom.window.KeyboardEvent(type,{code,bubbles:true}));}
 function tickManual(r,frames=20){for(let i=0;i<frames;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));}}
@@ -150,9 +151,9 @@ test('keyboard forward and reverse follow body heading without turning around',(
 test('keyboard turns in place; forward and turn can be combined',()=>{
  for(const [code,sign] of [['ArrowRight',1],['KeyD',1],['ArrowLeft',-1],['KeyA',-1]]){
   const {dom,r}=manualFixture(),x=r.x,y=r.y;
-  pressTowerKey(dom,'keydown',code);ctx.combat.pending[0]={source:'leg-1-upper',victim:1,endsAt:10};tickManual(r);
-  assert.ok(r.angle*sign>.2,`${code} changes heading`);assert.ok(Math.hypot(r.x-x,r.y-y)<.01,'turn alone does not walk');assert.equal(ctx.combat.pending[0],null,'turning cancels the attack too');
-  combatAttacks();assert.equal(ctx.combat.pending[0],null,'AI cannot restart an attack while turning');close(dom);
+  pressTowerKey(dom,'keydown',code);tickManual(r);
+  assert.ok(r.angle*sign>.2,`${code} changes heading`);assert.ok(Math.hypot(r.x-x,r.y-y)<.01,'turn alone does not walk');
+  close(dom);
  }
  const {dom,r}=manualFixture(),x=r.x,y=r.y;
  pressTowerKey(dom,'keydown','KeyW');pressTowerKey(dom,'keydown','KeyD');tickManual(r);
@@ -177,4 +178,8 @@ test('forward key follows the heading chosen by keyboard turning, not a screen a
  const angle=r.angle,x=r.x,y=r.y;pressTowerKey(dom,'keydown','ArrowUp');tickManual(r);
  const dx=r.x-x,dy=r.y-y;
  assert.equal(r.angle,angle);assert.ok(dx*Math.cos(angle)+dy*Math.sin(angle)>1);assert.ok(Math.abs(-dx*Math.sin(angle)+dy*Math.cos(angle))<.01);close(dom);
+});
+test('tower has one toolbar menu button and restores cancel-fight control in totalizator',()=>{
+ const {dom,s}=manualFixture();assert.equal(document.querySelector('#tag7hop-reset').hidden,true);assert.equal(document.querySelector('#game-menu').hidden,false);
+ initializeGame({session:s,entry:'betting'});installTowerUI();assert.equal(document.querySelector('#tag7hop-reset').hidden,false);assert.equal(document.querySelector('#tag7hop-reset').textContent,'Отменить бой');close(dom);
 });

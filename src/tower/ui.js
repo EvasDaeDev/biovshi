@@ -74,6 +74,7 @@ export function towerResults(){
 }
 export function installTowerUI(){
   refreshMenu();
+  ctx.resetButton.hidden=false;
   const menu=ctx.root.querySelector('#launch-overlay');
   ctx.root.querySelector('#menu-player').onchange=e=>{ctx.betting.towerPlayerId=Number(e.target.value);bettingSave();refreshMenu();};
   ctx.root.querySelector('#tower-patient').onchange=e=>{if(ctx.betting){towerFor(ctx.betting,ctx.menuPlayer).patient=Number(e.target.value);bettingSave();}};
@@ -101,7 +102,7 @@ export function installTowerUI(){
   });
   const dispose=ctx.root.__disposeTag;ctx.root.__disposeTag=()=>{off();dispose();};
   ctx.root.querySelector('#tower-wallet').textContent=`УРОВЕНЬ ${ctx.towerRun.level} · БАНК ${ctx.betting.players[ctx.towerPlayer].balance}`;
-  ctx.resetButton.textContent='В МЕНЮ';ctx.resetButton.onclick=openMenu;
+  ctx.resetButton.hidden=true;
   ctx.speedButton.disabled=true;ctx.svg.onclick=null;ctx.svg.style.cursor='default';
   ctx.root.querySelector('.arena-pause-help').hidden=true;
   installTowerInput();towerPreparation();
