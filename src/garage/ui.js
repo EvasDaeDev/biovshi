@@ -3,7 +3,7 @@ import {patientName,SKILLS} from '../ui/patient.js';
 import {ctx} from '../game/state.js';
 import {bettingModal,bettingOpen,bettingHud} from '../betting/ui.js';
 import {bettingSave} from '../betting/storage.js';
-import {newGarage,buyHat,nextPrice,normalizePatronage,resolvePatron,setPatientStats,earnedStats,statMultiplier,critChance} from './model.js';
+import {newGarage,buyHat,nextPrice,normalizePatronage,resolvePatron,setPatientStats,redistributeStat,earnedStats,statMultiplier,critChance} from './model.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
 import {paintPatientPortrait,PORTRAIT_BONES} from '../ui/patient-portrait.js';
 import {cleanFloor} from '../render/floor-history.js';
@@ -55,11 +55,8 @@ export function garageOpen(){
   const source=ctx.cardNodes[id],canvas=document.createElement('canvas');canvas.width=520;canvas.height=224;
   paintPatientPortrait({portrait:canvas,portraitAtlas:source?.portraitAtlas},id,PORTRAIT_BONES.map(b=>({key:b.key,state:'good',opacity:1})));section.querySelector('.garage-portrait').append(canvas);
   section.querySelectorAll('[data-stat]').forEach(select=>select.onchange=()=>{
-   const i=Number(select.dataset.stat),value=Number(select.value),base=earnedStats(g.wins),stats=[...base];
-   if(value!==base[i]){let other=g.stats.findIndex((n,j)=>j!==i&&n===base[j]+(base[i]-value));if(other<0)other=g.stats.findIndex((n,j)=>j!==i&&n===base[j]);if(other<0)other=(i+1)%3;
-    if(base[other]+base[i]-value<2)other=[0,1,2].find(j=>j!==i&&base[j]+base[i]-value>=2)??other;
-    stats[i]=value;stats[other]+=base[i]-value;}
-   try{const before=[...g.stats];setPatientStats(ctx.betting,id,ctx.procedureEditor,stats);ctx.garageNotices[id]=SKILLS.map((skill,j)=>{const delta=g.stats[j]-before[j];return delta?skill.name+' '+(delta>0?'+':'')+delta:null;}).filter(Boolean).join(' · ');bettingSave();garageOpen();}catch(error){select.value=g.stats[i];section.querySelector('[data-error]').textContent=error.message;}
+   const i=Number(select.dataset.stat),value=Number(select.value);
+   try{const stats=redistributeStat(g,i,value),before=[...g.stats];setPatientStats(ctx.betting,id,ctx.procedureEditor,stats);ctx.garageNotices[id]=SKILLS.map((skill,j)=>{const delta=g.stats[j]-before[j];return delta?skill.name+' '+(delta>0?'+':'')+delta:null;}).filter(Boolean).join(' · ');bettingSave();garageOpen();}catch(error){select.value=g.stats[i];section.querySelector('[data-error]').textContent=error.message;}
   });
   section.querySelector('[data-base]').onclick=()=>{try{setPatientStats(ctx.betting,id,ctx.procedureEditor,earnedStats(g.wins));ctx.garageNotices[id]='Исходные навыки восстановлены.';bettingSave();garageOpen();}catch(error){section.querySelector('[data-error]').textContent=error.message;}};
   const buyer=section.querySelector('[data-buyer]'),price=section.querySelector('[data-price]'),buy=section.querySelector('[data-buy]');

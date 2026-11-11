@@ -436,6 +436,17 @@ export function robotTick(robotState, dt, intent) {
     robotState.api.capsules = robotState.makeCapsules();
     return;
   }
+  if(intent.manual&&intent.speed>0&&!ctx.combat.finished){
+    // Player commands cancel windups, kicks, jump preparation and landing recovery.
+    // Once the feet have left the floor, the jump keeps its physical trajectory.
+    const leap=robotState.leap;
+    const airborne=leap&&(leap.kind==='combat-retreat'||leap.kind==='combat-pounce'&&leap.takeoffAt!=null||leap.kind==='rebound'&&leap.launched);
+    if(!airborne){
+      ctx.combat.pending[robotState.id]=null;
+      robotState.leap=null;robotState.attackVisual=null;robotState.combatRecoveryUntil=0;
+      if(robotState.scene)robotState.api.endScene();
+    }
+  }
   const strike=ctx.combat.pending[robotState.id];
   if(strike?.source.startsWith('leg-')){
     // A kick uses the other limbs as fixed supports; do not turn or walk mid-kick.
@@ -487,6 +498,9 @@ export function robotTick(robotState, dt, intent) {
       // not at alignment, which may precede takeoff by 120 ms.
     } else if (ctx.game.time - robotState.leap.prepareAt > CONFIG.attack.pounceTurnTimeoutSec) {
       robotState.leap = null;
+    } else if(intent.manual){
+      // A standing player never turns automatically to line up a headbutt.
+      robotState.leap=null;
     } else {
       intent = {
         goal: robotState.leap.goal,

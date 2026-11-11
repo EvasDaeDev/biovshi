@@ -1,11 +1,13 @@
 import {ctx} from '../game/state.js';
 import {CONFIG} from '../config.js';
+export function towerMovementActive(id){
+  return ctx.mode==='tower'&&id===0&&Math.hypot(ctx.towerInput?.x??0,ctx.towerInput?.y??0)>.12;
+}
 export function controlledIntent(robot){
   const {x=0,y=0}=ctx.towerInput??{},length=Math.hypot(x,y),moving=length>.12;
-  const target=ctx.robots.filter(r=>r.id!==0&&r.visible&&r.mobile).sort((a,b)=>Math.hypot(a.x-robot.x,a.y-robot.y)-Math.hypot(b.x-robot.x,b.y-robot.y))[0];
-  return {manual:true,mode:moving?'управляется':'атакует',speed:moving?CONFIG.movement.chaseSpeedCm*Math.min(1,length):0,
+  return {manual:true,mode:moving?'управляется':'ожидает команды',speed:moving?CONFIG.movement.chaseSpeedCm*Math.min(1,length):0,
     goal:moving?{x:robot.x+x/length*80,y:robot.y+y/length*80}:{x:robot.x,y:robot.y},
-    lookPoint:target?.center??null,brake:!moving};
+    lookPoint:null,brake:!moving};
 }
 export function installTowerInput(){
   const keys=new Set(),doc=ctx.root.ownerDocument,win=doc.defaultView;
