@@ -120,6 +120,5 @@ export function installTowerUI(){
   updateTowerHud();
   ctx.resetButton.hidden=true;
   ctx.speedButton.disabled=true;ctx.svg.onclick=null;ctx.svg.style.cursor='default';
-  ctx.root.querySelector('.arena-pause-help').hidden=true;
   installTowerInput();towerPreparation();
 }
