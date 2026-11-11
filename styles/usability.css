@@ -31,7 +31,6 @@
 #robot-tag-hops-v22.cards-hidden .tag7hop-layout {grid-template-columns:minmax(0,1fr) calc(var(--card-width) + 20px)}
 #robot-tag-hops-v22 .arena-pause-label {position:absolute;inset:0;z-index:4;display:grid;place-items:center;pointer-events:none;background:#0004;color:#f5e6c5;font-size:28px;font-weight:800;letter-spacing:.15em}
 #robot-tag-hops-v22 .arena-pause-label[hidden] {display:none}
-#robot-tag-hops-v22 .arena-pause-help {position:absolute;bottom:12px;left:12px;z-index:2;color:#e5d1a0;background:#111c;padding:4px 7px;font-size:12px;pointer-events:none}
 #robot-tag-hops-v22 #combat-log-toggle {position:absolute;top:142px;right:4px;z-index:4;background:#202219dd;color:#d7c8a9;border:1px solid #555643;padding:0;font-size:16px;cursor:pointer;width:24px;height:24px;line-height:1;}
 #robot-tag-hops-v22 #tag7hop-reset {margin-left:18px;border-color:#99482d}
 #robot-tag-hops-v22 .gladiator-results-details {margin-top:20px;font-size:13px}
@@ -67,7 +66,6 @@
 #robot-tag-hops-v22 .bet-balance-equation details[open] {white-space:normal;min-width:120px}
 #robot-tag-hops-v22 .bet-hud-player-stake {font-size:12px}
 
-#robot-tag-hops-v22 .arena-pause-help[hidden] {display:none}
 #robot-tag-hops-v22 #combat-log-toggle {min-height:24px}
 
 /* Match table headings and controls, keeping each wager on one compact row. */
