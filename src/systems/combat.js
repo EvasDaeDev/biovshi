@@ -1,3 +1,4 @@
+import {towerMovementActive} from '../tower/input.js';
 import {settleTower} from '../tower/ui.js';
 import {patientGarage} from '../game/patients.js';
 import {critChance} from '../garage/model.js';
@@ -209,7 +210,7 @@ function resolvePounceImpacts() {
 function initiateCombatPounces() {
   for(const attacker of ctx.robots){
     const id=attacker.id,ai=ctx.agentAI[id];
-    if(!attacker.visible||!attacker.mobile||!attacker.hasHead||
+    if(towerMovementActive(id)||!attacker.visible||!attacker.mobile||!attacker.hasHead||
        attacker.actualPose.leap||attacker.actualPose.scene||
        ctx.combat.pending[id]||ctx.game.time<ctx.combat.nextStrike[id]||
        ctx.game.time<attacker.combatRecoverUntil||
@@ -219,6 +220,7 @@ function initiateCombatPounces() {
       source.kind==='leg' && strikeCandidates(attacker,v,source).length>0)))continue;
     const target=activeOpponents(id)
       .filter(v=>pounceOpportunity(attacker,v))
+      .filter(v=>ctx.mode!=='tower'||id!==0||Math.abs(wrap(Math.atan2(v.center.y-attacker.y,v.center.x-attacker.x)-attacker.actualPose.chest.angle))<=CONFIG.attack.pounceAlignDeg*Math.PI/180)
       .sort((a,b)=>Math.hypot(a.x-attacker.x,a.y-attacker.y)
         -Math.hypot(b.x-attacker.x,b.y-attacker.y))[0];
     if(!target)continue;
@@ -284,7 +286,7 @@ export function combatAttacks() {
   // Удары отдаются по одному каждому бойцу, не автоматически обоим при контакте.
   for (const attacker of ctx.robots) {
     const id = attacker.id;
-    if (!attacker.visible || !attacker.mobile || ctx.game.time < ctx.combat.nextStrike[id] || ctx.combat.pending[id] || attacker.actualPose.leap || ctx.game.time < attacker.combatRecoverUntil) continue;
+    if (towerMovementActive(id) || !attacker.visible || !attacker.mobile || ctx.game.time < ctx.combat.nextStrike[id] || ctx.combat.pending[id] || attacker.actualPose.leap || ctx.game.time < attacker.combatRecoverUntil) continue;
     // Reach is measured from each attacking limb, including the rear pelvis.
     const preferredVictims = activeOpponents(id);
     let best = null;

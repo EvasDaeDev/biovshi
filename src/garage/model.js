@@ -10,6 +10,20 @@ export function validStats(stats, wins=0) {
   const delta=stats.map((n,i)=>n-base[i]);
   return delta.every(n=>Math.abs(n)<=1)&&delta.reduce((a,b)=>a+b,0)===0;
 }
+// The standard selector moves one point automatically and keeps the earned total.
+export function redistributeStat(patient,index,value){
+  const base=earnedStats(patient.wins),stats=[...base];
+  if(!Number.isInteger(index)||index<0||index>2||!Number.isInteger(value))throw Error('Некорректный навык.');
+  if(value!==base[index]){
+    let other=patient.stats.findIndex((n,j)=>j!==index&&n===base[j]+(base[index]-value));
+    if(other<0)other=patient.stats.findIndex((n,j)=>j!==index&&n===base[j]);
+    if(other<0)other=(index+1)%3;
+    if(base[other]+base[index]-value<2)other=[0,1,2].find(j=>j!==index&&base[j]+base[index]-value>=2)??other;
+    stats[index]=value;stats[other]+=base[index]-value;
+  }
+  if(!validStats(stats,patient.wins))throw Error('Можно перенести одно очко между навыками.');
+  return stats;
+}
 export function normalizePatient(patient) {
   patient.wins=Number.isSafeInteger(patient.wins)&&patient.wins>=0?patient.wins:0;
   if(!validStats(patient.stats,patient.wins))patient.stats=earnedStats(patient.wins);

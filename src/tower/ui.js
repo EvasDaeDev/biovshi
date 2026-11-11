@@ -2,10 +2,11 @@ import {ctx} from '../game/state.js';
 import {towerFor,resetTower,completeTower,rewardTower} from './model.js';
 import {bettingSave} from '../betting/storage.js';
 import {bettingSetup} from '../betting/ui.js';
-import {validStats,earnedStats} from '../garage/model.js';
+import {validStats,earnedStats,redistributeStat,statMultiplier,critChance} from '../garage/model.js';
 import {startSpawnSequence} from '../game/session.js';
 import {onGameEvent} from '../game/event-bus.js';
 import {installTowerInput} from './input.js';
+import {SKILLS} from '../ui/patient.js';
 
 export function refreshMenu(){
   const s=ctx.betting,select=ctx.root.querySelector('#menu-player');
@@ -35,10 +36,19 @@ export function towerPreparation(){
   panel.hidden=false;ctx.root.querySelector('#tower-prep-title').textContent=`БАШНЯ · УРОВЕНЬ ${t.level}`;
   ctx.root.querySelector('#tower-prep-name').textContent=ctx.betting.players[ctx.towerPlayer].name;
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
-  for(const [i,name] of ['СКОРОСТЬ','СИЛА','МАНЕВРЕННОСТЬ'].entries()){
-    const label=document.createElement('label');label.textContent=name;const select=document.createElement('select');select.dataset.towerStat=i;select.setAttribute('aria-label',name);
-    for(const n of [earnedStats(t.wins)[i]-1,earnedStats(t.wins)[i],earnedStats(t.wins)[i]+1].filter(n=>n>=2)){const option=document.createElement('option');option.value=n;option.textContent=n;option.selected=n===t.stats[i];select.append(option);}label.append(select);fields.append(label);
+  function renderSkills(){
+    fields.innerHTML=`<div class="garage-stat-list"><small>Побед: ${t.wins} · заработано очков: ${9+t.wins}</small>
+      ${SKILLS.map((skill,i)=>`<label><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select data-tower-stat="${i}" aria-label="${skill.name}">${[earnedStats(t.wins)[i]-1,earnedStats(t.wins)[i],earnedStats(t.wins)[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===t.stats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
+      <small class="garage-stat-effects">Скор. ${Math.round(statMultiplier(t.stats[0])*100)}% Мобиль. ${Math.round(statMultiplier(t.stats[2])*100)}% Сила +${Math.round(critChance(t.stats[1])*100)}%крит.</small>
+      <button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button>`;
+    fields.querySelectorAll('select').forEach(select=>select.onchange=()=>{
+      const index=Number(select.dataset.towerStat);
+      t.stats=redistributeStat(t,index,Number(select.value));ctx.towerGarage[0].stats=[...t.stats];bettingSave();renderSkills();
+      fields.querySelector(`[data-tower-stat="${index}"]`).focus();
+    });
+    fields.querySelector('[data-tower-base]').onclick=()=>{t.stats=earnedStats(t.wins);ctx.towerGarage[0].stats=[...t.stats];bettingSave();renderSkills();};
   }
+  renderSkills();
   ctx.root.querySelector('#tower-prep-error').textContent='';
   ctx.root.querySelector('#tower-fight').onclick=()=>{
     const stats=[...fields.querySelectorAll('select')].map(n=>Number(n.value));

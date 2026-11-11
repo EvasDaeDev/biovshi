@@ -1,3 +1,5 @@
+import {createRobot} from '../src/robot/robot.js';
+import {combatAttacks} from '../src/systems/combat.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -81,4 +83,57 @@ test('switching menu player updates floor and balance without changing the activ
  const s=betNewSession(['Первый','Второй'],100);completeTower(s,1,true);const dom=setup(s,towerFor(s,0));openMenu();
  const select=document.querySelector('#menu-player');select.value='1';select.dispatchEvent(new Event('change'));
  assert.match(document.querySelector('#launch-tower').textContent,/УРОВЕНЬ 2/);assert.equal(ctx.menuPlayer,1);assert.equal(ctx.towerPlayer,0);assert.equal(s.towerPlayerId,1);close(dom);
+});
+function manualFixture(){
+ const s=betNewSession(['Первый'],100),dom=setup(s,towerFor(s,0),'ring');
+ document.querySelector('#tower-fight').click();advanceStartup(10);ctx.paused=false;
+ ctx.robots=[];const r=createRobot(0,{x:350,y:350,angle:0}),foe=createRobot(1,{x:450,y:450,angle:0});ctx.robots=[r,foe];r.setVisible(true);foe.setVisible(false);
+ return {s,dom,r};
+}
+test('tower selectors automatically transfer a point, show standard effects and reset to earned skills',()=>{
+ const {s,dom}=manualFixture();openMenu();
+ // Reopen the actual preparation interface, not a separately computed draft.
+ ctx.root.querySelector('#tower-preparation').hidden=false;
+ let speed=document.querySelector('[data-tower-stat="0"]');speed.value='4';speed.dispatchEvent(new Event('change'));
+ assert.deepEqual(towerFor(s,0).stats,[4,2,3]);assert.deepEqual(ctx.towerGarage[0].stats,[4,2,3]);
+ assert.deepEqual([...document.querySelectorAll('[data-tower-stat]')].map(n=>Number(n.value)),[4,2,3]);
+ assert.match(document.querySelector('#tower-stats .garage-stat-effects').textContent,/Скор\. 120% Мобиль\. 100% Сила \+0%крит\./);
+ assert.deepEqual(bettingLoad().towers[0].stats,[4,2,3]);
+ const strength=document.querySelector('[data-tower-stat="1"]');strength.value='4';strength.dispatchEvent(new Event('change'));
+ assert.deepEqual(towerFor(s,0).stats,[3,4,2],'changing the other selector replaces the previous transfer');
+ document.querySelector('[data-tower-base]').click();assert.deepEqual(towerFor(s,0).stats,[3,3,3]);close(dom);
+});
+test('standing manual patient never rotates toward another patient',()=>{
+ const {dom,r}=manualFixture();const foe=ctx.robots[1];foe.setVisible(true);
+ const angle=r.angle,x=r.x,y=r.y;
+ for(let i=0;i<60;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));}
+ assert.equal(r.angle,angle);assert.ok(Math.hypot(r.x-x,r.y-y)<.01);assert.equal(controlledIntent(r).lookPoint,null);close(dom);
+});
+test('player direction interrupts a kick before damage and moves instead; AI cannot restart it during input',()=>{
+ const {dom,r}=manualFixture();const start={x:r.x,y:r.y};
+ ctx.combat.pending[0]={source:'leg-1-upper',victim:1,started:0,impactAt:0,endsAt:10,resolved:false};
+ ctx.towerInput={x:0,y:1};
+ for(let i=0;i<30;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));combatAttacks();}
+ assert.equal(ctx.combat.pending[0],null);assert.ok(r.angle>.2);assert.ok(Math.hypot(r.x-start.x,r.y-start.y)>1);assert.equal(ctx.combat.hits,0);close(dom);
+});
+test('manual input cancels preflight preparation but preserves an airborne jump until landing',()=>{
+ let fixture=manualFixture();let {dom,r}=fixture;
+ assert.equal(r.pounce({x:425,y:350},{victimId:1}),true);ctx.towerInput={x:0,y:1};r.tick(1/60,controlledIntent(r));assert.equal(r.actualPose.leap,null);close(dom);
+ fixture=manualFixture();({dom,r}=fixture);assert.equal(r.pounce({x:425,y:350},{victimId:1}),true);
+ const leap=r.actualPose.leap;Object.assign(leap,{launched:true,started:ctx.game.time-.5,takeoffAt:ctx.game.time-.1,direction:{x:1,y:0},lastHead:{...r.eye}});
+ ctx.towerInput={x:0,y:1};const angle=r.angle;r.tick(1/60,controlledIntent(r));assert.equal(r.actualPose.leap,leap);assert.equal(r.angle,angle);
+ // End the forward flight and backward landing, then input must override recovery.
+ for(let i=0;i<120&&r.actualPose.leap;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));}
+ assert.equal(r.actualPose.leap,null);const landing={x:r.x,y:r.y};
+ for(let i=0;i<20;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));}
+ assert.ok(r.angle>angle+.2);assert.ok(Math.hypot(r.x-landing.x,r.y-landing.y)>1);close(dom);
+});
+test('uncommanded pounce preparation cannot turn a standing player automatically',()=>{
+ const {dom,r}=manualFixture();assert.equal(r.pounce({x:350,y:425},{victimId:1}),true);const angle=r.angle;
+ r.tick(1/60,controlledIntent(r));assert.equal(r.angle,angle);assert.equal(r.actualPose.leap,null);close(dom);
+});
+test('automatic strikes resume after the player releases movement',()=>{
+ const {dom,r}=manualFixture();ctx.robots=[r];const foe=createRobot(1,{x:350,y:380,angle:0});ctx.robots.push(foe);foe.setVisible(true);ctx.combat.nextStrike[1]=Infinity;
+ ctx.towerInput={x:1,y:0};combatAttacks();assert.equal(ctx.combat.pending[0],null);assert.equal(r.actualPose.leap,null);
+ ctx.towerInput={x:0,y:0};combatAttacks();assert.ok(ctx.combat.pending[0],'standing player automatically attacks within reach');close(dom);
 });

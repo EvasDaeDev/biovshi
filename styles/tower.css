@@ -11,7 +11,9 @@
 #robot-tag-hops-v22 .tower-hud button{background:#4b422d;color:#f3deae;padding:8px;border:1px solid #8d805b;cursor:pointer}
 #robot-tag-hops-v22 #tower-stick{position:fixed;bottom:18px;left:18px;width:112px;height:112px;border:2px solid #93896c;border-radius:50%;background:#24271dbb;z-index:16;touch-action:none;display:flex;align-items:center;justify-content:center;user-select:none}
 #robot-tag-hops-v22 #tower-stick span{width:48px;height:48px;border-radius:50%;background:#aca17a;border:2px solid #d2c398;pointer-events:none}
-#robot-tag-hops-v22 #tower-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+#robot-tag-hops-v22 #tower-stats{display:grid;gap:12px}
+#robot-tag-hops-v22 #tower-stats .garage-stat-list{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+#robot-tag-hops-v22 #tower-stats .garage-stat-list>small{grid-column:1/-1}
 #robot-tag-hops-v22 #tower-stats label{display:grid;gap:8px;font-size:12px}
 #robot-tag-hops-v22 #tower-stats select{min-height:44px}
 #robot-tag-hops-v22 #tower-prep-error{color:#9d2929}
