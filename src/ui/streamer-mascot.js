@@ -5,6 +5,7 @@ import {ASSETS,assetUrl} from '../assets/manifest.js';
 const STORAGE='biovshi.streamer-hidden.v1';
 // Match the chin-to-collar placement in girl_prv.png for every expression.
 const HEAD_OFFSET_Y=22;
+const SHOULDER_OFFSET_Y=20;
 // Rectangles use the original, transparent atlas. Heads and effects stay independent.
 const HEADS={
  neutral:[13,10,157,233], admire:[198,9,156,236], fear:[388,10,156,235],
@@ -123,8 +124,8 @@ export function initializeStreamerMascot(){
   // Idle sleeves rest another 12 degrees down; reactions retain their full swings.
   const restAngle=reaction ? .12 : .33;
   // The straight sleeves deliberately rotate as whole pieces around the shoulders.
-  arm([0,319,104,58],99,165,4,140,-restAngle-energy*(.3+Math.sin(t*11)*.35));
-  arm([150,319,105,58],165,165,157,140,restAngle+energy*(.3+Math.sin(t*10+.8)*.35));
+  arm([0,319,104,58],99,165+SHOULDER_OFFSET_Y,4,140+SHOULDER_OFFSET_Y,-restAngle-energy*(.3+Math.sin(t*11)*.35));
+  arm([150,319,105,58],165,165+SHOULDER_OFFSET_Y,157,140+SHOULDER_OFFSET_Y,restAngle+energy*(.3+Math.sin(t*10+.8)*.35));
   painter.save();painter.translate(135,153+HEAD_OFFSET_Y+Math.round(bob));painter.rotate(Math.sin(t*(reaction?6:2))*(reaction?.045:.012));
   const head=heads[emotion];painter.drawImage(head,-83,-149,165,235);painter.restore();
   if(reaction){
