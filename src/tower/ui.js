@@ -74,6 +74,7 @@ export function towerResults(){
 export function installTowerUI(){
   refreshMenu();
   ctx.resetButton.hidden=false;
+  ctx.root.querySelector('#tower-wallet').hidden=ctx.mode!=='tower';
   const menu=ctx.root.querySelector('#launch-overlay');
   ctx.root.querySelector('#menu-player').onchange=e=>{ctx.betting.towerPlayerId=Number(e.target.value);bettingSave();refreshMenu();};
   ctx.root.querySelector('#tower-reset').onclick=()=>{if(confirm('Сбросить башню выбранного игрока? Банк монет сохранится.')){resetTower(ctx.betting,ctx.menuPlayer);bettingSave();refreshMenu();}};
@@ -85,7 +86,6 @@ export function installTowerUI(){
   ctx.root.querySelector('#launch-totalizator').onclick=async()=>{ctx.audio?.unlock();await ctx.startTotalizator();};
   ctx.root.querySelector('#game-menu').onclick=openMenu;
   ctx.root.querySelector('#tower-prep-menu').onclick=openMenu;
-  ctx.root.querySelector('#tower-leave').onclick=openMenu;
   if(ctx.mode!=='tower'){
     ctx.root.querySelector('#tower-controls').hidden=true;ctx.root.querySelector('#tower-preparation').hidden=true;
     ctx.resultsProcedure.textContent='ПРОЦЕДУРНАЯ';ctx.resultsAgain.textContent='К СТАВКАМ СЛЕДУЮЩЕГО РАУНДА';ctx.resultsProcedure.hidden=false;
