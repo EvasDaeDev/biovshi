@@ -1,5 +1,6 @@
 import {ctx} from '../game/state.js';
 import {onGameEvent} from '../game/event-bus.js';
+import {fighterLabel} from '../game/patients.js';
 import {quipCategory,quipFor,createSpeechPacer,renderQuip} from './streamer-quips.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
 
@@ -30,21 +31,36 @@ export function reactionFor(event){
  return null;
 }
 
-// One pending reaction, with expiry: even a very busy fight never builds a backlog.
+// Minor reactions coalesce; eliminations and the result are delivered once, in order.
 export function createReactionTrack(){
- let pending=null,current=null,time=0,until=0;
+ let pending=null,current=null,time=0,until=0,ended=false;
+ const required=[],seen=new Set();
  return {
-  offer(event){const next=reactionFor(event);if(!next)return; if(!pending||next.priority>=pending.priority)pending={...next,event,ready:time+.12,expires:time+2.5};},
+  offer(event){
+   const next=reactionFor(event);if(!next)return;
+   const mandatory=event.type==='robot-immobilized'||event.type==='combat-end';
+   const entry={...next,event,required:mandatory,ready:time+.12,expires:time+2.5};
+   if(mandatory){
+    const key=event.type==='combat-end'?'result':`out:${event.robot}`;
+    if(seen.has(key))return;seen.add(key);required.push(entry);
+    if(event.type==='combat-end'){ended=true;pending=null;}
+   }else if(!ended&&(!pending||next.priority>=pending.priority))pending=entry;
+  },
   tick(dt,accept=true){
-   time+=Math.min(Math.max(dt,0),.1);
-   if(current&&time>=until)current=null;
+   const delta=Math.min(Math.max(dt,0),.1);time+=delta;
+   // Pausing must not consume the readable duration of an obligatory announcement.
+   if(current?.required&&!accept)until+=delta;
+   if(current&&time+1e-9>=until)current=null;
    if(pending&&time>pending.expires)pending=null;
-   if(accept&&pending&&time>=pending.ready&&(!current||pending.priority>current.priority)){
+   if(accept&&!current?.required&&required[0]?.ready<=time){
+    current=required.shift();until=time+current.duration;
+   }else if(accept&&!required.length&&!current?.required&&pending&&time>=pending.ready&&(!current||pending.priority>current.priority)){
     current=pending;pending=null;until=time+current.duration;
    }
    return current;
   },
-  reset(){pending=current=null;time=until=0;}
+  hasRequired(){return required.length>0||Boolean(current?.required);},
+  reset(){pending=current=null;time=until=0;ended=false;required.length=0;seen.clear();}
  };
 }
 
@@ -113,7 +129,9 @@ export function initializeStreamerMascot(){
  const unsubscribe=onGameEvent(event=>{
   if(hidden)return;
   if(quipCategory(event)&&event.type!=='streamer-idle')quietFor=0;
-  track.offer(event);
+  const id=event.robot??event.to??event.winner;
+  const named=Number.isInteger(id)&&id>=0?{...event,fighterName:fighterLabel(id)}:event;
+  track.offer(named);
  });
  function drawPart(rect,x,y,w=rect[2],h=rect[3],source=atlas){painter.drawImage(source,...rect,Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
  function arm(rect,pivotX,pivotY,x,y,angle){
@@ -133,9 +151,9 @@ export function initializeStreamerMascot(){
   if(reaction!==spoken){
    spoken=reaction;
    caption.hidden=true;
-   if(reaction&&speechPacer.take(reaction.duration)){
+   if(reaction&&(reaction.required||speechPacer.take(reaction.duration))){
     const category=quipCategory(reaction.event),index=quipCounts.get(category)??0;
-    renderQuip(caption,quipFor(reaction.event,index));quipCounts.set(category,index+1);
+    renderQuip(caption,quipFor(reaction.event,index),reaction.event);quipCounts.set(category,index+1);
     caption.hidden=!caption.textContent;
    }
   }
@@ -164,7 +182,7 @@ export function initializeStreamerMascot(){
   painter.restore();box.dataset.emotion=emotion;
  };
  const reset=()=>{track.reset();clearSpeech();lastPaint=-Infinity;};
- ctx.streamerMascot={sync,reset};
+ ctx.streamerMascot={sync,reset,hasRequiredAnnouncements:()=>!hidden&&loaded&&track.hasRequired()};
  const dispose=root.__disposeTag;
  root.__disposeTag=()=>{
   disposed=true;unsubscribe();atlas.onload=atlas.onerror=null;toggle.onclick=null;box.remove();toggle.remove();

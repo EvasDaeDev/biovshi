@@ -29,7 +29,7 @@ test('mascot renders in both modes, keeps its own visibility and uses shared hin
   const painter=new Proxy({imageSmoothingEnabled:true,getImageData:()=>({data:new Uint8ClampedArray(163*249*4)})},{get:(o,k)=>k in o?o[k]:(...args)=>calls.push([k,...args])});
   win.HTMLCanvasElement.prototype.getContext=()=>painter;
   const images=[];win.Image=class{constructor(){this.naturalWidth=783;this.naturalHeight=512;images.push(this);}set src(value){this.url=value;}};
-  Object.assign(ctx,{root:win.document.querySelector('#root'),stage:win.document.querySelector('.tag7hop-stage'),mode,combat:{finished:false},startup:{phase:'running'},paused:false,settingsOpen:false,orientationBlocked:false});
+  Object.assign(ctx,{root:win.document.querySelector('#root'),stage:win.document.querySelector('.tag7hop-stage'),mode,betting:{players:[{name:'Лис'}]},towerPlayer:0,combat:{finished:false},startup:{phase:'running'},paused:false,settingsOpen:false,orientationBlocked:false});
   ctx.root.__disposeTag=()=>{};
   initializeStreamerMascot();initializeHints();images[0].onload();
   const button=ctx.root.querySelector('#streamer-mascot-toggle'),box=ctx.root.querySelector('#streamer-mascot');
@@ -40,7 +40,7 @@ test('mascot renders in both modes, keeps its own visibility and uses shared hin
   assert.equal(painter.imageSmoothingEnabled,false);assert.ok(calls.some(c=>c[0]==='drawImage'));
   emitGameEvent('combat-end',{winner:0});ctx.streamerMascot.sync(.1,200);ctx.streamerMascot.sync(.1,300);
   assert.equal(box.dataset.emotion,'cheer');
-  assert.equal(box.querySelector('.streamer-quip').textContent,'Остался один!');
+  assert.equal(box.querySelector('.streamer-quip').textContent,mode==='tower'?'Лис победил!':'A победил!');
   assert.equal(box.querySelector('.streamer-quip').hidden,false);
   ctx.streamerMascot.reset();ctx.streamerMascot.sync(.1,400);assert.equal(box.dataset.emotion,'neutral');
   assert.equal(box.querySelector('.streamer-quip').hidden,true);
@@ -49,6 +49,21 @@ test('mascot renders in both modes, keeps its own visibility and uses shared hin
   ctx.paused=false;for(let i=0;i<204;i++)ctx.streamerMascot.sync(.1,12000+i*100);
   assert.equal(box.dataset.emotion,'annoyed');
   assert.equal(box.querySelector('.streamer-quip').textContent,'…скуучно.');
+  ctx.streamerMascot.reset();
+  emitGameEvent('hit',{to:0,damage:2});ctx.streamerMascot.sync(.1,33000);ctx.streamerMascot.sync(.1,33100);
+  emitGameEvent('robot-immobilized',{robot:1,reason:'потерял сознание'});
+  emitGameEvent('robot-immobilized',{robot:1,reason:'потерял сознание'});
+  emitGameEvent('robot-immobilized',{robot:2,reason:'погиб'});
+  emitGameEvent('combat-end',{winner:0});
+  assert.equal(ctx.streamerMascot.hasRequiredAnnouncements(),true);
+  const lines=[];let previous=box.querySelector('.streamer-quip').textContent;
+  for(let i=0;i<90;i++){
+   ctx.streamerMascot.sync(.1,33200+i*100);
+   const caption=box.querySelector('.streamer-quip');
+   if(!caption.hidden&&caption.textContent!==previous){previous=caption.textContent;lines.push(previous);}
+  }
+  assert.deepEqual(lines,mode==='tower'?['ИИ 1 вышел!','ИИ 2 погиб!','Лис победил!']:['B вышел!','C погиб!','A победил!']);
+  assert.equal(ctx.streamerMascot.hasRequiredAnnouncements(),false);
   button.click();assert.equal(box.hidden,true);assert.equal(button.dataset.hint,'Показать маскота');
   assert.equal(win.localStorage.getItem('biovshi.streamer-hidden.v1'),'true');
   const count=calls.length;emitGameEvent('segment-broken',{});ctx.streamerMascot.sync(.1,500);assert.equal(calls.length,count);

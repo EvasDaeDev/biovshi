@@ -25,8 +25,8 @@ test('approved quips stay short, omit removed copy and use the affected fighter'
  assert.equal(quipFor(events[4]),'B, ножку забыл!');
  assert.equal(quipFor(events[5]),'B теряет запчасти!');
  assert.equal(quipFor(events[6]),'B вышел!');
- assert.equal(quipFor(events[7],1),'В морг!');
- assert.equal(quipFor(events[8]),'Остался один!');
+ assert.equal(quipFor(events[7],1),'B погиб!');
+ assert.equal(quipFor(events[8]),'B победил!');
  assert.deepEqual(STREAMER_QUIPS.idle,['…скуучно.','Чего такие целые?']);
 });
 
@@ -36,7 +36,7 @@ test('speech keeps the triggering event when important reactions replace a pendi
  track.offer({type:'hit',to:1});track.tick(.1);const played=track.tick(.1);
  assert.equal(quipFor(played.event),'C, ножку забыл!');
  track.offer({type:'combat-end',winner:2});track.tick(.1);
- assert.equal(quipFor(track.tick(.1).event),'Остался один!');
+ assert.equal(quipFor(track.tick(.1).event),'C победил!');
 });
 
 test('battle events still reach subscribers and the log without central arena announcements',()=>{
@@ -71,5 +71,34 @@ test('only fighter letters receive their shared identity colour, with safe text 
  }
  renderQuip(caption,'Ой, отвалилось!');assert.equal(caption.children.length,0);
  renderQuip(caption,'<img src=x>');assert.equal(caption.querySelector('img'),null);
+ dom.window.close();
+});
+
+test('mandatory announcements survive pause and are delivered before the winner',()=>{
+ const track=createReactionTrack();
+ track.offer({type:'robot-immobilized',robot:1,reason:'погиб'});track.tick(.1);track.tick(.1);
+ for(let i=0;i<80;i++)track.tick(.1,false);
+ assert.equal(track.hasRequired(),true);
+ track.offer({type:'combat-end',winner:0});
+ const lines=[];let previous=null;
+ for(let i=0;i<60;i++){
+  const reaction=track.tick(.1);if(reaction&&reaction!==previous){lines.push(quipFor(reaction.event));previous=reaction;}
+ }
+ assert.deepEqual(lines,['B погиб!','A победил!']);assert.equal(track.hasRequired(),false);
+});
+
+test('tower combat names remain intact and coloured safely in mandatory and casual lines',()=>{
+ const dom=new JSDOM('<p></p>'),caption=dom.window.document.querySelector('p');
+ for(const event of [
+  {type:'hit',to:0,fighterName:'Лис <3'},
+  {type:'robot-immobilized',robot:2,fighterName:'ИИ 2',reason:'потерял сознание'},
+  {type:'combat-end',winner:0,fighterName:'Лис <3'}
+ ]){
+  const text=quipFor(event);renderQuip(caption,text,event);
+  assert.equal(caption.textContent,text);
+  assert.equal(caption.querySelector('.streamer-fighter').textContent,event.fighterName);
+  assert.equal(caption.querySelectorAll('span').length,1);
+ }
+ assert.equal(quipFor({type:'combat-end',winner:0,fighterName:'Лис <3'}),'Лис <3 победил!');
  dom.window.close();
 });
