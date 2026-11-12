@@ -103,7 +103,7 @@ export class PixiArena {
     this.observer.observe(ctx.svg,{attributes:true,childList:true,characterData:true,subtree:true});
     this.canvas=this.app.canvas;this.canvas.id='tag7hop-pixi';
     this.canvas.setAttribute('role','img');this.canvas.setAttribute('aria-label',ctx.svg.getAttribute('aria-label'));
-    this.canvas.style.cssText='display:block;width:100%;height:100%;aspect-ratio:auto;touch-action:manipulation;cursor:pointer';
+    this.canvas.style.cssText=`display:block;width:100%;height:100%;aspect-ratio:auto;touch-action:manipulation;cursor:${ctx.svg.style.cursor||'pointer'}`;
     this.canvas.onclick=ctx.svg.onclick;
     ctx.svg.after(this.canvas);
     ctx.svg.style.setProperty('display','none','important');
