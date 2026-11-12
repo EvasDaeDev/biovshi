@@ -1,0 +1,3035 @@
+{
+  "baseCommit": "d0af6b1",
+  "command": [
+    "--seeds=12",
+    "--offset=5000",
+    "--seedMode=mixed",
+    "--profiles=off,moderate24",
+    "--out=docs/experiments/trauma-mixed.json"
+  ],
+  "seedMode": "mixed",
+  "scenario": "base",
+  "seeds": 12,
+  "offset": 5000,
+  "timeLimitSec": 180,
+  "fixedStep": 0.016666666666666666,
+  "headless": true,
+  "summary": [
+    {
+      "profile": "off",
+      "config": {
+        "enabled": false,
+        "threshold": 18,
+        "headMultiplier": 1.5
+      },
+      "matches": 36,
+      "finished": 36,
+      "deaths": 83,
+      "knockouts": 25,
+      "traumaKnockouts": 0,
+      "knockoutShare": 0.23148148148148148,
+      "winnerCounts": {
+        "0": 4,
+        "1": 7,
+        "2": 13,
+        "3": 12
+      },
+      "meanSeconds": 48.957407407405896,
+      "medianSeconds": 47.616666666665246,
+      "p90Seconds": 72.13333333333053,
+      "firstEliminationSeconds": 22.083796296296217,
+      "knockoutMovementLimbs": 0,
+      "severedPartsPerMatch": 26.666666666666668,
+      "arenaMeanSeconds": {
+        "ward": 57.88611111110911,
+        "ring": 47.64166666666525,
+        "annulus": 41.34444444444338
+      }
+    },
+    {
+      "profile": "moderate24",
+      "config": {
+        "enabled": true,
+        "threshold": 24,
+        "headMultiplier": 1.5
+      },
+      "matches": 36,
+      "finished": 36,
+      "deaths": 36,
+      "knockouts": 72,
+      "traumaKnockouts": 64,
+      "knockoutShare": 0.6666666666666666,
+      "winnerCounts": {
+        "0": 4,
+        "1": 7,
+        "2": 11,
+        "3": 14
+      },
+      "meanSeconds": 38.331018518517624,
+      "medianSeconds": 38.86666666666574,
+      "p90Seconds": 53.1333333333316,
+      "firstEliminationSeconds": 17.58009259259274,
+      "knockoutMovementLimbs": 0.7083333333333334,
+      "severedPartsPerMatch": 21.5,
+      "arenaMeanSeconds": {
+        "ward": 46.033333333332,
+        "ring": 36.52777777777699,
+        "annulus": 32.431944444443886
+      }
+    }
+  ],
+  "runs": [
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 3823848356,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 66.28333333333086,
+      "winner": 0,
+      "hits": 85,
+      "severedParts": 34,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 39.683333333332364,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 51.84999999999834,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        },
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 66.28333333333086,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 3823848356,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 53.11666666666493,
+      "winner": 0,
+      "hits": 64,
+      "severedParts": 19,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 23.7166666666666,
+          "trauma": 24,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 35.783333333332585,
+          "trauma": 25,
+          "movementLimbs": 0,
+          "remainingParts": 6
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 53.11666666666493,
+          "trauma": 18,
+          "movementLimbs": 3,
+          "remainingParts": 10
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 3823848356,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 39.366666666665715,
+      "winner": 2,
+      "hits": 76,
+      "severedParts": 35,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 21.26666666666674,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 23.649999999999938,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 39.366666666665715,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 3823848356,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 26.766666666666428,
+      "winner": 2,
+      "hits": 69,
+      "severedParts": 24,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 19.333333333333517,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 23.649999999999938,
+          "trauma": 23.5,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 26.766666666666428,
+          "trauma": 24,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 3823848356,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 40.33333333333233,
+      "winner": 1,
+      "hits": 89,
+      "severedParts": 29,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 20.433333333333454,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 27.799999999999702,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 40.33333333333233,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 7
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 3823848356,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 53.48333333333158,
+      "winner": 1,
+      "hits": 82,
+      "severedParts": 26,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 17.983333333333594,
+          "trauma": 25.5,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 19.100000000000197,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 53.48333333333158,
+          "trauma": 24,
+          "movementLimbs": 0,
+          "remainingParts": 5
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 3079120727,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 22.28333333333335,
+      "winner": 2,
+      "hits": 40,
+      "severedParts": 7,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 12.350000000000193,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 14.150000000000283,
+          "trauma": 0,
+          "movementLimbs": 3,
+          "remainingParts": 11
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 22.28333333333335,
+          "trauma": 0,
+          "movementLimbs": 4,
+          "remainingParts": 12
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 3079120727,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 22.28333333333335,
+      "winner": 2,
+      "hits": 40,
+      "severedParts": 7,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 12.350000000000193,
+          "trauma": 18,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 14.150000000000283,
+          "trauma": 15,
+          "movementLimbs": 3,
+          "remainingParts": 11
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 22.28333333333335,
+          "trauma": 15,
+          "movementLimbs": 4,
+          "remainingParts": 12
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 3079120727,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 35.76666666666592,
+      "winner": 2,
+      "hits": 82,
+      "severedParts": 29,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 17.8833333333336,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 23.783333333333264,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 35.76666666666592,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 3079120727,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 31.81666666666614,
+      "winner": 2,
+      "hits": 74,
+      "severedParts": 25,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 13.8333333333336,
+          "trauma": 24.5,
+          "movementLimbs": 0,
+          "remainingParts": 5
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 20.083333333333474,
+          "trauma": 25,
+          "movementLimbs": 1,
+          "remainingParts": 9
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 31.81666666666614,
+          "trauma": 22,
+          "movementLimbs": 1,
+          "remainingParts": 3
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 3079120727,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 28.78333333333298,
+      "winner": 3,
+      "hits": 65,
+      "severedParts": 16,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 16.31666666666702,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 22.383333333333344,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 9
+        },
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 28.78333333333298,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 3079120727,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 28.78333333333298,
+      "winner": 3,
+      "hits": 65,
+      "severedParts": 16,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 16.31666666666702,
+          "trauma": 25,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 22.383333333333344,
+          "trauma": 25,
+          "movementLimbs": 1,
+          "remainingParts": 9
+        },
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 28.78333333333298,
+          "trauma": 22,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1414545711,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 47.94999999999856,
+      "winner": 2,
+      "hits": 78,
+      "severedParts": 30,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 22.816666666666652,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 31.516666666666158,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 47.94999999999856,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 5
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1414545711,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 44.41666666666543,
+      "winner": 2,
+      "hits": 75,
+      "severedParts": 26,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 19.150000000000194,
+          "trauma": 25,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 32.99999999999941,
+          "trauma": 24,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 44.41666666666543,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 8
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1414545711,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 58.4333333333313,
+      "winner": 3,
+      "hits": 90,
+      "severedParts": 34,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 16.43333333333368,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 41.68333333333225,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 4
+        },
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 58.4333333333313,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 4
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1414545711,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 44.48333333333209,
+      "winner": 3,
+      "hits": 83,
+      "severedParts": 29,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 14.63333333333364,
+          "trauma": 25,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 17.350000000000296,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 9
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 44.48333333333209,
+          "trauma": 24,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1414545711,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 38.41666666666577,
+      "winner": 2,
+      "hits": 76,
+      "severedParts": 23,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 18.250000000000245,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 35.549999999999265,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 38.41666666666577,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1414545711,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 38.316666666665775,
+      "winner": 3,
+      "hits": 72,
+      "severedParts": 26,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 17.816666666666936,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 18.866666666666877,
+          "trauma": 24,
+          "movementLimbs": 1,
+          "remainingParts": 4
+        },
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 38.316666666665775,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1725090554,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 37.51666666666582,
+      "winner": 0,
+      "hits": 62,
+      "severedParts": 21,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 26.649999999999768,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 31.799999999999475,
+          "trauma": 0,
+          "movementLimbs": 3,
+          "remainingParts": 10
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 37.51666666666582,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1725090554,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 38.86666666666574,
+      "winner": 3,
+      "hits": 58,
+      "severedParts": 17,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 20.000000000000146,
+          "trauma": 25.5,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 20.783333333333434,
+          "trauma": 12,
+          "movementLimbs": 4,
+          "remainingParts": 12
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 38.86666666666574,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 9
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1725090554,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 44.26666666666544,
+      "winner": 2,
+      "hits": 88,
+      "severedParts": 41,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 37.98333333333246,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 42.46666666666554,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 3
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 44.26666666666544,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1725090554,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 34.64999999999932,
+      "winner": 2,
+      "hits": 69,
+      "severedParts": 23,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 15.36666666666701,
+          "trauma": 24,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 19.933333333333483,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 4
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 34.066666666666016,
+          "trauma": 25,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1725090554,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 49.43333333333181,
+      "winner": 1,
+      "hits": 76,
+      "severedParts": 21,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 21.633333333333386,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 5
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 33.449999999999385,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 49.43333333333181,
+          "trauma": 0,
+          "movementLimbs": 3,
+          "remainingParts": 10
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1725090554,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 34.43333333333266,
+      "winner": 1,
+      "hits": 74,
+      "severedParts": 22,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 18.883333333333542,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 9
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 21.650000000000052,
+          "trauma": 24,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 34.43333333333266,
+          "trauma": 24.5,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1195397838,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 52.93333333333161,
+      "winner": 1,
+      "hits": 76,
+      "severedParts": 27,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 35.71666666666592,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 45.03333333333206,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 52.34999999999831,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1195397838,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 47.39999999999859,
+      "winner": 1,
+      "hits": 75,
+      "severedParts": 24,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 22.86666666666665,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 9
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 33.18333333333273,
+          "trauma": 25,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 47.39999999999859,
+          "trauma": 23.5,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1195397838,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 35.749999999999254,
+      "winner": 2,
+      "hits": 66,
+      "severedParts": 25,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 9.333333333333377,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 23.7166666666666,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 35.749999999999254,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1195397838,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 31.849999999999472,
+      "winner": 2,
+      "hits": 64,
+      "severedParts": 23,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 9.333333333333377,
+          "trauma": 21,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 13.333333333333576,
+          "trauma": 25,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 31.849999999999472,
+          "trauma": 24.5,
+          "movementLimbs": 2,
+          "remainingParts": 10
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1195397838,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 54.983333333331494,
+      "winner": 3,
+      "hits": 85,
+      "severedParts": 26,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 10.316666666666759,
+          "trauma": 0,
+          "movementLimbs": 3,
+          "remainingParts": 11
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 31.866666666666138,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 54.983333333331494,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1195397838,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 29.79999999999959,
+      "winner": 3,
+      "hits": 49,
+      "severedParts": 11,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 10.316666666666759,
+          "trauma": 16,
+          "movementLimbs": 3,
+          "remainingParts": 11
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 17.083333333333645,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 29.21666666666629,
+          "trauma": 16,
+          "movementLimbs": 3,
+          "remainingParts": 11
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 2546362727,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 98.38333333332903,
+      "winner": 2,
+      "hits": 70,
+      "severedParts": 25,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 10.350000000000094,
+          "trauma": 0,
+          "movementLimbs": 4,
+          "remainingParts": 12
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 53.31666666666492,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 98.38333333332903,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 2546362727,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 58.683333333331284,
+      "winner": 2,
+      "hits": 60,
+      "severedParts": 19,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 10.350000000000094,
+          "trauma": 11,
+          "movementLimbs": 4,
+          "remainingParts": 12
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 41.349999999998936,
+          "trauma": 24.5,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 58.683333333331284,
+          "trauma": 24,
+          "movementLimbs": 1,
+          "remainingParts": 4
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 2546362727,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 63.26666666666436,
+      "winner": 3,
+      "hits": 85,
+      "severedParts": 34,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 43.299999999998825,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        },
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 46.39999999999865,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 63.26666666666436,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 2546362727,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 41.53333333333226,
+      "winner": 3,
+      "hits": 62,
+      "severedParts": 23,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 23.749999999999932,
+          "trauma": 25,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 29.699999999999594,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 41.53333333333226,
+          "trauma": 18.5,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 2546362727,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 46.38333333333198,
+      "winner": 3,
+      "hits": 68,
+      "severedParts": 25,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 9.650000000000059,
+          "trauma": 0,
+          "movementLimbs": 3,
+          "remainingParts": 11
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 14.550000000000303,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        },
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 46.38333333333198,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 2546362727,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 26.0999999999998,
+      "winner": 3,
+      "hits": 59,
+      "severedParts": 16,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 9.650000000000059,
+          "trauma": 13,
+          "movementLimbs": 3,
+          "remainingParts": 11
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 13.650000000000258,
+          "trauma": 24.5,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 26.0999999999998,
+          "trauma": 20,
+          "movementLimbs": 3,
+          "remainingParts": 10
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 672755477,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 38.4499999999991,
+      "winner": 1,
+      "hits": 69,
+      "severedParts": 22,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 25.999999999999805,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 27.833333333333034,
+          "trauma": 0,
+          "movementLimbs": 4,
+          "remainingParts": 12
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 38.4499999999991,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 672755477,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 35.06666666666596,
+      "winner": 1,
+      "hits": 59,
+      "severedParts": 19,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 19.13333333333353,
+          "trauma": 24,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 27.483333333333054,
+          "trauma": 16,
+          "movementLimbs": 3,
+          "remainingParts": 10
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 35.06666666666596,
+          "trauma": 22.5,
+          "movementLimbs": 0,
+          "remainingParts": 5
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 672755477,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 60.68333333333117,
+      "winner": 3,
+      "hits": 94,
+      "severedParts": 34,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 20.383333333333457,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 43.566666666665476,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 60.68333333333117,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 672755477,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 46.683333333331966,
+      "winner": 3,
+      "hits": 78,
+      "severedParts": 25,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 16.1333333333337,
+          "trauma": 24,
+          "movementLimbs": 0,
+          "remainingParts": 6
+        },
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 21.016666666666755,
+          "trauma": 25,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 46.683333333331966,
+          "trauma": 23,
+          "movementLimbs": 0,
+          "remainingParts": 6
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 672755477,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 47.616666666665246,
+      "winner": 2,
+      "hits": 55,
+      "severedParts": 17,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 16.000000000000373,
+          "trauma": 0,
+          "movementLimbs": 4,
+          "remainingParts": 12
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 17.21666666666697,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 8
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 47.616666666665246,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 672755477,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 25.58333333333316,
+      "winner": 2,
+      "hits": 52,
+      "severedParts": 15,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 16.000000000000373,
+          "trauma": 12,
+          "movementLimbs": 4,
+          "remainingParts": 12
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 17.21666666666697,
+          "trauma": 25,
+          "movementLimbs": 1,
+          "remainingParts": 8
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 25.58333333333316,
+          "trauma": 25,
+          "movementLimbs": 1,
+          "remainingParts": 4
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 2225716411,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 81.46666666666333,
+      "winner": 3,
+      "hits": 95,
+      "severedParts": 31,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 35.34999999999928,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 61.23333333333114,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 81.46666666666333,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 2225716411,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 61.983333333331096,
+      "winner": 1,
+      "hits": 80,
+      "severedParts": 32,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 30.99999999999952,
+          "trauma": 24,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 50.56666666666508,
+          "trauma": 24.5,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 61.983333333331096,
+          "trauma": 23,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 2225716411,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 47.98333333333189,
+      "winner": 0,
+      "hits": 73,
+      "severedParts": 28,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 21.416666666666732,
+          "trauma": 0,
+          "movementLimbs": 3,
+          "remainingParts": 10
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 45.43333333333204,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 4
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 47.98333333333189,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 2225716411,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 44.79999999999874,
+      "winner": 0,
+      "hits": 70,
+      "severedParts": 27,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 21.416666666666732,
+          "trauma": 21,
+          "movementLimbs": 3,
+          "remainingParts": 10
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 40.849999999998964,
+          "trauma": 24,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 44.79999999999874,
+          "trauma": 23,
+          "movementLimbs": 1,
+          "remainingParts": 4
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 2225716411,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 21.46666666666673,
+      "winner": 2,
+      "hits": 65,
+      "severedParts": 19,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 15.200000000000335,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 18.450000000000234,
+          "trauma": 0,
+          "movementLimbs": 3,
+          "remainingParts": 11
+        },
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 21.46666666666673,
+          "trauma": 0,
+          "movementLimbs": 3,
+          "remainingParts": 10
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 2225716411,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 21.533333333333392,
+      "winner": 3,
+      "hits": 58,
+      "severedParts": 15,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 13.016666666666893,
+          "trauma": 24.5,
+          "movementLimbs": 0,
+          "remainingParts": 6
+        },
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 17.866666666666934,
+          "trauma": 24,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 21.533333333333392,
+          "trauma": 17,
+          "movementLimbs": 3,
+          "remainingParts": 10
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1006536766,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 50.99999999999839,
+      "winner": 1,
+      "hits": 62,
+      "severedParts": 21,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 19.6333333333335,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 25.849999999999813,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 50.99999999999839,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 8
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1006536766,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 50.99999999999839,
+      "winner": 1,
+      "hits": 62,
+      "severedParts": 21,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 19.6333333333335,
+          "trauma": 25,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 25.849999999999813,
+          "trauma": 23,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 50.99999999999839,
+          "trauma": 21,
+          "movementLimbs": 2,
+          "remainingParts": 8
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1006536766,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 26.91666666666642,
+      "winner": 3,
+      "hits": 65,
+      "severedParts": 25,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 21.03333333333342,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 8
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 26.0499999999998,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 26.91666666666642,
+          "trauma": 0,
+          "movementLimbs": 4,
+          "remainingParts": 12
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1006536766,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 28.66666666666632,
+      "winner": 2,
+      "hits": 68,
+      "severedParts": 23,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 20.41666666666679,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 4
+        },
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 21.03333333333342,
+          "trauma": 25,
+          "movementLimbs": 1,
+          "remainingParts": 8
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 28.66666666666632,
+          "trauma": 24.5,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1006536766,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 39.39999999999905,
+      "winner": 2,
+      "hits": 82,
+      "severedParts": 30,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 32.983333333332745,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 34.11666666666601,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 39.39999999999905,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1006536766,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 23.149999999999967,
+      "winner": 3,
+      "hits": 62,
+      "severedParts": 12,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 15.850000000000367,
+          "trauma": 24.5,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 17.33333333333363,
+          "trauma": 20,
+          "movementLimbs": 2,
+          "remainingParts": 10
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 23.149999999999967,
+          "trauma": 16,
+          "movementLimbs": 3,
+          "remainingParts": 11
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 3231674496,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 85.26666666666311,
+      "winner": 2,
+      "hits": 93,
+      "severedParts": 33,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 34.11666666666601,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 43.416666666665485,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 85.26666666666311,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 8
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 3231674496,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 53.1333333333316,
+      "winner": 0,
+      "hits": 72,
+      "severedParts": 29,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 27.29999999999973,
+          "trauma": 24,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 36.34999999999922,
+          "trauma": 24,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 53.1333333333316,
+          "trauma": 21,
+          "movementLimbs": 1,
+          "remainingParts": 8
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 3231674496,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 42.599999999998865,
+      "winner": 3,
+      "hits": 77,
+      "severedParts": 27,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 14.416666666666963,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 4
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 18.11666666666692,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 42.599999999998865,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 3231674496,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 31.416666666666163,
+      "winner": 3,
+      "hits": 73,
+      "severedParts": 20,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 12.03333333333351,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 12.616666666666873,
+          "trauma": 24,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 31.416666666666163,
+          "trauma": 24.5,
+          "movementLimbs": 2,
+          "remainingParts": 10
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 3231674496,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 29.383333333332946,
+      "winner": 3,
+      "hits": 75,
+      "severedParts": 21,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 23.699999999999935,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 24.26666666666657,
+          "trauma": 0,
+          "movementLimbs": 4,
+          "remainingParts": 12
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 29.383333333332946,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 3231674496,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 20.616666666666777,
+      "winner": 2,
+      "hits": 59,
+      "severedParts": 12,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 16.31666666666702,
+          "trauma": 24,
+          "movementLimbs": 2,
+          "remainingParts": 10
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 18.38333333333357,
+          "trauma": 14,
+          "movementLimbs": 4,
+          "remainingParts": 12
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 20.616666666666777,
+          "trauma": 24.5,
+          "movementLimbs": 0,
+          "remainingParts": 5
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1331782360,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 40.966666666665624,
+      "winner": 1,
+      "hits": 56,
+      "severedParts": 28,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 27.566666666666382,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 7
+        },
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 27.783333333333037,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 40.966666666665624,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1331782360,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 40.966666666665624,
+      "winner": 1,
+      "hits": 56,
+      "severedParts": 28,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 27.566666666666382,
+          "trauma": 16,
+          "movementLimbs": 2,
+          "remainingParts": 7
+        },
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 27.783333333333037,
+          "trauma": 15,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 40.966666666665624,
+          "trauma": 23,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1331782360,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 48.93333333333184,
+      "winner": 2,
+      "hits": 85,
+      "severedParts": 36,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 16.48333333333368,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 35.44999999999927,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 48.93333333333184,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 3
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1331782360,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 28.433333333333,
+      "winner": 2,
+      "hits": 75,
+      "severedParts": 27,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 15.583333333333687,
+          "trauma": 25.5,
+          "movementLimbs": 1,
+          "remainingParts": 4
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 24.483333333333224,
+          "trauma": 25.5,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 28.433333333333,
+          "trauma": 24.5,
+          "movementLimbs": 0,
+          "remainingParts": 7
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 1331782360,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 64.21666666666431,
+      "winner": 1,
+      "hits": 101,
+      "severedParts": 33,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 20.13333333333347,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 1
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 28.149999999999682,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 64.21666666666431,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 6
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 1331782360,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 42.016666666665564,
+      "winner": 3,
+      "hits": 80,
+      "severedParts": 27,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 17.033333333333648,
+          "trauma": 24,
+          "movementLimbs": 0,
+          "remainingParts": 8
+        },
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 29.13333333333296,
+          "trauma": 25.5,
+          "movementLimbs": 1,
+          "remainingParts": 4
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 42.016666666665564,
+          "trauma": 24.5,
+          "movementLimbs": 0,
+          "remainingParts": 3
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 336131457,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 72.13333333333053,
+      "winner": 0,
+      "hits": 77,
+      "severedParts": 23,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 20.516666666666783,
+          "trauma": 0,
+          "movementLimbs": 3,
+          "remainingParts": 11
+        },
+        {
+          "id": 3,
+          "reason": "погиб",
+          "cause": null,
+          "time": 57.583333333331346,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 72.13333333333053,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 3
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 336131457,
+      "arena": "ward",
+      "finished": true,
+      "seconds": 45.483333333332034,
+      "winner": 0,
+      "hits": 62,
+      "severedParts": 21,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 20.516666666666783,
+          "trauma": 15,
+          "movementLimbs": 3,
+          "remainingParts": 11
+        },
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 32.783333333332756,
+          "trauma": 24,
+          "movementLimbs": 2,
+          "remainingParts": 7
+        },
+        {
+          "id": 3,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 45.483333333332034,
+          "trauma": 25,
+          "movementLimbs": 0,
+          "remainingParts": 2
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 336131457,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 67.73333333333078,
+      "winner": 3,
+      "hits": 71,
+      "severedParts": 26,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 9.500000000000052,
+          "trauma": 0,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 44.083333333332114,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        },
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 67.73333333333078,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 5
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 336131457,
+      "arena": "ring",
+      "finished": true,
+      "seconds": 47.233333333331935,
+      "winner": 3,
+      "hits": 61,
+      "severedParts": 24,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 9.500000000000052,
+          "trauma": 17,
+          "movementLimbs": 2,
+          "remainingParts": 9
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 44.083333333332114,
+          "trauma": 24,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 47.233333333331935,
+          "trauma": 24.5,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "off",
+      "seed": 336131457,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 35.71666666666592,
+      "winner": 3,
+      "hits": 81,
+      "severedParts": 24,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "погиб",
+          "cause": null,
+          "time": 30.21666666666623,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 4
+        },
+        {
+          "id": 1,
+          "reason": "потерял сознание",
+          "cause": "limb-loss",
+          "time": 35.59999999999926,
+          "trauma": 0,
+          "movementLimbs": 0,
+          "remainingParts": 6
+        },
+        {
+          "id": 2,
+          "reason": "погиб",
+          "cause": null,
+          "time": 35.71666666666592,
+          "trauma": 0,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        }
+      ]
+    },
+    {
+      "scenario": "base",
+      "profile": "moderate24",
+      "seed": 336131457,
+      "arena": "annulus",
+      "finished": true,
+      "seconds": 45.366666666665374,
+      "winner": 3,
+      "hits": 77,
+      "severedParts": 21,
+      "coins": 0,
+      "eliminations": [
+        {
+          "id": 0,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 18.783333333333548,
+          "trauma": 24,
+          "movementLimbs": 2,
+          "remainingParts": 8
+        },
+        {
+          "id": 1,
+          "reason": "погиб",
+          "cause": null,
+          "time": 28.69999999999965,
+          "trauma": 25,
+          "movementLimbs": 1,
+          "remainingParts": 6
+        },
+        {
+          "id": 2,
+          "reason": "потерял сознание",
+          "cause": "trauma",
+          "time": 45.366666666665374,
+          "trauma": 24,
+          "movementLimbs": 1,
+          "remainingParts": 7
+        }
+      ]
+    }
+  ]
+}

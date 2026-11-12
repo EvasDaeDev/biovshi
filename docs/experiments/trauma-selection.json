@@ -1,0 +1,184 @@
+{
+  "baseCommit": "d0af6b1",
+  "seeds": 8,
+  "offset": 10,
+  "seedMode": "linear",
+  "matches": 168,
+  "summary": [
+    {
+      "profile": "off",
+      "config": {
+        "enabled": false,
+        "threshold": 18,
+        "headMultiplier": 1.5
+      },
+      "matches": 24,
+      "finished": 24,
+      "deaths": 54,
+      "knockouts": 18,
+      "traumaKnockouts": 0,
+      "knockoutShare": 0.25,
+      "meanSeconds": 49.766666666665124,
+      "medianSeconds": 50.2166666666651,
+      "p90Seconds": 70.08333333333064,
+      "firstEliminationSeconds": 20.777777777777768,
+      "knockoutMovementLimbs": 0,
+      "severedPartsPerMatch": 26.833333333333332,
+      "arenaMeanSeconds": {
+        "ward": 60.706249999997844,
+        "ring": 49.19583333333183,
+        "annulus": 39.3979166666657
+      }
+    },
+    {
+      "profile": "original16",
+      "config": {
+        "enabled": true,
+        "threshold": 16,
+        "headMultiplier": 2
+      },
+      "matches": 24,
+      "finished": 24,
+      "deaths": 7,
+      "knockouts": 65,
+      "traumaKnockouts": 65,
+      "knockoutShare": 0.9027777777777778,
+      "meanSeconds": 20.474305555555635,
+      "medianSeconds": 20.71666666666677,
+      "p90Seconds": 26.149999999999796,
+      "firstEliminationSeconds": 11.137500000000069,
+      "knockoutMovementLimbs": 2.169230769230769,
+      "severedPartsPerMatch": 9.75,
+      "arenaMeanSeconds": {
+        "ward": 24.379166666666567,
+        "ring": 17.079166666666847,
+        "annulus": 19.964583333333476
+      }
+    },
+    {
+      "profile": "moderate18",
+      "config": {
+        "enabled": true,
+        "threshold": 18,
+        "headMultiplier": 1.5
+      },
+      "matches": 24,
+      "finished": 24,
+      "deaths": 11,
+      "knockouts": 61,
+      "traumaKnockouts": 61,
+      "knockoutShare": 0.8472222222222222,
+      "meanSeconds": 27.27222222222193,
+      "medianSeconds": 25.449999999999836,
+      "p90Seconds": 39.39999999999905,
+      "firstEliminationSeconds": 12.997916666666754,
+      "knockoutMovementLimbs": 1.4918032786885247,
+      "severedPartsPerMatch": 14.791666666666666,
+      "arenaMeanSeconds": {
+        "ward": 28.262499999999676,
+        "ring": 21.42499999999998,
+        "annulus": 32.12916666666612
+      }
+    },
+    {
+      "profile": "moderate20",
+      "config": {
+        "enabled": true,
+        "threshold": 20,
+        "headMultiplier": 1.5
+      },
+      "matches": 24,
+      "finished": 24,
+      "deaths": 14,
+      "knockouts": 58,
+      "traumaKnockouts": 57,
+      "knockoutShare": 0.8055555555555556,
+      "meanSeconds": 30.845138888888386,
+      "medianSeconds": 31.366666666666166,
+      "p90Seconds": 43.1666666666655,
+      "firstEliminationSeconds": 13.863194444444565,
+      "knockoutMovementLimbs": 1.1896551724137931,
+      "severedPartsPerMatch": 16.666666666666668,
+      "arenaMeanSeconds": {
+        "ward": 37.589583333332484,
+        "ring": 23.80624999999987,
+        "annulus": 31.139583333332826
+      }
+    },
+    {
+      "profile": "moderate22",
+      "config": {
+        "enabled": true,
+        "threshold": 22,
+        "headMultiplier": 1.5
+      },
+      "matches": 24,
+      "finished": 24,
+      "deaths": 19,
+      "knockouts": 53,
+      "traumaKnockouts": 52,
+      "knockoutShare": 0.7361111111111112,
+      "meanSeconds": 32.51249999999942,
+      "medianSeconds": 30.949999999999523,
+      "p90Seconds": 44.71666666666541,
+      "firstEliminationSeconds": 15.045833333333468,
+      "knockoutMovementLimbs": 0.9245283018867925,
+      "severedPartsPerMatch": 19.083333333333332,
+      "arenaMeanSeconds": {
+        "ward": 39.61458333333237,
+        "ring": 29.410416666666244,
+        "annulus": 28.51249999999965
+      }
+    },
+    {
+      "profile": "moderate24",
+      "config": {
+        "enabled": true,
+        "threshold": 24,
+        "headMultiplier": 1.5
+      },
+      "matches": 24,
+      "finished": 24,
+      "deaths": 26,
+      "knockouts": 46,
+      "traumaKnockouts": 45,
+      "knockoutShare": 0.6388888888888888,
+      "meanSeconds": 35.8791666666659,
+      "medianSeconds": 35.083333333332625,
+      "p90Seconds": 48.73333333333185,
+      "firstEliminationSeconds": 16.27916666666681,
+      "knockoutMovementLimbs": 0.7391304347826086,
+      "severedPartsPerMatch": 21.708333333333332,
+      "arenaMeanSeconds": {
+        "ward": 42.97499999999885,
+        "ring": 35.958333333332575,
+        "annulus": 28.704166666666307
+      }
+    },
+    {
+      "profile": "moderate26",
+      "config": {
+        "enabled": true,
+        "threshold": 26,
+        "headMultiplier": 1.5
+      },
+      "matches": 24,
+      "finished": 24,
+      "deaths": 32,
+      "knockouts": 40,
+      "traumaKnockouts": 36,
+      "knockoutShare": 0.5555555555555556,
+      "meanSeconds": 41.263194444443386,
+      "medianSeconds": 44.933333333332065,
+      "p90Seconds": 52.39999999999831,
+      "firstEliminationSeconds": 17.96666666666678,
+      "knockoutMovementLimbs": 0.5,
+      "severedPartsPerMatch": 23.708333333333332,
+      "arenaMeanSeconds": {
+        "ward": 50.449999999998425,
+        "ring": 38.83124999999907,
+        "annulus": 34.50833333333265
+      }
+    }
+  ]
+}

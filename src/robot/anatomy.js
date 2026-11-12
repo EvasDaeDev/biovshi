@@ -141,6 +141,8 @@ export function finishMobility(robotState, reason, impact = robotState.lastImpac
     robot: robotState.id,
     lastAttacker:robotState.lastTowerAttacker,
     reason,
+    knockoutCause: robotState.knockoutCause,
+    trauma: robotState.trauma,
     segment:reason==='потерял конечности'?impact?.segment:null,
     by:reason==='потерял конечности'?impact?.by:null
   });
@@ -180,16 +182,24 @@ export function reactToHit(robotState, attacker, segment) {
 }
 export function robotFailFromOilLoss(robotState) {
   if (!robotState.mobile() || robotState.movementLimbs() > 0) return false;
+  return knockOut(robotState, 'limb-loss');
+}
+function knockOut(robotState, cause) {
   robotState.bledOut = true;
+  robotState.knockoutCause = cause;
   robotState.finishMobility('потерял сознание');
   robotState.api.capsules = robotState.makeCapsules();
   return true;
 }
 export function robotDamage(robotState, key, by, damage=1) {
-  if (!key || !robotState.isDamageable(key) || !robotState.hp.has(key) || robotState.broken.has(key) || ctx.game.time - (robotState.hitAt.get(key) ?? -99) < CONFIG.combat.damageInvulnerabilitySec) return false;
+  if (!robotState.mobile() || !Number.isFinite(damage) || damage <= 0 || !key || !robotState.isDamageable(key) || !robotState.hp.has(key) || robotState.broken.has(key) || ctx.game.time - (robotState.hitAt.get(key) ?? -99) < CONFIG.combat.damageInvulnerabilitySec) return false;
   robotState.lastTowerAttacker=by;
   robotState.hitAt.set(key, ctx.game.time);
-  robotState.hp.set(key, Math.max(0,robotState.hp.get(key) - damage));
+  const actualDamage = Math.min(robotState.hp.get(key), damage);
+  robotState.hp.set(key, robotState.hp.get(key) - actualDamage);
+  if (CONFIG.combat.trauma.enabled) {
+    robotState.trauma += actualDamage * (key === 'head' ? CONFIG.combat.trauma.headMultiplier : 1);
+  }
   const caps = robotState.api.capsules.filter(c => c.segment === key);
   const pivot = caps.length ? {
     x: (caps[0].a.x + caps[0].b.x) / 2,
@@ -266,6 +276,10 @@ export function robotDamage(robotState, key, by, damage=1) {
     hp: robotState.hp.get(key),
     by,damage
   });
+  // Finish anatomical destruction first: a lethal head hit remains a death.
+  // Descendant HP removed by severing is never counted as a second injury.
+  if (CONFIG.combat.trauma.enabled && robotState.mobile()
+      && robotState.trauma >= CONFIG.combat.trauma.threshold) knockOut(robotState, 'trauma');
   robotState.api.capsules = robotState.makeCapsules();
   return true;
 }

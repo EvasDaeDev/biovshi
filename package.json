@@ -12,7 +12,8 @@
     "textures": "node scripts/prepare-textures.mjs",
     "prebuild": "npm run textures",
     "prestandalone": "npm run textures",
-    "profile:ui": "node scripts/profile-ui.mjs"
+    "profile:ui": "node scripts/profile-ui.mjs",
+    "experiment:trauma": "node scripts/experiment-trauma.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

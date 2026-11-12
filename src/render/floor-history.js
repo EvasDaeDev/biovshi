@@ -67,7 +67,9 @@ export function mergeFloorPixels(base,layer){
 export async function bakeRoundFloor({signal}={}){
   if(!ctx.floorCanvas)return;
   paint();
-  const corpses=ctx.robots.filter(r=>r.id!==ctx.combat.winner).map(r=>r.actor);
+  // A living unconscious patient is carried away, not baked into the floor.
+  // Blood and detached parts remain, along with bodies of genuinely dead patients.
+  const corpses=ctx.robots.filter(r=>r.id!==ctx.combat.winner&&!r.mobile&&!r.unconscious).map(r=>r.actor);
   const nodes=[ctx.oilG,ctx.detachedG,...corpses];
   const layer=ctx.arenaRenderer?.rasterizeRemains?ctx.arenaRenderer.rasterizeRemains(nodes,SIZE):(await staticArenaImage(nodes,{pixels:SIZE,exclude:'.robot-label'})).canvas;
   if(signal?.aborted)return;
