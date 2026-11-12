@@ -1,3 +1,4 @@
+import {pendingStrikes} from './strikes.js';
 import {patientGarage} from '../game/patients.js';
 import { clamp, wrap } from '../utils/math.js';
 import { ctx } from "../game/state.js";
@@ -227,11 +228,11 @@ export function fighterIntent(r) {
 
   // Nearby rear contact can trigger a kick without revealing a distant enemy.
   // Keep the body facing forward instead of turning the kick target into a hand target.
-  const kicking=ctx.combat.pending[id]?.source.startsWith('leg-');
+  const kicking=pendingStrikes(id).some(p=>p.source.startsWith('leg-'));
   if(kicking) {
     return {goal:here,speed:0,mode:'лягается',lookPoint:null};
   }
-  const warning = ctx.combat.pending.findIndex(p => p?.victim === id && p.at > ctx.game.time && ctx.robots[p.victim]?.mobile);
+  const warning = ctx.combat.pending.findIndex((_,from)=>pendingStrikes(from).some(p=>p.victim===id&&p.at>ctx.game.time&&ctx.robots[p.victim]?.mobile));
   if (warning >= 0 && r.hasHead && r.movementLimbs >= 1) {
     const enemy = ctx.robots[warning];
     if (enemy.mobile && notices(r, enemy)) {
@@ -259,7 +260,7 @@ export function fighterIntent(r) {
   const nearbyAttackers = active.filter(o =>
     pincerThreat(r,o,pincerRadius,
       r.hasHead && notices(r,o),
-      ctx.combat.pending[o.id]?.victim === id));
+      pendingStrikes(o.id).some(p=>p.victim===id)));
   const opponents = nearbyAttackers.slice().sort((a,b)=>
     Math.hypot(a.x-r.x,a.y-r.y)-Math.hypot(b.x-r.x,b.y-r.y)).slice(0,2);
   const bearings = opponents.map(o=>Math.atan2(o.y-r.y,o.x-r.x));

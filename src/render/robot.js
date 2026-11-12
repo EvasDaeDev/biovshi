@@ -1,3 +1,4 @@
+import {pendingStrikes} from '../systems/strikes.js';
 import {fighterLabel} from '../game/patients.js';
 import { clamp, smooth } from '../utils/math.js';
 import { jumpHeight } from '../robot/scenes.js';
@@ -92,8 +93,8 @@ export function draw(robotState, dt) {
   attr(robotState.neck, 'd', path([robotState.local(robotState.chest, 3, 0), robotState.local(robotState.headFrame, 18 + robotState.headMotion, 0)]));
   robotState.headCenter = robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0);
   robotState.mouthPoint = robotState.local(robotState.headFrame, 34 + robotState.headMotion, 0);
-  const pendingStrike = ctx.combat.pending[robotState.id];
-  const strikePose = pendingStrike ? robotState.attackPose(pendingStrike) : null;
+  const strikePoses=pendingStrikes(robotState.id).map(p=>robotState.attackPose(p)).filter(Boolean);
+  const strikePose=strikePoses.find(p=>p.kind==='head');
   attr(robotState.neck, 'display', robotState.hasHead() ? '' : 'none');
   if (!skinned) {
     robotState.horns.forEach((node, i) => attr(node, 'd', path(robotState.hornPoints(i === 0 ? -1 : 1))));
@@ -128,6 +129,7 @@ export function draw(robotState, dt) {
     }
   }
   for (const l of [...robotState.arms, ...robotState.legs]) {
+    const strikePose=strikePoses.find(p=>p.limb===l);
     const attackEnd = (strikePose?.kind === 'arm' || strikePose?.kind === 'leg') && strikePose.limb === l ? strikePose.tip : robotState.handEnd(l);
     const a = robotState.origin(l),
       solved = ik(a, attackEnd, ...robotState.lengths(l), l.kind === 'arm' ? l.side : -l.side);
@@ -143,7 +145,7 @@ export function draw(robotState, dt) {
     }
     l.pose = [a, solved.joint, solved.end];
   }
-  paintRobotSkin(robotState,strikePose);
+  paintRobotSkin(robotState,strikePoses);
   paintHeadDecor(robotState,strikePose);
   paintTorsoShadow(robotState);
 }

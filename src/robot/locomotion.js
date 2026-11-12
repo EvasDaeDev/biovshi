@@ -1,3 +1,4 @@
+import {pendingStrikes} from '../systems/strikes.js';
 import {resolveSurfaceContacts} from '../systems/surface-contact.js';
 import {patientGarage} from '../game/patients.js';
 import {statMultiplier} from '../garage/model.js';
@@ -437,8 +438,7 @@ export function robotTick(robotState, dt, intent) {
     robotState.api.capsules = robotState.makeCapsules();
     return;
   }
-  const strike=ctx.combat.pending[robotState.id];
-  if(!intent.manual&&strike?.source.startsWith('leg-')){
+  if(!intent.manual&&pendingStrikes(robotState.id).some(p=>p.source.startsWith('leg-'))){
     // Autonomous kicks keep planted supports; manual control keeps movement
     // and turning available throughout every ordinary strike.
     if(robotState.scene)robotState.api.endScene();
