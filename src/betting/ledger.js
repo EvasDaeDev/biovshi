@@ -1,5 +1,10 @@
 import {newGarage} from '../garage/model.js';
 export const BET_WIN_PERCENT = 85;
+export const JACKPOT_INTERVAL = 5;
+export const JACKPOT_PERCENT = 25;
+export function jackpotStatus(s) {
+  return `Розыгрыш 25% джекпота через ${JACKPOT_INTERVAL - (s.jackpotRounds ?? 0)} боёв с выигравшими и проигравшими ставками; не менее 75% остаётся в резерве.`;
+}
 export function betOdds(stakes, winningTotal) {
   return winningTotal ? 1 + (stakes - winningTotal) * BET_WIN_PERCENT / (100 * winningTotal) : null;
 }
@@ -17,6 +22,7 @@ export function betNewSession(names, capital) {
     phase: 'betting',
     arenaId:'ward',
     jackpot: 0,
+    jackpotRounds: 0,
     lockedJackpot: 0,
     players: names.map((name, id) => ({
       id,
@@ -34,6 +40,9 @@ export function betCommit(s, bets) {
   bets.forEach((b, i) => {
     if (b.player !== i || !Number.isInteger(b.amount) || b.amount < 0 || b.amount > s.players[i].balance || !Number.isInteger(b.robot) || b.robot < 0 || b.robot > 3) throw Error('Сумма ставки должна быть целым числом от 0 до баланса игрока.');
   });
+  // Permanent patients can change during the fight. Keep the complete build,
+  // cosmetics and patronage until the result is final, including across reloads.
+  s.roundSnapshot = {garage: structuredClone(s.garage), lastResult: structuredClone(s.lastResult)};
   s.bets = bets.filter(b => b.amount > 0).map(b => ({
     ...b
   }));
@@ -80,7 +89,20 @@ export function betResolve(s, winner) {
       : 'Ставки победителей возвращены. 85% проигравших ставок распределены пропорционально; 15% и остатки округления — в джекпот.';
   }
   const jackpotAdded = stakes - payouts.reduce((n, x) => n + x, 0);
-  s.jackpot = jackpotBefore + jackpotAdded;
+  const jackpotPayouts = s.players.map(() => 0);
+  s.jackpotRounds ??= 0;
+  if (winningTotal > 0 && stakes > winningTotal) {
+    s.jackpotRounds++;
+    if (s.jackpotRounds === JACKPOT_INTERVAL) {
+      const budget = BigInt(Math.floor(jackpotBefore * JACKPOT_PERCENT / 100));
+      for (const b of winning) jackpotPayouts[b.player] = Number(budget * BigInt(b.amount) / BigInt(winningTotal));
+      s.jackpotRounds = 0;
+    }
+  }
+  const jackpotPaid = jackpotPayouts.reduce((n, x) => n + x, 0);
+  jackpotPayouts.forEach((amount, i) => payouts[i] += amount);
+  s.jackpot = jackpotBefore + jackpotAdded - jackpotPaid;
+  if (jackpotPaid) message += ` Розыгрыш джекпота: ${jackpotPaid} монет победителям. Не менее 75% прежнего джекпота и поступления этого боя сохранены.`;
   payouts.forEach((amount, i) => s.players[i].balance += amount);
   s.lastResult = {
     round: s.round,
@@ -89,19 +111,22 @@ export function betResolve(s, winner) {
     stakes,
     jackpot: s.jackpot,
     jackpotAdded,
+    jackpotPaid,
     message,
     rows: s.players.map((p, i) => ({
       name: p.name,
       balance: p.balance,
       stake: s.bets.find(b => b.player === i)?.amount || 0,
       robot: s.bets.find(b => b.player === i)?.robot ?? null,
-      payout: payouts[i]
+      payout: payouts[i],
+      jackpotPayout: jackpotPayouts[i]
     }))
   };
   s.history.unshift(s.lastResult);
   s.history = s.history.slice(0, 10);
   s.phase = 'settled';
   s.lockedJackpot = 0;
+  delete s.roundSnapshot;
   return s.lastResult;
 }
 export function betWinnerNames(s, winner) {
@@ -117,6 +142,11 @@ export function betRefund(s) {
   s.lockedJackpot = 0;
   s.bets = [];
   s.phase = 'betting';
+  if (s.roundSnapshot) {
+    s.garage = s.roundSnapshot.garage;
+    s.lastResult = s.roundSnapshot.lastResult;
+    delete s.roundSnapshot;
+  }
   return true;
 }
 

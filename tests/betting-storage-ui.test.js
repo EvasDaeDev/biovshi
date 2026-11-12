@@ -71,3 +71,17 @@ test('settled version-1 history remains readable and does not issue a second pay
     assert.ok(bettingLoad());
   }finally{close(dom);}
 });
+
+test('jackpot progress and bonus receipts survive reload, and malformed rollback snapshots are rejected',()=>{
+ const dom=setup();try{
+  ctx.betting.jackpotRounds=4;
+  betCommit(ctx.betting,draft);betResolve(ctx.betting,0);bettingSave();
+  ctx.betting=bettingLoad();assert.ok(ctx.betting);
+  assert.equal(ctx.betting.jackpotRounds,0);assert.equal(ctx.betting.lastResult.jackpotPaid,5);
+  bettingResults();assert.match(document.querySelector('#bet-result-summary').textContent,/Выплачено из джекпота: 5/);
+  bettingOpen();assert.match(ctx.betContent.querySelector('[data-jackpot-status]').textContent,/через 5/);
+  betCommit(ctx.betting,draft);
+  ctx.betting.roundSnapshot.garage[0].investments={'99':10};bettingSave();
+  assert.equal(bettingLoad(),null);
+ }finally{close(dom);}
+});

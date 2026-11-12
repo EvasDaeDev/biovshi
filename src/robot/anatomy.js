@@ -80,11 +80,11 @@ export function leakOrigin(robotState, key) {
       y: (robotState.spine[i].y + robotState.spine[i + 1].y) / 2
     };
   }
-  const parts = key.split('-');
-  if (parts.length >= 3) {
-    const kind = parts[0],
-      side = Number(parts[1]),
-      part = parts[2];
+  const parts = /^(arm|leg)-(-?1)-(upper|lower)$/.exec(key);
+  if (parts) {
+    const kind = parts[1],
+      side = Number(parts[2]),
+      part = parts[3];
     const pool = kind === 'arm' ? robotState.arms : kind === 'leg' ? robotState.legs : [];
     const limb = pool.find(l => l.side === side);
     if (limb) {

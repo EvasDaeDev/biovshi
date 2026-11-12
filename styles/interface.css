@@ -1,16 +1,12 @@
 /* Scoped page theme overrides default white wrappers without changing arena colors. */
 html body #robot-tag-hops-v22 { color:#d5e9f3; }
-html body #robot-tag-hops-v22 .viz-controls { color:#d5e9f3; }
-html body #robot-tag-hops-v22 #tag7hop-status { color:#c6e8f6; }
-html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#daf6ff; border:1px solid #284763; }
-#robot-tag-hops-v22 .tag7hop-layout {display:flex;gap:18px;align-items:flex-start}
-#robot-tag-hops-v22 .tag7hop-sidebar-wrap {width:244px;flex:none;display:flex;flex-direction:column;gap:6px}
+#robot-tag-hops-v22 .tag7hop-sidebar-wrap {flex:none;display:flex;flex-direction:column;gap:6px}
 #robot-tag-hops-v22 .tag7hop-sidebar-title {display:none}
 #robot-tag-hops-v22 .tag7hop-sidebar {display:grid;gap:6px}
 #robot-tag-hops-v22 .tag7hop-main {flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:10px}
-#robot-tag-hops-v22 .tag7hop-stage {position:relative;isolation:isolate;width:100%;max-width:none;aspect-ratio:1}
-#robot-tag-hops-v22 .robot-card {position:relative;padding:4px 10px 4px;border:1px solid #204d74;border-radius:0;background:linear-gradient(180deg, rgba(9,20,43,.97), rgba(5,12,26,.98));color:#dff6ff;box-shadow:inset 0 0 0 1px rgba(102,238,255,.06),0 10px 24px rgba(2,6,16,.24);overflow:hidden}
-#robot-tag-hops-v22 .robot-card::before {content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--accent,#65eeff);box-shadow:0 0 12px var(--accent,#65eeff)}
+#robot-tag-hops-v22 .tag7hop-stage {position:relative;isolation:isolate;width:100%;max-width:none}
+#robot-tag-hops-v22 .robot-card {position:relative;padding:4px 10px 4px;border-radius:0;overflow:hidden}
+#robot-tag-hops-v22 .robot-card::before {content:"";position:absolute;inset:0 auto 0 0;background:var(--accent,#65eeff)}
 #robot-tag-hops-v22 .robot-card::after {content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .18s ease}
 #robot-tag-hops-v22 .robot-card.bleeding::after {background:rgba(160,0,20,.30);opacity:1}
 #robot-tag-hops-v22 .robot-card.disabled::after {background:rgba(0,0,0,.70);opacity:1}
@@ -21,17 +17,17 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
 #robot-tag-hops-v22 .robot-card-score {text-align:right}
 #robot-tag-hops-v22 .robot-card-segments {font-size:15px;font-weight:700;color:#fff}
 #robot-tag-hops-v22 .robot-card-score small {display:block;font-size:9px;color:#8fb9cc}
-#robot-tag-hops-v22 .robot-card-action {margin:0;flex:1 1 auto;min-width:0;padding:0;background:none;border:0;border-radius:0;font-size:11px;line-height:1.1;color:#9ec4d6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#robot-tag-hops-v22 .robot-card-metrics {display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:3px}
+#robot-tag-hops-v22 .robot-card-action {margin:0;flex:1 1 auto;min-width:0;padding:0;background:none;border:0;border-radius:0;font-size:11px;line-height:1.1;color:#9ec4d6;overflow:hidden;text-overflow:ellipsis}
+#robot-tag-hops-v22 .robot-card-metrics {display:grid;margin-bottom:3px}
 #robot-tag-hops-v22 .metric-box {padding:0;border-radius:0;background:transparent;border:0}
 #robot-tag-hops-v22 .metric-head {display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#8fb9cc;margin-bottom:4px}
 #robot-tag-hops-v22 .metric-icon {font-size:13px;line-height:1}
 #robot-tag-hops-v22 .metric-inline {display:flex;align-items:center;gap:7px;min-height:19px;white-space:nowrap}
 #robot-tag-hops-v22 .metric-inline .metric-value {display:inline;white-space:nowrap}
-#robot-tag-hops-v22 .metric-value {font-size:11px;font-weight:700;color:#f4fcff}
-#robot-tag-hops-v22 .mini-track {height:6px;border-radius:999px;background:rgba(113,143,165,.18);overflow:hidden;margin-top:2px}
-#robot-tag-hops-v22 .mini-fill {height:100%;border-radius:999px;background:linear-gradient(90deg,#ff5c5c,#ffd84a 56%,#4dff88);box-shadow:0 0 10px rgba(102,238,255,.14)}
-#robot-tag-hops-v22 .robot-card-body {display:block;min-height:0;margin-top:0}
+#robot-tag-hops-v22 .metric-value {font-size:11px;font-weight:700}
+#robot-tag-hops-v22 .mini-track {height:6px;border-radius:999px;overflow:hidden;margin-top:2px}
+#robot-tag-hops-v22 .mini-fill {height:100%;border-radius:999px;background:linear-gradient(90deg,#ff5c5c,#ffd84a 56%,#4dff88)}
+#robot-tag-hops-v22 .robot-card-body {margin-top:0}
 #robot-tag-hops-v22 .robot-card-modules {display:none}
 #robot-tag-hops-v22 .module-pill {display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 6px;border-radius:9px;background:rgba(5,12,24,.85);border:1px solid rgba(101,238,255,.08);font-size:10px;line-height:1.1}
 #robot-tag-hops-v22 .module-pill .label {color:#dff6ff;text-transform:uppercase;letter-spacing:.06em}
@@ -51,8 +47,7 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
   background:color-mix(in srgb,var(--night-bg) 65%,transparent);
 }
 #robot-tag-hops-v22 .tag7hop-intro[hidden] {display:none}
-#robot-tag-hops-v22 .tag7hop-intro-card {
-  width:33.333333%;aspect-ratio:1;box-sizing:border-box;padding:clamp(8px,2vw,24px);
+#robot-tag-hops-v22 .tag7hop-intro-card {box-sizing:border-box;
   display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:clamp(8px,2vw,22px);
   background:var(--night-bg);border:1.5px solid var(--night-ink);color:var(--night-ink);text-align:center;
   box-shadow:0 0 26px color-mix(in srgb,var(--night-ink) 16%,transparent);
@@ -60,14 +55,12 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
 #robot-tag-hops-v22 #tag7hop-intro-title {margin:0;line-height:1.2;font-size:clamp(14px,3.2vw,32px);font-weight:700}
 #robot-tag-hops-v22 #tag7hop-intro-title small {display:block;margin-top:.55em;font-size:.48em;line-height:1.4;font-weight:400}
 #robot-tag-hops-v22 #tag7hop-start {
-  min-height:36px;padding:.55em .7em;border:1px solid var(--night-ink);border-radius:0;
-  background:var(--night-ink);color:var(--night-bg);font-size:clamp(13px,2.2vw,22px);font-weight:700;cursor:pointer;
+  min-height:36px;padding:.55em .7em;border:1px solid var(--night-ink);border-radius:0;font-size:clamp(13px,2.2vw,22px);font-weight:700;cursor:pointer;
 }
 #robot-tag-hops-v22 #tag7hop-start:focus-visible {outline:2px solid var(--night-accent);outline-offset:4px}
 #robot-tag-hops-v22 #tag7hop-start:hover {filter:brightness(1.15)}
 #robot-tag-hops-v22 button:disabled {opacity:.45;cursor:default}
 #robot-tag-hops-v22 {
-  color:var(--foreground);
   --tag-label-size:12px
 }
 
@@ -293,12 +286,6 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
   display:inline
 }
 
-
-#robot-tag-hops-v22 #tag7hop-field .score-text {
-  fill:#c9f6ff;
-  filter:drop-shadow(0 0 2px #358bd6)
-}
-
 /* Зелёный цвет обозначает защиту. Его доля вычисляется по оставшемуся времени. */
 #robot-tag-hops-v22 { --night-protected: #72ed90; }
 #tag7hop-actors .robot.protected { stroke: var(--robot-color); }
@@ -340,9 +327,7 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
 #tag7hop-status span { color:#c9f6ff; border-color:#285c8e; box-shadow:none; }
 #robot-tag-hops-v22 .gladiator-results[hidden] { display: none !important; }
 #robot-tag-hops-v22 .gladiator-results {
-  position: fixed; inset: 0; z-index: 1100;
-  display: flex; align-items: center; justify-content: center;
-  box-sizing: border-box; background: rgba(2, 5, 13, .87); padding: 16px;
+  display: flex; align-items: center; justify-content: center; background: rgba(2, 5, 13, .87); padding: 16px;
   overflow: auto;
 }
 #robot-tag-hops-v22 .gladiator-results-card {
@@ -353,27 +338,25 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
   font-variant-numeric: tabular-nums;
 }
 #robot-tag-hops-v22 .gladiator-results-kicker {
-  font-size: 12px; color: #9abed2; font-weight: 600; letter-spacing: .14em;
+  font-size: 12px; font-weight: 600; letter-spacing: .14em;
 }
 #robot-tag-hops-v22 #gladiator-results-title {
-  font-weight: 800; color: #fff; font-size: clamp(20px, 3.5vw, 32px);
+  font-weight: 800; font-size: clamp(20px, 3.5vw, 32px);
   margin: 5px 0 3px; line-height: 1.15;
-  text-shadow: 0 0 12px #45c9ff;
 }
-#robot-tag-hops-v22 .gladiator-results-summary {font-size: 13px; color: #b7d3e0; margin: 0 0 12px;}
+#robot-tag-hops-v22 .gladiator-results-summary {font-size: 13px; margin: 0 0 12px;}
 #robot-tag-hops-v22 .gladiator-results-totals {
   display: grid; grid-template-columns: repeat(3, minmax(0,1fr));
-  gap: 7px; margin-bottom: 14px;
+  gap: 7px;
 }
 #robot-tag-hops-v22 .gladiator-result-total {
   padding: 8px 4px; text-align: center;
-  border: 1px solid #2a5265; background: #0a2130;
 }
-#robot-tag-hops-v22 .gladiator-result-total strong {display:block; font-size: clamp(16px, 2.8vw, 24px); color: #65eeff;}
-#robot-tag-hops-v22 .gladiator-result-total small {display:block; font-size: 11px; color: #c5dfeb;}
+#robot-tag-hops-v22 .gladiator-result-total strong {display:block; font-size: clamp(16px, 2.8vw, 24px);}
+#robot-tag-hops-v22 .gladiator-result-total small {display:block; font-size: 11px;}
 #robot-tag-hops-v22 .gladiator-results-table-wrap {overflow-x:auto;}
 #robot-tag-hops-v22 .gladiator-results-table {
-  border-collapse:collapse; width:100%; color: #e9faff; font-size: clamp(10px, 1.75vw, 13px);
+  border-collapse:collapse; width:100%;
 }
 #robot-tag-hops-v22 .gladiator-results-table :is(th,td) {
   text-align:center; padding: 7px 3px; border-bottom: 1px solid #29485c;
@@ -395,18 +378,18 @@ html body #robot-tag-hops-v22 .viz-controls .btn { background:#102039; color:#da
 html body #robot-tag-hops-v22 {max-width:none;flex-basis:auto}
 #robot-tag-hops-v22 .tag7hop-layout {display:grid;grid-template-columns:var(--card-width) minmax(0,1fr) calc(var(--card-width) + 20px);gap:20px;align-items:start}
 #robot-tag-hops-v22 .tag7hop-sidebar-wrap {width:100%}
-#robot-tag-hops-v22 .atmosphere-controls {position:relative;display:flex;justify-content:flex-start;align-items:center;gap:8px;min-height:48px;box-sizing:border-box;padding:8px 14px;border:1px solid #29485c;background:#071320;margin-bottom:12px}
-html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transform:translateX(-50%);order:0;flex-basis:auto;margin:0;color:#65eeff;font-weight:700;white-space:nowrap}
-#robot-tag-hops-v22 #bet-hud {min-width:0;margin:0;padding:clamp(12px,5vh,60px) 12px 12px;background:transparent;border:0;line-height:1.5;max-height:calc(100dvh - 110px);overflow:auto}
-#robot-tag-hops-v22 .bet-hud-bank {font-size:24px;color:#dff6ff;margin-bottom:24px}
+#robot-tag-hops-v22 .atmosphere-controls {position:relative;display:flex;justify-content:flex-start;align-items:center;gap:8px;min-height:48px;box-sizing:border-box;padding:8px 14px;margin-bottom:12px}
+html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transform:translateX(-50%);order:0;flex-basis:auto;margin:0;font-weight:700;white-space:nowrap}
+#robot-tag-hops-v22 #bet-hud {min-width:0;margin:0;background:transparent;border:0;line-height:1.5;max-height:calc(100dvh - 110px);overflow:auto}
+#robot-tag-hops-v22 .bet-hud-bank {font-size:24px;color:#dff6ff}
 #robot-tag-hops-v22 .bet-hud-bank strong {color:#65eeff}
-#robot-tag-hops-v22 .bet-hud-player {border-left:3px solid var(--fighter,#29485c);padding:9px 10px;margin:0 0 12px;background:#071320;font-size:14px;overflow-wrap:anywhere}
+#robot-tag-hops-v22 .bet-hud-player {margin:0 0 12px;font-size:14px;overflow-wrap:anywhere}
 #robot-tag-hops-v22 .bet-hud-player-name {color:#e9faff;font-weight:700}
 #robot-tag-hops-v22 .bet-hud-player-balance {color:#c5dfeb;margin-top:3px}
-#robot-tag-hops-v22 .bet-hud-player-stake {color:var(--fighter,#a5c4d5);margin-top:5px;font-size:13px}
+#robot-tag-hops-v22 .bet-hud-player-stake {color:var(--fighter,#a5c4d5);margin-top:5px}
 @media(max-width:1050px){
  #robot-tag-hops-v22 .tag7hop-layout {grid-template-columns:var(--card-width) minmax(0,1fr)}
- #robot-tag-hops-v22 #bet-hud {grid-column:1/-1;padding:12px 0;max-height:none;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
+ #robot-tag-hops-v22 #bet-hud {grid-column:1/-1;padding:12px 0;max-height:none;display:flex;gap:10px;align-items:flex-start}
  #robot-tag-hops-v22 .bet-hud-bank {font-size:20px;margin:0 10px 0 0}
  #robot-tag-hops-v22 .bet-hud-player {margin:0;min-width:150px}
 }
@@ -423,7 +406,7 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 /* Touch-device profile keeps anatomy, identity outlines and obstacle shadows. */
 #robot-tag-hops-v22 .graphics-control { display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#a5c4d5 }
 #robot-tag-hops-v22 #graphics-quality { background:#102039;color:#daf6ff;border:1px solid #284763;padding:5px;font:inherit }
-#robot-tag-hops-v22 #render-fps { color:#8ba6b8;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap }
+#robot-tag-hops-v22 #render-fps {font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap }
 #robot-tag-hops-v22.render-light #tag7hop-actors .robot .head,
 #robot-tag-hops-v22.render-light #tag7hop-trails,
 #robot-tag-hops-v22.render-light #tag7hop-pulses,
@@ -433,9 +416,6 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 #robot-tag-hops-v22.render-light #tag7hop-timer { mix-blend-mode:normal }
 
 /* The speed switch stays visibly latched while double time is active. */
-html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] {
-  background:#235361;color:#fff4cc;border-color:#e8c174;
-}
 
 #texture-loading {position:fixed;inset:0;z-index:2000;display:grid;place-items:center;background:#090f0c;color:#d3cead;font:18px system-ui;}
 
@@ -462,7 +442,7 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #robot-tag-hops-v22 .settings-overlay[hidden] {display:none}
 #robot-tag-hops-v22 .settings-overlay {position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:20px;background:rgba(0,4,10,.78)}
 #robot-tag-hops-v22 .settings-panel {box-sizing:border-box;width:min(100%,560px);max-height:calc(100dvh - 40px);overflow:auto;padding:20px;border:1px solid #39718b;background:#071320;box-shadow:0 12px 50px #0009;color:#dff6ff}
-#robot-tag-hops-v22 .settings-panel header {display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px}
+#robot-tag-hops-v22 .settings-panel header {display:flex;align-items:center;gap:20px;margin-bottom:18px}
 #robot-tag-hops-v22 .settings-panel h2 {margin:0;font-size:22px}
 #robot-tag-hops-v22 .settings-panel .render-diagnostics {font-size:14px;line-height:1.6}
 #robot-tag-hops-v22 .settings-panel .render-diagnostics label {display:flex;gap:8px;margin:10px 0}
@@ -470,9 +450,9 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #robot-tag-hops-v22 .performance-details summary {cursor:pointer}
 #robot-tag-hops-v22 .performance-details output {margin-top:8px;color:#8ba6b8;font-size:12px}
 
-#robot-tag-hops-v22 .portrait-wrap {display:flex;justify-content:center;align-items:center}
-#robot-tag-hops-v22 .patient-portrait {display:block;width:100%;height:auto;max-height:140px;object-fit:contain;image-rendering:pixelated}
-#robot-tag-hops-v22 .settings-panel .btn {background:#102039;color:#daf6ff;border:1px solid #284763;min-width:40px;min-height:40px}
+#robot-tag-hops-v22 .portrait-wrap {display:flex;align-items:center}
+#robot-tag-hops-v22 .patient-portrait {display:block;image-rendering:pixelated}
+#robot-tag-hops-v22 .settings-panel .btn {min-width:40px;min-height:40px}
 
 /* Fixed matching cards; only the arena viewport grows with the window. */
 #robot-tag-hops-v22 {--card-width:260px;--card-height:164px}
@@ -488,7 +468,7 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #robot-tag-hops-v22 .patient-portrait {height:100%;max-height:none;object-fit:contain}
 #robot-tag-hops-v22 #bet-hud {box-sizing:border-box;padding:12px 0;display:flex;flex-direction:column;gap:8px}
 #robot-tag-hops-v22 .bet-hud-bank {margin-bottom:16px}
-#robot-tag-hops-v22 .bet-hud-player {padding:12px;border:1px solid #204d74;border-left:3px solid var(--fighter,#29485c);display:flex;flex-direction:column;justify-content:center}
+#robot-tag-hops-v22 .bet-hud-player {display:flex;flex-direction:column;justify-content:center}
 #robot-tag-hops-v22 .bet-hud-player-name {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #robot-tag-hops-v22 .settings-panel .graphics-control {display:flex;margin:0 0 16px;gap:12px}
 @media(max-width:1050px){#robot-tag-hops-v22 #bet-hud{flex-direction:row;flex-wrap:wrap}#robot-tag-hops-v22 .bet-hud-bank{flex-basis:100%}}
@@ -506,15 +486,15 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #robot-tag-hops-v22.arena-expanded .arena-expand-button {background:#235361;color:#fff4cc;border-color:#e8c174}
 
 /* The portrait uses the left column; skills occupy the right column. */
-#robot-tag-hops-v22 .robot-card-body{display:grid;grid-template-columns:minmax(0,1fr) 91px;gap:6px;align-items:center}
+#robot-tag-hops-v22 .robot-card-body{display:grid;gap:6px;align-items:center}
 #robot-tag-hops-v22 .robot-card-metrics{grid-template-columns:minmax(0,1fr) 91px;gap:6px}
 #robot-tag-hops-v22 .robot-card-score{display:flex;align-items:center;gap:4px;white-space:nowrap}
-#robot-tag-hops-v22 .portrait-wrap{justify-content:flex-start;min-width:0;overflow:hidden}
-#robot-tag-hops-v22 .patient-portrait{width:100%;object-position:left center}
-#robot-tag-hops-v22 .patient-skills{display:flex;flex-direction:column;gap:7px;font-size:12px;font-variant-numeric:tabular-nums}
+#robot-tag-hops-v22 .portrait-wrap{min-width:0;overflow:hidden}
+#robot-tag-hops-v22 .patient-portrait{width:100%}
+#robot-tag-hops-v22 .patient-skills{display:flex;flex-direction:column;gap:7px;font-variant-numeric:tabular-nums}
 #robot-tag-hops-v22 .patient-skills>div{display:flex;align-items:center;gap:6px;white-space:nowrap}
 #robot-tag-hops-v22 .patient-skills>div>span:first-child{width:19px;text-align:center;font-size:16px}
-.biovshi-hint{position:fixed;z-index:100;max-width:240px;padding:5px 7px;border:1px solid #37596b;background:#071320;color:#dff6ff;font:8.6667px/1.45 Arial,sans-serif;pointer-events:none;white-space:normal}
+.biovshi-hint{position:fixed;padding:5px 7px;font:8.6667px/1.45 Arial,sans-serif;pointer-events:none;white-space:normal}
 /* Shared alignment and patient identity. */
 #robot-tag-hops-v22 h1,#robot-tag-hops-v22 h2,#robot-tag-hops-v22 h3,#robot-tag-hops-v22 th,#robot-tag-hops-v22 .gladiator-results-summary{text-align:center}
 #robot-tag-hops-v22 .patient-name{font-weight:700;white-space:nowrap}
@@ -528,12 +508,12 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 #robot-tag-hops-v22 .settings-panel header h2{flex:1;text-align:center}
 #robot-tag-hops-v22 .settings-panel header .btn{position:absolute;right:0}
 
-#robot-tag-hops-v22 #gladiator-results-procedure{border:1px solid #39718b;background:#102b3e;color:#dff6ff;font-weight:700;cursor:pointer;padding:11px;margin-top:16px;border-radius:0;min-height:42px;font-size:14px}
+#robot-tag-hops-v22 #gladiator-results-procedure{border:1px solid #39718b;font-weight:700;cursor:pointer;padding:11px;margin-top:16px;border-radius:0;min-height:42px;font-size:14px}
 #robot-tag-hops-v22 #gladiator-results-procedure:hover{background:#1b4056}
 
 #robot-tag-hops-v22 #combat-log[data-full="true"]{-webkit-mask-image:linear-gradient(to bottom,transparent,#000 28px);mask-image:linear-gradient(to bottom,transparent,#000 28px)}
 
 #robot-tag-hops-v22 .audio-controls{margin:16px 0}
 #robot-tag-hops-v22 .audio-controls label{display:grid;grid-template-columns:65px minmax(0,1fr) 45px;align-items:center;gap:12px;margin:12px 0;font-size:14px}
-#robot-tag-hops-v22 .audio-controls input{width:100%;min-width:0;accent-color:#5eeaff}
+#robot-tag-hops-v22 .audio-controls input{width:100%;min-width:0}
 #robot-tag-hops-v22 .audio-controls output{text-align:right;font-variant-numeric:tabular-nums}

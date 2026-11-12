@@ -122,9 +122,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.SCAN_SPEED = CONFIG.vision.scanSpeedDeg * Math.PI / 180;
   ctx.TRACK_SPEED = CONFIG.vision.trackingSpeedDeg * Math.PI / 180;
   ctx.TRACK_LIMIT = Math.PI / 2;
-  ctx.CHASE_SPEED = CONFIG.movement.chaseSpeedCm;
   ctx.ROBOT_COUNT = tower?towerEnemyCount(tower)+1:4;
-  ctx.FLEE_MEMORY = CONFIG.movement.fleeMemorySec;
   ctx.obstacles = ctx.arenaDefinition.obstacles.map(b => ({
     ...b,
     points: obstacleVertices(b)
@@ -249,42 +247,11 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.gridMajorNode = undefined;
   ctx.gridBaseMinor = undefined;
   ctx.gridBaseMajor = undefined;
-  ctx.game = {
-    time: 0,
-    hunter: 0,
-    tags: 0,
-    scores: Array(ctx.ROBOT_COUNT).fill(0),
-    readyAt: 0,
-    ceremony: null,
-    immune: Array(ctx.ROBOT_COUNT).fill(0),
-    bans: Array.from({
-      length: ctx.ROBOT_COUNT
-    }, () => Array(ctx.ROBOT_COUNT).fill(0)),
-    lastPursued: Array(ctx.ROBOT_COUNT).fill(-99),
-    target: null,
-    pursuitAt: 0,
-    pursuitDistance: 0,
-    lastSeen: null,
-    lostFor: 0,
-    events: [],
-    cornerReleases: 0,
-    switches: 0
-  };
+  ctx.game = {time: 0, events: []};
   ctx.round = {
     elapsedSec: 0
   };
   ctx.seed = Math.floor(Math.random() * 4294967296) >>> 0;
-  ctx.HEARING = {
-    radiusCm: 205,
-    blockedRadiusCm: 95,
-    minMoveCmSec: 13,
-    stepMinSec: .85,
-    stepMaxSec: 1.25,
-    memorySec: 2.4,
-    searchHoldSec: 1.0
-  };
-  ctx.soundEvents = [];
-  ctx.nextFootstepAt = Array(ctx.ROBOT_COUNT).fill(0);
   ctx.agentAI = Array.from({
     length: ctx.ROBOT_COUNT
   }, (_, id) => ({
@@ -307,7 +274,6 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     sensedId: null,
     sensedType: null,
     searchHoldUntil: 0,
-    lastSoundAt: -Infinity,
     lastHitAt: -100,
     profile: null,
     side: 0,
@@ -418,7 +384,6 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   initializeHitEffects();
   drawGrid();
   drawFloorDecals();
-  ctx.game.hunter = -1;
   rebuildRobots();
   ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = true;
   ctx.startButton.onclick = beginGame;
