@@ -20,17 +20,12 @@
 #robot-tag-hops-v22[data-game-mode="tower"] #streamer-mascot-toggle {left:144px}
 /* Speech follows the mascot and stays outside the arena's lighting/post effects. */
 #robot-tag-hops-v22 .streamer-quip {
- position:absolute;left:45%;bottom:78%;z-index:1;
- box-sizing:border-box;width:max-content;max-width:min(210px,40vw);
- margin:0;padding:7px 10px;border:2px solid #a89b78;
- background:#181b13f2;color:#f2e6c4;
- font:700 14px/1.2 "Arial Narrow",Arial,sans-serif;
- text-align:left;overflow-wrap:anywhere;text-shadow:1px 1px #000;
- box-shadow:3px 3px 0 #0008;pointer-events:none;
-}
-#robot-tag-hops-v22 .streamer-quip::after {
- content:"";position:absolute;left:12px;bottom:-7px;width:10px;height:10px;
- background:#181b13;border-right:2px solid #a89b78;border-bottom:2px solid #a89b78;
- transform:skewY(-30deg);
+ position:absolute;left:94%;bottom:55%;z-index:1;
+ box-sizing:border-box;width:max-content;max-width:min(280px,45vw);
+ margin:0;padding:0;border:0;background:none;color:#f2e6c4;
+ font:700 18.6667px/1.2 "Arial Narrow",Arial,sans-serif;
+ text-align:left;overflow-wrap:anywhere;
+ text-shadow:0 1px 2px #000,1px 0 2px #000,-1px 0 2px #000;
+ pointer-events:none;
 }
 #robot-tag-hops-v22 .streamer-quip[hidden] {display:none}

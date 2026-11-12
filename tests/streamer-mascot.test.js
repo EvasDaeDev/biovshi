@@ -46,7 +46,7 @@ test('mascot renders in both modes, keeps its own visibility and uses shared hin
   assert.equal(box.querySelector('.streamer-quip').hidden,true);
   ctx.paused=true;for(let i=0;i<110;i++)ctx.streamerMascot.sync(.1,500+i*100);
   assert.equal(box.querySelector('.streamer-quip').hidden,true);
-  ctx.paused=false;for(let i=0;i<104;i++)ctx.streamerMascot.sync(.1,12000+i*100);
+  ctx.paused=false;for(let i=0;i<204;i++)ctx.streamerMascot.sync(.1,12000+i*100);
   assert.equal(box.dataset.emotion,'annoyed');
   assert.equal(box.querySelector('.streamer-quip').textContent,'…скуучно.');
   button.click();assert.equal(box.hidden,true);assert.equal(button.dataset.hint,'Показать маскота');
