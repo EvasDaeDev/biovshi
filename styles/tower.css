@@ -64,3 +64,7 @@
 #robot-tag-hops-v22 #tower-artifact-view>summary{cursor:pointer;font-size:13px;font-weight:bold;letter-spacing:.04em}
 #robot-tag-hops-v22 #tower-prep-artifacts{margin-top:10px;padding:10px;background:#292c20;border:1px solid #8b784f}
 #robot-tag-hops-v22 #tower-prep-artifacts .artifact-award-note{display:none}
+
+/* Dark result sheets override the paper theme's paragraph colors. */
+#robot-tag-hops-v22 #bet-result-summary .tower-run-summary p{color:#f3e1ae}
+#robot-tag-hops-v22 #bet-result-summary .tower-run-summary :is(.artifact-award-note,.artifact-completed){color:#f3d884}
