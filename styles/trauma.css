@@ -1,0 +1,21 @@
+/* Compact secondary metric in the existing skill column; card size is unchanged. */
+#robot-tag-hops-v22 .patient-summary {min-width:0;display:flex;flex-direction:column;gap:8px}
+#robot-tag-hops-v22 .patient-trauma {font-size:10px;line-height:1.2;color:#b2aa91;font-variant-numeric:tabular-nums}
+#robot-tag-hops-v22 .patient-trauma-label {display:flex;justify-content:space-between;gap:4px;margin-bottom:4px;white-space:nowrap}
+#robot-tag-hops-v22 .patient-trauma-track {height:4px;overflow:hidden;border:1px solid #424b3d;background:#141914}
+#robot-tag-hops-v22 .patient-trauma-fill {display:block;width:100%;height:100%;transform:scaleX(0);transform-origin:left center;background:#7e9a79}
+#robot-tag-hops-v22 .patient-trauma[data-severity="warning"] .patient-trauma-fill {background:#d7a45d}
+#robot-tag-hops-v22 .patient-trauma[data-severity="critical"] .patient-trauma-fill {background:#cf645a}
+@media (max-height:740px) and (min-width:801px) {
+  #robot-tag-hops-v22 .patient-summary {gap:4px}
+  #robot-tag-hops-v22 .patient-summary .patient-skills {gap:3px;line-height:1.2}
+  #robot-tag-hops-v22 .patient-summary .patient-skills img.ui-icon {width:16px;height:16px}
+  #robot-tag-hops-v22 .patient-trauma {font-size:9px}
+  #robot-tag-hops-v22 .patient-trauma-label {margin-bottom:2px}
+  #robot-tag-hops-v22 .patient-trauma-track {height:3px}
+}
+@media (max-height:600px) and (min-width:801px) {
+  #robot-tag-hops-v22 .patient-summary {gap:2px}
+  #robot-tag-hops-v22 .patient-summary .patient-skills {gap:2px;font-size:10px}
+  #robot-tag-hops-v22 .patient-summary .patient-skills img.ui-icon {width:12px;height:12px}
+}

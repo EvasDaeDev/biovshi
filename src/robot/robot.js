@@ -242,6 +242,8 @@ function createRobot(id, start) {
   };
   robotState.movementLimbs = () => anatomyCounts().limbs;
   robotState.bledOut = false;
+  robotState.trauma = 0;
+  robotState.knockoutCause = null;
   robotState.hitReaction = null;
   robotState.recoilX = 0;
   robotState.recoilY = 0;
@@ -422,6 +424,8 @@ function createRobot(id, start) {
       return robotState.segments.length;
     },
     get unconscious() { return robotState.bledOut; },
+    get trauma() { return robotState.trauma; },
+    get knockoutCause() { return robotState.knockoutCause; },
      get movementLimbs() {
       return robotState.movementLimbs();
     },

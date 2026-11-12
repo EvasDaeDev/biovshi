@@ -10,10 +10,11 @@ export function makeRobotCard(id) {
   card.style.setProperty('--accent', ROBOT_COLORS[id%4]);
   card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${patientName(id,{short:true})}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><span aria-hidden="true">${uiIcon('bone')}</span> <span class="robot-card-segments">13/13</span></div></div>
   <div class="robot-card-body"><div class="portrait-wrap"><canvas class="patient-portrait" width="280" height="224" role="img" aria-label="Пациент ${String.fromCharCode(65+id)}"></canvas></div>
-  <div class="patient-skills" aria-label="Умения пациента">
+  <div class="patient-summary"><div class="patient-skills" aria-label="Умения пациента">
   <div aria-label="Сила" title="Сила определяет шанс критического урона (КРИТ)"><span aria-hidden="true">${uiIcon('strength')}</span><span class="js-strength">3 · 15% КРИТ</span></div>
   <div aria-label="Скорость" title="Скорость движения"><span aria-hidden="true">${uiIcon('speed')}</span><span class="js-speed">3 · 100%</span></div>
-  <div aria-label="Маневренность" title="Маневренность · скорость поворота"><span aria-hidden="true">${uiIcon('mobility')}</span><span class="js-maneuver">3 · 100%</span></div></div></div>`;
+  <div aria-label="Маневренность" title="Маневренность · скорость поворота"><span aria-hidden="true">${uiIcon('mobility')}</span><span class="js-maneuver">3 · 100%</span></div></div>
+  <div class="patient-trauma" title="Накопленная травма: заполнение шкалы приводит к потере сознания. Разрушение головы остаётся смертельным. Утрата всех конечностей также приводит к отключению."><div class="patient-trauma-label"><span>ТРАВМА</span><span class="js-trauma-value"></span></div><div class="patient-trauma-track" role="progressbar" aria-label="Накопленная травма" aria-valuemin="0"><span class="patient-trauma-fill"></span></div></div></div></div>`;
   ctx.roles.appendChild(card);
   return {
     card,
@@ -22,7 +23,11 @@ export function makeRobotCard(id) {
     strength:card.querySelector('.js-strength'),
     speed:card.querySelector('.js-speed'),
     maneuver:card.querySelector('.js-maneuver'),
-    portrait:card.querySelector('.patient-portrait')
+    portrait:card.querySelector('.patient-portrait'),
+    trauma:card.querySelector('.patient-trauma'),
+    traumaValue:card.querySelector('.js-trauma-value'),
+    traumaTrack:card.querySelector('.patient-trauma-track'),
+    traumaFill:card.querySelector('.patient-trauma-fill')
   };
 }
 export function moduleSnapshot(robot, keys) {

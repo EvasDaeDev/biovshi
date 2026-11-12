@@ -245,6 +245,11 @@ const CONFIG = {
     growFactor: 1.5 // Финальный размер пятна = стартовый × 1.5.
   },
   combat: {
+    trauma: {
+      enabled: true,
+      threshold: 24, // Накопленная травма до потери сознания; отдельна от HP.
+      headMultiplier: 1.5, // Учитывается только фактически снятое HP.
+    },
     healthPerSegment: 3,
     // Три точных попадания уничтожают каждый сегмент.
     attackRangeCm: 31.5,

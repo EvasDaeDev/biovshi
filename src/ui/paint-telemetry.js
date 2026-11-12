@@ -6,6 +6,8 @@ import { friendlyAction, segmentDisplayState } from './telemetry.js';
 import { PORTRAIT_BONES,paintPatientPortrait } from './patient-portrait.js';
 const setText = (node, value) => { if (node.textContent !== value) node.textContent = value; };
 const setClass = (node,key,on) => {if(node.classList.contains(key)!==on)node.classList.toggle(key,on);};
+const formatTrauma = new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
+const setAttribute = (node,key,value) => {if(node.getAttribute(key)!==value)node.setAttribute(key,value);};
 
 export function paintTelemetry() {
   if(ctx.telemetryEnabled===false||ctx.arenaExpanded)return;
@@ -25,6 +27,19 @@ export function paintTelemetry() {
     setText(card.strength,`${stats[1]} · ${Math.round(critChance(stats[1])*100)}% КРИТ`);
     setText(card.speed,`${stats[0]} · ${Math.round(statMultiplier(stats[0])*100)}%`);
     setText(card.maneuver,`${stats[2]} · ${Math.round(statMultiplier(stats[2])*100)}%`);
+    const {enabled,threshold}=CONFIG.combat.trauma;
+    const traumaHidden=!enabled;
+    if(card.trauma.hidden!==traumaHidden)card.trauma.hidden=traumaHidden;
+    if(enabled){
+      const value=Math.min(threshold,Math.max(0,r.trauma??0)),ratio=value/threshold;
+      setText(card.traumaValue,`${formatTrauma.format(value)} / ${formatTrauma.format(threshold)}`);
+      setAttribute(card.traumaTrack,'aria-valuemax',String(threshold));
+      setAttribute(card.traumaTrack,'aria-valuenow',String(value));
+      setAttribute(card.traumaTrack,'aria-valuetext',`${formatTrauma.format(value)} из ${formatTrauma.format(threshold)}${r.unconscious?' · без сознания':!r.hasHead?' · погиб':''}`);
+      setAttribute(card.trauma,'data-severity',ratio>=.75?'critical':ratio>=.5?'warning':'low');
+      const fill=`scaleX(${ratio})`;
+      if(card.traumaFill.style.transform!==fill)card.traumaFill.style.transform=fill;
+    }
     setClass(card.card,'bleeding', ctx.combat.unarmedDeadline[r.id] !== null && r.mobile);
     setClass(card.card,'disabled', !r.mobile);
     paintPatientPortrait(card,r.id,PORTRAIT_BONES.map(({key})=>({key,...segmentDisplayState(r,key)})));
