@@ -41,3 +41,6 @@
 #robot-tag-hops-v22 #tower-reward-toast[hidden]{display:none}
 @keyframes tower-reward-pop{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
 @media(prefers-reduced-motion:reduce){#robot-tag-hops-v22 #tower-reward-toast{animation:none}}
+
+/* Keep the shared coin proportional to the large run total. */
+#robot-tag-hops-v22 .tower-result-numbers .chip-icon{font-size:.55em;letter-spacing:normal;vertical-align:.04em}
