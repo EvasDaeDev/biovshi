@@ -9,7 +9,6 @@ import { sightClear, coreClearBone } from "./collision.js";
 import { pointSegment } from "../utils/math.js";
 import { note } from "../game/events.js";
 import { activeOpponents } from "./ai.js";
-import { arenaAnnounce } from "../ui/announcements.js";
 import { bettingSettle } from "../betting/ui.js";
 export
 // Непрерывная кинематика удара. Урон возможен лишь в конце фазы выпада.
@@ -323,10 +322,6 @@ export function combatAttacks() {
     }
   }
   const mobile = ctx.robots.filter(r => r.mobile && r.visible && r.segmentCount > 0);
-  if (ctx.robots.every(r => r.visible)) {
-    if (mobile.length === 2 && ctx.arenaAccent.lastActive > 2) arenaAnnounce('ОСТАЛИСЬ', 'ДВОЕ', 4, 2.3);
-    ctx.arenaAccent.lastActive = mobile.length;
-  }
   // A headbutt that wins the fight must still complete its backward hop
   // and landing recovery before switching to the victory animation.
   if ((mobile.length <= 1 || ctx.mode==='tower'&&!ctx.robots[0].mobile) && ctx.robots.every(r => r.visible)

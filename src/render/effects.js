@@ -5,12 +5,11 @@ import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
 import { attr, dot, el } from "./svg.js";
 import { path } from "../utils/math.js";
-import { oilColor,ROBOT_COLORS } from "../utils/colors.js";
+import { oilColor } from "../utils/colors.js";
 import { random } from "../utils/random.js";
 import { drawDetachedSkin } from './robot-skin.js';
 import { createLiquidSprite, paintLiquidSprite } from './liquid-sprites.js';
 
-const announcementColours=new WeakMap();
 export
 // Эффекты Geometry Wars используют отдельные частицы и не влияют на ИИ.
 function burst(x, y) {
@@ -225,12 +224,9 @@ export function flashSeveredParts(geometries) {
   });
 }
 export function resetCombatAccents() {
-  ctx.arenaAccent.message = null;
-  ctx.arenaAccent.lastActive = ctx.ROBOT_COUNT;
   ctx.arenaAccent.flashes.length = 0;
   ctx.severFlashG.replaceChildren();
-  ctx.scoreNodes.forEach(n => n.textContent = '');
-  attr(ctx.scoreG, 'aria-label', 'Объявления арены');
+  ctx.scoreG.replaceChildren();
 }
 export function paintCombatAccents() {
   for (let i = ctx.arenaAccent.flashes.length - 1; i >= 0; i--) {
@@ -241,16 +237,4 @@ export function paintCombatAccents() {
       ctx.arenaAccent.flashes.splice(i, 1);
     } else attr(f.node, 'opacity', Math.max(0, 1 - age / .12).toFixed(2));
   }
-  const message = ctx.arenaAccent.message,
-    active = message && ctx.game.time < message.until;
-  ctx.scoreNodes.forEach((node, i) => {
-    const text = active ? message.lines[i] : '';
-    if (node.textContent !== text) node.textContent = text;
-    if (text.length > 11) attr(node, 'textLength', 106);else if(node.hasAttribute('textLength'))node.removeAttribute('textLength');
-    const patient=/ПАЦИЕНТ ([ABCD])/.exec(text);
-    const colour=patient?ROBOT_COLORS['ABCD'.indexOf(patient[1])]:active&&message.priority===5?'#e1cf9a':'#d2d5bf';
-    if(announcementColours.get(node)!==colour){node.style.setProperty('fill',colour);announcementColours.set(node,colour);}
-    attr(node, 'opacity', active ? Math.min(1, (message.until - ctx.game.time) / .25) : 0);
-  });
-  attr(ctx.scoreG, 'aria-label', active ? message.lines.join(' · ') : 'Объявления арены');
 }

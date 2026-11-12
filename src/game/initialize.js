@@ -407,23 +407,12 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     length: ctx.ROBOT_COUNT
   }, (_, id) => makeRobotCard(id));
   ctx.arenaAccent = {
-    message: null,
-    lastActive: ctx.ROBOT_COUNT,
     flashes: []
   };
   ctx.severFlashG = el('g', {
     id: 'gladiator-sever-flashes',
     'pointer-events': 'none'
   }, ctx.arenaContent);
-  ctx.scoreNodes = [340, 359].map(y => el('text', {
-    x: 350,
-    y,
-    'text-anchor': 'middle',
-    class: 'score-text',
-    style: 'font-size:12px;font-weight:700;letter-spacing:.4px',
-    textLength: 106,
-    lengthAdjust: 'spacingAndGlyphs'
-  }, ctx.scoreG));
   ctx.intents = [];
   ctx.brainDebt = 0;
   initializeHitEffects();

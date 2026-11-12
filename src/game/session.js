@@ -11,7 +11,7 @@ import { rebuildRobots } from "./arena.js";
 import { cameraReset } from "../render/camera.js";
 import { bettingInit } from "../betting/ui.js";
 import { CONFIG } from "../config.js";
-import { arenaAnnounce } from "../ui/announcements.js";
+import {note} from "./events.js";
 import { paint } from "../render/frame.js";
 import { random } from "../utils/random.js";
 import { resetHitEffects } from '../render/hit-effects.js';
@@ -153,7 +153,7 @@ export function advanceStartup(dt) {
   const landedAt = Math.max(0,ctx.startup.order.length-1)*CONFIG.startup.spawnIntervalSec + CONFIG.startup.spawnDurationSec;
   if (ctx.startup.nextIndex === ctx.startup.order.length && ctx.startup.elapsed+1e-9 >= landedAt) {
     ctx.startup.phase = 'running';
-    arenaAnnounce('БОЙ', 'НАЧАЛСЯ', 1, 1.4);
+    note('combat-start', {});
     ctx.button.disabled = ctx.resetButton.disabled = false;
     ctx.speedButton.disabled=ctx.mode==='tower';
   }
