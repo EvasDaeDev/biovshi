@@ -157,6 +157,7 @@ export function bettingOpen() {
  <details class="bet-rules"><summary>Как считается выигрыш · коэффициенты предварительные</summary><p class="bet-muted">Коэффициенты предварительные и включают возврат ставки; итоговая выплата округляется вниз до целых фишек. Победители получают свои ставки и делят 85% проигравших ставок пропорционально своим ставкам. 15% и остатки округления пополняют джекпот. Нет ставок на победителя — все ставки в джекпот. Ничья / отмена — полный возврат ставок. Джекпот сохраняется отдельно и пока только накапливается.</p></details>
  ${ctx.betting.players.every(p => p.balance === 0) ? '<p class="bet-muted" data-empty-balances>У всех закончились фишки. Можно смотреть бои без ставок или начать новую игру.</p>' : ''}
  <button id="bet-new" type="button" class="bet-secondary">НОВАЯ ИГРА</button>
+ <button id="bet-menu" type="button" class="bet-secondary">В МЕНЮ</button>
  <div class="bet-actions"><button id="bet-procedure" type="button">В ПРОЦЕДУРНУЮ</button>${arenaPicker(ctx.selectedArenaId)}<button id="bet-fight" class="bet-primary" type="button"></button></div>
  <p class="bet-muted">${bettingStorageNote()}</p></form>
  ${ctx.betting.history.length ? `<details><summary>История раундов (${ctx.betting.history.length})</summary>${ctx.betting.history.map(r => `<p class="bet-muted">Раунд ${Number(r.round)} · ${r.winner === null ? 'ничья' : 'победитель ' + patientName(r.winner)} · ставки ${ctx.betFormat(Number(r.stakes ?? r.bank))}</p>`).join('')}</details>` : ''}`;
@@ -198,6 +199,7 @@ export function bettingOpen() {
   };
   ctx.betContent.querySelector('#bet-procedure').onclick=()=>{ctx.betDraft={session:ctx.betting,round:ctx.betting.round,bets:bettingReadDraft(),arenaId:ctx.selectedArenaId};garageOpen();};
   ctx.betContent.querySelector('#bet-new').onclick = bettingSetup;
+  ctx.betContent.querySelector('#bet-menu').onclick=()=>{ctx.betDraft={session:ctx.betting,round:ctx.betting.round,bets:bettingReadDraft(),arenaId:ctx.selectedArenaId};ctx.openMainMenu();};
   ctx.betContent.querySelector('#bet-stakes-form').oninput = bettingPreview;
   const stakesForm = ctx.betContent.querySelector('#bet-stakes-form');
   stakesForm.onsubmit = e => e.preventDefault();
