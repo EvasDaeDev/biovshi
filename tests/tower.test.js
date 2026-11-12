@@ -24,7 +24,10 @@ function setup(s,tower,arenaId='ward'){
  for(const key of ['document','localStorage','Event'])globalThis[key]=dom.window[key];
  globalThis.matchMedia=()=>({matches:false});globalThis.ResizeObserver=class{observe(){}disconnect(){}};globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
  ctx.arenaRenderer=null;ctx.towerPlayer=0;
- initializeGame({session:s,entry:'tower',tower:structuredClone(tower),arenaId});installTowerUI();return dom;
+ initializeGame({session:s,entry:'tower',tower:structuredClone(tower),arenaId});
+ // Pixi copies the SVG handler before installTowerUI; exercise that exact order.
+ const canvas=document.createElement('canvas');canvas.id='copied-arena';canvas.onclick=ctx.svg.onclick;ctx.svg.after(canvas);
+ installTowerUI();return dom;
 }
 function close(dom){ctx.root.__disposeTag();dom.window.close();ctx.mode='spectator';}
 test('rewards survive restart and defeat, are once per enemy per floor and isolated per player',()=>{
@@ -111,14 +114,30 @@ test('standing manual patient never rotates toward another patient',()=>{
  for(let i=0;i<60;i++){ctx.game.time+=1/60;r.tick(1/60,controlledIntent(r));}
  assert.equal(r.angle,angle);assert.ok(Math.hypot(r.x-x,r.y-y)<.01);assert.equal(controlledIntent(r).lookPoint,null);close(dom);
 });
-test('hands and head strikes allow movement; kicks keep their planted support',()=>{
- for(const source of ['leg-1-upper','arm-1-upper','head']){
+test('every ordinary manual strike allows movement and turning without cancelling the attack',()=>{
+ for(const source of ['leg-1-lower','leg--1-lower','arm-1-lower','arm--1-lower','head']){
   const {dom,r}=manualFixture(),x=r.x,y=r.y,angle=r.angle;
-  const strike={source,victim:1,started:0,impactAt:10,endsAt:10,resolved:false};ctx.combat.pending[0]=strike;
-  ctx.towerInput={x:0,y:1};tickManual(r,20);
-  assert.equal(ctx.combat.pending[0],strike);if(source.startsWith('leg-')){assert.equal(r.angle,angle);assert.ok(Math.hypot(r.x-x,r.y-y)<.01);}else{assert.ok(r.angle>angle+.2);assert.ok(Math.hypot(r.x-x,r.y-y)>1);}
+  const strike={source,victim:1,aim:{x:x+20,y:y+20},started:ctx.game.time,impactAt:ctx.game.time+.52,endsAt:ctx.game.time+.78,resolved:false};ctx.combat.pending[0]=strike;
+  ctx.towerInput={x:0,y:1};
+  for(const [frames,phase] of [[12,'windup'],[12,'thrust'],[16,'recover']]){
+   const before={x:r.x,y:r.y};tickManual(r,frames);
+   const pose=r.attackPose(strike);assert.equal(pose.progress.phase,phase);assert.ok(Number.isFinite(pose.tip.x)&&Number.isFinite(pose.tip.y));
+   assert.ok(Math.hypot(r.x-before.x,r.y-before.y)>.1,`${source} permits movement during ${phase}`);
+  }
+  assert.equal(ctx.combat.pending[0],strike);assert.ok(r.angle>angle+.2);assert.ok(Math.hypot(r.x-x,r.y-y)>1);
   ctx.combat.pending[0]=null;tickManual(r,20);assert.ok(r.angle>angle+.2);assert.ok(Math.hypot(r.x-x,r.y-y)>1);close(dom);
  }
+});
+test('tower arena clicks never pause; the pause button and other modes retain their controls',()=>{
+ const {dom,s}=manualFixture(),canvas=document.querySelector('#copied-arena');
+ for(const paused of [false,true]){
+  ctx.paused=paused;ctx.svg.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true}));canvas.click();assert.equal(ctx.paused,paused);
+ }
+ ctx.paused=false;ctx.button.click();assert.equal(ctx.paused,true);ctx.button.click();assert.equal(ctx.paused,false);
+ initializeGame({session:s,entry:'betting'});installTowerUI();ctx.startup.phase='running';ctx.paused=false;
+ const spectatorClick=ctx.svg.onclick;ctx.svg.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true}));assert.equal(ctx.paused,true);
+ ctx.mode='tower';spectatorClick();assert.equal(ctx.paused,true,'a copied stale handler cannot pause or resume a tower fight');
+ close(dom);
 });
 test('held input preserves jump preparation, flight and recovery before movement resumes',()=>{
  let fixture=manualFixture();let {dom,r}=fixture;

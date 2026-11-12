@@ -437,15 +437,10 @@ export function robotTick(robotState, dt, intent) {
     robotState.api.capsules = robotState.makeCapsules();
     return;
   }
-  // Kicks need planted support. Hands can strike while walking; a held command
-  // resumes after a kick finishes without cancelling the attack.
-  if(intent.manual&&ctx.combat.pending[robotState.id]?.source.startsWith('leg-')){
-    intent={...intent,speed:0,
-      goal:{x:robotState.x,y:robotState.y},brake:true};
-  }
   const strike=ctx.combat.pending[robotState.id];
-  if(strike?.source.startsWith('leg-')){
-    // A kick uses the other limbs as fixed supports; do not turn or walk mid-kick.
+  if(!intent.manual&&strike?.source.startsWith('leg-')){
+    // Autonomous kicks keep planted supports; manual control keeps movement
+    // and turning available throughout every ordinary strike.
     if(robotState.scene)robotState.api.endScene();
     robotState.vx=robotState.vy=robotState.requestedSpeed=0;
     robotState.currentIntent={goal:{x:robotState.x,y:robotState.y},speed:0,mode:'лягается',lookPoint:null};
