@@ -37,27 +37,9 @@ export async function resetRound(destination='betting') {
   ctx.telemetryDirty = true;
   ctx.lastTelemetryAt = -Infinity;
   ctx.settledOilDrops = new WeakSet();
-  // Каждый новый раунд заново разыгрывает роль водящего между всеми четырьмя.
-  const hunter = -1;
   ctx.round.elapsedSec = 0;
   ctx.resultsPanel.hidden = true;
-  Object.assign(ctx.game, {
-    time: 0,
-    hunter,
-    tags: 0,
-    readyAt: 0,
-    ceremony: null,
-    target: null,
-    pursuitAt: 0,
-    pursuitDistance: 0,
-    lastSeen: null,
-    lostFor: 0,
-    cornerReleases: 0,
-    switches: 0
-  });
-  ctx.game.scores.fill(0);
-  ctx.game.immune.fill(0);
-  ctx.game.lastPursued.fill(-99);
+  ctx.game.time = 0;
   resetCombatAccents();
   resetHitEffects();
   ctx.combat.unarmedDeadline.fill(null);
@@ -87,7 +69,6 @@ export async function resetRound(destination='betting') {
   ctx.combat.oilLeaks.length = 0;
   ctx.combat.oilDrops.length = 0;
   ctx.oilG.replaceChildren();
-  ctx.game.bans.forEach(row => row.fill(0));
   ctx.game.events.length = 0;
   ctx.agentAI.forEach((ai, id) => Object.assign(ai, {
     goal: null,
@@ -121,11 +102,8 @@ export async function resetRound(destination='betting') {
     progressAt: 0,
     orbitBreakUntil: 0,
     orbitGoal: null,
-    nextPounceDecisionAt: 0,
-    lastSoundAt: -Infinity
+    nextPounceDecisionAt: 0
   }));
-  ctx.soundEvents.length = 0;
-  ctx.nextFootstepAt.fill(0);
   ctx.combat.escapeSide = ctx.combat.escapeSide.map(() => random() < .5 ? -1 : 1);
   ctx.intents = [];
   ctx.brainDebt = 0;

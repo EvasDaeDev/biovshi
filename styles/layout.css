@@ -1,5 +1,4 @@
 html, body, html>body { background:#02050d !important; background-color:#02050d !important; color:#c7dbea !important; }
 html body{width:100%;max-width:none;margin:0;padding:12px;box-sizing:border-box;min-height:100vh;min-height:100dvh;display:flex;align-items:flex-start;justify-content:center;background:#02050d !important;color:#d4e7f0 !important}
 #robot-tag-hops-v22{width:100%;max-width:none;flex:1 1 auto;margin-inline:auto}
-#robot-tag-hops-v22 .viz-controls{padding-right:0}
 button{touch-action:manipulation}

@@ -13,7 +13,7 @@ export function paint() {
   updateSparks();
   paintOil();
   paintDetachedAnatomy();
-  for (const r of ctx.robots) r.paint(false);
+  for (const r of ctx.robots) r.paint();
   timed('telemetry',paintTelemetry);
   paintCombatAccents();
   paintHitEffects();

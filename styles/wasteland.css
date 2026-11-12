@@ -203,11 +203,10 @@ html body #robot-tag-hops-v22 #tag7hop-status {color:#d6bd8b;text-shadow:0 1px #
 /* Compact patient cards: artwork zooms without growing the fixed 260 x 164 card. */
 #robot-tag-hops-v22 .robot-card-name strong,
 #robot-tag-hops-v22 .patient-name {font-size:16px;line-height:1.1}
-#robot-tag-hops-v22 .patient-portrait {transform:scale(1.1);transform-origin:left center}
+#robot-tag-hops-v22 .patient-portrait {transform-origin:left center}
 /* A deliberate monospace treatment for event messages, not the primary UI font. */
 #robot-tag-hops-v22 #combat-log {font-size:12px;line-height:16px}
 /* Hints are legible but remain visually secondary. */
-.biovshi-hint {font-size:10px;line-height:1.45}
 /* Preserve the existing telemetry sizing; fix only undersized betting annotations. */
 #robot-tag-hops-v22 .bet-muted,
 #robot-tag-hops-v22 .garage-patient small,
@@ -310,7 +309,6 @@ html body #robot-tag-hops-v22 #tag7hop-status {color:#d6bd8b;text-shadow:0 1px #
 #robot-tag-hops-v22 .bet-table th {text-transform:uppercase}
 #robot-tag-hops-v22 :is(.bet-panel,.settings-panel,.gladiator-results-card) .bet-actions button,
 #robot-tag-hops-v22 .results-actions button {text-transform:uppercase}
-#robot-tag-hops-v22 .bet-table :is(th,td) {padding:6px 5px}
 #robot-tag-hops-v22 .bet-pools {margin:10px 0}
 #robot-tag-hops-v22 .bet-actions {margin-top:12px}
 #robot-tag-hops-v22 .gladiator-results-totals {margin-bottom:8px}

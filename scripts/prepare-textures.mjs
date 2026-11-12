@@ -19,7 +19,7 @@ export async function prepareTexture(input, output, { maxSize = 256, pixelated =
 
 async function main() {
   const root = fileURLToPath(new URL('../', import.meta.url));
-  const source = path.join(root, 'assets-source/textures');
+  const source = path.join(root, '_src/texture-inputs/textures');
   const destination = path.join(root, 'public/assets/textures');
   const outputs = new Set();
   async function walk(dir) {

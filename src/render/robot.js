@@ -154,13 +154,11 @@ export function draw(robotState, dt) {
 export function visionAngle(robotState) {
   return robotState.hasHead() ? CONFIG.vision.runnerAngleDeg * Math.PI / 180 : 0;
 }
-export function robotPaint(robotState, hunter) {
+export function robotPaint(robotState) {
   if (!robotState.visible) return;
   const spawn = robotState.spawnVisual = spawnAppearance(robotState);
   attr(robotState.actor,'opacity',spawn.opacity.toFixed(3));
   attr(robotState.floor,'opacity',spawn.opacity.toFixed(3));
-  hunter = false;
-  const shield = hunter ? 0 : clamp((ctx.game.immune[robotState.id] - ctx.game.time) / Math.max(.001, CONFIG.attack.previousHunterShieldSec), 0, 1);
   const victorious = ctx.combat.finished && ctx.combat.winner === robotState.id;
   paintVictoryGlow(robotState,victorious);
   attr(robotState.actor, 'style', '--robot-color:#b7ada1;filter:none');
@@ -173,7 +171,7 @@ export function robotPaint(robotState, hunter) {
   const height = robotState.scene && robotState.mode === 'cover' ? robotState.coverHeightStart * (1 - smooth((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec)) + (1 - robotState.coverHeightStart) * .7 * Math.sin(Math.PI * clamp((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec, 0, 1)) : robotState.scene && robotState.mode === 'hops' ? robotState.hopHeight() : robotState.leap ? jumpHeight(robotState) : robotState.mode === 'startle' && robotState.scene ? Math.sin(Math.PI * clamp((ctx.game.time - robotState.scene.started) / CONFIG.attack.startleSec, 0, 1)) * .55 : 0;
   attr(robotState.limbG, 'transform', robotState.bodyTransform(height));
   attr(robotState.bodyG, 'transform', robotState.bodyTransform(height));
-  attr(robotState.actor, 'class', hunter ? 'robot hunter' : shield > 0 ? 'robot protected' : 'robot');
+  attr(robotState.actor, 'class', 'robot');
   robotState.draw(0);
   if(robotState.corpsePuddlePending&&inertiaOffset(robotState.corpseInertia).settled) {
     const center=robotState.visiblePoint(robotState.api.center);
@@ -192,9 +190,7 @@ export function robotPaint(robotState, hunter) {
       robotState.trail.push({
         x: p.x,
         y: p.y,
-        time: ctx.game.time,
-        hunter,
-        shield
+        time: ctx.game.time
       });
       if (robotState.trail.length > CONFIG.trails.limit) robotState.trail.shift();
     }

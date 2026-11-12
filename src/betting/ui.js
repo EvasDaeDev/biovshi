@@ -6,7 +6,7 @@ import {COIN_ICON} from '../ui/currency.js';
 import {cleanFloor} from '../render/floor-history.js';
 import {garageOpen} from '../garage/ui.js';
 import { ctx } from "../game/state.js";
-import { betCommit, betNewSession, betRefund, betResolve, betTopUp, betAddPlayer, betOdds } from "./ledger.js";
+import { betCommit, betNewSession, betRefund, betResolve, betTopUp, betAddPlayer, betOdds, jackpotStatus } from "./ledger.js";
 import { bettingLoad, bettingSave } from "./storage.js";
 import { startSpawnSequence } from "../game/session.js";
 function bettingInputDialog({title,initialValue,numeric=false,maxLength=32}) {
@@ -149,12 +149,13 @@ export function bettingOpen() {
   ctx.betContent.innerHTML = `${ctx.betNotice ? `<p class="bet-muted">${ctx.betEscape(ctx.betNotice)}</p>` : ''}
  <p class="bet-muted">Выберите пациента для каждого игрока и сумму. Ставка 0 — пропустить раунд.</p>
  <p>Ставки раунда: <strong id="bet-bank">0</strong> · Накопленный джекпот: <strong>${ctx.betFormat(ctx.betting.jackpot)}</strong></p>
+ <p class="bet-muted" data-jackpot-status>${jackpotStatus(ctx.betting)}</p>
  <div class="bet-pools">${ctx.BET_COLORS.map((c, i) => `<div class="bet-pool" style="--fighter:${c}"><strong>${patientName(i,{short:true})}</strong><small>${skillSummary(ctx.betting.garage?.[i]?.stats)}</small><span id="bet-pool-${i}"></span><small id="bet-odds-${i}"></small></div>`).join('')}</div>
  <form id="bet-stakes-form"><div class="bet-table-wrap"><table class="bet-table"><thead><tr><th>Игрок <button id="bet-add-player" class="bet-top-up bet-add-player" type="button" aria-label="Добавить игрока" title="Добавить игрока" ${ctx.betting.players.length>=16?'disabled':''}>+</button></th><th>Баланс</th><th>Пациент</th><th>Ставка</th><th>Останется</th></tr></thead><tbody>
  ${ctx.betting.players.map(bettingPlayerRow).join('')}
  </tbody></table></div>
  <div id="bet-error" class="bet-error" role="status"></div>
- <details class="bet-rules"><summary>Как считается выигрыш · коэффициенты предварительные</summary><p class="bet-muted">Коэффициенты предварительные и включают возврат ставки; итоговая выплата округляется вниз до целых фишек. Победители получают свои ставки и делят 85% проигравших ставок пропорционально своим ставкам. 15% и остатки округления пополняют джекпот. Нет ставок на победителя — все ставки в джекпот. Ничья / отмена — полный возврат ставок. Джекпот сохраняется отдельно и пока только накапливается.</p></details>
+ <details class="bet-rules"><summary>Как считается выигрыш · коэффициенты предварительные</summary><p class="bet-muted">Коэффициенты предварительные и включают возврат ставки; итоговая выплата округляется вниз до целых фишек. Победители получают свои ставки и делят 85% проигравших ставок пропорционально своим ставкам. 15% и остатки округления пополняют джекпот. Нет ставок на победителя — все ставки в джекпот. Ничья / отмена — полный возврат ставок. Джекпот сохраняется отдельно. ${jackpotStatus(ctx.betting)}</p></details>
  ${ctx.betting.players.every(p => p.balance === 0) ? '<p class="bet-muted" data-empty-balances>У всех закончились фишки. Можно смотреть бои без ставок или начать новую игру.</p>' : ''}
  <button id="bet-new" type="button" class="bet-secondary">НОВАЯ ИГРА</button>
  <button id="bet-menu" type="button" class="bet-secondary">В МЕНЮ</button>
@@ -246,7 +247,7 @@ export function bettingSettle(winner) {
 }
 export function bettingCancel() {
   if (!ctx.betting) return;
-  if (betRefund(ctx.betting)) ctx.betNotice = 'Бой отменён: все ставки возвращены. Джекпот сохранён.';
+  if (betRefund(ctx.betting)) ctx.betNotice = 'Бой отменён: ставки, навыки, декор и покровительство восстановлены. Джекпот сохранён.';
   bettingSave();
 }
 export function bettingResults() {
@@ -264,7 +265,7 @@ export function bettingResults() {
     const gain=p.payout>0?' bet-net-win':'';
     return `<tr><td>${ctx.betEscape(p.name)}</td><td>${p.robot === null ? '—' : patientName(p.robot,{short:true}) + ' · ' + ctx.betFormat(p.stake)}</td><td class="${gain}">${ctx.betFormat(p.payout)}</td><td><span class="bet-net${net < 0 ? ' bet-net-loss' : net > 0 ? ' bet-net-win' : ''}">${net > 0 ? '+' : ''}${ctx.betFormat(net)}</span></td><td class="bet-balance-equation"><details><summary><strong>${ctx.betFormat(p.balance)}</strong></summary><span>${ctx.betFormat(before)}</span>${p.stake?` <span class="bet-net-loss">−${ctx.betFormat(p.stake)}</span>`:''}${p.payout?` <span class="bet-net-win">+${ctx.betFormat(p.payout)}</span>`:''} = <strong>${ctx.betFormat(p.balance)}</strong></details></td></tr>`;
   }).join('')}
- </tbody></table></div>${r.jackpotAdded !== undefined ? `<p>В джекпот за раунд: +${ctx.betFormat(r.jackpotAdded)}</p>` : ''}<p>Накопленный джекпот: ${ctx.betFormat(r.jackpot)}</p>`;
+ </tbody></table></div>${r.jackpotAdded !== undefined ? `<p>В джекпот за раунд: +${ctx.betFormat(r.jackpotAdded)}</p>` : ''}${r.jackpotPaid ? `<p class="bet-net-win">Выплачено из джекпота: ${ctx.betFormat(r.jackpotPaid)}</p>` : ''}<p>Накопленный джекпот: ${ctx.betFormat(r.jackpot)}</p>`;
 }
 export function bettingInit() {
   ctx.betting = bettingLoad();

@@ -17,7 +17,7 @@
 #robot-tag-hops-v22 .results-actions {position:sticky;bottom:0;z-index:25;background:var(--paper);border-top:1px solid var(--paper-rule);padding:10px 0 2px;box-shadow:none}
 #robot-tag-hops-v22 .bet-panel .bet-secondary {min-height:32px;padding:4px 9px;font-size:12px;margin-top:12px}
 #robot-tag-hops-v22 .bet-quick {display:flex;gap:4px;margin-top:5px}
-#robot-tag-hops-v22 .bet-panel .bet-quick button {min-height:28px;padding:3px 7px;font-size:12px}
+#robot-tag-hops-v22 .bet-panel .bet-quick button {font-size:12px}
 #robot-tag-hops-v22 .bet-rules {font-size:13px;margin-top:10px}
 #robot-tag-hops-v22 .bet-rules summary {cursor:pointer}
 #robot-tag-hops-v22 .bet-panel .garage-lock-note {font-size:12px;margin:0;color:#723721}
