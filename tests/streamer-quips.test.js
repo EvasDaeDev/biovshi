@@ -1,0 +1,49 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {STREAMER_QUIPS,quipFor} from '../src/ui/streamer-quips.js';
+import {createReactionTrack} from '../src/ui/streamer-mascot.js';
+import {note} from '../src/game/events.js';
+import {ctx} from '../src/game/state.js';
+import {onGameEvent} from '../src/game/event-bus.js';
+
+test('approved quips stay short, omit removed copy and use the affected fighter',()=>{
+ const events=[{type:'combat-start'},{type:'hit',to:1},{type:'hit',to:1,damage:2},
+  {type:'segment-broken',robot:1,segment:'arm--1-upper'},
+  {type:'segment-broken',robot:1,segment:'leg-1-lower'},
+  {type:'segment-broken',robot:1,segment:'head'},
+  {type:'robot-immobilized',robot:1,reason:'потерял сознание'},
+  {type:'robot-immobilized',robot:1,reason:'погиб'},
+  {type:'combat-end',winner:1},{type:'combat-end',winner:null},{type:'streamer-idle'}];
+ for(const event of events)for(let i=0;i<12;i++){
+  const line=quipFor(event,i);assert.ok(line);assert.ok(line.match(/[\p{L}\p{N}]+/gu).length<=3,line);
+  assert.doesNotMatch(line,/пациент|твоё|перезагрузка|рукопожатие|танцы|возврат|зато|пока живой|ломайтесь|обещанный хруст|обнимашки|— окончательно/iu);
+ }
+ assert.equal(quipFor(events[1]),'B, держи сдачу!');
+ assert.equal(quipFor(events[3]),'B, ручкой помаши!');
+ assert.equal(quipFor(events[4]),'B, ножку забыл!');
+ assert.equal(quipFor(events[5]),'B теряет запчасти!');
+ assert.equal(quipFor(events[6]),'B вышел!');
+ assert.equal(quipFor(events[7],1),'В морг!');
+ assert.equal(quipFor(events[8]),'Остался один!');
+ assert.deepEqual(STREAMER_QUIPS.idle,['…скуучно.','Чего такие целые?']);
+});
+
+test('speech keeps the triggering event when important reactions replace a pending hit',()=>{
+ const track=createReactionTrack();track.offer({type:'hit',to:0});
+ track.offer({type:'segment-broken',robot:2,segment:'leg--1-lower'});
+ track.offer({type:'hit',to:1});track.tick(.1);const played=track.tick(.1);
+ assert.equal(quipFor(played.event),'C, ножку забыл!');
+ track.offer({type:'combat-end',winner:2});track.tick(.1);
+ assert.equal(quipFor(track.tick(.1).event),'Остался один!');
+});
+
+test('battle events still reach subscribers and the log without central arena announcements',()=>{
+ const oldGame=ctx.game,oldAccent=ctx.arenaAccent;
+ const received=[];const off=onGameEvent(event=>received.push(event));
+ try{
+  ctx.game={time:7,events:[]};ctx.arenaAccent={flashes:[]};
+  for(const type of ['combat-start','segment-broken','robot-immobilized','combat-end'])note(type,{robot:1,segment:'head',winner:0});
+  assert.equal(received.length,4);assert.equal(ctx.game.events.length,4);
+  assert.deepEqual(ctx.arenaAccent,{flashes:[]});
+ }finally{off();ctx.game=oldGame;ctx.arenaAccent=oldAccent;}
+});

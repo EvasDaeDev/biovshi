@@ -1,5 +1,6 @@
 import {ctx} from '../game/state.js';
 import {onGameEvent} from '../game/event-bus.js';
+import {quipCategory,quipFor} from './streamer-quips.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
 
 const STORAGE='biovshi.streamer-hidden.v1';
@@ -20,10 +21,12 @@ const EFFECTS={
 };
 
 export function reactionFor(event){
+ if(event.type==='combat-start')return {emotion:'joy',priority:2,duration:2.3};
+ if(event.type==='streamer-idle')return {emotion:'annoyed',priority:0,duration:2.3};
  if(event.type==='combat-end')return {emotion:event.winner===null?'annoyed':'cheer',priority:5,duration:2.7};
  if(event.type==='robot-immobilized')return {emotion:event.reason==='погиб'?'fear':'admire',priority:4,duration:2.1};
  if(event.type==='segment-broken')return {emotion:'fear',priority:3,duration:1.9};
- if(event.type==='hit')return {emotion:event.damage===2?'admire':(Math.floor((event.time??0)*10)%3===0?'joy':'annoyed'),priority:event.damage===2?2:1,duration:1.2};
+ if(event.type==='hit')return {emotion:event.damage===2?'admire':(Math.floor((event.time??0)*10)%3===0?'joy':'annoyed'),priority:event.damage===2?2:1,duration:2};
  return null;
 }
 
@@ -31,7 +34,7 @@ export function reactionFor(event){
 export function createReactionTrack(){
  let pending=null,current=null,time=0,until=0;
  return {
-  offer(event){const next=reactionFor(event);if(!next)return; if(!pending||next.priority>=pending.priority)pending={...next,ready:time+.12,expires:time+2.5};},
+  offer(event){const next=reactionFor(event);if(!next)return; if(!pending||next.priority>=pending.priority)pending={...next,event,ready:time+.12,expires:time+2.5};},
   tick(dt,accept=true){
    time+=Math.min(Math.max(dt,0),.1);
    if(current&&time>=until)current=null;
@@ -78,18 +81,21 @@ export function initializeStreamerMascot(){
  const root=ctx.root,doc=root.ownerDocument,win=doc.defaultView;
  const box=doc.createElement('div');box.id='streamer-mascot';box.setAttribute('aria-hidden','true');
  const canvas=doc.createElement('canvas');canvas.width=280;canvas.height=288;box.append(canvas);
+ const caption=doc.createElement('p');caption.className='streamer-quip';caption.hidden=true;box.append(caption);
  const toggle=doc.createElement('button');toggle.id='streamer-mascot-toggle';toggle.type='button';toggle.setAttribute('aria-controls',box.id);
  ctx.stage.append(box,toggle);
  let hidden=false,disposed=false,painter=null,iconAtlas=null,loaded=false,elapsed=0,lastPaint=-Infinity;
  try{hidden=win.localStorage.getItem(STORAGE)==='true';}catch{/* Storage may be disabled. */}
- const track=createReactionTrack(),heads={};
+ const track=createReactionTrack(),heads={},quipCounts=new Map();
+ let spoken=null,quietFor=0;
+ const clearSpeech=()=>{spoken=null;quietFor=0;caption.hidden=true;caption.textContent='';};
  const updateToggle=()=>{
   box.hidden=hidden;toggle.textContent=hidden?'▴':'▾';toggle.setAttribute('aria-expanded',String(!hidden));
   toggle.dataset.hint=hidden?'Показать маскота':'Скрыть маскота';toggle.setAttribute('aria-label',toggle.dataset.hint);
   toggle.classList.toggle('is-collapsed',hidden);
  };
  toggle.onclick=event=>{
-  event.stopPropagation();hidden=!hidden;track.reset();updateToggle();
+  event.stopPropagation();hidden=!hidden;track.reset();clearSpeech();updateToggle();
   try{win.localStorage.setItem(STORAGE,String(hidden));}catch{/* Keep working without persistence. */}
  };
  updateToggle();
@@ -104,7 +110,11 @@ export function initializeStreamerMascot(){
  };
  atlas.onerror=()=>{if(!disposed){box.hidden=true;toggle.hidden=true;}};
  atlas.src=assetUrl(ASSETS.textures.streamer);
- const unsubscribe=onGameEvent(event=>{if(!hidden)track.offer(event);});
+ const unsubscribe=onGameEvent(event=>{
+  if(hidden)return;
+  if(quipCategory(event)&&event.type!=='streamer-idle')quietFor=0;
+  track.offer(event);
+ });
  function drawPart(rect,x,y,w=rect[2],h=rect[3],source=atlas){painter.drawImage(source,...rect,Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
  function arm(rect,pivotX,pivotY,x,y,angle){
   painter.save();painter.translate(pivotX,pivotY);painter.rotate(angle);drawPart(rect,x-pivotX,y-pivotY);painter.restore();
@@ -114,7 +124,19 @@ export function initializeStreamerMascot(){
   if(now-lastPaint<1000/30-1)return;
   const delta=Number.isFinite(lastPaint)?Math.min((now-lastPaint)/1000,.1):Math.min(dt,.1);lastPaint=now;elapsed+=delta;
   const active=!ctx.paused&&!ctx.settingsOpen&&ctx.startup.phase==='running';
+  if(active&&!ctx.combat?.finished){
+   quietFor+=delta;
+   if(quietFor>=10){track.offer({type:'streamer-idle'});quietFor=0;}
+  }
   const reaction=track.tick(delta,active),emotion=reaction?.emotion??'neutral';
+  if(reaction!==spoken){
+   spoken=reaction;
+   if(reaction){
+    const category=quipCategory(reaction.event),index=quipCounts.get(category)??0;
+    caption.textContent=quipFor(reaction.event,index);quipCounts.set(category,index+1);
+   }
+   caption.hidden=!reaction||!caption.textContent;
+  }
   const energy=reaction?1:.16,t=elapsed;
   const bob=Math.sin(t*(reaction?9:2.7))*(reaction?2:1);
   // The torso ends at y=277; align it with the 288px canvas bottom.
@@ -139,7 +161,7 @@ export function initializeStreamerMascot(){
   }
   painter.restore();box.dataset.emotion=emotion;
  };
- const reset=()=>{track.reset();lastPaint=-Infinity;};
+ const reset=()=>{track.reset();clearSpeech();lastPaint=-Infinity;};
  ctx.streamerMascot={sync,reset};
  const dispose=root.__disposeTag;
  root.__disposeTag=()=>{
