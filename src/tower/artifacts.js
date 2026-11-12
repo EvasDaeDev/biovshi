@@ -1,7 +1,7 @@
 export const ARTIFACT_COUNT=4;
 export const PIECES_PER_ARTIFACT=4;
 export const ARTIFACT_PIECE_COUNT=ARTIFACT_COUNT*PIECES_PER_ARTIFACT;
-export const ARTIFACT_NAMES=['Мишка','Кубок','Телевизор','Водка и огурец'];
+export const ARTIFACT_NAMES=['Мишка','Компьютер','Грааль','Водка и огурец'];
 
 // Floors are cleared consecutively, so the lifetime record also identifies
 // every previously rewarded floor. Pieces survive run resets with that record.

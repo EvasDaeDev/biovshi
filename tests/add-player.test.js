@@ -62,7 +62,7 @@ test('adding a player preserves actual draft fields and arena choice, escapes th
   assert.equal(rows[0].querySelector('input').value,'23');assert.equal(rows[0].querySelector('select').value,'3');
   assert.equal(rows[1].querySelector('input').value,'');assert.equal(ctx.selectedArenaId,'ring');
   const row=ctx.betContent.querySelector('[data-bet-player="2"]');
-  assert.equal(row.querySelector('td').textContent,'<img src=x onerror=alert(1)>');assert.equal(row.querySelector('img'),null);
+  assert.equal(row.querySelector('td').textContent,'<img src=x onerror=alert(1)>');assert.equal(row.firstElementChild.querySelector('img'),null);
   assert.equal(row.querySelector('input').value,'0');assert.equal(row.querySelector('input').max,'100');
   row.querySelector('[data-top-up]').click();await answerDialog('25');
   assert.equal(ctx.betting.players[2].balance,125);assert.equal(row.querySelector('input').max,'125');

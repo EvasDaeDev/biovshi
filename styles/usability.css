@@ -99,3 +99,13 @@
 #robot-tag-hops-v22 .bet-panel .bet-pool .skill-summary,
 #robot-tag-hops-v22 .bet-panel .bet-pool .skill-summary > span {font-size:inherit}
 #robot-tag-hops-v22 .bet-panel .bet-pool .patient-name {font-size:20px}
+
+/* Shared PNG icon sizing; preserve each image's full transparent canvas. */
+#robot-tag-hops-v22 img.ui-icon{display:inline-block;width:1.3em;height:1.3em;object-fit:contain;vertical-align:-.25em;flex:none}
+#robot-tag-hops-v22 img.ui-icon.chip-icon{width:1.2em;height:1.2em;border:0;border-radius:0;background:none;box-shadow:none;padding:0;margin:0;vertical-align:-.2em;font-size:inherit}
+#robot-tag-hops-v22 :is(.settings-button,.arena-expand-button) img.ui-icon{width:28px;height:28px}
+#robot-tag-hops-v22 .skill-summary img.ui-icon{width:1.3em;height:1.3em}
+#robot-tag-hops-v22 .robot-card-score img.ui-icon{width:21px;height:21px;vertical-align:middle}
+#robot-tag-hops-v22 .patient-skills img.ui-icon{width:22px;height:22px;vertical-align:middle}
+#robot-tag-hops-v22 :is(.garage-stat-list label>span,#tower-stats label>span){display:inline-flex;align-items:center;gap:4px}
+#robot-tag-hops-v22 .tower-result-numbers img.chip-icon{font-size:.55em;vertical-align:.04em}

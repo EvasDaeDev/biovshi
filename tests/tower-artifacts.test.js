@@ -59,6 +59,7 @@ test('collection markup layers each owned fragment over its matching silhouette 
  const dom=new JSDOM(artifactCollectionMarkup(collection,3)),doc=dom.window.document;
  assert.equal(doc.querySelectorAll('.artifact').length,4);assert.equal(doc.querySelectorAll('.artifact-silhouette').length,4);assert.equal(doc.querySelectorAll('.artifact-piece').length,5);
  assert.equal(doc.querySelectorAll('.artifact-piece.is-new').length,1);assert.equal(doc.querySelector('.is-new').dataset.piece,'3');assert.equal(doc.querySelectorAll('.artifact.is-complete').length,1);
+ assert.match(doc.querySelectorAll('.artifact')[1].textContent,/Компьютер/);assert.match(doc.querySelectorAll('.artifact')[2].textContent,/Грааль/);
  assert.match(doc.querySelector('.artifact-completed').textContent,/Мишка/);
  assert.match(doc.querySelector('[data-piece="6"]').src,/artefacts\/2\/3.png$/);
  for(const image of doc.querySelectorAll('img'))assert.ok(fs.existsSync(new URL('../public/'+image.getAttribute('src').replace(/^\.\//,''),import.meta.url)));
@@ -71,6 +72,7 @@ test('settlement grants once, repeat result rendering does not reroll, and a rep
  globalThis.matchMedia=()=>({matches:false});globalThis.ResizeObserver=class{observe(){}disconnect(){}};globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
  const s=betNewSession(['Игрок'],100);ctx.towerPlayer=0;initializeGame({session:s,entry:'tower',tower:structuredClone(towerFor(s,0)),arenaId:'ward'});installTowerUI();
  try{
+  const preview=document.querySelector('#tower-artifact-view');assert.equal(preview.open,false);preview.open=true;assert.equal(preview.querySelectorAll('.artifact-silhouette').length,4);assert.equal(preview.querySelectorAll('.artifact-piece').length,0);
   ctx.combat.winner=0;settleTower(0);const awarded=ctx.towerOutcome.artifact;assert.ok(Number.isInteger(awarded));assert.equal(towerFor(s,0).record,1);
   settleTower(0);towerResults();towerResults();assert.equal(towerFor(s,0).artifacts.pieces.length,1);assert.equal(document.querySelector('.artifact-piece.is-new').dataset.piece,String(awarded));
   assert.equal(bettingLoad().towers[0].artifacts.pieces[0],awarded);

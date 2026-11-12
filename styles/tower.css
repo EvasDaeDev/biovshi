@@ -59,3 +59,8 @@
 #robot-tag-hops-v22 .artifact-piece.is-new{animation:artifact-insert 1s ease-out both}
 @keyframes artifact-insert{from{opacity:0;transform:translateY(-16px) scale(1.12);filter:drop-shadow(0 0 8px #f3d884)}to{opacity:1;transform:none;filter:none}}
 @media(prefers-reduced-motion:reduce){#robot-tag-hops-v22 .artifact-piece.is-new{animation:none}}
+
+#robot-tag-hops-v22 #tower-artifact-view{margin:14px 0;color:var(--paper-ink);border-top:1px solid var(--paper-rule);padding-top:12px}
+#robot-tag-hops-v22 #tower-artifact-view>summary{cursor:pointer;font-size:13px;font-weight:bold;letter-spacing:.04em}
+#robot-tag-hops-v22 #tower-prep-artifacts{margin-top:10px;padding:10px;background:#292c20;border:1px solid #8b784f}
+#robot-tag-hops-v22 #tower-prep-artifacts .artifact-award-note{display:none}

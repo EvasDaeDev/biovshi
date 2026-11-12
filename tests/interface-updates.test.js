@@ -19,7 +19,7 @@ function close(dom){ctx.root.__disposeTag();dom.window.close();}
 test('patient card shows the three permanent skills and a bone count without mobility telemetry',()=>{
  const dom=setup();ctx.betting.garage[0].stats=[2,4,3];ctx.telemetryDirty=true;paintTelemetry();
  const card=ctx.cardNodes[0];assert.equal(card.strength.textContent,'4 · 30% КРИТ');assert.equal(card.speed.textContent,'2 · 80%');assert.equal(card.maneuver.textContent,'3 · 100%');
- assert.equal(card.card.querySelector('.js-mobility'),null);assert.match(card.card.querySelector('.robot-card-score').textContent,/🦴.*13\/13/);assert.equal(card.card.querySelectorAll('.patient-skills>div').length,3);close(dom);
+ assert.equal(card.card.querySelector('.js-mobility'),null);assert.match(card.card.querySelector('.robot-card-score').textContent,/13\/13/);assert.match(card.card.querySelector('.robot-card-score img').src,/bone_01\.png$/);assert.equal(card.card.querySelectorAll('.patient-skills>div').length,3);close(dom);
 });
 test('top-up preserves draft bets, persists the new chip supply and safely rejects invalid input',async()=>{
  const dom=setup(),rows=[...document.querySelectorAll('[data-bet-player]')];
@@ -53,7 +53,7 @@ test('top-up preserves draft bets, persists the new chip supply and safely rejec
 test('results colour income and losses, show profit and reconcile the actual balance',()=>{
  const dom=setup();betCommit(ctx.betting,[{player:0,robot:0,amount:10},{player:1,robot:1,amount:20}]);betResolve(ctx.betting,0);bettingResults();
  const root=document.querySelector('#bet-result-summary'),rows=root.querySelectorAll('tbody tr');assert.match(root.querySelector('thead').textContent,/Прибыль/);
- assert.equal(rows[0].children[2].textContent,'27 ');assert.ok(rows[0].children[2].querySelector('.chip-icon'));assert.equal(root.querySelectorAll('img').length,0);assert.ok(rows[0].children[2].classList.contains('bet-net-win'));assert.equal(rows[0].children[3].textContent,'+17 ');assert.equal(rows[0].children[4].querySelector('summary').textContent,'117 ');assert.match(rows[0].children[4].textContent,/100  −10  \+27  = 117 /);
+ assert.equal(rows[0].children[2].textContent,'27 ');assert.ok(rows[0].children[2].querySelector('.chip-icon'));assert.ok([...root.querySelectorAll('img')].every(image=>image.classList.contains('chip-icon')));assert.ok(rows[0].children[2].classList.contains('bet-net-win'));assert.equal(rows[0].children[3].textContent,'+17 ');assert.equal(rows[0].children[4].querySelector('summary').textContent,'117 ');assert.match(rows[0].children[4].textContent,/100  −10  \+27  = 117 /);
  assert.equal(rows[1].children[3].textContent,'-20 ');assert.ok(rows[1].children[3].firstElementChild.classList.contains('bet-net-loss'));assert.equal(rows[1].children[4].querySelector('summary').textContent,'80 ');assert.match(rows[1].children[4].textContent,/100  −20  = 80 /);close(dom);
 });
 test('shared hints replace native titles, support keyboard focus and clean up on dispose',()=>{

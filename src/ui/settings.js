@@ -1,9 +1,11 @@
+import {uiIcon} from './icons.js';
 import {ctx} from '../game/state.js';
 import {setPaused} from './controls.js';
 
 export function initializeSettings() {
   const root=ctx.root,doc=root.ownerDocument;
   const panel=root.querySelector('#arena-settings'),button=root.querySelector('#arena-settings-button');
+  button.innerHTML=uiIcon('settings');
   const closeButton=panel.querySelector('#arena-settings-close');
   const creditsOpen=panel.querySelector('#arena-credits-open');
   const creditsView=panel.querySelector('#arena-credits-view');

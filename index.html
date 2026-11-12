@@ -46,6 +46,7 @@
   <div id="tower-preparation" class="bet-overlay" role="dialog" aria-modal="true" aria-labelledby="tower-prep-title" hidden><div class="bet-panel">
     <h2 id="tower-prep-title">БАШНЯ</h2><p id="tower-prep-name"></p><div id="tower-floor-preview"></div>
     <p>Все конечности восстановлены. Распределите навыки перед боем.</p><div id="tower-stats" class="bet-fields"></div>
+    <details id="tower-artifact-view"><summary>КОЛЛЕКЦИЯ АРТЕФАКТОВ</summary><div id="tower-prep-artifacts"></div></details>
     <p id="tower-prep-error" role="status"></p><div class="bet-actions"><button id="tower-prep-menu" type="button">В МЕНЮ</button><button id="tower-fight" class="bet-primary" type="button">НА АРЕНУ</button></div>
   </div></div>
   <div id="tower-controls" hidden><div id="tower-stick" role="group" aria-label="Джойстик движения"><span></span></div></div>
@@ -59,7 +60,6 @@
 <output id="render-fps" aria-label="Частота отрисовки">— FPS</output>
 <span id="tag7hop-status" class="text-small" aria-live="polite">Гладиаторы · каждый сам за себя</span>
 <button id="arena-settings-button" class="btn settings-button" type="button" aria-label="Настройки" aria-controls="arena-settings" aria-expanded="false" title="Настройки">
-<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M9.5 2.5h5l.6 2.6 2.1 1.2 2.6-.8 2.5 4.3-2 1.8v2.4l2 1.8-2.5 4.3-2.6-.8-2.1 1.2-.6 2.6h-5l-.6-2.6-2.1-1.2-2.6.8-2.5-4.3 2-1.8v-2.4l-2-1.8 2.5-4.3 2.6.8 2.1-1.2z" transform="translate(0 -1) scale(1 .96)" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
 </button>
 </div>
 
@@ -173,7 +173,6 @@
   </g>
   </svg>
   <button id="arena-expand-button" class="btn arena-expand-button" type="button" aria-label="Развернуть" aria-pressed="false" title="Развернуть">
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3.5" width="19" height="13.5" rx="1.5"/><path d="M8 21h8M12 17v4M6 8V7h3m6 0h3v1M6 12v1h3m6 0h3v-1"/></svg>
   </button>
   </div>
 
