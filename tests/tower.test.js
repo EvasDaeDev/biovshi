@@ -37,7 +37,7 @@ test('rewards survive restart and defeat, are once per enemy per floor and isola
  completeTower(s,0,true);assert.equal(towerFor(s,0).level,2);assert.deepEqual(towerFor(s,0).stats,[3,4,3]);assert.ok(validTower(towerFor(s,0)));
  assert.equal(rewardTower(s,0,1,0),false,'no payouts during preparation');towerFor(s,0).preparing=false;
  assert.equal(rewardTower(s,0,1,0),true);assert.equal(rewardTower(s,0,2,0),true);
- completeTower(s,0,false);assert.deepEqual(towerFor(s,0),newTower(towerFor(s,0).patient,1));assert.equal(s.players[0].balance,130);
+ completeTower(s,0,false);assert.deepEqual(towerFor(s,0),newTower(towerFor(s,0).patient,1,towerFor(s,0).artifacts));assert.equal(s.players[0].balance,130);
  assert.deepEqual(towerFor(s,1),newTower(towerFor(s,1).patient));assert.equal(s.players[1].balance,100);
  resetTower(s,0);assert.equal(s.players[0].balance,130);
 });
