@@ -81,8 +81,9 @@ export function createRobotSkin(robot) {
   if(ctx.textureAssets?.[assetKey]?.loaded)activate(true);
 }
 
-export function paintRobotSkin(robot,strikePose=null) {
+export function paintRobotSkin(robot,strikePoses=[]) {
   if (!robot.skin?.ready) return;
+  const strikePose=strikePoses.find(p=>p.kind==='head');
   const position=(key,a,b)=>{
     const piece=robot.skin.pieces.get(key);
     attr(piece.group,'display',robot.healthy(key)?'':'none');
@@ -103,8 +104,9 @@ export function paintRobotSkin(robot,strikePose=null) {
   for(const limb of [...robot.arms,...robot.legs]) {
     if (!limb.pose) continue;
     const [a,joint,end]=limb.pose,key=`${limb.kind}-${limb.side}-`;
-    const stump=(strikePose?.kind==='arm'||strikePose?.kind==='leg')&&strikePose.limb===limb&&!strikePose.complete;
-    position(key+'upper',a,stump?strikePose.tip:joint);
+    const limbStrike=strikePoses.find(p=>p.limb===limb);
+    const stump=(limbStrike?.kind==='arm'||limbStrike?.kind==='leg')&&limbStrike.limb===limb&&!limbStrike.complete;
+    position(key+'upper',a,stump?limbStrike.tip:joint);
     position(key+'lower',joint,end);
   }
 }

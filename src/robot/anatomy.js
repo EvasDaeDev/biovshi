@@ -1,3 +1,4 @@
+import {cancelStrikesAgainst} from '../systems/strikes.js';
 import {patientDeath} from '../garage/model.js';
 import {bettingSave} from '../betting/storage.js';
 import {showCrit} from '../render/crit.js';
@@ -115,13 +116,13 @@ export function finishMobility(robotState, reason, impact = robotState.lastImpac
   robotState.recoilX = robotState.recoilY = 0;
   robotState.hitReaction = null;
   ctx.combat.pending[robotState.id] = null;
+  cancelStrikesAgainst(robotState.id);
   ctx.combat.unarmedDeadline[robotState.id] = null;
   for (let i = 0; i < ctx.ROBOT_COUNT; i++) {
     if (ctx.combat.focus[i] === robotState.id) {
       ctx.combat.focus[i] = -1;
       ctx.combat.focusUntil[i] = 0;
     }
-    if (ctx.combat.pending[i]?.victim === robotState.id) ctx.combat.pending[i] = null;
     if (ctx.combat.retreatFrom[i] === robotState.id) {
       ctx.combat.retreatUntil[i] = 0;
       ctx.combat.retreatFrom[i] = -1;

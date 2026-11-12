@@ -1,3 +1,4 @@
+import {pendingStrikes,setPendingStrikes} from './strikes.js';
 import {settleTower} from '../tower/ui.js';
 import {patientGarage} from '../game/patients.js';
 import {critChance} from '../garage/model.js';
@@ -141,6 +142,18 @@ export function compareStrikeCandidates(a,b,{moving=false}={}) {
   const tier=c=>/^(arm|leg)-/.test(c.segment)?0:c.segment==='head'?2:1;
   return tier(a)-tier(b) || strikePriority(a)-strikePriority(b);
 }
+// Prefer two independently reachable limb strikes at distinct opponents. If the
+// best limb is the only one reaching the second opponent, try another pairing.
+export function selectSimultaneousStrikes(candidates,{moving=false}={}){
+ const sorted=[...candidates].sort((a,b)=>compareStrikeCandidates(a,b,{moving}));
+ const limbs=sorted.filter(c=>c.source.kind==='arm'||c.source.kind==='leg');
+ const limb=key=>key.replace(/-(upper|lower)$/,'');
+ for(const first of limbs){
+  const second=limbs.find(c=>c.victim.id!==first.victim.id&&limb(c.source.key)!==limb(first.source.key));
+  if(second)return [first,second];
+ }
+ return sorted.length?[sorted[0]]:[];
+}
 // Every opportunity is considered once, not every frame: otherwise 20%
 // would become effectively certain over a few seconds.
 export function pounceOpportunity(attacker,victim) {
@@ -242,83 +255,71 @@ export function finishingPounceInProgress(robot,time) {
 export function combatAttacks() {
   if (ctx.combat.finished) return;
   resolvePounceImpacts();
-  // Один реальный удар: замах -> движение -> касание -> возврат в опору.
+  // Каждый удар: замах -> движение -> касание -> возврат в опору.
   for (const attacker of ctx.robots) {
-    const id = attacker.id,
-      pending = ctx.combat.pending[id];
-    if (!pending) continue;
-    if (!pending.resolved && ctx.game.time >= pending.impactAt) {
-      pending.resolved = true;
-      const victim = ctx.robots[pending.victim];
-      const src = attacker.attackSources.find(s => s.key === pending.source);
-      if (attacker.visible && src && victim?.visible && victim.hasHead && victim.segmentCount > 0) {
-        const touched = struckSegment(attacker, victim, pending);
-        const damage=touched&&random()<critChance(patientGarage()?.[id]?.stats[1]??3)?2:1;
-        if (touched && victim.damage(touched, id, damage)) {
-          if (victim.mobile) victim.reactToHit(attacker, touched);
-          ctx.combat.hits++;
-          ctx.combat.fighterHits[id]++;
-          ctx.combat.fighterTaken[victim.id]++;
-          ctx.combat.lastHitTime = ctx.game.time;
-          ctx.agentAI[id].lastHitAt = ctx.game.time;
-          ctx.agentAI[victim.id].lastHitAt = ctx.game.time;
-          note('combat-strike', {
+    const id = attacker.id;
+    for(const pending of pendingStrikes(id)){
+      if (!pending.resolved && ctx.game.time >= pending.impactAt) {
+        pending.resolved = true;
+        const victim = ctx.robots[pending.victim];
+        const src = attacker.attackSources.find(s => s.key === pending.source);
+        if (attacker.visible && attacker.mobile && src && victim?.visible && victim.hasHead && victim.segmentCount > 0) {
+          const touched = struckSegment(attacker, victim, pending);
+          const damage=touched&&random()<critChance(patientGarage()?.[id]?.stats[1]??3)?2:1;
+          if (touched && victim.damage(touched, id, damage)) {
+            if (victim.mobile) victim.reactToHit(attacker, touched);
+            ctx.combat.hits++;
+            ctx.combat.fighterHits[id]++;
+            ctx.combat.fighterTaken[victim.id]++;
+            ctx.combat.lastHitTime = ctx.game.time;
+            ctx.agentAI[id].lastHitAt = ctx.game.time;
+            ctx.agentAI[victim.id].lastHitAt = ctx.game.time;
+            note('combat-strike', {
+              from: id,
+              to: victim.id,
+              source: pending.source,
+              segment: touched
+            });
+            if (victim.mobile && victim.movementLimbs < 4) {
+              ctx.combat.retreatUntil[victim.id] = ctx.game.time + CONFIG.combat.retreatSec;
+              ctx.combat.retreatFrom[victim.id] = id;
+            }
+          } else note('combat-miss', {
             from: id,
             to: victim.id,
-            source: pending.source,
-            segment: touched
+            source: pending.source
           });
-          if (victim.mobile && victim.movementLimbs < 4) {
-            ctx.combat.retreatUntil[victim.id] = ctx.game.time + CONFIG.combat.retreatSec;
-            ctx.combat.retreatFrom[victim.id] = id;
-          }
-        } else note('combat-miss', {
-          from: id,
-          to: victim.id,
-          source: pending.source
-        });
+        }
       }
     }
-    if (ctx.game.time >= pending.endsAt) ctx.combat.pending[id] = null;
+    if(pendingStrikes(id).every(p=>ctx.game.time>=p.endsAt))ctx.combat.pending[id]=null;
   }
   initiateCombatPounces();
-  // Удары отдаются по одному каждому бойцу, не автоматически обоим при контакте.
+  // Each limb attacks one target; each cycle can attack at most two opponents.
   for (const attacker of ctx.robots) {
     const id = attacker.id;
     if (!attacker.visible || !attacker.mobile || ctx.game.time < ctx.combat.nextStrike[id] || ctx.combat.pending[id] || attacker.actualPose.leap || ctx.game.time < attacker.combatRecoverUntil) continue;
     // Reach is measured from each attacking limb, including the rear pelvis.
     const preferredVictims = activeOpponents(id);
     const moving=Math.hypot(attacker.velocity?.x??0,attacker.velocity?.y??0)>5||ctx.intents[id]?.speed>5;
-    let best = null;
-    for (const v of preferredVictims) for (const source of attacker.attackSources) {
-      // Head strikes remain possible even when other limbs are intact.
-      for (const c of strikeCandidates(attacker, v, source)) {
-        // Prefer hands on the move, then retain target tiers and geometry scores.
-        if (!best || compareStrikeCandidates(c,best,{moving})<0) best = c;
-      }
+    const candidates=[];
+    for(const v of preferredVictims)for(const source of attacker.attackSources){
+      const best=strikeCandidates(attacker,v,source)[0];
+      if(best)candidates.push(best);
     }
-    if (best) {
-      ctx.combat.pending[id] = {
-        victim: best.victim.id,
-        segment: best.segment,
-        source: best.source.key,
-        aim: {
-          ...best.aim
-        },
-        started: ctx.game.time,
-        impactAt: ctx.game.time + CONFIG.combat.windupSec + CONFIG.combat.thrustSec,
-        endsAt: ctx.game.time + CONFIG.combat.windupSec + CONFIG.combat.thrustSec + CONFIG.combat.recoverSec,
-        at: ctx.game.time + CONFIG.combat.windupSec,
-        resolved: false
-      };
-      ctx.combat.strikes++;
-      ctx.combat.fighterSwings[id]++;
-      ctx.combat.nextStrike[id] = ctx.game.time + CONFIG.combat.attackCooldownSec * (1 + .16 * (4 - attacker.spineCount));
-      note('combat-windup', {
-        from: id,
-        to: best.victim.id,
-        source: best.source.key
-      });
+    const selected=selectSimultaneousStrikes(candidates,{moving});
+    if(selected.length){
+      setPendingStrikes(id,selected.map(best=>({
+        victim:best.victim.id,segment:best.segment,source:best.source.key,aim:{...best.aim},
+        started:ctx.game.time,
+        impactAt:ctx.game.time+CONFIG.combat.windupSec+CONFIG.combat.thrustSec,
+        endsAt:ctx.game.time+CONFIG.combat.windupSec+CONFIG.combat.thrustSec+CONFIG.combat.recoverSec,
+        at:ctx.game.time+CONFIG.combat.windupSec,resolved:false
+      })));
+      ctx.combat.strikes+=selected.length;
+      ctx.combat.fighterSwings[id]+=selected.length;
+      ctx.combat.nextStrike[id]=ctx.game.time+CONFIG.combat.attackCooldownSec*(1+.16*(4-attacker.spineCount));
+      for(const best of selected)note('combat-windup',{from:id,to:best.victim.id,source:best.source.key});
     }
   }
   const mobile = ctx.robots.filter(r => r.mobile && r.visible && r.segmentCount > 0);

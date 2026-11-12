@@ -1,3 +1,4 @@
+import {pendingStrikes} from '../systems/strikes.js';
 import { clamp, wrap, smooth } from '../utils/math.js';
 import { CONFIG } from "../config.js";
 import { coreClearBone, sightClear } from "../systems/collision.js";
@@ -162,8 +163,7 @@ export function settleHands(robotState) {
   }
 }
 export function lifted(robotState, l) {
-  const p = ctx.combat.pending[robotState.id];
-  if (p && (p.source === `${l.kind}-${l.side}-lower` || p.source === `${l.kind}-${l.side}-upper`)) return true;
+  if(pendingStrikes(robotState.id).some(p=>p.source===`${l.kind}-${l.side}-lower`||p.source===`${l.kind}-${l.side}-upper`))return true;
   return robotState.mode === 'cover' || robotState.mode === 'hops' && robotState.hopHeight() > .001 || robotState.mode === 'scratch' && l.kind === 'arm' && l.side === 1 || (robotState.mode === 'eat' || robotState.mode === 'startle') && l.kind === 'arm' || !!robotState.leap?.launched || robotState.leap?.kind === 'rebound';
 }
 export
