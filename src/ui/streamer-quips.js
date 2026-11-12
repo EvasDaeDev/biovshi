@@ -1,6 +1,6 @@
 import {ROBOT_COLORS} from '../utils/colors.js';
 
-// Approved copy. {fighter} is a short arena letter, never a patient title/name.
+// {fighter} uses the live combat name in tower mode and the arena letter otherwise.
 export const STREAMER_QUIPS={
  start:['Мясо подъехало!','Кто первый ляжет?','Обнимайтесь покрепче!'],
  hit:['{fighter}, держи сдачу!','Хрустит — значит свежее!','Нежнее, садист!','Ой, прямо больно!'],
@@ -27,7 +27,10 @@ export function quipFor(event,index=0){
  const lines=event.type==='combat-end'&&event.winner===null?STREAMER_QUIPS.death.slice(1):category==='arm'||category==='leg'?[...STREAMER_QUIPS[category],...STREAMER_QUIPS.detached]:STREAMER_QUIPS[category];
  const id=event.robot??event.to??event.winner;
  const fighter=Number.isInteger(id)&&id>=0&&id<26?String.fromCharCode(65+id):'—';
- return lines[index%lines.length].replaceAll('{fighter}',fighter);
+ const name=event.fighterName??fighter;
+ if(event.type==='combat-end')return event.winner===null?'Бой окончен!':`${name} победил!`;
+ if(event.type==='robot-immobilized')return `${name} ${event.reason==='погиб'?'погиб':'вышел'}!`;
+ return lines[index%lines.length].replaceAll('{fighter}',name);
 }
 
 // A spoken line is followed by an equally long silent interval; animation continues.
@@ -39,8 +42,15 @@ export function createSpeechPacer(){
   reset(){time=next=0;}
  };
 }
-export function renderQuip(caption,text){
+export function renderQuip(caption,text,event={}){
  const doc=caption.ownerDocument;
+ if(event.fighterName){
+  const at=text.indexOf(event.fighterName),id=event.robot??event.to??event.winner;
+  if(at<0){caption.textContent=text;return;}
+  const name=doc.createElement('span');name.className='streamer-fighter';
+  name.style.color=ROBOT_COLORS[id%ROBOT_COLORS.length];name.textContent=event.fighterName;
+  caption.replaceChildren(doc.createTextNode(text.slice(0,at)),name,doc.createTextNode(text.slice(at+event.fighterName.length)));return;
+ }
  caption.replaceChildren(...text.split(/(\b[A-Z]\b)/).map(part=>{
   if(!/^[A-Z]$/.test(part))return doc.createTextNode(part);
   const name=doc.createElement('span');name.className='streamer-fighter';
