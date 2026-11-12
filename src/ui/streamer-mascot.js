@@ -1,6 +1,6 @@
 import {ctx} from '../game/state.js';
 import {onGameEvent} from '../game/event-bus.js';
-import {quipCategory,quipFor} from './streamer-quips.js';
+import {quipCategory,quipFor,createSpeechPacer,renderQuip} from './streamer-quips.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
 
 const STORAGE='biovshi.streamer-hidden.v1';
@@ -86,9 +86,9 @@ export function initializeStreamerMascot(){
  ctx.stage.append(box,toggle);
  let hidden=false,disposed=false,painter=null,iconAtlas=null,loaded=false,elapsed=0,lastPaint=-Infinity;
  try{hidden=win.localStorage.getItem(STORAGE)==='true';}catch{/* Storage may be disabled. */}
- const track=createReactionTrack(),heads={},quipCounts=new Map();
+ const track=createReactionTrack(),speechPacer=createSpeechPacer(),heads={},quipCounts=new Map();
  let spoken=null,quietFor=0;
- const clearSpeech=()=>{spoken=null;quietFor=0;caption.hidden=true;caption.textContent='';};
+ const clearSpeech=()=>{spoken=null;quietFor=0;speechPacer.reset();caption.hidden=true;caption.textContent='';};
  const updateToggle=()=>{
   box.hidden=hidden;toggle.textContent=hidden?'▴':'▾';toggle.setAttribute('aria-expanded',String(!hidden));
   toggle.dataset.hint=hidden?'Показать маскота':'Скрыть маскота';toggle.setAttribute('aria-label',toggle.dataset.hint);
@@ -126,16 +126,18 @@ export function initializeStreamerMascot(){
   const active=!ctx.paused&&!ctx.settingsOpen&&ctx.startup.phase==='running';
   if(active&&!ctx.combat?.finished){
    quietFor+=delta;
-   if(quietFor>=10){track.offer({type:'streamer-idle'});quietFor=0;}
+   if(quietFor>=20){track.offer({type:'streamer-idle'});quietFor=0;}
   }
+  speechPacer.tick(delta);
   const reaction=track.tick(delta,active),emotion=reaction?.emotion??'neutral';
   if(reaction!==spoken){
    spoken=reaction;
-   if(reaction){
+   caption.hidden=true;
+   if(reaction&&speechPacer.take(reaction.duration)){
     const category=quipCategory(reaction.event),index=quipCounts.get(category)??0;
-    caption.textContent=quipFor(reaction.event,index);quipCounts.set(category,index+1);
+    renderQuip(caption,quipFor(reaction.event,index));quipCounts.set(category,index+1);
+    caption.hidden=!caption.textContent;
    }
-   caption.hidden=!reaction||!caption.textContent;
   }
   const energy=reaction?1:.16,t=elapsed;
   const bob=Math.sin(t*(reaction?9:2.7))*(reaction?2:1);

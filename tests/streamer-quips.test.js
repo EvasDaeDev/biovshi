@@ -1,6 +1,8 @@
+import {JSDOM} from 'jsdom';
+import {ROBOT_COLORS} from '../src/utils/colors.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {STREAMER_QUIPS,quipFor} from '../src/ui/streamer-quips.js';
+import {STREAMER_QUIPS,quipFor,createSpeechPacer,renderQuip} from '../src/ui/streamer-quips.js';
 import {createReactionTrack} from '../src/ui/streamer-mascot.js';
 import {note} from '../src/game/events.js';
 import {ctx} from '../src/game/state.js';
@@ -46,4 +48,28 @@ test('battle events still reach subscribers and the log without central arena an
   assert.equal(received.length,4);assert.equal(ctx.game.events.length,4);
   assert.deepEqual(ctx.arenaAccent,{flashes:[]});
  }finally{off();ctx.game=oldGame;ctx.arenaAccent=oldAccent;}
+});
+
+test('speech pacing halves repeated comments and resets for a new round',()=>{
+ const pacer=createSpeechPacer();let count=0;
+ for(let i=0;i<10;i++){if(pacer.take(2))count++;pacer.tick(2);}
+ assert.equal(count,5);
+ pacer.reset();assert.equal(pacer.take(2),true);
+ assert.equal(pacer.take(2),false);
+});
+
+test('only fighter letters receive their shared identity colour, with safe text rendering',()=>{
+ const dom=new JSDOM('<p></p>'),caption=dom.window.document.querySelector('p');
+ for(let id=0;id<4;id++){
+  const text=quipFor({type:'segment-broken',segment:'arm-1-upper',robot:id},2);
+  renderQuip(caption,text);
+  assert.equal(caption.textContent,text);
+  const name=caption.querySelector('.streamer-fighter');assert.ok(name);
+  assert.equal(name.textContent,'ABCD'[id]);
+  const expected=dom.window.document.createElement('span');expected.style.color=ROBOT_COLORS[id];
+  assert.equal(name.style.color,expected.style.color);
+ }
+ renderQuip(caption,'Ой, отвалилось!');assert.equal(caption.children.length,0);
+ renderQuip(caption,'<img src=x>');assert.equal(caption.querySelector('img'),null);
+ dom.window.close();
 });

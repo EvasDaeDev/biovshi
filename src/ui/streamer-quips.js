@@ -1,3 +1,5 @@
+import {ROBOT_COLORS} from '../utils/colors.js';
+
 // Approved copy. {fighter} is a short arena letter, never a patient title/name.
 export const STREAMER_QUIPS={
  start:['Мясо подъехало!','Кто первый ляжет?','Обнимайтесь покрепче!'],
@@ -26,4 +28,23 @@ export function quipFor(event,index=0){
  const id=event.robot??event.to??event.winner;
  const fighter=Number.isInteger(id)&&id>=0&&id<26?String.fromCharCode(65+id):'—';
  return lines[index%lines.length].replaceAll('{fighter}',fighter);
+}
+
+// A spoken line is followed by an equally long silent interval; animation continues.
+export function createSpeechPacer(){
+ let time=0,next=0;
+ return {
+  tick(dt){time+=Math.max(0,dt);},
+  take(duration){if(time+1e-9<next)return false;next=time+duration*2;return true;},
+  reset(){time=next=0;}
+ };
+}
+export function renderQuip(caption,text){
+ const doc=caption.ownerDocument;
+ caption.replaceChildren(...text.split(/(\b[A-Z]\b)/).map(part=>{
+  if(!/^[A-Z]$/.test(part))return doc.createTextNode(part);
+  const name=doc.createElement('span');name.className='streamer-fighter';
+  name.style.color=ROBOT_COLORS[(part.charCodeAt(0)-65)%ROBOT_COLORS.length];
+  name.textContent=part;return name;
+ }));
 }
