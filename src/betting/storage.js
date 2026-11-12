@@ -22,6 +22,7 @@ export function bettingLoad() {
     s.towerEarned??=0;
     if(!Number.isSafeInteger(s.towerEarned)||s.towerEarned<0||s.towerEarned>16000000)throw Error();
     s.towers??={};
+    const migrateArtifacts=Object.values(s.towers).some(t=>t&&t.artifacts===undefined);
     if(typeof s.towers!=='object'||Array.isArray(s.towers)||s.towers===null||!Object.entries(s.towers).every(([id,t])=>/^(0|[1-9]\d*)$/.test(id)&&s.players[Number(id)]&&validTower(normalizeTower(t))))throw Error();
     s.garage??=newGarage();
     if(!Array.isArray(s.garage)||s.garage.length!==4||!s.garage.every(g=>g&&typeof g==='object'))throw Error();
@@ -39,6 +40,7 @@ export function bettingLoad() {
     const total = s.players.reduce((n, p) => n + p.balance, 0) + s.jackpot + (s.phase === 'running' ? s.lockedJackpot + s.bets.reduce((n, b) => n + b.amount, 0) : 0);
     if (total + s.shopSpent !== s.players.length * s.capital + s.topUps + s.towerEarned) throw Error();
     if (betRefund(s)) ctx.betNotice = 'Предыдущий бой был прерван: ставки возвращены, джекпот сохранён.';
+    if(migrateArtifacts){try{localStorage.setItem(ctx.BET_STORAGE,JSON.stringify(s));}catch{ctx.betStorageAvailable=false;}}
     return s;
   } catch {
     ctx.betNotice = 'Не удалось загрузить сохранённую сессию. Можно начать новую игру.';

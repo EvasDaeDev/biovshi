@@ -8,6 +8,7 @@ import {onGameEvent} from '../game/event-bus.js';
 import {installTowerInput} from './input.js';
 import {SKILLS} from '../ui/patient.js';
 import {arenaDiagram} from '../game/arenas.js';
+import {artifactCollectionMarkup} from './artifact-ui.js';
 import {formatChips} from '../ui/currency.js';
 
 export function refreshMenu(){
@@ -71,7 +72,10 @@ export function settleTower(winner){
   ctx.towerOutcome={won,floor:t.level,cleared,record:Math.max(t.record,cleared),newRecord:cleared>t.record,
     runKills:t.runKills,runCoins:t.runCoins,floorCoins:ctx.towerFloorCoins??0,time:ctx.round.elapsedSec,
     reason:ctx.robots[0].hasHead?'Потерял сознание':'Погиб'};
-  completeTower(ctx.betting,ctx.towerPlayer,won);bettingSave();ctx.clearTowerInput?.();
+  const priorPieces=[...t.artifacts.pieces];
+  const next=completeTower(ctx.betting,ctx.towerPlayer,won);
+  ctx.towerOutcome.artifact=won?next.artifacts.pieces.find(id=>!priorPieces.includes(id))??null:null;
+  bettingSave();ctx.clearTowerInput?.();
 }
 export function towerResults(){
   const won=ctx.combat.winner===0,t=towerFor(ctx.betting,ctx.towerPlayer),o=ctx.towerOutcome??{floor:ctx.towerRun.level,cleared:won?ctx.towerRun.level:ctx.towerRun.level-1,record:t.record};
@@ -82,6 +86,7 @@ export function towerResults(){
     ${o.newRecord?'<strong class="tower-record-banner">НОВЫЙ ЛИЧНЫЙ РЕКОРД!</strong>':''}
     ${won&&o.cleared%5===0?`<strong class="tower-milestone">РУБЕЖ: ${o.cleared} ЭТАЖЕЙ</strong>`:''}
     <div class="tower-result-numbers"><div><strong>${o.cleared}</strong><span>ЭТАЖЕЙ ПРОЙДЕНО</span></div><div><strong>${o.record}</strong><span>ЛИЧНЫЙ РЕКОРД</span></div><div><strong>${formatChips(coins)}</strong><span>${coinLabel}</span></div></div>
+    ${artifactCollectionMarkup(t.artifacts,o.artifact)}
     <p>БАНК: ${formatChips(ctx.betting.players[ctx.towerPlayer].balance)}${o.runKills==null?'':` · ЛИЧНЫХ ПОБЕД: ${o.runKills}`}</p>
   </div>`;
   ctx.resultsAgain.textContent=won?`НА ЭТАЖ ${t.level}`:'НОВАЯ ПОПЫТКА · ЭТАЖ 1';

@@ -1,8 +1,9 @@
+import {newArtifactCollection,validArtifactCollection,drawArtifactPiece} from './artifacts.js';
 import {BASE_STATS,patientVictory,validStats} from '../garage/model.js';
 export const TOWER_REWARD=10;
 export const floorEnemyCount=floor=>1+Math.floor(floor/2);
 export const towerEnemyCount=t=>t.legacyEnemyCount??floorEnemyCount(t.level);
-export function newTower(patient=Math.floor(Math.random()*4),record=0){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,rewarded:[],preparing:false,record,runKills:0,runCoins:0};}
+export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(record)){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts};}
 export function normalizeTower(t){
  if(!t||typeof t!=='object'||Array.isArray(t))return t;
  if(t.version===undefined||t.version===1){
@@ -10,6 +11,7 @@ export function normalizeTower(t){
   // Past run earnings were not recorded per player. Never invent those figures.
   t.runKills=t.wins>0?null:t.rewarded?.length??0;t.runCoins=t.runKills===null?null:t.runKills*TOWER_REWARD;
  }
+ if(t.artifacts===undefined&&Number.isSafeInteger(t.record)&&t.record>=0)t.artifacts=newArtifactCollection(t.record);
  return t;
 }
 export function towerFor(session,player){
@@ -21,7 +23,7 @@ export function validTower(t){
  const count=towerEnemyCount(t),optionalCount=n=>n===null||Number.isSafeInteger(n)&&n>=0;
  return t&&t.version===2&&Number.isSafeInteger(t.level)&&t.level>=1&&Number.isSafeInteger(t.wins)&&t.wins===t.level-1
   &&Number.isInteger(t.patient)&&t.patient>=0&&t.patient<4&&validStats(t.stats,t.wins)
-  &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&optionalCount(t.runKills)&&optionalCount(t.runCoins)
+  &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&validArtifactCollection(t.artifacts,t.record)&&optionalCount(t.runKills)&&optionalCount(t.runCoins)
   &&(t.legacyEnemyCount===undefined||t.legacyEnemyCount===t.level)
   &&typeof t.preparing==='boolean'&&Array.isArray(t.rewarded)&&t.rewarded.length<=count
   &&new Set(t.rewarded).size===t.rewarded.length&&t.rewarded.every(id=>Number.isInteger(id)&&id>=1&&id<=count);
@@ -36,8 +38,8 @@ export function rewardTower(session,player,victim,by){
 }
 export function completeTower(session,player,won){
  const t=towerFor(session,player);
- if(won){t.record=Math.max(t.record,t.level);patientVictory(t);t.level++;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;}
- else session.towers[player]=newTower(undefined,t.record);
+ if(won){if(t.level>t.record)drawArtifactPiece(t.artifacts);t.record=Math.max(t.record,t.level);patientVictory(t);t.level++;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;}
+ else session.towers[player]=newTower(undefined,t.record,t.artifacts);
  return session.towers[player];
 }
-export function resetTower(session,player){const t=towerFor(session,player);return session.towers[player]=newTower(undefined,t.record);}
+export function resetTower(session,player){const t=towerFor(session,player);return session.towers[player]=newTower(undefined,t.record,t.artifacts);}

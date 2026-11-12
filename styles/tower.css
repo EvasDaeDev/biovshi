@@ -44,3 +44,18 @@
 
 /* Keep the shared coin proportional to the large run total. */
 #robot-tag-hops-v22 .tower-result-numbers .chip-icon{font-size:.55em;letter-spacing:normal;vertical-align:.04em}
+
+/* All fragment PNGs share the silhouette's full 256px canvas and alignment. */
+#robot-tag-hops-v22 .tower-artifacts{margin:14px 0 8px}
+#robot-tag-hops-v22 .artifact-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+#robot-tag-hops-v22 .artifact{margin:0;min-width:0;text-align:center}
+#robot-tag-hops-v22 .artifact-image{position:relative;width:100%;aspect-ratio:1;isolation:isolate}
+#robot-tag-hops-v22 .artifact-image img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+#robot-tag-hops-v22 .artifact figcaption{font-size:11px;line-height:1.4;color:#d7c8a9}
+#robot-tag-hops-v22 .artifact.is-complete figcaption{color:#f3d884}
+#robot-tag-hops-v22 .tower-run-summary .artifact-award-note,
+#robot-tag-hops-v22 .tower-run-summary .artifact-completed{color:#f3d884;font-size:12px;text-align:center;margin:8px 0;line-height:1.4}
+#robot-tag-hops-v22 .artifact-award-note{text-transform:uppercase}
+#robot-tag-hops-v22 .artifact-piece.is-new{animation:artifact-insert 1s ease-out both}
+@keyframes artifact-insert{from{opacity:0;transform:translateY(-16px) scale(1.12);filter:drop-shadow(0 0 8px #f3d884)}to{opacity:1;transform:none;filter:none}}
+@media(prefers-reduced-motion:reduce){#robot-tag-hops-v22 .artifact-piece.is-new{animation:none}}
