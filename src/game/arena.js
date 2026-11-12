@@ -100,15 +100,6 @@ export function expandedObstacle(b, pad) {
     points
   };
 }
-export function chooseHunter() {
-  // Независимый жребий: любой робот может выпасть снова, у каждого шанс 25%.
-  if (globalThis.crypto?.getRandomValues) {
-    const value = new Uint32Array(1);
-    globalThis.crypto.getRandomValues(value);
-    return value[0] % ctx.ROBOT_COUNT;
-  }
-  return Math.floor(random() * ctx.ROBOT_COUNT);
-}
 // Фиксированные точки старта. В каждой из них может появиться любой робот.
 export function spawnFacingAngle(point,boundary) {
   const right=boundary.right??boundary.left+boundary.size;

@@ -109,3 +109,48 @@ test('combat log uses a 35-character column at the stage corner and fades only a
  const fade=dom.window.getComputedStyle(ctx.combatLog).getPropertyValue('mask-image');assert.match(fade,/28px/);
  ctx.resultsAgain.click();assert.equal(ctx.combatLog.children.length,0);assert.equal(ctx.combatLog.dataset.full,'false');close(dom);
 });
+
+test('cancelled combat restores patient builds, hats, patronage and balances, including after reload',async()=>{
+ for(const reload of [false,true]){
+  const s=betNewSession(['A','B'],1000);
+  const {earnedStats}=await import('../src/garage/model.js');
+  s.garage[0].wins=6;s.garage[0].stats=earnedStats(6);
+  buyHat(s,0,1,3,50);
+  const before=structuredClone(s);
+  const dom=setup({session:s,entry:'betting'});
+  try{
+   const {betCommit}=await import('../src/betting/ledger.js');
+   const {bettingCancel}=await import('../src/betting/ui.js');
+   betCommit(s,[{player:0,robot:0,amount:100},{player:1,robot:1,amount:100}]);
+   startSpawnSequence();advanceStartup(10);
+   ctx.robots[0].damage('head',1,100);
+   assert.equal(s.garage[0].wins,0);assert.equal(s.garage[0].head,null);
+   if(reload){bettingSave();ctx.betting=bettingLoad();assert.ok(ctx.betting);}
+   else bettingCancel();
+   assert.deepEqual(ctx.betting.garage,before.garage);
+   assert.deepEqual(ctx.betting.players,before.players);
+   assert.equal(ctx.betting.shopSpent,before.shopSpent);
+   assert.equal(ctx.betting.jackpot,before.jackpot);
+   assert.equal(ctx.betting.lastResult,before.lastResult);
+   assert.equal(ctx.betting.roundSnapshot,undefined);
+   bettingSave();assert.deepEqual(bettingLoad(),ctx.betting);
+   await resetRound();
+   assert.ok(ctx.robots.every(r=>r.hasHead&&r.movementLimbs===4));
+  }finally{close(dom);}
+ }
+});
+
+test('leak origins follow both sides of damaged arms and legs',()=>{
+ const dom=setup({session:betNewSession(['A'],100),entry:'betting'});
+ try{
+  const r=ctx.robots[0];
+  for(const kind of ['arm','leg'])for(const side of [-1,1]){
+   const upper=r.capsules.find(c=>c.segment===`${kind}-${side}-upper`);
+   const lower=r.capsules.find(c=>c.segment===`${kind}-${side}-lower`);
+   const actualUpper=r.leakOrigin(`${kind}-${side}-upper`);
+   const actualLower=r.leakOrigin(`${kind}-${side}-lower`);
+   assert.ok(Math.hypot(actualUpper.x-(upper.a.x+upper.b.x)/2,actualUpper.y-(upper.a.y+upper.b.y)/2)<1e-8);
+   assert.ok(Math.hypot(actualLower.x-lower.a.x,actualLower.y-lower.a.y)<1e-8);
+  }
+ }finally{close(dom);}
+});

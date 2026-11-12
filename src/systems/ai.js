@@ -7,17 +7,6 @@ import { arenaClearance } from "../game/arena.js";
 import { CONFIG } from "../config.js";
 import { notices } from "./perception.js";
 import { strikeCandidates } from "./combat.js";
-export function eligible(id) {
-  return id !== ctx.game.hunter && ctx.game.time >= ctx.game.immune[id] && ctx.game.time >= ctx.game.bans[ctx.game.hunter][id];
-}
-export function setTarget(id) {
-  if (ctx.game.target !== id) {
-    ctx.game.target = id;
-    ctx.game.pursuitAt = ctx.game.time;
-    ctx.game.pursuitDistance = id === null ? 0 : Math.hypot(ctx.robots[id].x - ctx.robots[ctx.game.hunter].x, ctx.robots[id].y - ctx.robots[ctx.game.hunter].y);
-    if (id !== null) ctx.game.lastPursued[id] = ctx.game.time;
-  }
-}
 export function patrol(r) {
   const ai = ctx.agentAI[r.id];
   if (!ai.goal || ctx.game.time > ai.goalUntil || Math.hypot(ai.goal.x - r.x, ai.goal.y - r.y) < 28) {
@@ -352,7 +341,7 @@ export function fighterIntent(r) {
       x: target.x,
       y: target.y
     };
-    ai.sensedUntil = ctx.game.time + ctx.HEARING.memorySec;
+    ai.sensedUntil = ctx.game.time + CONFIG.vision.memorySec;
     ai.sensedId = target.id;
     ai.sensedType = 'vision';
     ai.searchHoldUntil = 0;

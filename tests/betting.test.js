@@ -91,8 +91,53 @@ test('all credits remain accounted for across many rounds at the maximum chip su
     const before=s.jackpot;
     betCommit(s,draft);assert.equal(total(s),16000000);
     const r=betResolve(s,round%7===0?null:round%4);
-    assert.equal(total(s),16000000);assert.ok(s.jackpot>=before);
-    assert.ok(r.rows.reduce((sum,r)=>sum+r.payout,0)<=r.stakes);
+    assert.equal(total(s),16000000);
+    assert.ok(r.jackpotPaid<=Math.floor(before/4));
+    assert.equal(s.jackpot,before+r.jackpotAdded-r.jackpotPaid);
+    assert.ok(r.rows.reduce((sum,r)=>sum+r.payout,0)<=r.stakes+r.jackpotPaid);
     for(const row of r.rows){assert.ok(Number.isSafeInteger(row.payout));if(row.robot===r.winner)assert.ok(row.payout>=row.stake);}
   }
+});
+
+test('every fifth contested winning round shares only a quarter of the prior jackpot',()=>{
+  const s=betNewSession(['А','Б','В'],10000);
+  s.players[0].balance-=1000;s.jackpot=1000;
+  for(let i=1;i<=5;i++){
+    s.phase='betting';
+    const before=s.jackpot;
+    betCommit(s,bets([10,30,100],[0,0,1]));
+    const r=betResolve(s,0);
+    assert.equal(total(s),30000);
+    if(i<5){assert.equal(r.jackpotPaid,0);assert.equal(s.jackpotRounds,i);}
+    else {
+      // Previous jackpot is 1064; budget 266 split 1:3, rounded down.
+      assert.deepEqual(r.rows.map(p=>p.jackpotPayout),[66,199,0]);
+      assert.equal(r.jackpotPaid,265);
+      assert.ok(s.jackpot>=Math.ceil(before*.75)+r.jackpotAdded);
+      assert.equal(s.jackpotRounds,0);
+      assert.equal(betResolve(s,0),null);
+    }
+  }
+});
+
+test('draws, cancellation, zero bets, unbacked and unanimous wins cannot trigger a jackpot',()=>{
+  const s=betNewSession(['А','Б'],1000);
+  s.players[0].balance-=100;s.jackpot=100;s.jackpotRounds=4;
+  for(const [amounts,robots,winner] of [
+    [[10,20],[0,1],null], [[0,0],[0,1],0],
+    [[10,20],[0,1],3], [[10,20],[0,0],0]
+  ]){
+    s.phase='betting';betCommit(s,bets(amounts,robots));
+    const r=betResolve(s,winner);
+    assert.equal(r.jackpotPaid,0);assert.equal(s.jackpotRounds,4);assert.equal(total(s),2000);
+  }
+  s.phase='betting';betCommit(s,bets([10,20],[0,1]));betRefund(s);
+  assert.equal(s.jackpotRounds,4);
+});
+
+test('small and uneven jackpot shares retain all rounding in the reserve',()=>{
+  const s=betNewSession(['А','Б','В'],100);
+  s.players[0].balance-=3;s.jackpot=3;s.jackpotRounds=4;
+  betCommit(s,bets([1,2,3],[0,0,1]));const r=betResolve(s,0);
+  assert.equal(r.jackpotPaid,0);assert.equal(s.jackpot,5);assert.equal(total(s),300);
 });
