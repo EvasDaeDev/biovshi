@@ -1,6 +1,13 @@
 // Paths are relative to public/. Use null to keep the current appearance and silence.
 export const ASSETS = {
   textures: {
+    uiBone:'assets/textures/UI/icons/bone_01.png',
+    uiCoin:'assets/textures/UI/icons/coin_01.png',
+    uiMobility:'assets/textures/UI/icons/mobi_01.png',
+    uiScreen:'assets/textures/UI/icons/screen_01.png',
+    uiSettings:'assets/textures/UI/icons/setting_01.png',
+    uiSpeed:'assets/textures/UI/icons/speed_01.png',
+    uiStrength:'assets/textures/UI/icons/strench_01.png',
     ...Object.fromEntries(Array.from({length:4},(_,a)=>['bg','1','2','3','4'].map(piece=>[`artifact${a+1}_${piece}`,`assets/textures/UI/artefacts/${a+1}/${piece}.png`])).flat()),
     streamer: 'assets/textures/streamer/girl_atlas.png',
     arenaFloor: 'assets/textures/arena/floor_01.webp',

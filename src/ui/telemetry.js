@@ -1,3 +1,4 @@
+import {uiIcon} from './icons.js';
 import {patientName} from './patient.js';
 import { TELEMETRY_COLOURS } from './telemetry-colours.js';
 import { clamp } from '../utils/math.js';
@@ -7,12 +8,12 @@ export function makeRobotCard(id) {
   const card = document.createElement('section');
   card.className = 'robot-card';
   card.style.setProperty('--accent', ROBOT_COLORS[id%4]);
-  card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${patientName(id,{short:true})}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><span aria-hidden="true">🦴</span> <span class="robot-card-segments">13/13</span></div></div>
+  card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${patientName(id,{short:true})}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><span aria-hidden="true">${uiIcon('bone')}</span> <span class="robot-card-segments">13/13</span></div></div>
   <div class="robot-card-body"><div class="portrait-wrap"><canvas class="patient-portrait" width="280" height="224" role="img" aria-label="Пациент ${String.fromCharCode(65+id)}"></canvas></div>
   <div class="patient-skills" aria-label="Умения пациента">
-  <div aria-label="Сила" title="Сила определяет шанс критического урона (КРИТ)"><span aria-hidden="true">💪</span><span class="js-strength">3 · 15% КРИТ</span></div>
-  <div aria-label="Скорость" title="Скорость движения"><span aria-hidden="true">→</span><span class="js-speed">3 · 100%</span></div>
-  <div aria-label="Маневренность" title="Маневренность · скорость поворота"><span aria-hidden="true">↻</span><span class="js-maneuver">3 · 100%</span></div></div></div>`;
+  <div aria-label="Сила" title="Сила определяет шанс критического урона (КРИТ)"><span aria-hidden="true">${uiIcon('strength')}</span><span class="js-strength">3 · 15% КРИТ</span></div>
+  <div aria-label="Скорость" title="Скорость движения"><span aria-hidden="true">${uiIcon('speed')}</span><span class="js-speed">3 · 100%</span></div>
+  <div aria-label="Маневренность" title="Маневренность · скорость поворота"><span aria-hidden="true">${uiIcon('mobility')}</span><span class="js-maneuver">3 · 100%</span></div></div></div>`;
   ctx.roles.appendChild(card);
   return {
     card,

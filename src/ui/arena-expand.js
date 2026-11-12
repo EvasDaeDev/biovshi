@@ -1,3 +1,4 @@
+import {uiIcon} from './icons.js';
 import {ctx} from '../game/state.js';
 import {fitField} from './controls.js';
 import {paintTelemetry} from './paint-telemetry.js';
@@ -5,6 +6,7 @@ import {paintTelemetry} from './paint-telemetry.js';
 export function initializeArenaExpand() {
   const root=ctx.root,doc=root.ownerDocument,win=doc.defaultView;
   const button=root.querySelector('#arena-expand-button');
+  button.innerHTML=uiIcon('screen');
   let overflow=[],scroll={x:0,y:0};ctx.arenaExpanded=false;
   const updateButton=()=>{
     const label=ctx.arenaExpanded?'Свернуть':'Развернуть';

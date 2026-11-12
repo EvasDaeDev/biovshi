@@ -1,4 +1,4 @@
-// A CSS-drawn coin works without emoji fonts, downloads, or external assets.
-export const COIN_ICON='<span class="chip-icon" role="img" aria-label="фишки"></span>';
+import {uiIcon} from './icons.js';
+export const COIN_ICON=uiIcon('coin',{className:'chip-icon',label:'монеты'});
 export const formatChips = value => Number(value).toLocaleString('ru-RU') + ' '+COIN_ICON;
 export const formatChipsText = value => Number(value).toLocaleString('ru-RU') + ' фишек';
