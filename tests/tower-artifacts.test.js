@@ -59,7 +59,9 @@ test('collection markup layers each owned fragment over its matching silhouette 
  const dom=new JSDOM(artifactCollectionMarkup(collection,3)),doc=dom.window.document;
  assert.equal(doc.querySelectorAll('.artifact').length,4);assert.equal(doc.querySelectorAll('.artifact-silhouette').length,4);assert.equal(doc.querySelectorAll('.artifact-piece').length,5);
  assert.equal(doc.querySelectorAll('.artifact-piece.is-new').length,1);assert.equal(doc.querySelector('.is-new').dataset.piece,'3');assert.equal(doc.querySelectorAll('.artifact.is-complete').length,1);
- assert.match(doc.querySelectorAll('.artifact')[1].textContent,/Компьютер/);assert.match(doc.querySelectorAll('.artifact')[2].textContent,/Грааль/);
+ assert.match(doc.querySelectorAll('.artifact')[1].textContent,/\?\?\?/);assert.doesNotMatch(doc.body.innerHTML,/Компьютер|Грааль|Водка и огурец/);
+ const incomplete=artifactCollectionMarkup({version:1,pieces:[4]},4);assert.doesNotMatch(incomplete,/Мишка|Компьютер|Грааль|Водка и огурец/);assert.match(incomplete,/НОВЫЙ ФРАГМЕНТ · 1\/4/);
+ const complete=artifactCollectionMarkup(newArtifactCollection(16));for(const name of ['Мишка','Компьютер','Грааль','Водка и огурец'])assert.ok(complete.includes(name));
  assert.match(doc.querySelector('.artifact-completed').textContent,/Мишка/);
  assert.match(doc.querySelector('[data-piece="6"]').src,/artefacts\/2\/3.png$/);
  for(const image of doc.querySelectorAll('img'))assert.ok(fs.existsSync(new URL('../public/'+image.getAttribute('src').replace(/^\.\//,''),import.meta.url)));
