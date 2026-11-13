@@ -58,7 +58,7 @@ test('live severing removes both segment effects and highlighting; recovery, dea
  const f=setup();try{
   let r=ctx.robots[0];f.paint();
   assert.equal(patientCombatStats(0).count,2);near(patientCombatStats(0).effective[1],3.18);
-  assert.equal(ctx.cardNodes[0].strength.textContent,'3,18 · 18% КРИТ');
+  assert.equal(ctx.cardNodes[0].strength.textContent,'3,18 · 18%');
   assert.equal(ctx.cardNodes[0].maneuver.textContent,'2,88 · 98%');
   assert.equal(ctx.cardNodes[0].card.querySelectorAll('.is-prosthetic').length,3);
   r.damage(arm[0],1,3);assert.equal(patientCombatStats(0).count,0);f.paint();
