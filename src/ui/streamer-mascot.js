@@ -100,8 +100,8 @@ export function initializeStreamerMascot({lines,random}={}){
  const canvas=doc.createElement('canvas');canvas.width=280;canvas.height=288;box.append(canvas);
  const caption=doc.createElement('p');caption.className='streamer-quip';caption.hidden=true;box.append(caption);
  const toggle=doc.createElement('button');toggle.id='streamer-mascot-toggle';toggle.type='button';toggle.setAttribute('aria-controls',box.id);
- // Viewport UI must not inherit the arena column offset or its isolated layer.
- root.append(box,toggle);
+ // Anchor to the arena viewport, independently of its world camera.
+ ctx.stage.append(box,toggle);
  let hidden=false,disposed=false,painter=null,iconAtlas=null,loaded=false,elapsed=0,lastPaint=-Infinity;
  try{hidden=win.localStorage.getItem(STORAGE)==='true';}catch{/* Storage may be disabled. */}
  const motion=createStreamerMotion(),track=createReactionTrack(),speechPacer=createSpeechPacer(),heads={},selectQuip=createQuipSelector(lines,random);

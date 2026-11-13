@@ -16,4 +16,6 @@ export function fitInterface(){
   ctx.root.style.width=(ctx.arenaExpanded?(win.visualViewport?.width||win.innerWidth)/layout.scale:layout.width)+'px';
   ctx.root.style.setProperty('--game-height',layout.height+'px');
   ctx.root.classList.toggle('compact-layout',layout.width<1120);
+  // A wide iPad still needs the touch toolbar; width alone cannot identify it.
+  ctx.root.classList.toggle('mobile-layout',Boolean(ctx.touchDevice));
 }
