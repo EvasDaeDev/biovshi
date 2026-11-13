@@ -48,7 +48,7 @@ function createPiece(key,url,parent) {
     href:url,x:0,y:0,width:256,height:256,preserveAspectRatio:'none',
     style:CONFIG.rendering.texturePixelated?'image-rendering:crisp-edges;image-rendering:pixelated':'',
   },viewport);
-  return {group,image,part};
+  return {group,image,part,url};
 }
 
 export function createRobotSkin(robot) {
@@ -72,7 +72,8 @@ export function createRobotSkin(robot) {
   const keys=[...Object.keys(ROBOT_PARTS).filter(k=>/^(arm|leg)/.test(k)),
     'spine-3','spine-2','spine-1','spine-0','head'];
   for(const key of keys) {
-    const piece=createPiece(key,url,/^(arm|leg)/.test(key)?limbs:body);
+    const android=robot.prosthetics.includes(key)&&ctx.textureAssets?.robotAndroid?.loaded!==false;
+    const piece=createPiece(key,android?assetUrl(ASSETS.textures.robotAndroid):url,/^(arm|leg)/.test(key)?limbs:body);
     piece.image.addEventListener('load',()=>activate(true),{once:true});
     piece.image.addEventListener('error',()=>activate(false));
     pieces.set(key,piece);
@@ -121,7 +122,7 @@ export function snapshotRobotSkin(robot,key) {
     const transform=node.getAttribute?.('transform');
     if (transform)transforms.unshift(transform);
   }
-  return {key,url:robot.skin.url,transform:transforms.join(' '),hat:key==='head'?patientGarage()?.[robot.id]?.head?.hat:null};
+  return {key,url:piece.url,transform:transforms.join(' '),hat:key==='head'?patientGarage()?.[robot.id]?.head?.hat:null};
 }
 
 export function drawDetachedSkin(snapshot,parent) {

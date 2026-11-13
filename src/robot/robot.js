@@ -1,4 +1,4 @@
-import {patientSkin} from '../game/patients.js';
+import {patientSkin,patientGarage} from '../game/patients.js';
 import { clamp } from '../utils/math.js';
 import { descendants, finishMobility, leakOrigin, reactToHit, robotDamage, robotFailFromOilLoss, segmentGeometry } from "./anatomy.js";
 import { allLimbs, attackPose, handEnd, handRest, headFrameAt, hornPoints, layoutBody, legRest, lengths, limbFrame, local, mixPose, origin, rest, savePose, sphereCenters, updateExtraLimbs, updateTail } from "./kinematics.js";
@@ -203,6 +203,7 @@ function createRobot(id, start) {
   };
   robotState.hp = new Map();
   robotState.broken = new Set();
+  robotState.prosthetics = [...(patientGarage()?.[robotState.id]?.prosthetics??[])];
   robotState.hitAt = new Map();
   robotState.segments = ['head', ...Array.from({
     length: 4
@@ -420,6 +421,8 @@ function createRobot(id, start) {
     get segmentCount() {
       return robotState.segments.length - robotState.broken.size;
     },
+    get missingSegments() { return [...robotState.broken]; },
+    get prosthetics() { return [...robotState.prosthetics]; },
     get segmentTotal() {
       return robotState.segments.length;
     },

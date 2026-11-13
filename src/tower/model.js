@@ -1,11 +1,12 @@
 import {newArtifactCollection,validArtifactCollection,drawArtifactPiece} from './artifacts.js';
-import {BASE_STATS,patientVictory,validStats} from '../garage/model.js';
+import {BASE_STATS,patientVictory,validStats,normalizeProsthetics} from '../garage/model.js';
 export const TOWER_REWARD=10;
 export const floorEnemyCount=floor=>1+Math.floor(floor/2);
 export const towerEnemyCount=t=>t.legacyEnemyCount??floorEnemyCount(t.level);
-export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(record)){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts};}
+export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(record)){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts};}
 export function normalizeTower(t){
  if(!t||typeof t!=='object'||Array.isArray(t))return t;
+ t.prosthetics=normalizeProsthetics(t.prosthetics);
  if(t.version===undefined||t.version===1){
   t.version=2;t.record=Math.max(0,t.wins??0);t.legacyEnemyCount=t.level;
   // Past run earnings were not recorded per player. Never invent those figures.

@@ -2,7 +2,7 @@ import {ctx} from '../game/state.js';
 import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount} from './model.js';
 import {bettingSave} from '../betting/storage.js';
 import {bettingSetup} from '../betting/ui.js';
-import {validStats,earnedStats,redistributeStat,statMultiplier,critChance} from '../garage/model.js';
+import {patientRecovery,validStats,earnedStats,redistributeStat,statMultiplier,critChance} from '../garage/model.js';
 import {startSpawnSequence} from '../game/session.js';
 import {onGameEvent} from '../game/event-bus.js';
 import {installTowerInput} from './input.js';
@@ -73,6 +73,7 @@ export function settleTower(winner){
   ctx.towerOutcome={won,floor:t.level,cleared,record:Math.max(t.record,cleared),newRecord:cleared>t.record,
     runKills:t.runKills,runCoins:t.runCoins,floorCoins:ctx.towerFloorCoins??0,time:ctx.round.elapsedSec,
     reason:ctx.robots[0].hasHead?'Потерял сознание':'Погиб'};
+  if(won)patientRecovery(t,ctx.robots[0]);
   const priorPieces=[...t.artifacts.pieces];
   const next=completeTower(ctx.betting,ctx.towerPlayer,won);
   ctx.towerOutcome.artifact=won?next.artifacts.pieces.find(id=>!priorPieces.includes(id))??null:null;
