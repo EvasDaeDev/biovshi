@@ -128,3 +128,23 @@ test('portrait keyboard guard keeps the underlying settings sheet open and resto
  Object.defineProperty(win,'innerWidth',{value:844,configurable:true});Object.defineProperty(win,'innerHeight',{value:390,configurable:true});win.dispatchEvent(new Event('resize'));
  assert.equal(ctx.settingsOpen,true);assert.equal(ctx.paused,true);f.close();
 });
+
+test('joystick keeps its owning finger while a second finger uses other controls or touches the stick',()=>{
+ const f=setup();setControlMode('control');
+ const stick=document.querySelector('#tower-stick'),captured=new Set();
+ stick.setPointerCapture=id=>captured.add(id);stick.hasPointerCapture=id=>captured.has(id);stick.releasePointerCapture=id=>captured.delete(id);
+ stick.getBoundingClientRect=()=>({left:0,top:0,width:168,height:168});
+ const pointer=(type,id,x,y)=>{
+  const event=new f.dom.window.MouseEvent(type,{bubbles:true,cancelable:true,clientX:x,clientY:y,button:0});
+  Object.defineProperty(event,'pointerId',{value:id});stick.dispatchEvent(event);
+ };
+ pointer('pointerdown',11,145,84);assert.equal(ctx.towerInput.x,1);assert.ok(captured.has(11));
+ let secondControlClicks=0;const secondControl=document.createElement('button');ctx.root.append(secondControl);secondControl.onclick=()=>secondControlClicks++;
+ secondControl.click();assert.equal(secondControlClicks,1);assert.equal(ctx.towerInput.x,1);
+ pointer('pointerdown',22,10,84);pointer('pointermove',22,84,10);assert.equal(ctx.towerInput.x,1);assert.equal(captured.has(22),false);
+ for(const type of ['pointerup','pointercancel','lostpointercapture']){pointer(type,22,84,10);assert.equal(ctx.towerInput.x,1);}
+ pointer('pointermove',11,84,145);assert.equal(ctx.towerInput.y,1);
+ pointer('pointerup',11,84,145);assert.deepEqual(ctx.towerInput,{x:0,y:0});assert.equal(captured.size,0);
+ pointer('pointerdown',22,145,84);assert.equal(ctx.towerInput.x,1);
+ f.dom.window.dispatchEvent(new Event('blur'));assert.deepEqual(ctx.towerInput,{x:0,y:0});assert.equal(captured.size,0);f.close();
+});

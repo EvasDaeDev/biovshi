@@ -208,7 +208,7 @@ test('new tower patient is random, retained across levels and continued saves, r
 });
 test('touch joystick supplies directional input and stops after finger release',()=>{
  const {dom,r}=manualFixture(),stick=document.querySelector('#tower-stick');stick.getBoundingClientRect=()=>({left:0,top:0,width:112,height:112});stick.setPointerCapture=()=>{};
- const pointer=(type,x,y)=>{const event=new dom.window.Event(type,{bubbles:true});Object.assign(event,{pointerId:7,clientX:x,clientY:y});stick.dispatchEvent(event);};
+ const pointer=(type,x,y)=>{const event=new dom.window.Event(type,{bubbles:true});Object.assign(event,{pointerId:7,clientX:x,clientY:y,button:0});stick.dispatchEvent(event);};
  pointer('pointerdown',95,56);assert.ok(ctx.towerInput.x>.9);assert.equal(ctx.towerInput.y,0);assert.ok(controlledIntent(r).goal.x>r.x);
  pointer('pointermove',56,17);assert.ok(ctx.towerInput.y<-.9);assert.equal(ctx.towerInput.x,0);
  pointer('pointerup',56,17);assert.equal(controlledIntent(r).speed,0);close(dom);

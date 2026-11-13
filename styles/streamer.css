@@ -1,6 +1,6 @@
 /* Screen-space UI: unaffected by arena camera, lighting or post effects. */
 #robot-tag-hops-v22 #streamer-mascot {
- position:absolute;left:6px;bottom:0;z-index:5;
+ position:fixed;left:6px;bottom:0;z-index:14;
  width:min(219px,28.5%);height:min(225px,calc(75% - 46.5px));
  pointer-events:none;
 }
@@ -10,14 +10,11 @@
  image-rendering:pixelated;
 }
 #robot-tag-hops-v22 #streamer-mascot-toggle {
- position:absolute;left:8px;bottom:4px;z-index:6;
+ position:fixed;left:8px;bottom:4px;z-index:15;
  width:24px;height:24px;min-height:24px;padding:0;
  border:1px solid #555643;background:#202219dd;color:#d7c8a9;
  font-size:16px;line-height:1;cursor:pointer;touch-action:manipulation;
 }
-/* Keep the bottom edge aligned; clear the tower stick horizontally. */
-#robot-tag-hops-v22[data-game-mode="tower"] #streamer-mascot {left:142px;width:min(219px,28.5%,calc(100% - 148px))}
-#robot-tag-hops-v22[data-game-mode="tower"] #streamer-mascot-toggle {left:144px}
 /* Speech follows the mascot and stays outside the arena's lighting/post effects. */
 #robot-tag-hops-v22 .streamer-quip {
  position:absolute;left:94%;bottom:55%;z-index:1;

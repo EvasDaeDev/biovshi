@@ -27,7 +27,10 @@ export function installTowerInput(){
   const clearDestination=()=>{ctx.towerDestination=null;marker.hidden=true;const robot=ctx.robots[0];robot?.cancelNavigation();};
   ctx.clearTowerDestination=clearDestination;
   const active=()=>ctx.mode==='tower'&&ctx.startup.phase==='running'&&!ctx.paused&&!ctx.settingsOpen&&!ctx.orientationBlocked&&!ctx.combat.finished;
-  const reset=()=>{keys.clear();pointer=null;ctx.towerInput={x:0,y:0};knob.style.transform='translate(0px,0px)';};
+  const reset=()=>{
+    const captured=pointer;pointer=null;keys.clear();ctx.towerInput={x:0,y:0};knob.style.transform='translate(0px,0px)';
+    if(captured!==null&&stick.hasPointerCapture?.(captured))stick.releasePointerCapture(captured);
+  };
   const update=()=>{ctx.towerInput={x:Number(keys.has('ArrowRight')||keys.has('KeyD'))-Number(keys.has('ArrowLeft')||keys.has('KeyA')),y:Number(keys.has('ArrowDown')||keys.has('KeyS'))-Number(keys.has('ArrowUp')||keys.has('KeyW'))};};
   const key=e=>{
     if(e.type==='keyup'&&keys.has(e.code)){keys.delete(e.code);update();return;}
@@ -36,8 +39,14 @@ export function installTowerInput(){
     if(!active()||ctx.towerControlMode==='direction')return;e.preventDefault();keys.add(e.code);update();
   };
   const move=e=>{if(e.pointerId!==pointer||!active()||ctx.towerControlMode==='direction')return;const b=stick.getBoundingClientRect(),dx=(e.clientX-b.left-b.width/2)/(b.width*.35),dy=(e.clientY-b.top-b.height/2)/(b.height*.35),n=Math.max(1,Math.hypot(dx,dy));ctx.towerInput={x:dx/n,y:dy/n};knob.style.transform=`translate(${dx/n*45}px,${dy/n*45}px)`;};
-  stick.onpointerdown=e=>{if(!active()||ctx.towerControlMode==='direction')return;pointer=e.pointerId;stick.setPointerCapture(pointer);move(e);};
-  stick.onpointermove=move;stick.onpointerup=stick.onpointercancel=stick.onlostpointercapture=reset;
+  // The first finger owns the stick until release. Other fingers remain free
+  // to operate UI controls; their release/cancel events must not stop movement.
+  stick.onpointerdown=e=>{
+    if(pointer!==null||!active()||ctx.towerControlMode==='direction'||e.button!==0)return;
+    e.preventDefault();pointer=e.pointerId;stick.setPointerCapture(pointer);move(e);
+  };
+  const release=e=>{if(e.pointerId===pointer)reset();};
+  stick.onpointermove=move;stick.onpointerup=stick.onpointercancel=stick.onlostpointercapture=release;
   const click=event=>{
     if(ctx.towerControlMode!=='direction'||!active()||event.button!==0||!['svg','canvas'].includes(event.target.tagName.toLowerCase())&&!event.target.closest('svg'))return;
     const surface=ctx.arenaRenderer?.canvas??ctx.svg;
