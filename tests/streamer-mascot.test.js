@@ -33,6 +33,8 @@ test('mascot renders in both modes, keeps its own visibility and uses shared hin
   ctx.root.__disposeTag=()=>{};
   initializeStreamerMascot({lines:{victory:['win {fighter}','winner {fighter}'],knockout:['out {fighter}'],death:['dead {fighter}'],critical:['hit {fighter}'],idle:['idle']},random:()=>0});initializeHints();images[0].onload();
   const button=ctx.root.querySelector('#streamer-mascot-toggle'),box=ctx.root.querySelector('#streamer-mascot');
+  assert.equal(box.parentElement,ctx.stage,'mascot stays inside the arena on both device layouts');
+  assert.equal(button.parentElement,ctx.stage,'visibility toggle follows the same arena anchor');
   assert.equal(button.hasAttribute('title'),false);
   button.dispatchEvent(new win.Event('pointerover',{bubbles:true}));
   assert.equal(win.document.querySelector('.biovshi-hint').textContent,'Скрыть маскота');

@@ -11,7 +11,7 @@ import {advanceStartup} from '../src/game/session.js';
 import {createRobot} from '../src/robot/robot.js';
 import {controlledIntent,arenaPoint} from '../src/tower/input.js';
 import {loadControlMode,setControlMode} from '../src/tower/control-mode.js';
-import {viewportLayout} from '../src/ui/viewport.js';
+import {viewportLayout,fitInterface} from '../src/ui/viewport.js';
 import {fittedCamera} from '../src/render/camera.js';
 import {loadAudioSettings} from '../src/audio/audio.js';
 
@@ -147,4 +147,11 @@ test('joystick keeps its owning finger while a second finger uses other controls
  pointer('pointerup',11,84,145);assert.deepEqual(ctx.towerInput,{x:0,y:0});assert.equal(captured.size,0);
  pointer('pointerdown',22,145,84);assert.equal(ctx.towerInput.x,1);
  f.dom.window.dispatchEvent(new Event('blur'));assert.deepEqual(ctx.towerInput,{x:0,y:0});assert.equal(captured.size,0);f.close();
+});
+
+test('wide touch screens use the mobile toolbar while a desktop at the same size keeps its layout',()=>{
+ const f=setup(),win=f.dom.window;
+ Object.defineProperty(win,'innerWidth',{value:1366,configurable:true});Object.defineProperty(win,'innerHeight',{value:1024,configurable:true});
+ ctx.touchDevice=true;fitInterface();assert.equal(ctx.root.classList.contains('mobile-layout'),true);assert.equal(ctx.layoutScale,1);
+ ctx.touchDevice=false;fitInterface();assert.equal(ctx.root.classList.contains('mobile-layout'),false);assert.equal(ctx.layoutScale,1);f.close();
 });
