@@ -1,3 +1,4 @@
+import {createStreamerMotion} from './streamer-motion.js';
 import {ctx} from '../game/state.js';
 import {onGameEvent} from '../game/event-bus.js';
 import {fighterLabel} from '../game/patients.js';
@@ -102,9 +103,9 @@ export function initializeStreamerMascot(){
  ctx.stage.append(box,toggle);
  let hidden=false,disposed=false,painter=null,iconAtlas=null,loaded=false,elapsed=0,lastPaint=-Infinity;
  try{hidden=win.localStorage.getItem(STORAGE)==='true';}catch{/* Storage may be disabled. */}
- const track=createReactionTrack(),speechPacer=createSpeechPacer(),heads={},quipCounts=new Map();
+ const motion=createStreamerMotion(),track=createReactionTrack(),speechPacer=createSpeechPacer(),heads={},quipCounts=new Map();
  let spoken=null,quietFor=0;
- const clearSpeech=()=>{spoken=null;quietFor=0;speechPacer.reset();caption.hidden=true;caption.textContent='';};
+ const clearSpeech=()=>{spoken=null;quietFor=0;motion.reset();speechPacer.reset();caption.hidden=true;caption.textContent='';};
  const updateToggle=()=>{
   box.hidden=hidden;toggle.textContent=hidden?'▴':'▾';toggle.setAttribute('aria-expanded',String(!hidden));
   toggle.dataset.hint=hidden?'Показать маскота':'Скрыть маскота';toggle.setAttribute('aria-label',toggle.dataset.hint);
@@ -128,6 +129,7 @@ export function initializeStreamerMascot(){
  atlas.src=assetUrl(ASSETS.textures.streamer);
  const unsubscribe=onGameEvent(event=>{
   if(hidden)return;
+  motion.offer(event);
   if(quipCategory(event)&&event.type!=='streamer-idle')quietFor=0;
   const id=event.robot??event.to??event.winner;
   const named=Number.isInteger(id)&&id>=0?{...event,fighterName:fighterLabel(id)}:event;
@@ -157,17 +159,15 @@ export function initializeStreamerMascot(){
     caption.hidden=!caption.textContent;
    }
   }
-  const energy=reaction?1:.16,t=elapsed;
+  const pose=motion.tick(delta),t=elapsed;
   const bob=Math.sin(t*(reaction?9:2.7))*(reaction?2:1);
   // The torso ends at y=277; align it with the 288px canvas bottom.
   // Only the head bobs, so the lower edge never floats above the arena.
   painter.clearRect(0,0,canvas.width,canvas.height);painter.save();painter.translate(0,11);
   drawPart([10,377,245,135],12,142);
-  // Idle sleeves rest another 12 degrees down; reactions retain their full swings.
-  const restAngle=reaction ? .12 : .33;
-  // The straight sleeves deliberately rotate as whole pieces around the shoulders.
-  arm([0,319,104,58],99,165+SHOULDER_OFFSET_Y,4,140+SHOULDER_OFFSET_Y,-restAngle-energy*(.3+Math.sin(t*11)*.35));
-  arm([150,319,105,58],165,165+SHOULDER_OFFSET_Y,157,140+SHOULDER_OFFSET_Y,restAngle+energy*(.3+Math.sin(t*10+.8)*.35));
+  // Fixed shoulder anchors; activity changes a centred swing, never its height.
+  arm([0,319,104,58],99,165+SHOULDER_OFFSET_Y,4,140+SHOULDER_OFFSET_Y,pose.left);
+  arm([150,319,105,58],165,165+SHOULDER_OFFSET_Y,157,140+SHOULDER_OFFSET_Y,pose.right);
   painter.save();painter.translate(135,153+HEAD_OFFSET_Y+Math.round(bob));painter.rotate(Math.sin(t*(reaction?6:2))*(reaction?.045:.012));
   const head=heads[emotion];painter.drawImage(head,-83,-149,165,235);painter.restore();
   if(reaction){
