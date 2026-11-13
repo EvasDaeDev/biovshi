@@ -244,6 +244,11 @@ const CONFIG = {
     // За сколько секунд капля растекается.
     growFactor: 1.5 // Финальный размер пятна = стартовый × 1.5.
   },
+  prosthetics: {
+    speedPerSegment: 0.03, // Доля исходных очков за сохранившийся сегмент протеза.
+    strengthPerSegment: 0.03,
+    maneuverPerSegment: -0.02,
+  },
   combat: {
     trauma: {
       enabled: true,

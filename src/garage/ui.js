@@ -1,5 +1,6 @@
+import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {COIN_ICON,formatChipsText} from '../ui/currency.js';
-import {patientName,SKILLS} from '../ui/patient.js';
+import {patientName,SKILLS,skillHintAttributes} from '../ui/patient.js';
 import {ctx} from '../game/state.js';
 import {bettingModal,bettingOpen,bettingHud} from '../betting/ui.js';
 import {bettingSave} from '../betting/storage.js';
@@ -26,13 +27,14 @@ export function garageOpen(){
  <label class="procedure-editor"><span>НАСТРАИВАЕТ</span> <select id="procedure-editor">${ctx.betting.players.map(p=>`<option value="${p.id}" ${p.id===ctx.procedureEditor?'selected':''}>${ctx.betEscape(p.name)}</option>`).join('')}</select></label>
  ${ctx.lastFloorBakeError?`<p class="bet-muted" role="status">${ctx.betEscape(ctx.lastFloorBakeError)}</p>`:''}
  <div class="garage-grid">${ctx.betting.garage.map((g,id)=>{
+ const snapshot=prostheticStatSnapshot(g),stats=snapshot.effective;
  const patron=resolvePatron(g),locked=patron!==null&&patron!==ctx.procedureEditor;
  return `<section class="garage-patient" data-patient="${id}"><h3>${patientName(id)} <button type="button" class="patron-name" aria-expanded="false" aria-controls="patron-${id}">(${patron===null?'без покровителя':ctx.betEscape(ctx.betting.players[patron].name)})</button></h3>
  <div id="patron-${id}" class="patron-popup" hidden><strong>Вложения</strong>${ctx.betting.players.map(p=>`<div>${ctx.betEscape(p.name)}: ${ctx.betFormat(g.investments[p.id]??0)}</div>`).join('')}</div>
  ${locked?`<p class="garage-lock-note">Изменяет только покровитель — ${ctx.betEscape(ctx.betting.players[patron].name)}</p>`:''}
  <div class="garage-core"><div class="garage-portrait"></div><div class="garage-stat-list"><small>Побед: ${g.wins??0} · заработано очков: ${9+(g.wins??0)}</small>
- ${SKILLS.map((skill,i)=>`<label><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select aria-label="${ctx.betEscape(skill.name)} — пациент ${String.fromCharCode(65+id)}" data-stat="${i}" ${locked?'disabled':''}>${[...new Set([earnedStats(g.wins)[i]-1,earnedStats(g.wins)[i],earnedStats(g.wins)[i]+1].filter(n=>n>=2))].map(n=>`<option ${n===g.stats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}
- </div></div><small class="garage-stat-effects">Скор. ${Math.round(statMultiplier(g.stats[0])*100)}% Мобиль. ${Math.round(statMultiplier(g.stats[2])*100)}% Сила +${Math.round(critChance(g.stats[1])*100)}%крит.</small>
+ ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)}><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select aria-label="${ctx.betEscape(skill.name)} — пациент ${String.fromCharCode(65+id)}" data-stat="${i}" ${locked?'disabled':''}>${[...new Set([earnedStats(g.wins)[i]-1,earnedStats(g.wins)[i],earnedStats(g.wins)[i]+1].filter(n=>n>=2))].map(n=>`<option ${n===g.stats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}
+ </div></div><small class="garage-stat-effects">Скор. ${Math.round(statMultiplier(stats[0])*100)}% Мобиль. ${Math.round(statMultiplier(stats[2])*100)}% Сила +${Math.round(critChance(stats[1])*100)}%крит.</small>
  <div class="garage-status-line"><button data-base ${locked?'disabled':''} title="Вернуть исходные характеристики">ВЕРНУТЬ ИСХОДНЫЕ</button><span>ГОЛОВА: ${g.head?'шапка '+g.head.hat+' · '+ctx.betFormat(g.head.price):'свободна'}</span></div>
  <label class="garage-buyer">ПОКУПАТЕЛЬ <select data-buyer>${ctx.betting.players.map(p=>`<option value="${p.id}">${ctx.betEscape(p.name)} · ${formatChipsText(p.balance)}</option>`).join('')}</select></label>
  <div class="garage-hats">${[1,2,3,4].map(h=>`<button data-hat="${h}" aria-label="Выбрать шапку ${h}" aria-pressed="false"><img src="${assetUrl(ASSETS.textures['hat'+h])}" alt="Шапка ${h}"></button>`).join('')}</div>

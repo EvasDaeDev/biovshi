@@ -1,3 +1,4 @@
+import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {ctx} from '../game/state.js';
 import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount} from './model.js';
 import {bettingSave} from '../betting/storage.js';
@@ -6,7 +7,7 @@ import {patientRecovery,validStats,earnedStats,redistributeStat,statMultiplier,c
 import {startSpawnSequence} from '../game/session.js';
 import {onGameEvent} from '../game/event-bus.js';
 import {installTowerInput} from './input.js';
-import {SKILLS} from '../ui/patient.js';
+import {SKILLS,skillHintAttributes} from '../ui/patient.js';
 import {arenaDiagram} from '../game/arenas.js';
 import {artifactCollectionMarkup} from './artifact-ui.js';
 import {formatChips} from '../ui/currency.js';
@@ -41,9 +42,10 @@ export function towerPreparation(){
   ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':`<span>${formatChips(10)} ЗА ЛИЧНОЕ ВЫБИВАНИЕ</span>`}</div>`;
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   function renderSkills(){
+    const snapshot=prostheticStatSnapshot(t),stats=snapshot.effective;
     fields.innerHTML=`<div class="garage-stat-list"><small>Побед: ${t.wins} · заработано очков: ${9+t.wins}</small>
-      ${SKILLS.map((skill,i)=>`<label><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select data-tower-stat="${i}" aria-label="${skill.name}">${[earnedStats(t.wins)[i]-1,earnedStats(t.wins)[i],earnedStats(t.wins)[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===t.stats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
-      <small class="garage-stat-effects">Скор. ${Math.round(statMultiplier(t.stats[0])*100)}% Мобиль. ${Math.round(statMultiplier(t.stats[2])*100)}% Сила +${Math.round(critChance(t.stats[1])*100)}%крит.</small>
+      ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)}><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select data-tower-stat="${i}" aria-label="${skill.name}">${[earnedStats(t.wins)[i]-1,earnedStats(t.wins)[i],earnedStats(t.wins)[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===t.stats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
+      <small class="garage-stat-effects">Скор. ${Math.round(statMultiplier(stats[0])*100)}% Мобиль. ${Math.round(statMultiplier(stats[2])*100)}% Сила +${Math.round(critChance(stats[1])*100)}%крит.</small>
       <button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button>`;
     fields.querySelectorAll('select').forEach(select=>select.onchange=()=>{
       const index=Number(select.dataset.towerStat);

@@ -39,7 +39,8 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   else svg.innerHTML=root.__arenaSvgTemplate;
   ctx.mode=tower?'tower':'spectator';
   root.dataset.gameMode=ctx.mode;
-  if(tower)ctx.betting=session;
+  // Body creation must see this session's prostheses, including on a fresh load.
+  ctx.betting=session;
   ctx.towerRun=tower;
   ctx.towerGarage=tower?Array.from({length:towerEnemyCount(tower)+1},(_,id)=>({stats:id===0?[...tower.stats]:[3,3,3],head:null,prosthetics:id===0?[...(tower.prosthetics??[])]:[]})):null;
   ctx.textureAssets=textures;
