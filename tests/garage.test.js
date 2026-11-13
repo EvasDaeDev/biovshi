@@ -36,3 +36,21 @@ test('shop expenses and permanent builds survive save/load, including legacy sav
  const legacy=betNewSession(['Legacy'],100);delete legacy.garage;delete legacy.shopSpent;delete legacy.floorId;
  memory.set(ctx.BET_STORAGE,JSON.stringify(legacy));const migrated=bettingLoad();assert.deepEqual(migrated.garage,newGarage());assert.equal(migrated.shopSpent,0);
 });
+
+test('prostheses accumulate only on lost parts and cancellation restores the previous body',async()=>{
+ const {patientRecovery,patientDeath,normalizePatient}=await import('../src/garage/model.js');
+ const {betRefund}=await import('../src/betting/ledger.js');
+ const s=betNewSession(['Player'],100),g=s.garage[0];
+ patientRecovery(g,{hasHead:true,missingSegments:['leg-1-lower']});
+ patientRecovery(g,{hasHead:true,missingSegments:[]});
+ assert.deepEqual(g.prosthetics,['leg-1-lower'],'concussion alone adds no prostheses');
+ patientRecovery(g,{hasHead:true,missingSegments:['arm-1-upper','arm-1-lower','tail-0']});
+ assert.deepEqual(g.prosthetics,['arm-1-upper','arm-1-lower','leg-1-lower']);
+ const saved=structuredClone(g);
+ betCommit(s,[{player:0,robot:0,amount:10}]);patientDeath(g);betRefund(s);
+ assert.deepEqual(s.garage[0],saved);
+ const legacy={stats:[3,3,3],wins:0};normalizePatient(legacy);assert.deepEqual(legacy.prosthetics,[]);
+ normalizePatient({...legacy,prosthetics:['head','invalid','leg-1-lower','leg-1-lower']});
+ patientRecovery(s.garage[0],{hasHead:false,missingSegments:['leg--1-upper']});
+ assert.deepEqual(s.garage[0],saved,'a dead patient cannot acquire new prostheses');
+});

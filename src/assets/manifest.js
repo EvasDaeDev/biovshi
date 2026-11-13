@@ -20,6 +20,7 @@ export const ASSETS = {
     hat2: 'assets/textures/robots/decor/head/2.png',
     hat3: 'assets/textures/robots/decor/head/3.png',
     hat4: 'assets/textures/robots/decor/head/4.png',
+    robotAndroid: 'assets/textures/robots/ar_01.png',
     robotA: 'assets/textures/robots/r_01.png',
     robotB: 'assets/textures/robots/r_02.png',
     robotC: 'assets/textures/robots/r_03.png',

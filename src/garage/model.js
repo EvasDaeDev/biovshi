@@ -24,7 +24,17 @@ export function redistributeStat(patient,index,value){
   if(!validStats(stats,patient.wins))throw Error('Можно перенести одно очко между навыками.');
   return stats;
 }
+export const PROSTHETIC_SEGMENTS = [...Array.from({length:4},(_,i)=>'spine-'+i),
+  ...['arm','leg'].flatMap(kind=>[-1,1].flatMap(side=>['upper','lower'].map(part=>`${kind}-${side}-${part}`)))];
+export function normalizeProsthetics(parts) {
+  return PROSTHETIC_SEGMENTS.filter(key=>Array.isArray(parts)&&parts.includes(key));
+}
+export function patientRecovery(patient,robot) {
+  if(!robot?.hasHead)return;
+  patient.prosthetics=normalizeProsthetics([...(patient.prosthetics??[]),...robot.missingSegments]);
+}
 export function normalizePatient(patient) {
+  patient.prosthetics=normalizeProsthetics(patient.prosthetics);
   patient.wins=Number.isSafeInteger(patient.wins)&&patient.wins>=0?patient.wins:0;
   if(!validStats(patient.stats,patient.wins))patient.stats=earnedStats(patient.wins);
   return patient;
@@ -37,6 +47,7 @@ export function patientVictory(patient) {
   patient.stats=patient.stats.map((n,i)=>n+next[i]-old[i]);
 }
 export function patientDeath(patient) {
+  patient.prosthetics=[];
   patient.wins=0;
   patient.stats=[...BASE_STATS];
   patient.head=null;
@@ -44,7 +55,7 @@ export function patientDeath(patient) {
   if(patient.decor)patient.decor={};
   if(patient.decorations)patient.decorations={};
 }
-export function newGarage(){return Array.from({length:4},()=>({stats:[3,3,3],wins:0,head:null,investments:{},patron:null}));}
+export function newGarage(){return Array.from({length:4},()=>({stats:[3,3,3],wins:0,head:null,prosthetics:[],investments:{},patron:null}));}
 export function statMultiplier(points){return points<=4?1+(points-3)*.2:1.2+[0,.15,.30,.40,.50,.60][Math.min(5,Math.max(0,points-4))];}
 export function critChance(points){return points<=4?Math.max(0,(points-2)*.15):[.30,.38,.45,.50,.55,.60][Math.min(5,Math.max(0,points-4))];}
 export function nextPrice(slot){return slot?slot.price+Math.ceil(slot.price/10):10;}

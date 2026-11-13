@@ -1128,3 +1128,42 @@ test('footstep events follow individual leg landings, never planted feet or hand
    leg.phase=0;robot.paint(false);leg.phase=1;robot.paint(false);assert.equal(events.length,2,'a new contact at the same point still makes a sound');
  }finally{unsubscribe();ctx.root.__disposeTag();dom.window.close();}
 });
+
+test('recovery replaces only severed segments, persists prosthetics, and death restores the default atlas',async()=>{
+  const {bettingSettle}=await import('../src/betting/ui.js');
+  const {bettingLoad}=await import('../src/betting/storage.js');
+  const dom=setup({textures:Object.fromEntries(Object.keys(ASSETS.textures).map(key=>[key,{loaded:true}]))});
+  try{
+    const r=ctx.robots[0],g=ctx.betting.garage[0];
+    g.wins=3;g.stats=[4,4,4];
+    const previous={...CONFIG.combat.trauma};
+    try{
+      CONFIG.combat.trauma.enabled=true;CONFIG.combat.trauma.threshold=3;
+      assert.equal(r.damage('arm--1-upper',1,3),true);
+      assert.equal(r.unconscious,true);
+    }finally{Object.assign(CONFIG.combat.trauma,previous);}
+    assert.deepEqual(r.missingSegments,['arm--1-upper','arm--1-lower']);
+    bettingSettle(1);
+    assert.deepEqual(g.prosthetics,['arm--1-upper','arm--1-lower']);
+    assert.deepEqual(g.stats,[4,4,4]);assert.equal(g.wins,3);
+    assert.deepEqual(bettingLoad().garage[0].prosthetics,g.prosthetics);
+    // The original remains keep their original atlas until the next round.
+    assert.ok(ctx.combat.detached[0].pieces.every(p=>p.skin.url.endsWith('r_01.png')));
+    await resetRound();
+    const restored=ctx.robots[0];
+    const image=key=>restored.actor.querySelector(`[data-skin-segment="${key}"] image`).getAttribute('href');
+    assert.ok(image('arm--1-upper').endsWith('ar_01.png'));
+    assert.ok(image('arm--1-lower').endsWith('ar_01.png'));
+    assert.ok(image('arm-1-upper').endsWith('r_01.png'));
+    assert.ok(image('spine-1').endsWith('r_01.png'));
+    assert.equal(restored.segmentCount,restored.segmentTotal);
+    restored.setVisible(true);paint();
+    assert.equal(restored.damage('arm--1-lower',1,3),true);
+    assert.ok(ctx.combat.detached.at(-1).pieces.every(p=>p.skin.url.endsWith('ar_01.png')),
+      'a detached prosthesis retains its android atlas');
+    assert.equal(restored.damage('head',1,6),true);
+    assert.deepEqual(g.prosthetics,[]);assert.deepEqual(g.stats,[3,3,3]);
+    await resetRound();
+    assert.ok([...ctx.robots[0].actor.querySelectorAll('[data-skin-segment] image')].every(img=>img.getAttribute('href').endsWith('r_01.png')));
+  }finally{ctx.root.__disposeTag();dom.window.close();}
+});
