@@ -11,7 +11,7 @@ const pointsFormat=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2});
 export const formatSkillPoints=value=>pointsFormat.format(value);
 export function skillValue(snapshot,index){
  const points=snapshot.effective[index];
- return `${formatSkillPoints(points)} · ${Math.round((index===1?critChance(points):statMultiplier(points))*100)}%${index===1?' КРИТ':''}`;
+ return `${formatSkillPoints(points)} · ${Math.round((index===1?critChance(points):statMultiplier(points))*100)}%`;
 }
 export function skillHint(snapshot,index){
  const descriptions=['Скорость движения','Шанс критического урона (КРИТ)','Маневренность · скорость поворота'];

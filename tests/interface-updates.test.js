@@ -18,7 +18,7 @@ function setup(){
 function close(dom){ctx.root.__disposeTag();dom.window.close();}
 test('patient card shows the three permanent skills and a bone count without mobility telemetry',()=>{
  const dom=setup();ctx.betting.garage[0].stats=[2,4,3];ctx.telemetryDirty=true;paintTelemetry();
- const card=ctx.cardNodes[0];assert.equal(card.strength.textContent,'4 · 30% КРИТ');assert.equal(card.speed.textContent,'2 · 80%');assert.equal(card.maneuver.textContent,'3 · 100%');
+ const card=ctx.cardNodes[0];assert.equal(card.strength.textContent,'4 · 30%');assert.equal(card.speed.textContent,'2 · 80%');assert.equal(card.maneuver.textContent,'3 · 100%');
  assert.equal(card.card.querySelector('.js-mobility'),null);assert.match(card.card.querySelector('.robot-card-score').textContent,/13\/13/);assert.match(card.card.querySelector('.robot-card-score img').src,/bone_01\.png$/);assert.equal(card.card.querySelectorAll('.patient-skills>div').length,3);close(dom);
 });
 test('top-up preserves draft bets, persists the new chip supply and safely rejects invalid input',async()=>{
