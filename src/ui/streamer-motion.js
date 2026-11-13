@@ -12,11 +12,14 @@ export function createStreamerMotion(){
     :event.type==='combat-end'?.45:event.type==='combat-windup'?.06:0;
    drive=clamp(drive+impulse);
   },
-  tick(dt){
+  tick(dt,{celebrating=false}={}){
    const delta=Math.min(Math.max(dt,0),.1);
-   intensity+=(drive-intensity)*(1-Math.exp(-7*delta));
+   const target=celebrating?1:drive;
+   intensity+=(target-intensity)*(1-Math.exp(-7*delta));
    drive*=Math.exp(-delta/1.7);
-   phase=(phase+delta*(2.2+6*intensity))%(Math.PI*2);
+   // About 0.35 Hz at rest, 1.9 Hz in a busy fight, 2.9 Hz during victory.
+   const speed=2.2+(celebrating?15.8:10)*intensity;
+   phase=(phase+delta*speed)%(Math.PI*2);
    // Idle: 12 degrees down. Busy fight: centred swings through up to +/-25 degrees.
    // Rest + amplitude never exceeds 25 degrees, including during transitions.
    const rest=12*(1-intensity)*RAD,amplitude=(3+22*intensity)*RAD;
