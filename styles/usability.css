@@ -58,7 +58,9 @@
  #robot-tag-hops-v22.cards-hidden .tag7hop-layout {grid-template-columns:minmax(0,1fr) 185px}
 }
 
-.biovshi-hint[popover] {margin:0;inset:auto;box-sizing:border-box}
+.biovshi-hint[popover] {margin:0;inset:auto;box-sizing:border-box;white-space:pre-line;max-width:min(300px,calc(100vw - 8px))}
+#robot-tag-hops-v22 .is-prosthetic {outline:1px solid #008cff;outline-offset:1px;border-radius:2px}
+#robot-tag-hops-v22 [data-hint-tap]:focus-visible {outline:2px solid #42a5ff;outline-offset:2px}
 #robot-tag-hops-v22 .tag7hop-layout {min-width:0}
 #robot-tag-hops-v22 .robot-card-body {grid-template-columns:minmax(0,1fr) 108px}
 #robot-tag-hops-v22 .patient-skills {font-size:12px}

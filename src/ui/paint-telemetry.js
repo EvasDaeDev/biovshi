@@ -1,5 +1,5 @@
-import {patientGarage} from '../game/patients.js';
-import {statMultiplier,critChance} from '../garage/model.js';
+import {patientCombatStats} from '../game/patients.js';
+import {SKILLS,skillValue,skillHint} from './patient.js';
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 import { friendlyAction, segmentDisplayState } from './telemetry.js';
@@ -23,10 +23,14 @@ export function paintTelemetry() {
     setText(card.segments, `${n}/${r.segmentTotal}`);
     const actionText = friendlyAction(r);
     if (card.action.textContent !== actionText) card.action.textContent = actionText;
-    const stats=patientGarage()?.[r.id]?.stats??[3,3,3];
-    setText(card.strength,`${stats[1]} · ${Math.round(critChance(stats[1])*100)}% КРИТ`);
-    setText(card.speed,`${stats[0]} · ${Math.round(statMultiplier(stats[0])*100)}%`);
-    setText(card.maneuver,`${stats[2]} · ${Math.round(statMultiplier(stats[2])*100)}%`);
+    const stats=patientCombatStats(r.id,r);
+    for(const [index,node] of [[0,card.speed],[1,card.strength],[2,card.maneuver]]){
+      const value=skillValue(stats,index),field=node.parentElement;
+      setText(node,value);
+      setClass(field,'is-prosthetic',stats.count>0);
+      setAttribute(field,'data-hint',skillHint(stats,index));
+      setAttribute(field,'aria-label',`${SKILLS[index].name}: ${value}`);
+    }
     const {enabled,threshold}=CONFIG.combat.trauma;
     const traumaHidden=!enabled;
     if(card.trauma.hidden!==traumaHidden)card.trauma.hidden=traumaHidden;

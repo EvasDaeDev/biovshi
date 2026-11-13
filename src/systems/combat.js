@@ -1,6 +1,6 @@
 import {pendingStrikes,setPendingStrikes} from './strikes.js';
 import {settleTower} from '../tower/ui.js';
-import {patientGarage} from '../game/patients.js';
+import {patientCombatStats} from '../game/patients.js';
 import {critChance} from '../garage/model.js';
 import {random} from '../utils/random.js';
 import { clamp, wrap, smooth } from '../utils/math.js';
@@ -265,7 +265,7 @@ export function combatAttacks() {
         const src = attacker.attackSources.find(s => s.key === pending.source);
         if (attacker.visible && attacker.mobile && src && victim?.visible && victim.hasHead && victim.segmentCount > 0) {
           const touched = struckSegment(attacker, victim, pending);
-          const damage=touched&&random()<critChance(patientGarage()?.[id]?.stats[1]??3)?2:1;
+          const damage=touched&&random()<critChance(patientCombatStats(id,attacker).effective[1])?2:1;
           if (touched && victim.damage(touched, id, damage)) {
             if (victim.mobile) victim.reactToHit(attacker, touched);
             ctx.combat.hits++;

@@ -24,7 +24,7 @@ export function redistributeStat(patient,index,value){
   if(!validStats(stats,patient.wins))throw Error('Можно перенести одно очко между навыками.');
   return stats;
 }
-export const PROSTHETIC_SEGMENTS = [...Array.from({length:4},(_,i)=>'spine-'+i),
+export const PROSTHETIC_SEGMENTS = [...Array.from({length:3},(_,i)=>'spine-'+(i+1)),
   ...['arm','leg'].flatMap(kind=>[-1,1].flatMap(side=>['upper','lower'].map(part=>`${kind}-${side}-${part}`)))];
 export function normalizeProsthetics(parts) {
   return PROSTHETIC_SEGMENTS.filter(key=>Array.isArray(parts)&&parts.includes(key));
@@ -56,8 +56,14 @@ export function patientDeath(patient) {
   if(patient.decorations)patient.decorations={};
 }
 export function newGarage(){return Array.from({length:4},()=>({stats:[3,3,3],wins:0,head:null,prosthetics:[],investments:{},patron:null}));}
-export function statMultiplier(points){return points<=4?1+(points-3)*.2:1.2+[0,.15,.30,.40,.50,.60][Math.min(5,Math.max(0,points-4))];}
-export function critChance(points){return points<=4?Math.max(0,(points-2)*.15):[.30,.38,.45,.50,.55,.60][Math.min(5,Math.max(0,points-4))];}
+// Interpolate fractional effective points; earned points and existing caps stay intact.
+function interpolateEffect(points,values){
+ const offset=Math.max(0,Math.min(values.length-1,points-4));
+ const lower=Math.floor(offset),upper=Math.ceil(offset),fraction=offset-lower;
+ return values[lower]+(values[upper]-values[lower])*fraction;
+}
+export function statMultiplier(points){return points<=4?1+(points-3)*.2:1.2+interpolateEffect(points,[0,.15,.30,.40,.50,.60]);}
+export function critChance(points){return points<=4?Math.max(0,(points-2)*.15):interpolateEffect(points,[.30,.38,.45,.50,.55,.60]);}
 export function nextPrice(slot){return slot?slot.price+Math.ceil(slot.price/10):10;}
 export function buyHat(session,patient,player,hat,price){
   if(session.phase!=='betting')throw Error('Покупки доступны до ставок.');
