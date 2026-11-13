@@ -1,3 +1,4 @@
+import {loadControlMode,setControlMode} from '../tower/control-mode.js';
 import {uiIcon} from './icons.js';
 import {ctx} from '../game/state.js';
 import {setPaused} from './controls.js';
@@ -6,6 +7,10 @@ export function initializeSettings() {
   const root=ctx.root,doc=root.ownerDocument;
   const panel=root.querySelector('#arena-settings'),button=root.querySelector('#arena-settings-button');
   button.innerHTML=uiIcon('settings');
+  const controlMode=root.querySelector('#tower-control-mode');
+  ctx.towerControlMode=loadControlMode(winStorage(doc));
+  controlMode.value=ctx.towerControlMode;controlMode.disabled=ctx.mode!=='tower';
+  controlMode.onchange=()=>{if(ctx.mode==='tower')setControlMode(controlMode.value);};
   const closeButton=panel.querySelector('#arena-settings-close');
   const creditsOpen=panel.querySelector('#arena-credits-open');
   const creditsView=panel.querySelector('#arena-credits-view');
@@ -52,5 +57,7 @@ export function initializeSettings() {
   };
   doc.addEventListener('keydown',onKey);
   const dispose=root.__disposeTag;
-  root.__disposeTag=()=>{close(false);panel.hidden=true;button.onclick=closeButton.onclick=panel.onclick=creditsOpen.onclick=creditsBack.onclick=null;doc.removeEventListener('keydown',onKey);dispose();};
+  root.__disposeTag=()=>{close(false);controlMode.onchange=null;panel.hidden=true;button.onclick=closeButton.onclick=panel.onclick=creditsOpen.onclick=creditsBack.onclick=null;doc.removeEventListener('keydown',onKey);dispose();};
 }
+
+function winStorage(doc){try{return doc.defaultView.localStorage;}catch{return null;}}

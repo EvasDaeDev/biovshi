@@ -4,7 +4,7 @@ import { onGameEvent } from '../game/event-bus.js';
 import { ctx } from '../game/state.js';
 
 const STORAGE='biovshi.audio.v1';
-const DEFAULTS={sounds:70,music:10};
+const DEFAULTS={sounds:50,music:50};
 const rawFiles=new Map(),decodedFiles=new WeakMap();
 const vocalGainCache=new WeakMap();
 const PAIN_TARGET_RMS=10**(-19/20);

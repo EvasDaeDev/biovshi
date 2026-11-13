@@ -1,6 +1,6 @@
 #robot-tag-hops-v22 .bet-overlay[hidden], #bet-hud[hidden] {display:none!important}
 #robot-tag-hops-v22 .bet-overlay {background:rgba(2,5,13,.94);display:flex;justify-content:center;padding:18px;color:#e9faff}
-#robot-tag-hops-v22 .bet-panel {max-height:calc(100dvh - 36px);overflow:auto;box-sizing:border-box;border:1px solid #39718b;background:#071320;box-shadow:0 0 65px #19aaf425;font-variant-numeric:tabular-nums}
+#robot-tag-hops-v22 .bet-panel {max-height:calc(var(--game-height,100dvh) - 36px);overflow:auto;box-sizing:border-box;border:1px solid #39718b;background:#071320;box-shadow:0 0 65px #19aaf425;font-variant-numeric:tabular-nums}
 #robot-tag-hops-v22 .bet-panel h2 {margin:5px 0 12px;color:#fff;line-height:1.15}
 #robot-tag-hops-v22 .bet-kicker {color:#65eeff;font-size:11px;letter-spacing:.18em}
 #robot-tag-hops-v22 .bet-muted {color:#a5c4d5;line-height:1.5}
@@ -32,7 +32,7 @@
 #bet-result-summary .bet-net-loss {border-color:#ff4545}
 #bet-result-summary .bet-net-win {border-color:#48ed57}
 
-@media(max-width:500px){#robot-tag-hops-v22 .bet-fields,#robot-tag-hops-v22 .bet-names{grid-template-columns:1fr}#robot-tag-hops-v22 .bet-panel{padding:15px}#robot-tag-hops-v22 .bet-overlay{padding:8px}#robot-tag-hops-v22 .bet-panel{max-height:calc(100dvh - 16px)}#robot-tag-hops-v22 .bet-pool{padding:8px 2px}}
+@media(max-width:500px){#robot-tag-hops-v22 .bet-fields,#robot-tag-hops-v22 .bet-names{grid-template-columns:1fr}#robot-tag-hops-v22 .bet-panel{padding:15px}#robot-tag-hops-v22 .bet-overlay{padding:8px}#robot-tag-hops-v22 .bet-panel{max-height:calc(var(--game-height,100dvh) - 16px)}#robot-tag-hops-v22 .bet-pool{padding:8px 2px}}
 
 #robot-tag-hops-v22 .garage-grid{display:grid}#robot-tag-hops-v22 .garage-patient{border-radius:8px;display:flex;flex-direction:column}#robot-tag-hops-v22 .garage-patient h3,#robot-tag-hops-v22 .garage-patient p{margin:0}#robot-tag-hops-v22 .garage-patient label{justify-content:space-between;gap:8px}#robot-tag-hops-v22 .garage-patient select,#robot-tag-hops-v22 .garage-patient input{max-width:150px}#robot-tag-hops-v22 .garage-patient small{color:#a7ada2}#robot-tag-hops-v22 .garage-hats{display:flex}#robot-tag-hops-v22 .garage-hats img{image-rendering:pixelated}#robot-tag-hops-v22 .garage-patient [data-error]{color:#ffb47a}
 #robot-tag-hops-v22 .bet-panel .garage-hats button{padding:2px;min-width:0;flex:1}

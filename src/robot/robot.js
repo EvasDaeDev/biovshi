@@ -560,6 +560,7 @@ function createRobot(id, start) {
     pounce: robotPounce.bind(null, robotState),
     beginScene: robotBeginScene.bind(null, robotState),
     endScene: robotEndScene.bind(null, robotState),
+    cancelNavigation() { robotState.route=[];robotState.routeGoal=null;robotState.routeIndex=0; },
     tick: robotTick.bind(null, robotState),
     paint: robotPaint.bind(null, robotState)
   };

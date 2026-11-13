@@ -1,14 +1,17 @@
+import {fitInterface} from './viewport.js';
 import { resetFrameClock } from "../game/clock.js";
 import { ctx } from "../game/state.js";
 import { attr } from "../render/svg.js";
 export
 // Sidebar is BESIDE the arena, not above it. Never subtract the cards' height.
 function fitField() {
+  fitInterface();
+  const scale=ctx.layoutScale||1;
   const main = ctx.root.querySelector('.tag7hop-main');
-  const columnWidth = main.getBoundingClientRect().width || 700;
+  const columnWidth = main.getBoundingClientRect().width/scale || 700;
   const win=ctx.root.ownerDocument.defaultView;
-  const viewportHeight=win.visualViewport?.height||win.innerHeight;
-  const toolbarHeight=ctx.root.querySelector('.atmosphere-controls').getBoundingClientRect().height;
+  const viewportHeight=(win.visualViewport?.height||win.innerHeight)/scale;
+  const toolbarHeight=ctx.root.querySelector('.atmosphere-controls').getBoundingClientRect().height/scale;
   // The WINDOW is rectangular; the camera fits the square arena inside it.
   const width=Math.max(1,Math.floor(columnWidth));
   const height=ctx.arenaExpanded?Math.max(1,Math.floor(viewportHeight-toolbarHeight-36)):
@@ -21,6 +24,7 @@ function fitField() {
   }
   sizeLabels();
   ctx.arenaRenderer?.resize();
+  ctx.paintTowerMarker?.();
 }
 export function sizeLabels() {
   const bounds=(ctx.arenaRenderer?.canvas??ctx.svg).getBoundingClientRect();
