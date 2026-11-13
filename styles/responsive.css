@@ -17,8 +17,12 @@ html body #robot-tag-hops-v22 {flex:none;max-width:none;--card-height:clamp(112p
 #robot-tag-hops-v22.arena-expanded {height:var(--game-height,100dvh)}
 #robot-tag-hops-v22.arena-expanded .tag7hop-layout {display:block}
 #robot-tag-hops-v22 .robot-card-action {white-space:nowrap}
-#robot-tag-hops-v22 .atmosphere-controls {padding:8px 14px;gap:8px}
-html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transform:translateX(-50%);margin:0;font-size:inherit;max-width:55%;overflow:hidden;text-overflow:ellipsis}
+/* All toolbar content participates in layout: the status cannot cover the wallet. */
+#robot-tag-hops-v22 .atmosphere-controls {padding:8px 14px;gap:8px;flex-wrap:nowrap}
+#robot-tag-hops-v22 .atmosphere-controls>.btn {flex-shrink:0}
+#robot-tag-hops-v22 #tower-wallet {flex:0 1 auto;min-width:0;max-width:40%;white-space:normal;overflow-wrap:anywhere}
+html body #robot-tag-hops-v22 #tag7hop-status {position:static;left:auto;transform:none;flex:1 1 200px;min-width:0;max-width:none;margin:0 0 0 auto;font-size:inherit;text-align:right;white-space:normal;overflow-wrap:anywhere}
+#robot-tag-hops-v22 .atmosphere-controls>.settings-button {margin-left:0}
 #robot-tag-hops-v22 #tower-stick {width:168px;height:168px;opacity:.5;zoom:calc(1 / var(--interface-scale,1))}
 #robot-tag-hops-v22 #tower-stick span {width:72px;height:72px}
 #robot-tag-hops-v22 #tower-stick[hidden] {display:none}
