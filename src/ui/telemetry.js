@@ -91,7 +91,10 @@ export function friendlyAction(robot) {
   if (!robot.mobile) return 'Без сознания';
   if (deadline !== null) return `Теряет сознание · ${Math.ceil(Math.max(0, deadline - ctx.game.time))} с`;
   if (ctx.combat.pending[robot.id]) return 'Наносит удар';
-  if(ctx.mode==='tower'&&robot.id===0)return ctx.intents[0]?.speed>0?'Управляется игроком':'Ожидает движения';
+  if(ctx.mode==='tower'&&robot.id===0){
+    if(ctx.towerControlMode==='direction')return ctx.intents[0]?.speed>0?'Идёт к точке':'Удерживает позицию';
+    return ctx.intents[0]?.speed>0?'Управляется игроком':'Ожидает движения';
+  }
   if (!robot.hasHead) return 'Слепой режим';
   const map = {
     wander: 'Ищет врага',

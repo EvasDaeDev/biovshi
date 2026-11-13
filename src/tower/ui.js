@@ -27,7 +27,7 @@ export function refreshMenu(){
   ctx.root.querySelector('#launch-setup').textContent=s?'НОВАЯ ИГРА':'СОЗДАТЬ ИГРУ';
 }
 export function openMenu(){
-  ctx.clearTowerInput?.();ctx.paused=true;ctx.audio?.sync();
+  ctx.clearTowerInput?.();ctx.clearTowerDestination?.();ctx.paused=true;ctx.audio?.sync();
   ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;
   ctx.root.querySelector('#tower-preparation').hidden=true;
   ctx.root.querySelector('#tower-controls').hidden=true;
@@ -79,7 +79,7 @@ export function settleTower(winner){
   const priorPieces=[...t.artifacts.pieces];
   const next=completeTower(ctx.betting,ctx.towerPlayer,won);
   ctx.towerOutcome.artifact=won?next.artifacts.pieces.find(id=>!priorPieces.includes(id))??null:null;
-  bettingSave();ctx.clearTowerInput?.();
+  bettingSave();ctx.clearTowerInput?.();ctx.clearTowerDestination?.();
 }
 export function towerResults(){
   const won=ctx.combat.winner===0,t=towerFor(ctx.betting,ctx.towerPlayer),o=ctx.towerOutcome??{floor:ctx.towerRun.level,cleared:won?ctx.towerRun.level:ctx.towerRun.level-1,record:t.record};

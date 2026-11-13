@@ -1,43 +1,64 @@
-import { ctx } from '../game/state.js';
-import { resetFrameClock } from '../game/clock.js';
+import {ctx} from '../game/state.js';
+import {resetFrameClock} from '../game/clock.js';
 
-export function initializeOrientation() {
-  ctx.root.querySelector('#landscape-required')?.remove();
-  const overlay=document.createElement('div');
+export function initializeOrientation(){
+  const root=ctx.root,doc=root.ownerDocument,win=doc.defaultView;
+  root.querySelector('#landscape-required')?.remove();
+  const overlay=doc.createElement('dialog');
   overlay.id='landscape-required';overlay.hidden=true;
-  overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
-  overlay.setAttribute('aria-labelledby','landscape-title');
-  overlay.innerHTML='<div><h2 id="landscape-title">Поверните устройство</h2><p>Арена работает в горизонтальном положении.</p><button type="button" class="btn">Горизонтальный режим</button></div>';
-  ctx.root.appendChild(overlay);
-  const win=ctx.root.ownerDocument.defaultView;
+  overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','landscape-title');
+  overlay.innerHTML='<div><h2 id="landscape-title">Поверните устройство</h2><p>Арена работает в горизонтальном положении.</p><button type="button" class="btn">Проверить ориентацию</button></div>';
+  root.append(overlay);
+  let previous=null;
   const update=()=>{
-    const type=win.screen?.orientation?.type;
-    const portrait=type?type.startsWith('portrait'):win.innerHeight>win.innerWidth;
-    const blocked=Boolean(ctx.touchDevice&&portrait);
-    if(ctx.orientationBlocked!==blocked)resetFrameClock();
-    ctx.orientationBlocked=blocked;overlay.hidden=!blocked;
+    // Window dimensions also cover tablet split view. Screen orientation alone
+    // can stay landscape while the browser's actual viewport is portrait.
+    const blocked=Boolean(ctx.touchDevice&&win.innerHeight>win.innerWidth);
+    if(ctx.orientationBlocked!==blocked){resetFrameClock();ctx.clearTowerInput?.();}
+    ctx.orientationBlocked=blocked;
+    if(blocked){
+      if(overlay.hidden)previous=doc.activeElement;
+      overlay.hidden=false;
+      // A modal dialog is above launch sheets AND other already open dialogs.
+      if(!overlay.open){
+        if(typeof overlay.showModal==='function')overlay.showModal();
+        else overlay.setAttribute('open','');
+        overlay.querySelector('button').focus();
+      }
+    }else{
+      if(overlay.open){if(typeof overlay.close==='function')overlay.close();else overlay.removeAttribute('open');}
+      overlay.hidden=true;
+      if(previous?.isConnected&&!previous.closest('[hidden]'))previous.focus();
+      previous=null;
+    }
   };
-  const lock=async fullscreen=>{
-    if(!ctx.touchDevice)return;
-    try{
-      if(fullscreen&&!document.fullscreenElement)await ctx.root.requestFullscreen?.();
-      await win.screen?.orientation?.lock?.('landscape');
-    }catch{/* Browsers without orientation locking keep the rotation prompt. */}
-    update();
+  const guard=event=>{
+    if(!ctx.orientationBlocked)return;
+    if(overlay.contains(event.target)){if(event.type==='keydown')event.stopImmediatePropagation();return;}
+    event.preventDefault();event.stopImmediatePropagation();
+    if(event.type==='focusin')overlay.querySelector('button').focus();
   };
-  overlay.querySelector('button').onclick=()=>lock(true);
-  const onPointer=()=>lock(false);
-  ctx.root.addEventListener('pointerdown',onPointer,{once:true});
-  win.addEventListener('resize',update);
-  win.screen?.orientation?.addEventListener?.('change',update);
-  document.addEventListener('fullscreenchange',update);
+  const events=['click','pointerdown','pointerup','keydown','submit','focusin'];
+  for(const type of events)doc.addEventListener(type,guard,true);
+  overlay.addEventListener('cancel',event=>event.preventDefault());
+  overlay.querySelector('button').onclick=update;
+  const observer=new win.MutationObserver(records=>{
+    // If an asynchronous action opens another native dialog, promote the guard
+    // again so that no game form becomes interactive above it.
+    if(ctx.orientationBlocked&&records.some(r=>r.target!==overlay&&r.target.tagName==='DIALOG'&&r.target.open)){
+      if(overlay.open&&typeof overlay.close==='function')overlay.close();
+      else overlay.removeAttribute('open');
+      update();
+    }
+  });
+  observer.observe(root,{subtree:true,attributes:true,attributeFilter:['open']});
+  win.addEventListener('resize',update);win.screen?.orientation?.addEventListener?.('change',update);
   update();
-  const dispose=ctx.root.__disposeTag;
-  ctx.root.__disposeTag=()=>{
-    win.removeEventListener('resize',update);
-    win.screen?.orientation?.removeEventListener?.('change',update);
-    document.removeEventListener('fullscreenchange',update);
-    ctx.root.removeEventListener('pointerdown',onPointer);
-    overlay.remove();dispose();
+  const dispose=root.__disposeTag;
+  root.__disposeTag=()=>{
+    observer.disconnect();win.removeEventListener('resize',update);win.screen?.orientation?.removeEventListener?.('change',update);
+    for(const type of events)doc.removeEventListener(type,guard,true);
+    if(overlay.open&&typeof overlay.close==='function')overlay.close();
+    overlay.remove();ctx.orientationBlocked=false;dispose();
   };
 }

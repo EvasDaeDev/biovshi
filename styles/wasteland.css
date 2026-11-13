@@ -225,10 +225,10 @@ html body #robot-tag-hops-v22 #tag7hop-status {color:#d6bd8b;text-shadow:0 1px #
 #robot-tag-hops-v22 .bet-overlay {position:fixed;inset:0;z-index:1100;overflow-y:auto;box-sizing:border-box;align-items:center}
 #robot-tag-hops-v22 .gladiator-results {position:fixed;inset:0;z-index:1100;box-sizing:border-box}
 #robot-tag-hops-v22 .bet-panel,
-#robot-tag-hops-v22 .gladiator-results-card {max-height:calc(100dvh - 36px);overflow-y:auto;overscroll-behavior:contain}
+#robot-tag-hops-v22 .gladiator-results-card {max-height:calc(var(--game-height,100dvh) - 36px);overflow-y:auto;overscroll-behavior:contain}
 @media(max-width:500px) {
  #robot-tag-hops-v22 .bet-panel,
- #robot-tag-hops-v22 .gladiator-results-card {max-height:calc(100dvh - 16px)}
+ #robot-tag-hops-v22 .gladiator-results-card {max-height:calc(var(--game-height,100dvh) - 16px)}
  #robot-tag-hops-v22 .gladiator-results {padding:8px}
 }
 /* Avoid bright cyan remnants in modal controls and field highlights. */
@@ -242,7 +242,7 @@ html body #robot-tag-hops-v22 #tag7hop-status {color:#d6bd8b;text-shadow:0 1px #
 #robot-tag-hops-v22 .bet-overlay[data-view="garage"] {padding:10px}
 #robot-tag-hops-v22 .bet-overlay[data-view="garage"] .bet-panel {
  width:min(100%,1320px);padding:12px 16px 10px;
- max-height:calc(100dvh - 20px);display:flex;flex-direction:column;
+ max-height:calc(var(--game-height,100dvh) - 20px);display:flex;flex-direction:column;
 }
 #robot-tag-hops-v22 .bet-overlay[data-view="garage"] .bet-panel h2 {
  margin:0 0 5px;font-size:clamp(21px,2.2vw,29px);line-height:1.15;

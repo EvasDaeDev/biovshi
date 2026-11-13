@@ -1,0 +1,32 @@
+/* One side-by-side layout at every width. fitInterface supplies logical size. */
+html body #robot-tag-hops-v22 {flex:none;max-width:none;--card-height:clamp(112px,calc((var(--game-height,100dvh) - 122px) / 4),164px)}
+#robot-tag-hops-v22 .tag7hop-layout {display:grid;grid-template-columns:var(--card-width) minmax(0,1fr) calc(var(--card-width) + 20px);gap:16px;align-items:start}
+#robot-tag-hops-v22 .tag7hop-sidebar-wrap {width:var(--card-width);max-height:calc(var(--game-height,100dvh) - 100px);overflow-y:auto;overflow-x:hidden}
+#robot-tag-hops-v22 .tag7hop-sidebar {display:flex;flex-direction:column;flex-wrap:nowrap;gap:8px}
+#robot-tag-hops-v22 .tag7hop-main {width:auto;min-width:0}
+#robot-tag-hops-v22 #bet-hud {grid-column:auto;display:flex;flex-direction:column;flex-wrap:nowrap;width:auto;max-height:calc(var(--game-height,100dvh) - 100px);overflow:auto;padding:0}
+#robot-tag-hops-v22 #bet-hud[hidden] {display:none}
+#robot-tag-hops-v22 .bet-hud-bank {flex-basis:auto;margin:0 0 12px}
+#robot-tag-hops-v22.compact-layout {--card-width:215px}
+#robot-tag-hops-v22.compact-layout .tag7hop-layout {grid-template-columns:215px minmax(0,1fr) 185px;gap:12px}
+#robot-tag-hops-v22.compact-layout .bet-hud-player {width:185px;min-width:185px}
+#robot-tag-hops-v22[data-game-mode="tower"] .tag7hop-layout {grid-template-columns:var(--card-width) minmax(0,1fr)}
+#robot-tag-hops-v22.cards-hidden .tag7hop-layout {grid-template-columns:minmax(0,1fr) calc(var(--card-width) + 20px)}
+#robot-tag-hops-v22.compact-layout.cards-hidden .tag7hop-layout {grid-template-columns:minmax(0,1fr) 185px}
+#robot-tag-hops-v22[data-game-mode="tower"].cards-hidden .tag7hop-layout {grid-template-columns:minmax(0,1fr)}
+#robot-tag-hops-v22.arena-expanded {height:var(--game-height,100dvh)}
+#robot-tag-hops-v22.arena-expanded .tag7hop-layout {display:block}
+#robot-tag-hops-v22 .robot-card-action {white-space:nowrap}
+#robot-tag-hops-v22 .atmosphere-controls {padding:8px 14px;gap:8px}
+html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transform:translateX(-50%);margin:0;font-size:inherit;max-width:55%;overflow:hidden;text-overflow:ellipsis}
+#robot-tag-hops-v22 #tower-stick {width:168px;height:168px;opacity:.5;zoom:calc(1 / var(--interface-scale,1))}
+#robot-tag-hops-v22 #tower-stick span {width:72px;height:72px}
+#robot-tag-hops-v22 #tower-stick[hidden] {display:none}
+#robot-tag-hops-v22 .tower-control-setting {display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px}
+#robot-tag-hops-v22 #tower-control-mode {min-height:40px;padding:6px;background:#102039;color:#daf6ff;border:1px solid #284763}
+#robot-tag-hops-v22 #tower-control-hint {font-size:12px;color:#a5c4d5;margin:6px 0 18px}
+#robot-tag-hops-v22 #tower-direction-marker {position:absolute;z-index:4;pointer-events:none;border:2px solid #b9faff;border-radius:50%;box-sizing:border-box;background:#38dfff44;box-shadow:0 0 9px #24dfff,inset 0 0 7px #24dfff;transform:translate(-50%,-50%)}
+#robot-tag-hops-v22 #tower-direction-marker[hidden] {display:none}
+/* Native modal top layer blocks every sheet, regardless of its z-index. */
+#robot-tag-hops-v22 #landscape-required:not([hidden]) {position:fixed;inset:0;z-index:3000;zoom:calc(1 / var(--interface-scale,1));width:100%;height:100%;max-width:none;max-height:none;margin:0;box-sizing:border-box;border:0;display:grid;place-items:center;padding:24px;background:#090f0c;color:#d3cead;text-align:center}
+#landscape-required::backdrop {background:#090f0c}

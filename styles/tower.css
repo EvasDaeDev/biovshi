@@ -1,4 +1,4 @@
-#robot-tag-hops-v22 .launch-paper{max-height:calc(100dvh - 24px);overflow-y:auto;padding-top:22px;padding-bottom:22px}
+#robot-tag-hops-v22 .launch-paper{max-height:calc(var(--game-height,100dvh) - 24px);overflow-y:auto;padding-top:22px;padding-bottom:22px}
 #robot-tag-hops-v22 .tower-menu-block{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;margin-top:14px;text-align:left}
 #robot-tag-hops-v22 .tower-menu-block label{font-size:12px;font-weight:bold}
 #robot-tag-hops-v22 .tower-menu-block select{min-height:36px;background:#d9d0b6;color:#27291f;border:1px solid #645d47;padding:5px;width:100%}

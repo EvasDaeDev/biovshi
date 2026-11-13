@@ -137,6 +137,7 @@ export function frame(now) {
   // Changing viewBox repaints the whole arena. Do it only with a new game frame.
   if (painted) {
     cameraUpdate(ctx.cameraDebt);
+    ctx.paintTowerMarker?.();
     timed('webgl',()=>ctx.arenaRenderer?.render());
     ctx.cameraDebt = 0;
   } else if (ctx.paused || ctx.settingsOpen || ctx.orientationBlocked || document.hidden || resultsOpen) ctx.cameraDebt = 0;

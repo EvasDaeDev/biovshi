@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="./styles/tower.css">
 <link rel="stylesheet" href="./styles/streamer.css">
 <link rel="stylesheet" href="./styles/trauma.css">
+<link rel="stylesheet" href="./styles/responsive.css">
 </head>
 <body>
 <div id="texture-loading" role="status">Подготовка арены…</div>
@@ -69,9 +70,13 @@
   <header><h2 id="arena-settings-title">Настройки</h2><button id="arena-settings-close" class="btn" type="button" aria-label="Закрыть настройки">✕</button></header>
   <label class="graphics-control">Графика <select id="graphics-quality" aria-label="Качество графики"><option value="auto">Авто</option><option value="full">Полная</option><option value="light">Лёгкая</option></select></label>
   <div class="audio-controls" role="group" aria-label="Громкость">
-   <label for="sound-volume">Звуки <input id="sound-volume" type="range" min="0" max="100" step="1" value="70"><output for="sound-volume" id="sound-volume-value">70%</output></label>
-   <label for="music-volume">Музыка <input id="music-volume" type="range" min="0" max="100" step="1" value="10"><output for="music-volume" id="music-volume-value">10%</output></label>
+   <label for="sound-volume">Звуки <input id="sound-volume" type="range" min="0" max="100" step="1" value="50"><output for="sound-volume" id="sound-volume-value">50%</output></label>
+   <label for="music-volume">Музыка <input id="music-volume" type="range" min="0" max="100" step="1" value="50"><output for="music-volume" id="music-volume-value">50%</output></label>
   </div>
+  <label class="tower-control-setting">Способ управления
+   <select id="tower-control-mode" aria-describedby="tower-control-hint"><option value="control">Управление</option><option value="direction">Направление</option></select>
+  </label>
+  <p id="tower-control-hint">Настройка для режима башни.</p>
   <div id="arena-settings-content"></div>
   <div class="credits-entry"><button id="arena-credits-open" type="button" aria-controls="arena-credits-view" aria-expanded="false">АВТОРЫ И ЛИЦЕНЗИИ</button></div>
   <section id="arena-credits-view" class="credits-view" aria-labelledby="arena-credits-title" hidden>

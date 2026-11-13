@@ -65,7 +65,7 @@ test('music loops through pause; crawling stops on unconsciousness and music fad
 
 test('volume sliders update independent buses, persist 0–100 values and restore preferences',async()=>{
  const f=setup();await f.unlock();const input=f.dom.window.document.querySelector('#sound-volume');input.value='0';input.dispatchEvent(new f.dom.window.Event('input'));
- assert.equal(f.gains[0].gain.value,0);assert.equal(f.gains[1].gain.value,.1);assert.equal(f.dom.window.document.querySelector('#sound-volume-value').value,'0%');
+ assert.equal(f.gains[0].gain.value,0);assert.equal(f.gains[1].gain.value,.5);assert.equal(f.dom.window.document.querySelector('#sound-volume-value').value,'0%');
  f.audio.setVolume('music',150);assert.equal(f.gains[1].gain.value,1);
  assert.deepEqual(loadAudioSettings(f.dom.window.localStorage),{sounds:0,music:100});
  f.audio.setVolume('music',0);assert.equal(live(f.sources,'music').length,0);
@@ -99,7 +99,7 @@ test('foot contact uses step_1 at 70%; legless movement loops it at 100% and sto
  robot.limbs=[];f.audio.sync();await flush();const resumed=live(f.sources,'drag').find(s=>s.loop);assert.ok(resumed);
  f.state.paused=true;f.audio.sync();assert.ok(resumed.stopped);
  f.state.paused=false;f.state.robots[1].mobile=false;f.audio.sync();await flush();assert.equal(live(f.sources,'drag').filter(s=>s.loop).length,0);
- assert.deepEqual(loadAudioSettings(),{sounds:70,music:10});
+ assert.deepEqual(loadAudioSettings(),{sounds:50,music:50});
  f.finish();
 });
 

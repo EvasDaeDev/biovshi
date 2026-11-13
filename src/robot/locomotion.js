@@ -17,7 +17,7 @@ export function hasGoal(robotState) {
 export function currentTargetVisible(robotState) {
   return !!robotState.currentIntent.lookPoint;
 }
-export function steerTo(robotState, goal) {
+export function steerTo(robotState, goal, padding=robotState.routePadding, waypointRadius=18) {
   // A stop/attack intent is not a navigation request. Discard stale waypoints
   // rather than turning toward an old flank point with zero travel speed.
   if (Math.hypot(goal.x - robotState.x, goal.y - robotState.y) < 4) {
@@ -26,17 +26,18 @@ export function steerTo(robotState, goal) {
     robotState.routeIndex = 0;
     return goal;
   }
-  if (!robotState.routeGoal || Math.hypot(robotState.routeGoal.x - goal.x, robotState.routeGoal.y - goal.y) > 18 || !robotState.route.length) {
+  if (robotState.routeClearance!==padding || !robotState.routeGoal || Math.hypot(robotState.routeGoal.x - goal.x, robotState.routeGoal.y - goal.y) > 18 || !robotState.route.length) {
     robotState.route = planPath({
       x: robotState.x,
       y: robotState.y
-    }, goal, robotState.routePadding);
+    }, goal, padding);
+    robotState.routeClearance=padding;
     robotState.routeGoal = {
       ...goal
     };
     robotState.routeIndex = 0;
   }
-  while (robotState.routeIndex < robotState.route.length - 1 && Math.hypot(robotState.route[robotState.routeIndex].x - robotState.x, robotState.route[robotState.routeIndex].y - robotState.y) < 18) robotState.routeIndex++;
+  while (robotState.routeIndex < robotState.route.length - 1 && Math.hypot(robotState.route[robotState.routeIndex].x - robotState.x, robotState.route[robotState.routeIndex].y - robotState.y) < waypointRadius) robotState.routeIndex++;
   // planPath может вернуть только начальную точку при отсутствии маршрута.
   // Не превращаем это в вечную команду стоять на месте.
   if (robotState.route.length === 1 && Math.hypot(robotState.route[0].x - robotState.x, robotState.route[0].y - robotState.y) < 4 && Math.hypot(goal.x - robotState.x, goal.y - robotState.y) > 25) {
@@ -558,12 +559,12 @@ export function robotTick(robotState, dt, intent) {
       x: robotState.x,
       y: robotState.y
     },
-    waypoint = intent.manual?goal:robotState.steerTo(goal),
+    waypoint = intent.navigate?robotState.steerTo(goal,intent.navigationPadding,6*ctx.scale):intent.manual?goal:robotState.steerTo(goal),
     dx = waypoint.x - robotState.x,
     dy = waypoint.y - robotState.y,
     heading = intent.manual || robotState.t >= robotState.recoveryUntil ? headingForIntent(robotState.angle, robotState, waypoint, intent) : robotState.angle,
     turn = wrap(heading - robotState.angle),
-    speed = intent.speed * CONFIG.movement.speedMultiplier * statMultiplier(patientCombatStats(robotState.id,robotState.api).effective[0]) * robotState.locomotion() * clamp(Math.hypot(goal.x - robotState.x, goal.y - robotState.y) / 18, 0, 1) * (robotState.reduced ? 1 : .86 + .14 * Math.sin(robotState.gait * 2 - .5));
+    speed = intent.speed * CONFIG.movement.speedMultiplier * statMultiplier(patientCombatStats(robotState.id,robotState.api).effective[0]) * robotState.locomotion() * clamp(Math.hypot(intent.navigate?dx:goal.x - robotState.x, intent.navigate?dy:goal.y - robotState.y) / 18, 0, 1) * (intent.navigate?Math.max(0,Math.cos(turn)):1) * (robotState.reduced ? 1 : .86 + .14 * Math.sin(robotState.gait * 2 - .5));
   const flinching = robotState.hitReaction && ctx.game.time < robotState.hitReaction.start + robotState.hitReaction.duration;
   const flinchTime = flinching ? (ctx.game.time - robotState.hitReaction.start) / robotState.hitReaction.duration : 1;
   const flinchSlow = flinching ? .18 + .82 * smooth(flinchTime) : 1;
