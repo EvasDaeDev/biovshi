@@ -76,7 +76,7 @@ test('mascot renders in both modes, keeps its own visibility and uses shared hin
 test('mascot preserves pixel scaling and participates in normal and standalone asset pipelines',()=>{
  const css=fs.readFileSync(new URL('../styles/streamer.css',import.meta.url),'utf8');
  assert.match(css,/image-rendering:pixelated/);
- assert.match(css,/data-game-mode="tower"/);
+
  const initialize=fs.readFileSync(new URL('../src/game/initialize.js',import.meta.url),'utf8');
  assert.match(initialize,/initializeStreamerMascot\(\)/);
 });

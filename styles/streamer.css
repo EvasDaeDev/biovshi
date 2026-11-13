@@ -15,9 +15,6 @@
  border:1px solid #555643;background:#202219dd;color:#d7c8a9;
  font-size:16px;line-height:1;cursor:pointer;touch-action:manipulation;
 }
-/* Keep the bottom edge aligned; clear the tower stick horizontally. */
-#robot-tag-hops-v22[data-game-mode="tower"] #streamer-mascot {left:142px;width:min(219px,28.5%,calc(100% - 148px))}
-#robot-tag-hops-v22[data-game-mode="tower"] #streamer-mascot-toggle {left:144px}
 /* Speech follows the mascot and stays outside the arena's lighting/post effects. */
 #robot-tag-hops-v22 .streamer-quip {
  position:absolute;left:94%;bottom:55%;z-index:1;
