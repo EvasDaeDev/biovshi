@@ -2,7 +2,7 @@ import {createStreamerMotion} from './streamer-motion.js';
 import {ctx} from '../game/state.js';
 import {onGameEvent} from '../game/event-bus.js';
 import {fighterLabel} from '../game/patients.js';
-import {quipCategory,quipFor,createSpeechPacer,renderQuip} from './streamer-quips.js';
+import {quipCategory,createQuipSelector,createSpeechPacer,renderQuip} from './streamer-quips.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
 
 const STORAGE='biovshi.streamer-hidden.v1';
@@ -94,7 +94,7 @@ function isolateHead(doc,atlas,rect,icons=false){
  paint.putImageData(pixels,0,0);return canvas;
 }
 
-export function initializeStreamerMascot(){
+export function initializeStreamerMascot({lines,random}={}){
  const root=ctx.root,doc=root.ownerDocument,win=doc.defaultView;
  const box=doc.createElement('div');box.id='streamer-mascot';box.setAttribute('aria-hidden','true');
  const canvas=doc.createElement('canvas');canvas.width=280;canvas.height=288;box.append(canvas);
@@ -103,7 +103,7 @@ export function initializeStreamerMascot(){
  ctx.stage.append(box,toggle);
  let hidden=false,disposed=false,painter=null,iconAtlas=null,loaded=false,elapsed=0,lastPaint=-Infinity;
  try{hidden=win.localStorage.getItem(STORAGE)==='true';}catch{/* Storage may be disabled. */}
- const motion=createStreamerMotion(),track=createReactionTrack(),speechPacer=createSpeechPacer(),heads={},quipCounts=new Map();
+ const motion=createStreamerMotion(),track=createReactionTrack(),speechPacer=createSpeechPacer(),heads={},selectQuip=createQuipSelector(lines,random);
  let spoken=null,quietFor=0;
  const clearSpeech=()=>{spoken=null;quietFor=0;motion.reset();speechPacer.reset();caption.hidden=true;caption.textContent='';};
  const updateToggle=()=>{
@@ -154,8 +154,7 @@ export function initializeStreamerMascot(){
    spoken=reaction;
    caption.hidden=true;
    if(reaction&&(reaction.required||speechPacer.take(reaction.duration))){
-    const category=quipCategory(reaction.event),index=quipCounts.get(category)??0;
-    renderQuip(caption,quipFor(reaction.event,index),reaction.event);quipCounts.set(category,index+1);
+    renderQuip(caption,selectQuip(reaction.event),reaction.event);
     caption.hidden=!caption.textContent;
    }
   }

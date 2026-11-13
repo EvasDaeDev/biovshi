@@ -1,36 +1,47 @@
+import {STREAMER_LINES} from './streamer-lines.js';
 import {ROBOT_COLORS} from '../utils/colors.js';
 
-// {fighter} uses the live combat name in tower mode and the arena letter otherwise.
-export const STREAMER_QUIPS={
- start:['Мясо подъехало!','Кто первый ляжет?','Обнимайтесь покрепче!'],
- hit:['{fighter}, держи сдачу!','Хрустит — значит свежее!','Нежнее, садист!','Ой, прямо больно!'],
- critical:['{fighter}, зубы собери!','Аж хрустнуло!','Вот это массаж!','Минус самооценка!'],
- arm:['{fighter}, ручкой помаши!','Рук больше нет?','Верните {fighter} руку!'],
- leg:['{fighter}, ножку забыл!','Допрыгался, зайчик!','Ползи, красавчик!'],
- detached:['{fighter} теряет запчасти!','Ой, отвалилось!','Это было лишнее?','Сборка без гарантии!'],
- knockout:['{fighter} вышел!','Спи, мой сладкий!','Устал быть целым!'],
- death:['{fighter} окончательно вышел!','В морг!','Больше небольно!','Пакетик нужен?'],
- victory:['Остался один!','Красавчик, почти целый!','Поздравляю, снова сюда!','Главный кусок мяса!'],
- idle:['…скуучно.','Чего такие целые?']
-};
 export function quipCategory(event){
  if(event.type==='combat-start')return 'start';
  if(event.type==='streamer-idle')return 'idle';
- if(event.type==='combat-end')return event.winner===null?'death':'victory';
+ if(event.type==='combat-end')return event.winner===null?'draw':'victory';
  if(event.type==='robot-immobilized')return event.reason==='погиб'?'death':'knockout';
  if(event.type==='segment-broken')return event.segment?.startsWith('arm')?'arm':event.segment?.startsWith('leg')?'leg':'detached';
  if(event.type==='hit')return event.damage===2?'critical':'hit';
  return null;
 }
-export function quipFor(event,index=0){
- const category=quipCategory(event);if(!category)return '';
- const lines=event.type==='combat-end'&&event.winner===null?STREAMER_QUIPS.death.slice(1):category==='arm'||category==='leg'?[...STREAMER_QUIPS[category],...STREAMER_QUIPS.detached]:STREAMER_QUIPS[category];
+// One selector per mascot; round resets deliberately preserve its shuffled bags.
+export function createQuipSelector(catalog=STREAMER_LINES,random=Math.random){
+ const bags=new Map();
+ return event=>{
+  const category=quipCategory(event);if(!category)return '';
+  const source=catalog[category];
+  // Deduplicate copy so identical entries cannot cause consecutive repeats.
+  const lines=Array.isArray(source)?[...new Set(source.filter(line=>typeof line==='string'&&line.trim()))]:[];
+  if(!lines.length)return '';
+  let state=bags.get(category);
+  if(!state){state={remaining:[],last:null};bags.set(category,state);}
+  if(!state.remaining.length){
+   state.remaining=[...lines];
+   for(let i=state.remaining.length-1;i>0;i--){
+    const j=Math.floor(random()*(i+1));
+    [state.remaining[i],state.remaining[j]]=[state.remaining[j],state.remaining[i]];
+   }
+   const last=state.remaining.length-1;
+   if(last>0&&state.remaining[last]===state.last){
+    const j=Math.floor(random()*last);
+    [state.remaining[last],state.remaining[j]]=[state.remaining[j],state.remaining[last]];
+   }
+  }
+  state.last=state.remaining.pop();
+  return quipFor(event,state.last);
+ };
+}
+
+export function quipFor(event,template=''){
  const id=event.robot??event.to??event.winner;
  const fighter=Number.isInteger(id)&&id>=0&&id<26?String.fromCharCode(65+id):'—';
- const name=event.fighterName??fighter;
- if(event.type==='combat-end')return event.winner===null?'Бой окончен!':`${name} победил!`;
- if(event.type==='robot-immobilized')return `${name} ${event.reason==='погиб'?'погиб':'вышел'}!`;
- return lines[index%lines.length].replaceAll('{fighter}',name);
+ return template.replaceAll('{fighter}',event.fighterName??fighter);
 }
 
 // A spoken line is followed by an equally long silent interval; animation continues.
