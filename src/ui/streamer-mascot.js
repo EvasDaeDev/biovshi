@@ -159,7 +159,8 @@ export function initializeStreamerMascot(){
     caption.hidden=!caption.textContent;
    }
   }
-  const pose=motion.tick(delta),t=elapsed;
+  const celebrating=reaction?.event.type==='combat-end'&&reaction.event.winner!==null;
+  const pose=motion.tick(delta,{celebrating}),t=elapsed;
   const bob=Math.sin(t*(reaction?9:2.7))*(reaction?2:1);
   // The torso ends at y=277; align it with the 288px canvas bottom.
   // Only the head bobs, so the lower edge never floats above the arena.
