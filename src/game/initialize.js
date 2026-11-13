@@ -41,7 +41,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   root.dataset.gameMode=ctx.mode;
   if(tower)ctx.betting=session;
   ctx.towerRun=tower;
-  ctx.towerGarage=tower?Array.from({length:towerEnemyCount(tower)+1},(_,id)=>({stats:id===0?[...tower.stats]:[3,3,3],head:null})):null;
+  ctx.towerGarage=tower?Array.from({length:towerEnemyCount(tower)+1},(_,id)=>({stats:id===0?[...tower.stats]:[3,3,3],head:null,prosthetics:id===0?[...(tower.prosthetics??[])]:[]})):null;
   ctx.textureAssets=textures;
   ctx.root = root;
   ctx.svg = ctx.root.querySelector('#tag7hop-field');

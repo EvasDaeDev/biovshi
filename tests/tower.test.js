@@ -262,3 +262,20 @@ test('manual and autonomous patients can leave the annulus obstacle without losi
   close(dom);
  }
 });
+
+test('tower carries restored android segments between floors and clears them for a new run',()=>{
+ const s=betNewSession(['Player'],100),t=towerFor(s,0);
+ const dom=setup(s,structuredClone(t));
+ try{
+  document.querySelector('#tower-fight').click();advanceStartup(20);
+  assert.equal(ctx.robots[0].damage('leg-1-upper',1,3),true);
+  settleTower(0);
+  assert.deepEqual(s.towers[0].prosthetics,['leg-1-upper','leg-1-lower']);
+  initializeGame({session:s,tower:structuredClone(s.towers[0])});
+  for(const key of ['leg-1-upper','leg-1-lower']){
+   assert.ok(ctx.robots[0].actor.querySelector(`[data-skin-segment="${key}"] image`).getAttribute('href').endsWith('ar_01.png'));
+  }
+  assert.deepEqual(ctx.betting.garage[0].prosthetics,[],'arena patient is independent of the tower body');
+  assert.deepEqual(completeTower(s,0,false).prosthetics,[]);
+ }finally{ctx.root.__disposeTag();dom.window.close();}
+});

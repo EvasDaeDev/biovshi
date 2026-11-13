@@ -28,6 +28,7 @@ const minX=Math.min(...corners.map(p=>p.x)),maxX=Math.max(...corners.map(p=>p.x)
 const minY=Math.min(...corners.map(p=>p.y)),maxY=Math.max(...corners.map(p=>p.y));
 const palettes=new Map();
 const hatImages=new Map();
+let androidAtlas=null;
 
 // Palette atlases are prepared once. Transparency and luminance detail survive;
 // healthy parts use the original image with absolutely no green tint.
@@ -61,6 +62,7 @@ async function atlasPalette(url) {
 }
 export async function preparePatientPortraits() {
   const cards=ctx.cardNodes;
+  try{androidAtlas=ctx.textureAssets?.robotAndroid?.loaded===false?null:await atlasPalette(assetUrl(ASSETS.textures.robotAndroid));}catch{androidAtlas=null;}
   await Promise.all([1,2,3,4].map(async id=>{try{hatImages.set(id,await loadTextureImage(assetUrl(ASSETS.textures['hat'+id])));}catch{}}));
   await Promise.all(cards.map(async(card,id)=>{
     const key=['robotA','robotB','robotC','robotD'][patientSkin(id)];
@@ -71,8 +73,9 @@ export async function preparePatientPortraits() {
   ctx.telemetryPortraitsReady=true;ctx.telemetryDirty=true;
 }
 export function paintPatientPortrait(card,id,states) {
+  const prosthetics=ctx.robots[id]?.prosthetics??patientGarage()?.[id]?.prosthetics??[];
   const hat=patientGarage()?.[id]?.head?.hat;
-  const key=states.map(s=>s.state+':'+s.opacity).join('|')+'|'+hat+'|'+card.portrait.width+'x'+card.portrait.height;
+  const key=states.map(s=>s.state+':'+s.opacity).join('|')+'|'+prosthetics.join(',')+'|'+hat+'|'+card.portrait.width+'x'+card.portrait.height;
   if(card.portraitStateKey!==key){
     card.portraitStateKey=key;card.portraitStates=Object.fromEntries(states.map(s=>[s.key,s.state]));
     const counts=states.reduce((counts,s)=>(counts[s.state]=(counts[s.state]??0)+1,counts),{});
@@ -85,9 +88,10 @@ export function paintPatientPortrait(card,id,states) {
   draw.setTransform(portraitScale,0,0,portraitScale,card.portrait.width/2-(minX+maxX)*portraitScale/2,card.portrait.height/2-(minY+maxY)*portraitScale/2);draw.imageSmoothingEnabled=false;
   for(let i=0;i<PORTRAIT_BONES.length;i++){
     const bone=PORTRAIT_BONES[i],state=states[i];draw.save();draw.globalAlpha=Number(state.opacity);
-    if(card.portraitAtlas){
+    const atlas=prosthetics.includes(bone.key)&&androidAtlas?androidAtlas:card.portraitAtlas;
+    if(atlas){
       draw.transform(...bone.matrix);
-      draw.drawImage(card.portraitAtlas[state.state],bone.part.col*64,bone.part.row*64,64,64,0,0,64,64);
+      draw.drawImage(atlas[state.state],bone.part.col*64,bone.part.row*64,64,64,0,0,64,64);
     }else{
       draw.strokeStyle=state.state==='off'?'#353e48':TELEMETRY_COLOURS[state.state]??'#b7ada1';draw.fillStyle=draw.strokeStyle;
       draw.lineWidth=bone.key.startsWith('spine')?10:3;draw.lineCap='round';draw.beginPath();
