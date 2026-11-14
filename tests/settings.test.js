@@ -32,6 +32,18 @@ function setup(start=true){
 const open=()=>document.querySelector('#arena-settings-button').click();
 const close=()=>document.querySelector('#arena-settings-close').click();
 
+test('launch menu Settings opens before choosing a mode and returns focus to its own button',async()=>{
+ const dom=setup();installTowerUI();initializeModalFocus();
+ const trigger=document.getElementById('launch-settings-button');
+ assert.ok(trigger.closest('#launch-overlay'));assert.ok(trigger.querySelector('.ui-icon'));
+ trigger.click();await Promise.resolve();
+ assert.equal(ctx.settingsOpen,true);assert.equal(trigger.getAttribute('aria-expanded'),'true');
+ close();await Promise.resolve();
+ assert.equal(document.getElementById('launch-overlay').hidden,false);
+ assert.equal(trigger.getAttribute('aria-expanded'),'false');assert.equal(document.activeElement,trigger);
+ ctx.root.__disposeTag();assert.equal(trigger.onclick,null);dom.window.close();
+});
+
 test('Settings opens above every game sheet, keeps its focus and returns to the same sheet',async()=>{
  for(const id of ['launch-overlay','tower-preparation','bet-overlay','gladiator-results']){
   const dom=setup();installTowerUI();

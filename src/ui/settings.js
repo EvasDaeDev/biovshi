@@ -7,8 +7,11 @@ import {openMenu} from '../tower/ui.js';
 export function initializeSettings() {
   const root=ctx.root,doc=root.ownerDocument;
   const panel=root.querySelector('#arena-settings'),button=root.querySelector('#arena-settings-button');
+  const launchButton=root.querySelector('#launch-settings-button');
+  const buttons=[button,launchButton];
+  let opener=button;
   panel.querySelector('#settings-build-version').textContent=typeof __BUILD_VERSION__==='string'?__BUILD_VERSION__:'0.1.0+dev';
-  button.innerHTML=uiIcon('settings');
+  for(const trigger of buttons)trigger.innerHTML=uiIcon('settings');
   const controlMode=root.querySelector('#tower-control-mode');
   ctx.towerControlMode=loadControlMode(winStorage(doc));
   controlMode.value=ctx.towerControlMode;controlMode.disabled=ctx.mode!=='tower';
@@ -35,20 +38,21 @@ export function initializeSettings() {
   const close=(restore=true)=>{
     if(!ctx.settingsOpen)return;
     if(!creditsView.hidden)showCredits(false);
-    panel.hidden=true;ctx.settingsOpen=false;button.setAttribute('aria-expanded','false');
+    panel.hidden=true;ctx.settingsOpen=false;for(const trigger of buttons)trigger.setAttribute('aria-expanded','false');
     for(const [node,inert] of background)node.inert=inert;background=[];
-    if(restore){setPaused(wasPaused);button.focus();}
+    if(restore){setPaused(wasPaused);opener.focus();}
   };
-  const open=()=>{
+  const open=event=>{
     if(ctx.settingsOpen)return;
+    opener=event.currentTarget;
     wasPaused=ctx.paused;
-    ctx.settingsOpen=true;setPaused(true);panel.hidden=false;button.setAttribute('aria-expanded','true');
+    ctx.settingsOpen=true;setPaused(true);panel.hidden=false;for(const trigger of buttons)trigger.setAttribute('aria-expanded','true');
     background=[root.querySelector('.atmosphere-controls'),root.querySelector('.tag7hop-layout'),root.querySelector('#bet-overlay'),root.querySelector('#launch-overlay'),root.querySelector('#tower-preparation')]
       .map(node=>[node,Boolean(node.inert)]);
     for(const [node] of background)node.inert=true;
     closeButton.focus();
   };
-  button.onclick=open;closeButton.onclick=()=>close();
+  for(const trigger of buttons)trigger.onclick=open;closeButton.onclick=()=>close();
   tutorialButton.onclick=()=>{close();ctx.tutorial?.restart();};
   menuButton.onclick=()=>{if(openMenu())close(false);};
   panel.onclick=event=>{if(event.target===panel)close();};
@@ -65,7 +69,7 @@ export function initializeSettings() {
   };
   doc.addEventListener('keydown',onKey);
   const dispose=root.__disposeTag;
-  root.__disposeTag=()=>{close(false);controlMode.onchange=null;panel.hidden=true;tutorialButton.onclick=menuButton.onclick=null;button.onclick=closeButton.onclick=panel.onclick=creditsOpen.onclick=creditsBack.onclick=null;doc.removeEventListener('keydown',onKey);dispose();};
+  root.__disposeTag=()=>{close(false);controlMode.onchange=null;panel.hidden=true;tutorialButton.onclick=menuButton.onclick=null;button.onclick=launchButton.onclick=closeButton.onclick=panel.onclick=creditsOpen.onclick=creditsBack.onclick=null;doc.removeEventListener('keydown',onKey);dispose();};
 }
 
 function winStorage(doc){try{return doc.defaultView.localStorage;}catch{return null;}}

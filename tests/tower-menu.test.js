@@ -34,7 +34,7 @@ test('boot menu creates shared players, switches modes and restarts a saved floo
   assert.equal(document.querySelector('#launch-overlay').hidden,false);assert.equal(ctx.betting.players[0].name,'Общий игрок');
   await ctx.startTower(0);assert.equal(ctx.mode,'tower');assert.equal(ctx.robots.length,2);assert.equal(document.querySelector('#launch-overlay').hidden,true);assert.equal(document.querySelector('#tower-preparation').hidden,false);
   document.querySelector('#tower-fight').click();advanceStartup(10);ctx.robots[1].damage('head',0,100);assert.equal(ctx.betting.players[0].balance,110);
-  document.querySelector('#game-menu').click();await ctx.startTotalizator();assert.equal(ctx.mode,'spectator');assert.equal(ctx.robots.length,4);assert.equal(ctx.betting.players[0].balance,110);assert.ok(document.querySelector('#bet-stakes-form'));
+  document.querySelector('#arena-settings-button').click();document.querySelector('#settings-main-menu').click();await ctx.startTotalizator();assert.equal(ctx.mode,'spectator');assert.equal(ctx.robots.length,4);assert.equal(ctx.betting.players[0].balance,110);assert.ok(document.querySelector('#bet-stakes-form'));
   await ctx.startTower(0);assert.equal(ctx.robots[1].hasHead,true);document.querySelector('#tower-fight').click();advanceStartup(10);ctx.robots[1].damage('head',0,100);assert.equal(ctx.betting.players[0].balance,110,'no duplicate payout after mode switch');
   assert.equal(bettingLoad().players[0].balance,110);
   await ctx.startSetup();assert.equal(ctx.mode,'spectator');assert.ok(document.querySelector('#bet-setup-form'));

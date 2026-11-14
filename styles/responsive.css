@@ -48,3 +48,4 @@ html body #robot-tag-hops-v22.mobile-layout #tag7hop-status {position:static;lef
 #robot-tag-hops-v22 .settings-panel #settings-main-menu:hover {background:#a55330;color:#fff5d9}
 #robot-tag-hops-v22 .settings-panel .settings-copyright {margin-top:16px;color:var(--paper-ink);opacity:.75;text-align:center;line-height:1.5}
 #robot-tag-hops-v22 .settings-panel .settings-copyright small {font-size:11px}
+#robot-tag-hops-v22 .launch-paper .launch-settings-button {position:absolute;top:12px;right:12px;margin:0;width:42px;height:42px;padding:8px}
