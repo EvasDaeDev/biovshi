@@ -1,28 +1,33 @@
+import {obstacleVertices} from '../game/arena.js';
 import {ctx} from '../game/state.js';
 import {clamp,segmentDistance} from '../utils/math.js';
 const cache=new WeakMap();
 function projection(points,n){let min=Infinity,max=-Infinity;for(const p of points){const q=p.x*n.x+p.y*n.y;min=Math.min(min,q);max=Math.max(max,q);}return {min,max};}
 function polygonData(box){
  let data=cache.get(box);if(data)return data;
- const points=box.points,axes=points.map((a,i)=>{const b=points[(i+1)%points.length],len=Math.hypot(b.x-a.x,b.y-a.y);const n={x:(b.y-a.y)/len,y:(a.x-b.x)/len};return {n,...projection(points,n)};});
+ const points=box.points??obstacleVertices(box),axes=points.map((a,i)=>{const b=points[(i+1)%points.length],len=Math.hypot(b.x-a.x,b.y-a.y);const n={x:(b.y-a.y)/len,y:(a.x-b.x)/len};return {n,...projection(points,n)};});
  data={axes,points,left:Math.min(...points.map(p=>p.x)),right:Math.max(...points.map(p=>p.x)),top:Math.min(...points.map(p=>p.y)),bottom:Math.max(...points.map(p=>p.y))};cache.set(box,data);return data;
 }
 // Minimum translation for a thick segment against a convex obstacle.
 export function capsulePolygonContact(c,box){
  const data=polygonData(box),{a,b,r}=c;
  if(Math.max(a.x,b.x)+r<data.left||Math.min(a.x,b.x)-r>data.right||Math.max(a.y,b.y)+r<data.top||Math.min(a.y,b.y)-r>data.bottom)return null;
- const axes=[...data.axes],dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;
- if(len2>1e-12){const n={x:-dy/Math.sqrt(len2),y:dx/Math.sqrt(len2)};axes.push({n,...projection(data.points,n)});}
- let nearest=null,distance=Infinity;
- for(const vertex of data.points){const t=len2?clamp(((vertex.x-a.x)*dx+(vertex.y-a.y)*dy)/len2,0,1):0;const x=a.x+dx*t-vertex.x,y=a.y+dy*t-vertex.y,d=x*x+y*y;if(d<distance){distance=d;nearest={x,y};}}
- if(distance>1e-12){const n={x:nearest.x/Math.sqrt(distance),y:nearest.y/Math.sqrt(distance)};axes.push({n,...projection(data.points,n)});}
+ const dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;
  let best=null;
- for(const {n,min,max} of axes){
+ const overlap=({n,min,max})=>{
   const A=a.x*n.x+a.y*n.y,B=b.x*n.x+b.y*n.y,low=Math.min(A,B)-r,high=Math.max(A,B)+r;
-  if(high<=min||low>=max)return null;
+  if(high<=min||low>=max)return false;
   const negative=high-min,positive=max-low,depth=Math.min(negative,positive),sign=negative<positive?-1:1;
   if(!best||depth<best.depth)best={depth,nx:n.x*sign,ny:n.y*sign};
- }
+  return true;
+ };
+ // Most candidates are clear on an existing polygon axis. Reject them before
+ // calculating the capsule-specific axes (especially on the 64-sided arena).
+ for(const axis of data.axes)if(!overlap(axis))return null;
+ if(len2>1e-12){const n={x:-dy/Math.sqrt(len2),y:dx/Math.sqrt(len2)};if(!overlap({n,...projection(data.points,n)}))return null;}
+ let nearest=null,distance=Infinity;
+ for(const vertex of data.points){const t=len2?clamp(((vertex.x-a.x)*dx+(vertex.y-a.y)*dy)/len2,0,1):0;const x=a.x+dx*t-vertex.x,y=a.y+dy*t-vertex.y,d=x*x+y*y;if(d<distance){distance=d;nearest={x,y};}}
+ if(distance>1e-12){const n={x:nearest.x/Math.sqrt(distance),y:nearest.y/Math.sqrt(distance)};if(!overlap({n,...projection(data.points,n)}))return null;}
  return best;
 }
 export function staticContacts(c){
