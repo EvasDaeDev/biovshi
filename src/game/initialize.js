@@ -17,7 +17,7 @@ import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
 import { random } from '../utils/random.js';
 import { ctx } from "./state.js";
-import { fitField, togglePause, toggleSpeed, setTimeScale } from "../ui/controls.js";
+import { fitField, togglePause, toggleSpeed, setTimeScale, setPaused } from "../ui/controls.js";
 import { CONFIG } from "../config.js";
 import { obstacleVertices, polygonPlanes, rebuildRobots } from "./arena.js";
 import { attr, el } from "../render/svg.js";
@@ -85,7 +85,6 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   };
   ctx.intro.hidden = false;
   ctx.disposed = false;
-  ctx.paused = false;
   ctx.settingsOpen = false;
   ctx.telemetryPortraitsReady = false;
   ctx.frameId = 0;
@@ -108,6 +107,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     globalThis.visualViewport?.removeEventListener('resize', fitField);
   };
   ctx.cache = new WeakMap();
+  setPaused(false);
   setTimeScale(1);
   ctx.liquidAtlasSources=null;
   ctx.coolantAtlasSources=null;

@@ -1,3 +1,4 @@
+import {setPaused} from '../ui/controls.js';
 import {patientVictory,patientRecovery} from '../garage/model.js';
 import {arenaPicker} from '../game/arenas.js';
 import {patientName,skillSummary} from '../ui/patient.js';
@@ -34,11 +35,10 @@ export function bettingModal(title) {
   ctx.resultsPanel.hidden = true;
   ctx.startup.phase = 'betting';
   ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = true;
-  ctx.paused = false;
+  setPaused(false);
   ctx.debt = 0;
   ctx.betTitle.textContent = title;
   ctx.betOverlay.dataset.view='betting';
-  ctx.root.querySelector('.arena-pause-label').hidden=true;
   ctx.betOverlay.hidden = false;
 }
 export function bettingStorageNote() {

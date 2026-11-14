@@ -1,3 +1,4 @@
+import {setPaused} from '../ui/controls.js';
 import {hasBoss} from '../boss/config.js';
 import {bossFloorReward} from '../boss/encounter.js';
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
@@ -36,7 +37,7 @@ export function openMenu(){
     ctx.betDraft={session:ctx.betting,round:ctx.betting.round,bets:bettingReadDraft(),arenaId:ctx.selectedArenaId};
   }
   ctx.startup.phase='menu';
-  ctx.clearTowerInput?.();ctx.clearTowerDestination?.();ctx.paused=true;ctx.audio?.sync();
+  ctx.clearTowerInput?.();ctx.clearTowerDestination?.();setPaused(true);
   ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;
   ctx.root.querySelector('#tower-preparation').hidden=true;
   ctx.root.querySelector('#tower-controls').hidden=true;
@@ -70,7 +71,7 @@ export function towerPreparation(){
   ctx.root.querySelector('#tower-fight').onclick=()=>{
     const stats=[...fields.querySelectorAll('select')].map(n=>Number(n.value));
     if(!validStats(stats,t.wins)){ctx.root.querySelector('#tower-prep-error').textContent='Можно перенести одно очко между навыками, сохранив их сумму.';return;}
-    t.stats=stats;t.preparing=false;ctx.towerGarage[0].stats=[...stats];bettingSave();panel.hidden=true;ctx.paused=false;
+    t.stats=stats;t.preparing=false;ctx.towerGarage[0].stats=[...stats];bettingSave();panel.hidden=true;
     ctx.root.querySelector('#tower-controls').hidden=false;startSpawnSequence();
   };
   ctx.root.querySelector('#tower-fight').focus();
