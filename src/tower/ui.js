@@ -1,3 +1,4 @@
+import {artifactDropChance,ARTIFACT_COMPLETION_REWARD,ARTIFACT_PIECE_COUNT} from './artifacts.js';
 import {bossName} from '../boss/names.js';
 import {setPaused} from '../ui/controls.js';
 import {hasBoss} from '../boss/config.js';
@@ -53,7 +54,7 @@ export function towerPreparation(){
   title.classList.toggle('boss-floor-title',hasBoss(t));
   title.textContent=hasBoss(t)?`${bossName(t.level)} · ЭТАЖ №${t.level}`:`БАШНЯ · ЭТАЖ ${t.level}`;
   ctx.root.querySelector('#tower-prep-name').textContent=ctx.betting.players[ctx.towerPlayer].name;
-  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(bossFloorReward(t))} ЗА ЛИЧНОЕ ВЫБИВАНИЕ</span></div>`;
+  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(bossFloorReward(t))} ЗА ЛИЧНОЕ ВЫБИВАНИЕ</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div>`;
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   function renderSkills(){
     const snapshot=prostheticStatSnapshot(t),stats=snapshot.effective;
@@ -69,7 +70,7 @@ export function towerPreparation(){
     fields.querySelector('[data-tower-base]').onclick=()=>{t.stats=earnedStats(t.wins);ctx.towerGarage[0].stats=[...t.stats];bettingSave();renderSkills();};
   }
   renderSkills();
-  ctx.root.querySelector('#tower-prep-artifacts').innerHTML=artifactCollectionMarkup(t.artifacts);
+  ctx.root.querySelector('#tower-prep-artifacts').innerHTML=artifactCollectionMarkup(t.artifacts)+`<p class="artifact-bonus-note">ПОЛНЫЙ АРТЕФАКТ: +${formatChips(ARTIFACT_COMPLETION_REWARD)}</p>`;
   ctx.root.querySelector('#tower-prep-error').textContent='';
   ctx.root.querySelector('#tower-fight').onclick=()=>{
     const stats=[...fields.querySelectorAll('select')].map(n=>Number(n.value));
@@ -92,7 +93,11 @@ export function settleTower(winner){
     reason:ctx.robots[0].hasHead?'Потерял сознание':'Погиб'};
   if(won)patientRecovery(t,ctx.robots[0]);
   const priorPieces=[...t.artifacts.pieces];
+  const balanceBefore=ctx.betting.players[ctx.towerPlayer].balance;
   const next=completeTower(ctx.betting,ctx.towerPlayer,won);
+  const bonus=ctx.betting.players[ctx.towerPlayer].balance-balanceBefore;
+  ctx.towerOutcome.artifactBonus=bonus;
+  if(bonus){ctx.towerFloorCoins=(ctx.towerFloorCoins??0)+bonus;ctx.towerOutcome.floorCoins=ctx.towerFloorCoins;ctx.towerOutcome.runCoins=t.runCoins;}
   ctx.towerOutcome.artifact=won?next.artifacts.pieces.find(id=>!priorPieces.includes(id))??null:null;
   bettingSave();ctx.clearTowerInput?.();ctx.clearTowerDestination?.();
 }
@@ -105,7 +110,7 @@ export function towerResults(){
     ${o.newRecord?'<strong class="tower-record-banner">НОВЫЙ ЛИЧНЫЙ РЕКОРД!</strong>':''}
     ${won&&o.cleared%5===0?`<strong class="tower-milestone">РУБЕЖ: ${o.cleared} ЭТАЖЕЙ</strong>`:''}
     <div class="tower-result-numbers"><div><strong>${o.cleared}</strong><span>ЭТАЖЕЙ ПРОЙДЕНО</span></div><div><strong>${o.record}</strong><span>ЛИЧНЫЙ РЕКОРД</span></div><div><strong>${formatChips(coins)}</strong><span>${coinLabel}</span></div></div>
-    ${artifactCollectionMarkup(t.artifacts,o.artifact)}
+    ${artifactCollectionMarkup(t.artifacts,o.artifact,o.artifactBonus)}
     <p>БАНК: ${formatChips(ctx.betting.players[ctx.towerPlayer].balance)}${o.runKills==null?'':` · ЛИЧНЫХ ПОБЕД: ${o.runKills}`}</p>
   </div>`;
   ctx.resultsAgain.textContent=won?`НА ЭТАЖ ${t.level}`:'НОВАЯ ПОПЫТКА · ЭТАЖ 1';

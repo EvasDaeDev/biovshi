@@ -1,7 +1,8 @@
+import {formatChips} from '../ui/currency.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
 import {ARTIFACT_NAMES,ARTIFACT_COUNT,PIECES_PER_ARTIFACT,ARTIFACT_PIECE_COUNT} from './artifacts.js';
 
-export function artifactCollectionMarkup(collection,newPiece=null){
+export function artifactCollectionMarkup(collection,newPiece=null,completionBonus=0){
  const pieces=collection.pieces;
  const awarded=Number.isInteger(newPiece)&&pieces.includes(newPiece);
  const newArtifact=awarded?Math.floor(newPiece/PIECES_PER_ARTIFACT):null;
@@ -21,6 +22,6 @@ export function artifactCollectionMarkup(collection,newPiece=null){
     <figcaption>${revealedName(artifact)??'???'} · ${count}/4${complete?' · СОБРАН':''}</figcaption>
    </figure>`;
   }).join('')}</div>
-  ${awarded&&countFor(newArtifact)===PIECES_PER_ARTIFACT?`<p class="artifact-completed" role="status">АРТЕФАКТ СОБРАН · ${ARTIFACT_NAMES[newArtifact]}</p>`:''}
+  ${awarded&&countFor(newArtifact)===PIECES_PER_ARTIFACT?`<p class="artifact-completed" role="status">АРТЕФАКТ СОБРАН · ${ARTIFACT_NAMES[newArtifact]}${completionBonus?' · +'+formatChips(completionBonus):''}</p>`:''}
  </section>`;
 }

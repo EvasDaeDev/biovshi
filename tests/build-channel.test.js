@@ -25,6 +25,7 @@ test('compiled test channel creates a floor-two boss and isolates sessions, sett
  const {startBossScenario}=await import('./scripts/boss-harness.mjs');
  const {ctx}=await import('./src/game/state.js');
  const {bettingSave,bettingLoad}=await import('./src/betting/storage.js');
+ const {completeTower}=await import('./src/tower/model.js');
  const {writeTutorial,freshTutorial,TUTORIAL_STORAGE}=await import('./src/ui/tutorial-model.js');
  const {savePostEffectsPreference,POST_EFFECTS_STORAGE}=await import('./src/render/post-effects.js');
  const {loadControlMode,setControlMode}=await import('./src/tower/control-mode.js');
@@ -37,7 +38,7 @@ test('compiled test channel creates a floor-two boss and isolates sessions, sett
   localStorage.setItem('biovshi.local-totalizator.v1','untouched main save');
   localStorage.setItem('biovshi.tutorial.v1','untouched main tutorial');
   localStorage.setItem('biovshi.post-effects.v1','on');localStorage.setItem('biovshi.tower-control.v1','control');
-  f.boss.damage('head',0,100);bettingSave();assert.equal(bettingLoad().players[0].balance,1100);
+  f.boss.damage('head',0,100);completeTower(f.session,0,true,()=>0);bettingSave();const saved=bettingLoad();assert.equal(saved.players[0].balance,1100);assert.equal(saved.towers[0].artifacts.bossWins[2],1);assert.equal(saved.towers[0].artifacts.pieces.length,1);
   assert.equal(localStorage.getItem('biovshi.local-totalizator.v1'),'untouched main save');
   writeTutorial(localStorage,freshTutorial());assert.equal(TUTORIAL_STORAGE,'biovshi.test.tutorial.v1');
   assert.ok(localStorage.getItem(TUTORIAL_STORAGE));assert.equal(localStorage.getItem('biovshi.tutorial.v1'),'untouched main tutorial');

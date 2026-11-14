@@ -17,7 +17,7 @@ export function startBossScenario({variant='brute',arena='ward',floor=5,seed=123
  globalThis.matchMedia=()=>({matches:false});globalThis.ResizeObserver=class{observe(){}disconnect(){}};globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
  ctx.arenaRenderer=null;ctx.towerPlayer=0;
  const session=betNewSession(['Испытатель'],1000),tower=towerFor(session,0);
- Object.assign(tower,{level:floor,wins:floor-1,record:floor-1,stats:earnedStats(floor-1),artifacts:newArtifactCollection(floor-1)});
+ Object.assign(tower,{level:floor,wins:floor-1,record:floor-1,stats:earnedStats(floor-1),artifacts:newArtifactCollection()});
  if(ordinary)tower.legacyBossFloor=true;
  else tower.bossEncounter={floor,variant,texture:'assets/textures/robots/boss/b_01.png'};
  const textures=Object.fromEntries(Object.keys(ASSETS.textures).map(key=>[key,{loaded:textured}]));

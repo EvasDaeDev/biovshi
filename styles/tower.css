@@ -68,3 +68,5 @@
 /* Dark result sheets override the paper theme's paragraph colors. */
 #robot-tag-hops-v22 #bet-result-summary .tower-run-summary p{color:#f3e1ae}
 #robot-tag-hops-v22 #bet-result-summary .tower-run-summary :is(.artifact-award-note,.artifact-completed){color:#f3d884}
+
+#robot-tag-hops-v22 .artifact-bonus-note{color:#f3d884;font-size:12px;text-align:center;margin:10px 0}

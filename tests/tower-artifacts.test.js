@@ -4,80 +4,124 @@ import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {betNewSession} from '../src/betting/ledger.js';
 import {bettingLoad,bettingSave} from '../src/betting/storage.js';
-import {towerFor,completeTower,resetTower,newTower,validTower} from '../src/tower/model.js';
-import {newArtifactCollection,drawArtifactPiece,validArtifactCollection} from '../src/tower/artifacts.js';
+import {towerFor,completeTower,resetTower,newTower,validTower,rewardTower} from '../src/tower/model.js';
+import {newArtifactCollection,drawArtifactPiece,validArtifactCollection,artifactDropChance,awardBossArtifact} from '../src/tower/artifacts.js';
 import {artifactCollectionMarkup} from '../src/tower/artifact-ui.js';
 import {ASSETS} from '../src/assets/manifest.js';
 import {ctx} from '../src/game/state.js';
-import {initializeGame} from '../src/game/initialize.js';
-import {installTowerUI,settleTower,towerResults} from '../src/tower/ui.js';
+import {earnedStats} from '../src/garage/model.js';
+import {startBossScenario} from '../scripts/boss-harness.mjs';
+import {settleTower,towerResults,towerPreparation} from '../src/tower/ui.js';
 
-test('random selection gives each remaining fragment one equally sized slot and never repeats',()=>{
- const initial={version:1,pieces:[0,3,5,8,15]},remaining=Array.from({length:16},(_,n)=>n).filter(n=>!initial.pieces.includes(n));
- for(let slot=0;slot<remaining.length;slot++){
-  const collection=structuredClone(initial);
-  assert.equal(drawArtifactPiece(collection,()=> (slot+.5)/remaining.length),remaining[slot]);
+function atFloor(session,player,floor){
+ const t=towerFor(session,player);
+ Object.assign(t,{level:floor,wins:floor-1,record:Math.max(t.record,floor-1),stats:earnedStats(floor-1),preparing:false,rewarded:[]});
+ delete t.bossEncounter;return towerFor(session,player);
+}
+function filled(pieces){return {...newArtifactCollection(),pieces:[...pieces],bossWins:{5:pieces.length||1}};}
+
+test('draw selects equally among missing fragments, never repeats and stops at all sixteen',()=>{
+ const initial=filled([0,3,5,8,15]),remaining=Array.from({length:16},(_,n)=>n).filter(n=>!initial.pieces.includes(n));
+ for(let slot=0;slot<remaining.length;slot++)assert.equal(drawArtifactPiece(structuredClone(initial),()=> (slot+.5)/remaining.length),remaining[slot]);
+ const all=newArtifactCollection();for(let i=0;i<16;i++)drawArtifactPiece(all,()=>0);
+ assert.deepEqual(all.pieces,Array.from({length:16},(_,n)=>n));assert.equal(drawArtifactPiece(all),null);
+});
+
+test('drop chance is per boss floor, falls multiplicatively after every victory and floors at 20 percent',()=>{
+ const c=newArtifactCollection();
+ for(let wins=0;wins<20;wins++){
+  const expected=Math.max(.2,.8**wins);assert.equal(artifactDropChance(c,5),expected);assert.equal(artifactDropChance(c,10),1);
+  const before=c.pieces.length;assert.equal(awardBossArtifact(c,5,()=>.99999)!==null,wins===0);
+  assert.equal(c.bossWins[5],wins+1);assert.equal(c.pieces.length,before+(wins===0?1:0));
  }
- const all=newArtifactCollection(100,()=>0);
- assert.deepEqual(all.pieces,Array.from({length:16},(_,n)=>n));
- assert.equal(drawArtifactPiece(all),null);assert.equal(all.pieces.length,16);
+ const boundary=newArtifactCollection();awardBossArtifact(boundary,5,()=>0);assert.equal(awardBossArtifact(boundary,5,()=>.8),null);
+ assert.ok(Number.isInteger(awardBossArtifact(boundary,5,()=>.63999)));
 });
-test('each first-cleared floor grants one piece; defeat, reset and repeated floors preserve the collection',()=>{
- const s=betNewSession(['Первый','Второй'],100),initial=structuredClone(s.players);
- completeTower(s,0,true);const first=[...towerFor(s,0).artifacts.pieces];assert.equal(first.length,1);
- completeTower(s,0,false);assert.deepEqual(towerFor(s,0).artifacts.pieces,first);
- completeTower(s,0,true);assert.deepEqual(towerFor(s,0).artifacts.pieces,first);
- completeTower(s,0,true);assert.equal(towerFor(s,0).artifacts.pieces.length,2);
- resetTower(s,0);const saved=[...towerFor(s,0).artifacts.pieces];
- for(let floor=1;floor<=16;floor++){completeTower(s,0,true);assert.equal(towerFor(s,0).artifacts.pieces.length,Math.min(Math.max(2,floor),16));assert.ok(validTower(towerFor(s,0)));}
- assert.deepEqual(towerFor(s,0).artifacts.pieces.slice(0,2),saved);
- completeTower(s,0,true);assert.equal(new Set(towerFor(s,0).artifacts.pieces).size,16);
- assert.deepEqual(towerFor(s,1).artifacts.pieces,[]);completeTower(s,1,true);assert.equal(towerFor(s,1).artifacts.pieces.length,1);
- assert.deepEqual(s.players,initial,'collection does not issue or spend coins');
+
+test('only bosses drop fragments; losses and resets preserve counts, collections and chances per player',()=>{
+ const s=betNewSession(['Первый','Второй'],100);
+ completeTower(s,0,true,()=>0);assert.deepEqual(towerFor(s,0).artifacts,newArtifactCollection());
+ const t=atFloor(s,0,5);completeTower(s,0,false,()=>0);assert.equal(towerFor(s,0).artifacts.bossWins[5],undefined);
+ atFloor(s,0,5);completeTower(s,0,true,()=>0);assert.equal(t.artifacts.pieces.length,1);assert.equal(artifactDropChance(t.artifacts,5),.8);
+ resetTower(s,0);assert.deepEqual(towerFor(s,0).artifacts,t.artifacts);
+ atFloor(s,0,5);completeTower(s,0,true,()=>.99);assert.equal(t.artifacts.pieces.length,1);assert.equal(t.artifacts.bossWins[5],2);
+ assert.equal(artifactDropChance(t.artifacts,10),1);assert.ok(validTower(towerFor(s,0)));
+ assert.deepEqual(towerFor(s,1).artifacts,newArtifactCollection());
+ const legacy=atFloor(s,1,5);delete legacy.bossEncounter;legacy.legacyBossFloor=true;completeTower(s,1,true,()=>0);
+ assert.deepEqual(legacy.artifacts,newArtifactCollection(),'a legacy ordinary floor cannot masquerade as a boss');
 });
-test('collection validation rejects duplicates, invalid IDs and mismatches with lifetime record',()=>{
- assert.equal(validArtifactCollection({version:1,pieces:[0,0]},2),false);
- assert.equal(validArtifactCollection({version:1,pieces:[16]},1),false);
- assert.equal(validArtifactCollection({version:1,pieces:[.5]},1),false);
- assert.equal(validArtifactCollection({version:1,pieces:[]},1),false);
- assert.equal(validArtifactCollection(newArtifactCollection(100),100),true);
+
+test('each complete artifact pays exactly 333 once, while every replay still pays 100 boss coins',()=>{
+ const s=betNewSession(['Первый','Второй'],100);
+ for(let victory=1;victory<=16;victory++){
+  const t=atFloor(s,0,5);assert.equal(rewardTower(s,0,1,0),true);assert.equal(rewardTower(s,0,1,0),false);
+  completeTower(s,0,true,()=>0);
+  assert.equal(t.artifacts.pieces.length,victory);assert.equal(s.players[0].balance,100+100*victory+333*Math.floor(victory/4));
+  assert.equal(t.runCoins,100*victory+333*Math.floor(victory/4));assert.ok(validTower(towerFor(s,0)));
+ }
+ const c=towerFor(s,0).artifacts;assert.deepEqual(c.rewardedArtifacts,[0,1,2,3]);assert.equal(artifactDropChance(c,5),0);
+ resetTower(s,0);atFloor(s,0,5);rewardTower(s,0,1,0);completeTower(s,0,true,()=>0);
+ assert.equal(s.players[0].balance,100+1700+4*333);assert.equal(c.pieces.length,16);assert.equal(c.bossWins[5],17);
+ assert.equal(s.towerEarned,1700+4*333);assert.equal(s.players[1].balance,100);
 });
-test('legacy records receive retrospective rewards once, persist their exact pieces, and reject corrupted saves',()=>{
+
+test('a failed drop keeps the 100-coin boss reward and does not award a completion bonus',()=>{
+ const s=betNewSession(['Игрок'],100),t=atFloor(s,0,5);t.artifacts=filled([0,1,2]);
+ rewardTower(s,0,1,0);completeTower(s,0,true,()=>.99);
+ assert.equal(s.players[0].balance,200);assert.equal(t.artifacts.pieces.length,3);assert.deepEqual(t.artifacts.rewardedArtifacts,[]);
+});
+
+test('bonus respects the shared currency ceiling without marking unpaid bonuses paid or corrupting saves',()=>{
+ const s=betNewSession(['Игрок'],15999600),t=atFloor(s,0,5);t.artifacts=filled([0,1,2]);
+ rewardTower(s,0,1,0);completeTower(s,0,true,()=>0);
+ assert.equal(s.players[0].balance,15999700);assert.equal(s.towerEarned,100);assert.deepEqual(t.artifacts.rewardedArtifacts,[]);assert.ok(validTower(t));
+});
+
+test('v2 validation rejects duplicate pieces, malformed counters and claimed incomplete artifacts',()=>{
+ assert.equal(validArtifactCollection(filled([0,0]),5),false);assert.equal(validArtifactCollection(filled([16]),5),false);
+ assert.equal(validArtifactCollection(filled([.5]),5),false);assert.equal(validArtifactCollection(newArtifactCollection(),30),true);
+ for(const bad of [{...filled([0]),bossWins:{4:1}},{...filled([0]),bossWins:{5:-1}},{...filled([0]),bossWins:{5:1.5}},{...filled([0]),bossWins:{}},{...filled([0]),rewardedArtifacts:[0]}])assert.equal(validArtifactCollection(bad,30),false);
+});
+
+test('old collections are cleared once without changing record or bank; new collection and bonuses survive load',()=>{
  const dom=new JSDOM('',{url:'https://artifact-save.test/'});globalThis.localStorage=dom.window.localStorage;
  ctx.BET_STORAGE='artifact-test';ctx.betStorageAvailable=true;
- const s=betNewSession(['Первый','Второй'],100);
- s.towers[0]=newTower(0,5);s.towers[1]=newTower(1,30);delete s.towers[0].artifacts;delete s.towers[1].artifacts;
- localStorage.setItem(ctx.BET_STORAGE,JSON.stringify(s));
- const loaded=bettingLoad();assert.ok(loaded);assert.equal(loaded.towers[0].artifacts.pieces.length,5);assert.equal(loaded.towers[1].artifacts.pieces.length,16);
- assert.deepEqual(bettingLoad().towers,loaded.towers,'migration is saved before a second load');
- resetTower(loaded,0);completeTower(loaded,0,true);ctx.betting=loaded;bettingSave();assert.deepEqual(bettingLoad().towers[0].artifacts,loaded.towers[0].artifacts);
- loaded.towers[0].artifacts.pieces[1]=loaded.towers[0].artifacts.pieces[0];localStorage.setItem(ctx.BET_STORAGE,JSON.stringify(loaded));assert.equal(bettingLoad(),null);
- dom.window.close();
-});
-test('collection markup layers each owned fragment over its matching silhouette and highlights only the awarded piece',()=>{
- const collection={version:1,pieces:[0,1,2,3,6]};
- const dom=new JSDOM(artifactCollectionMarkup(collection,3)),doc=dom.window.document;
- assert.equal(doc.querySelectorAll('.artifact').length,4);assert.equal(doc.querySelectorAll('.artifact-silhouette').length,4);assert.equal(doc.querySelectorAll('.artifact-piece').length,5);
- assert.equal(doc.querySelectorAll('.artifact-piece.is-new').length,1);assert.equal(doc.querySelector('.is-new').dataset.piece,'3');assert.equal(doc.querySelectorAll('.artifact.is-complete').length,1);
- assert.match(doc.querySelectorAll('.artifact')[1].textContent,/\?\?\?/);assert.doesNotMatch(doc.body.innerHTML,/Компьютер|Грааль|Водка и огурец/);
- const incomplete=artifactCollectionMarkup({version:1,pieces:[4]},4);assert.doesNotMatch(incomplete,/Мишка|Компьютер|Грааль|Водка и огурец/);assert.match(incomplete,/НОВЫЙ ФРАГМЕНТ · 1\/4/);
- const complete=artifactCollectionMarkup(newArtifactCollection(16));for(const name of ['Мишка','Компьютер','Грааль','Водка и огурец'])assert.ok(complete.includes(name));
- assert.match(doc.querySelector('.artifact-completed').textContent,/Мишка/);
- assert.match(doc.querySelector('[data-piece="6"]').src,/artefacts\/2\/3.png$/);
- for(const image of doc.querySelectorAll('img'))assert.ok(fs.existsSync(new URL('../public/'+image.getAttribute('src').replace(/^\.\//,''),import.meta.url)));
- assert.equal(Object.keys(ASSETS.textures).filter(key=>key.startsWith('artifact')).length,20);
- dom.window.close();
-});
-test('settlement grants once, repeat result rendering does not reroll, and a replayed floor has no reward animation',()=>{
- const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://artifact-ui.test/',pretendToBeVisual:true});
- for(const key of ['document','localStorage','Event'])globalThis[key]=dom.window[key];
- globalThis.matchMedia=()=>({matches:false});globalThis.ResizeObserver=class{observe(){}disconnect(){}};globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
- const s=betNewSession(['Игрок'],100);ctx.towerPlayer=0;initializeGame({session:s,entry:'tower',tower:structuredClone(towerFor(s,0)),arenaId:'ward'});installTowerUI();
  try{
-  const preview=document.querySelector('#tower-artifact-view');assert.equal(preview.open,false);preview.open=true;assert.equal(preview.querySelectorAll('.artifact-silhouette').length,4);assert.equal(preview.querySelectorAll('.artifact-piece').length,0);
-  ctx.combat.winner=0;settleTower(0);const awarded=ctx.towerOutcome.artifact;assert.ok(Number.isInteger(awarded));assert.equal(towerFor(s,0).record,1);
-  settleTower(0);towerResults();towerResults();assert.equal(towerFor(s,0).artifacts.pieces.length,1);assert.equal(document.querySelector('.artifact-piece.is-new').dataset.piece,String(awarded));
-  assert.equal(bettingLoad().towers[0].artifacts.pieces[0],awarded);
-  resetTower(s,0);ctx.towerSettled=false;settleTower(0);towerResults();assert.equal(ctx.towerOutcome.artifact,null);assert.equal(document.querySelector('.artifact-piece.is-new'),null);assert.equal(document.querySelectorAll('.artifact-piece').length,1);
- }finally{ctx.root.__disposeTag();dom.window.close();ctx.mode='spectator';}
+  const s=betNewSession(['Первый','Второй'],100);s.towers[0]=newTower(0,5);s.towers[1]=newTower(1,30);
+  s.towers[0].artifacts={version:1,pieces:[0,1,2,3,4]};delete s.towers[1].artifacts;
+  localStorage.setItem(ctx.BET_STORAGE,JSON.stringify(s));const loaded=bettingLoad();assert.ok(loaded);
+  for(const t of Object.values(loaded.towers))assert.deepEqual(t.artifacts,newArtifactCollection());
+  assert.equal(loaded.towers[0].record,5);assert.equal(loaded.towers[1].record,30);assert.deepEqual(loaded.players,s.players);
+  assert.deepEqual(bettingLoad().towers,loaded.towers,'one-time reset is persisted');
+  for(let i=0;i<4;i++){atFloor(loaded,0,5);rewardTower(loaded,0,1,0);completeTower(loaded,0,true,()=>0);resetTower(loaded,0);}
+  ctx.betting=loaded;bettingSave();const again=bettingLoad();assert.ok(again);assert.deepEqual(again.towers[0].artifacts,loaded.towers[0].artifacts);assert.equal(again.players[0].balance,833);
+  again.towers[0].artifacts.pieces[1]=again.towers[0].artifacts.pieces[0];localStorage.setItem(ctx.BET_STORAGE,JSON.stringify(again));assert.equal(bettingLoad(),null,'corrupt v2 is rejected, not reset');
+ }finally{dom.window.close();}
+});
+
+test('collection markup layers owned fragments, hides unfinished names and shows the actual 333 bonus',()=>{
+ const collection=filled([0,1,2,3,6]),dom=new JSDOM(artifactCollectionMarkup(collection,3,333)),doc=dom.window.document;
+ try{
+  assert.equal(doc.querySelectorAll('.artifact').length,4);assert.equal(doc.querySelectorAll('.artifact-silhouette').length,4);assert.equal(doc.querySelectorAll('.artifact-piece').length,5);
+  assert.equal(doc.querySelectorAll('.artifact-piece.is-new').length,1);assert.equal(doc.querySelector('.is-new').dataset.piece,'3');assert.equal(doc.querySelectorAll('.artifact.is-complete').length,1);
+  assert.match(doc.querySelectorAll('.artifact')[1].textContent,/\?\?\?/);assert.doesNotMatch(doc.body.innerHTML,/Компьютер|Грааль|Водка и огурец/);
+  assert.match(doc.querySelector('.artifact-completed').textContent,/Мишка.*333/);
+  const complete=artifactCollectionMarkup(filled(Array.from({length:16},(_,i)=>i)));for(const name of ['Мишка','Компьютер','Грааль','Водка и огурец'])assert.ok(complete.includes(name));
+  for(const image of doc.querySelectorAll('img'))assert.ok(fs.existsSync(new URL('../public/'+image.getAttribute('src').replace(/^\.\//,''),import.meta.url)));
+  assert.equal(Object.keys(ASSETS.textures).filter(key=>key.startsWith('artifact')).length,20);
+ }finally{dom.window.close();}
+});
+
+test('boss preparation shows saved chance; settlement and repeated result rendering never duplicate 333 coins',()=>{
+ const f=startBossScenario({floor:5});
+ try{
+  f.tower.artifacts=filled([0,1,2]);Math.random=()=>0;towerPreparation();
+  assert.match(document.querySelector('[data-artifact-chance]').textContent,/51,2%/);
+  assert.match(document.querySelector('.artifact-bonus-note').textContent,/333/);
+  document.querySelector('#tower-fight').click();f.boss.damage('head',0,100);ctx.combat.winner=0;settleTower(0);
+  assert.equal(ctx.towerOutcome.artifact,3);assert.equal(ctx.towerOutcome.artifactBonus,333);assert.equal(ctx.towerOutcome.runCoins,433);
+  const balance=f.session.players[0].balance;settleTower(0);towerResults();towerResults();assert.equal(f.session.players[0].balance,balance);
+  assert.match(document.querySelector('.artifact-completed').textContent,/333/);assert.ok(bettingLoad());
+  assert.equal(bettingLoad().players[0].balance,balance);
+ }finally{f.close();}
 });

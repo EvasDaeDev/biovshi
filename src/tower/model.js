@@ -1,11 +1,11 @@
 import {isBossFloor,hasBoss} from '../boss/config.js';
 import {ensureBossEncounter,validBossEncounter,bossFloorReward} from '../boss/encounter.js';
-import {newArtifactCollection,validArtifactCollection,drawArtifactPiece} from './artifacts.js';
+import {newArtifactCollection,validArtifactCollection,awardBossArtifact,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
 import {BASE_STATS,patientVictory,validStats,normalizeProsthetics} from '../garage/model.js';
 export const TOWER_REWARD=10;
 export const floorEnemyCount=floor=>1+Math.floor(floor/2);
 export const towerEnemyCount=t=>t.legacyEnemyCount??(hasBoss(t)?1:floorEnemyCount(t.level));
-export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(record)){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts};}
+export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts};}
 export function normalizeTower(t){
  if(!t||typeof t!=='object'||Array.isArray(t))return t;
  t.prosthetics=normalizeProsthetics(t.prosthetics);
@@ -15,7 +15,7 @@ export function normalizeTower(t){
   // Past run earnings were not recorded per player. Never invent those figures.
   t.runKills=t.wins>0?null:t.rewarded?.length??0;t.runCoins=t.runKills===null?null:t.runKills*TOWER_REWARD;
  }
- if(t.artifacts===undefined&&Number.isSafeInteger(t.record)&&t.record>=0)t.artifacts=newArtifactCollection(t.record);
+ if(t.artifacts===undefined||t.artifacts?.version===1)t.artifacts=newArtifactCollection();
  return t;
 }
 export function towerFor(session,player){
@@ -42,9 +42,20 @@ export function rewardTower(session,player,victim,by){
  t.rewarded.push(victim);session.players[player].balance+=reward;session.towerEarned=(session.towerEarned??0)+reward;
  if(t.runKills!==null)t.runKills++;if(t.runCoins!==null)t.runCoins+=reward;return true;
 }
-export function completeTower(session,player,won){
+function creditArtifactRewards(session,player,t){
+ for(let artifact=0;artifact<ARTIFACT_COUNT;artifact++){
+  if(!artifactComplete(t.artifacts,artifact)||t.artifacts.rewardedArtifacts.includes(artifact))continue;
+  const issued=session.players.length*session.capital+(session.topUps??0)+(session.towerEarned??0);
+  if(issued+ARTIFACT_COMPLETION_REWARD>16000000)continue;
+  session.players[player].balance+=ARTIFACT_COMPLETION_REWARD;
+  session.towerEarned=(session.towerEarned??0)+ARTIFACT_COMPLETION_REWARD;
+  if(t.runCoins!==null)t.runCoins+=ARTIFACT_COMPLETION_REWARD;
+  t.artifacts.rewardedArtifacts.push(artifact);
+ }
+}
+export function completeTower(session,player,won,random=Math.random){
  const t=towerFor(session,player);
- if(won){if(t.level>t.record)drawArtifactPiece(t.artifacts);t.record=Math.max(t.record,t.level);patientVictory(t);t.level++;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;}
+ if(won){if(hasBoss(t))awardBossArtifact(t.artifacts,t.level,random);creditArtifactRewards(session,player,t);t.record=Math.max(t.record,t.level);patientVictory(t);t.level++;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;}
  else session.towers[player]=newTower(undefined,t.record,t.artifacts);
  return session.towers[player];
 }
