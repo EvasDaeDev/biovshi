@@ -1,3 +1,4 @@
+import {screenRect} from './geometry.js';
 import {fitInterface} from './viewport.js';
 import { resetFrameClock } from "../game/clock.js";
 import { ctx } from "../game/state.js";
@@ -8,10 +9,11 @@ function fitField() {
   fitInterface();
   const scale=ctx.layoutScale||1;
   const main = ctx.root.querySelector('.tag7hop-main');
-  const columnWidth = main.getBoundingClientRect().width/scale || 700;
+  const columnWidth = main.clientWidth || screenRect(main).width/scale || 700;
   const win=ctx.root.ownerDocument.defaultView;
   const viewportHeight=(win.visualViewport?.height||win.innerHeight)/scale;
-  const toolbarHeight=ctx.root.querySelector('.atmosphere-controls').getBoundingClientRect().height/scale;
+  const toolbar=ctx.root.querySelector('.atmosphere-controls');
+  const toolbarHeight=toolbar.offsetHeight||screenRect(toolbar).height/scale;
   // The WINDOW is rectangular; the camera fits the square arena inside it.
   const width=Math.max(1,Math.floor(columnWidth));
   const height=ctx.arenaExpanded?Math.max(1,Math.floor(viewportHeight-toolbarHeight-36)):
@@ -27,7 +29,7 @@ function fitField() {
   ctx.paintTowerMarker?.();
 }
 export function sizeLabels() {
-  const bounds=(ctx.arenaRenderer?.canvas??ctx.svg).getBoundingClientRect();
+  const bounds=screenRect(ctx.arenaRenderer?.canvas??ctx.svg);
   const width=Math.min(bounds.width||ctx.fieldSide||700,bounds.height||ctx.fieldSide||700);
   ctx.root.style.setProperty('--tag-label-size', 12 * 716 / width + 'px');
   ctx.root.style.setProperty('--score-label-size', Math.min(12 * 716 / width, 24) + 'px');

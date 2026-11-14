@@ -1,3 +1,4 @@
+import {screenRect,visibleViewport,localPoint,scrollPanelToTarget} from './geometry.js';
 import {ctx} from '../game/state.js';
 import {setPaused} from './controls.js';
 import {TUTORIAL_CHAPTERS} from './tutorial-content.js';
@@ -26,10 +27,10 @@ export function initializeTutorial(){
  const resolve=value=>typeof value==='function'?value(ctx):value;
  const visibleRect=node=>{
   if(!node||node.closest('[hidden]'))return null;
-  const r=node.getBoundingClientRect();
+  const r=screenRect(node);
   return r.width>0&&r.height>0?r:null;
  };
- const viewport=()=>({x:win.visualViewport?.offsetLeft??0,y:win.visualViewport?.offsetTop??0,width:win.visualViewport?.width??win.innerWidth,height:win.visualViewport?.height??win.innerHeight});
+ const viewport=()=>visibleViewport(win);
  function layout(){
   layoutFrame=0;if(!api.active||disposed)return;
   const view=viewport(),arena=TUTORIAL_CHAPTERS[chapter].arena;
@@ -38,26 +39,30 @@ export function initializeTutorial(){
    const r=visibleRect(ctx.stage);
    if(r){const x=Math.max(view.x,r.left),y=Math.max(view.y,r.top);bounds={x,y,width:Math.max(1,Math.min(view.x+view.width,r.right)-x),height:Math.max(1,Math.min(view.y+view.height,r.bottom)-y)};}
   }
-  const pause=dialog.querySelector('.tutorial-pause');
-  pause.style.left=bounds.x+bounds.width/2+'px';pause.style.top=bounds.y+10+'px';
+  const origin=screenRect(dialog),pause=dialog.querySelector('.tutorial-pause');
+  const pausePoint=localPoint({x:bounds.x+bounds.width/2,y:bounds.y+10},origin);
+  pause.style.left=pausePoint.x+'px';pause.style.top=pausePoint.y+'px';
   // Keep readable text in screen pixels; do not inherit interface zoom.
   group.style.width=Math.min(view.height<440?500:610,Math.max(1,bounds.width-20))+'px';
   group.style.maxHeight=Math.max(1,bounds.height-20)+'px';
   const rect=visibleRect(target),fallback={x:bounds.x+bounds.width/2,y:bounds.y+bounds.height/2,width:0,height:0};
   const clipped=rect?{x:Math.max(view.x,rect.left),y:Math.max(view.y,rect.top),width:Math.max(0,Math.min(view.x+view.width,rect.right)-Math.max(view.x,rect.left)),height:Math.max(0,Math.min(view.y+view.height,rect.bottom)-Math.max(view.y,rect.top))}:fallback;
   const obstacles=['#tower-stick','#combat-log'].map(s=>visibleRect(root.querySelector(s))).filter(Boolean).map(r=>({x:r.left,y:r.top,width:r.width,height:r.height}));
-  const size=group.getBoundingClientRect();
+  const size=screenRect(group);
   const box=tutorialPlacement(bounds,size,clipped,obstacles);
-  group.dataset.corner=box.corner;group.style.left=box.x+'px';group.style.top=box.y+'px';
+  group.dataset.corner=box.corner;
+  const groupPoint=localPoint(box,origin);group.style.left=groupPoint.x+'px';group.style.top=groupPoint.y+'px';
   spot.hidden=!rect||!clipped.width||!clipped.height;
   if(!spot.hidden){
-   Object.assign(spot.style,{left:clipped.x-4+'px',top:clipped.y-4+'px',width:clipped.width+8+'px',height:clipped.height+8+'px'});
+   const spotPoint=localPoint(clipped,origin);
+   Object.assign(spot.style,{left:spotPoint.x-4+'px',top:spotPoint.y-4+'px',width:clipped.width+8+'px',height:clipped.height+8+'px'});
    const tx=clipped.x+clipped.width/2,ty=clipped.y+clipped.height/2;
    const dx=box.x+box.width/2-tx,dy=box.y+box.height/2-ty;
    const scale=1/Math.max(Math.abs(dx)/(clipped.width/2+14),Math.abs(dy)/(clipped.height/2+14),.001);
    const length=Math.hypot(dx,dy)||1,ux=dx/length,uy=dy/length;
    const ex=tx+dx*scale,ey=ty+dy*scale;
-   arrow.setAttribute('d',`M ${ex+ux*42} ${ey+uy*42} L ${ex} ${ey}`);
+   const start=localPoint({x:ex+ux*42,y:ey+uy*42},origin),end=localPoint({x:ex,y:ey},origin);
+   arrow.setAttribute('d',`M ${start.x} ${start.y} L ${end.x} ${end.y}`);
   }else arrow.removeAttribute('d');
   dialog.classList.toggle('tutorial-no-target',spot.hidden);
  }
@@ -76,8 +81,7 @@ export function initializeTutorial(){
   if(target){
    // The game sheet itself owns scrolling. Never scroll the entire game root.
    const panel=target.closest('.bet-panel,.launch-paper,.gladiator-results-card');
-   const tr=target.getBoundingClientRect(),pr=panel?.getBoundingClientRect();
-   if(pr&&(tr.top<pr.top||tr.bottom>pr.bottom))target.scrollIntoView?.({block:'nearest',inline:'nearest',behavior:'instant'});
+   if(panel)scrollPanelToTarget(panel,target);
    resize.observe(target);
   }
   state.steps[chapter]=index;save();layout();next.focus({preventScroll:true});
