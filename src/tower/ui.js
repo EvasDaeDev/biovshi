@@ -52,7 +52,7 @@ export function towerPreparation(){
   ctx.startup.phase='tower-ready';ctx.resultsPanel.hidden=true;ctx.root.querySelector('#tower-controls').hidden=true;
   panel.hidden=false;const title=ctx.root.querySelector('#tower-prep-title');
   title.classList.toggle('boss-floor-title',hasBoss(t));
-  title.textContent=hasBoss(t)?`${bossName(t.level)} · ЭТАЖ №${t.level}`:`БАШНЯ · ЭТАЖ ${t.level}`;
+  title.textContent=hasBoss(t)?`${bossName(t.level)}\nЭТАЖ №${t.level}`:`БАШНЯ · ЭТАЖ ${t.level}`;
   ctx.root.querySelector('#tower-prep-name').textContent=ctx.betting.players[ctx.towerPlayer].name;
   ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(bossFloorReward(t))} ЗА ЛИЧНОЕ ВЫБИВАНИЕ</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div>`;
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
