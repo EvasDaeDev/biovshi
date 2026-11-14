@@ -57,7 +57,7 @@ export function rigClear(robotState) {
   if (robotState.healthy(robotState.pelvisKey??'spine-3') && !robotState.clearCircle(robotState.pelvis, 24 * (robotState.scale??ctx.scale))) return false;
   for (let i = 1; i < robotState.spine.length; i++) if (robotState.healthy('spine-' + (i - 1)) && !robotState.clearBone(robotState.spine[i - 1], robotState.spine[i], 17 * (robotState.scale??ctx.scale))) return false;
   for (let i = 1; i < robotState.tail.length; i++) if (robotState.healthy('tail-' + (i - 1)) && !robotState.clearBone(robotState.tail[i - 1], robotState.tail[i], 3 * (robotState.scale??ctx.scale), false)) return false;
-  return (!robotState.hasHead() || robotState.clearCircle(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13 * (robotState.scale??ctx.scale)) && robotState.clearCircle(robotState.local(robotState.headFrame, 39 + robotState.headMotion, 0), 2.5 * (robotState.scale??ctx.scale))) && [...robotState.arms, ...robotState.legs].filter(l => robotState.healthy(`${limbKey(l)}-upper`)).every(l => robotState.limbClear(l));
+  return (!robotState.hasHead() || robotState.clearCircle(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13 * (robotState.body?.headSizeFactor??1) * (robotState.scale??ctx.scale)) && robotState.clearCircle(robotState.local(robotState.headFrame, 25 + 14*(robotState.body?.headSizeFactor??1) + robotState.headMotion, 0), 2.5 * (robotState.body?.headSizeFactor??1) * (robotState.scale??ctx.scale))) && [...robotState.arms, ...robotState.legs].filter(l => robotState.healthy(`${limbKey(l)}-upper`)).every(l => robotState.limbClear(l));
 }
 export function freeBlockedJoint(robotState, l, dt) {
   const a = robotState.origin(l),
@@ -193,8 +193,8 @@ export function makeCapsules(robotState) {
   for (let i = 1; i < robotState.tail.length; i++) push(robotState.tail[i - 1], robotState.tail[i], 3, 'tail-' + (i - 1));
   push(robotState.chest, robotState.chest, 19, 'spine-0');
   push(robotState.pelvis, robotState.pelvis, 24, robotState.pelvisKey??'spine-3');
-  push(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13, 'head');
-  push(robotState.local(robotState.headFrame, 39 + robotState.headMotion, 0), robotState.local(robotState.headFrame, 39 + robotState.headMotion, 0), 2.5, 'head');
+  push(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13*(robotState.body?.headSizeFactor??1), 'head');
+  push(robotState.local(robotState.headFrame, 25 + 14*(robotState.body?.headSizeFactor??1) + robotState.headMotion, 0), robotState.local(robotState.headFrame, 25 + 14*(robotState.body?.headSizeFactor??1) + robotState.headMotion, 0), 2.5*(robotState.body?.headSizeFactor??1), 'head');
   for (const l of [...robotState.arms, ...robotState.legs]) {
     const a = robotState.origin(l),
       ls = robotState.lengths(l),

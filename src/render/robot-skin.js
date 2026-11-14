@@ -99,8 +99,8 @@ export function paintRobotSkin(robot,strikePoses=[]) {
   const offset=strikePose?.kind==='head'?{
     x:strikePose.tip.x-strikePose.base.x,y:strikePose.tip.y-strikePose.base.y,
   }:{x:0,y:0};
-  const dx=Math.cos(robot.headFrame.angle)*10*(robot.scale??ctx.scale);
-  const dy=Math.sin(robot.headFrame.angle)*10*(robot.scale??ctx.scale);
+  const dx=Math.cos(robot.headFrame.angle)*10*(robot.body?.headSizeFactor??1)*(robot.scale??ctx.scale);
+  const dy=Math.sin(robot.headFrame.angle)*10*(robot.body?.headSizeFactor??1)*(robot.scale??ctx.scale);
   position('head',{x:head.x+offset.x-dx,y:head.y+offset.y-dy},
     {x:head.x+offset.x+dx,y:head.y+offset.y+dy});
   for(const limb of [...robot.arms,...robot.legs]) {
@@ -144,7 +144,7 @@ export function paintHeadDecor(robot,strikePose){
   if(robot.decorHatId!==hat){robot.decorHat?.remove();robot.decorHat=hat?createHat(hat,robot.bodyG):null;robot.decorHatId=hat;}
   if(!robot.decorHat)return;
   attr(robot.decorHat,'display',robot.healthy('head')?'':'none');
-  const dx=Math.cos(robot.headFrame.angle)*10*(robot.scale??ctx.scale),dy=Math.sin(robot.headFrame.angle)*10*(robot.scale??ctx.scale);
+  const dx=Math.cos(robot.headFrame.angle)*10*(robot.body?.headSizeFactor??1)*(robot.scale??ctx.scale),dy=Math.sin(robot.headFrame.angle)*10*(robot.body?.headSizeFactor??1)*(robot.scale??ctx.scale);
   const offset=strikePose?.kind==='head'?{x:strikePose.tip.x-strikePose.base.x,y:strikePose.tip.y-strikePose.base.y}:{x:0,y:0};
   const head=robot.headCenter;
   attr(robot.decorHat,'transform','matrix('+skinMatrix({x:head.x+offset.x-dx,y:head.y+offset.y-dy},{x:head.x+offset.x+dx,y:head.y+offset.y+dy},ROBOT_PARTS.head).join(' ')+')');

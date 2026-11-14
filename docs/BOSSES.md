@@ -105,3 +105,8 @@ node scripts/render-boss-preview.mjs
 node --import='data:text/javascript,globalThis.__TEST_BUILD__=true' scripts/experiment-boss.mjs --seeds=2 --floors=2,10 --variants=brute,long,arms,legs --tactics=prototype,new --out=docs/experiments/boss-tactics.json
 node --import='data:text/javascript,globalThis.__TEST_BUILD__=true' scripts/experiment-boss.mjs --seeds=1 --floors=2 --variants=brute,long,arms,legs --tactics=new --policy=orbit --out=docs/experiments/boss-tactics-orbit.json
 ```
+
+
+## Уменьшенная голова босса
+
+Голова всех четырёх анатомий имеет линейный размер 75% от головы обычного пациента: профиль головы равен 0,75 / 1,5 = 0,5 относительно увеличенного тела. Центр крепления сохранён. Одинаково уменьшены текстура, резервный векторный рендер, портрет, обе капсулы попадания (голова и передний выступ), проверка стен и геометрия оторванной головы. HP, урон, крит, поведение и размеры остальных частей не меняются. Сравнительные результаты выше относятся к прежней крупной голове.

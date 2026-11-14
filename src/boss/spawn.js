@@ -11,7 +11,8 @@ function neutralCapsules(start,body){
  const stride=CONFIG.robot.vertebraBaseCm,end=body.spineSegments*stride;
  for(let i=0;i<body.spineSegments;i++)push(world(-i*stride,0),world(-(i+1)*stride,0),17,`spine-${i}`);
  push(world(0,0),world(0,0),19,'spine-0');push(world(-end,0),world(-end,0),24,body.pelvisKey);
- push(world(25,0),world(25,0),13,'head');push(world(39,0),world(39,0),2.5,'head');
+ const headSize=body.headSizeFactor??1,front=25+14*headSize;
+ push(world(25,0),world(25,0),13*headSize,'head');push(world(front,0),world(front,0),2.5*headSize,'head');
  for(const l of body.limbs){
   const index=l.anchor??(l.kind==='arm'?0:body.spineSegments),x=-index*stride;
   const a=world(x+(l.kind==='arm'?3:-5),l.side*(l.kind==='arm'?15:12));

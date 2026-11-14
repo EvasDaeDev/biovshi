@@ -32,7 +32,7 @@ export function segmentGeometry(robotState, key) {
     kind: 'head',
     x: robotState.api.eye.x,
     y: robotState.api.eye.y,
-    r: 10 * (robotState.scale??ctx.scale)
+    r: 10 * (robotState.body?.headSizeFactor??1) * (robotState.scale??ctx.scale)
   };
   if (key.startsWith('spine-')) {
     const i = Number(key.slice(6));

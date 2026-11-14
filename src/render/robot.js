@@ -129,6 +129,12 @@ export function draw(robotState, dt) {
       attr(robotState.head, 'transform', `rotate(${robotState.headFrame.angle * 180 / Math.PI} ${robotState.headCenter.x} ${robotState.headCenter.y})`);
     }
   }
+  if (!skinned && robotState.body.headSizeFactor !== undefined) {
+    const {x,y}=robotState.headCenter,factor=robotState.body.headSizeFactor;
+    // Keep the attack translation outside scaling, so headbutt motion is unchanged.
+    for(const node of [robotState.head,robotState.nose,robotState.mouth,...robotState.horns])
+      attr(node,'transform',`${node.getAttribute('transform')||''} translate(${x} ${y}) scale(${factor}) translate(${-x} ${-y})`);
+  }
   for (const l of [...robotState.arms, ...robotState.legs]) {
     const strikePose=strikePoses.find(p=>p.limb===l);
     const attackEnd = (strikePose?.kind === 'arm' || strikePose?.kind === 'leg') && strikePose.limb === l ? strikePose.tip : robotState.handEnd(l);

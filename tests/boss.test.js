@@ -12,7 +12,7 @@ import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 import {step} from '../src/game/loop.js';
 import {onGameEvent} from '../src/game/event-bus.js';
 import {paintTelemetry} from '../src/ui/paint-telemetry.js';
-import {pounceOpportunity,selectSimultaneousStrikes,strikeProgress} from '../src/systems/combat.js';
+import {pounceContactSegment,pounceOpportunity,selectSimultaneousStrikes,strikeProgress} from '../src/systems/combat.js';
 import {bossPortraitBones} from '../src/boss/card.js';
 import {drawDetachedSkin} from '../src/render/robot-skin.js';
 import {limbKey} from '../src/robot/body.js';
@@ -21,6 +21,12 @@ for(const variant of BOSS_VARIANTS)for(const arena of ['ward','ring','annulus'])
  const f=startBossScenario({variant:variant.id,arena});
  try{
   const r=f.boss;assert.equal(ctx.robots.length,2);assert.ok(r.isBoss);assert.equal(r.scale,f.player.scale*1.5);assert.equal(ctx.scale,CONFIG.robot.scale);
+  const head=r.capsules.filter(c=>c.segment==='head'),normalHead=f.player.capsules.filter(c=>c.segment==='head');
+  head.forEach((c,i)=>assert.ok(Math.abs(c.r-normalHead[i].r*.75)<1e-9));
+  assert.ok(Math.abs(Math.hypot(head[1].a.x-head[0].a.x,head[1].a.y-head[0].a.y)-14*f.player.scale*.75)<1e-9);
+  const outer={x:head[0].a.x-Math.sin(r.angle)*10*f.player.scale,y:head[0].a.y+Math.cos(r.angle)*10*f.player.scale};
+  assert.equal(pounceContactSegment(outer,outer,head,()=>true,0),null,'old outer head area no longer takes hits');
+  assert.equal(pounceContactSegment(head[0].a,head[0].a,head,()=>true,0),'head');
   assert.equal(r.spineCount,variant.spineSegments);assert.equal(r.movementLimbs,variant.extra?6:4);assert.equal(r.limbIntegrity,1);
   assert.equal(r.hp.get('head'),12);assert.equal(r.hp.get('spine-'+(variant.spineSegments-1)),8);
   assert.equal(r.maxHp('arm--1-upper'),6);assert.equal(r.body.skinKey,'robotBoss0');
@@ -38,6 +44,11 @@ for(const variant of BOSS_VARIANTS)for(const arena of ['ward','ring','annulus'])
   }
   // Shadows and live sprites must also cover every extended spine section.
   r.paint(0);assert.doesNotMatch(r.actor.outerHTML,/NaN|undefined/);
+  const matrix=actor=>actor.querySelector('[data-skin-segment="head"]').getAttribute('transform').match(/matrix\(([^)]+)\)/)[1].split(/\s+/).map(Number);
+  f.player.paint(0);const hm=matrix(r.actor),nm=matrix(f.player.actor);
+  assert.ok(Math.abs(Math.hypot(hm[0],hm[1])/Math.hypot(nm[0],nm[1])-.75)<1e-9,'head texture is 75% of ordinary head');
+  const portrait=bossPortraitBones(r.body).find(b=>b.key==='head');assert.equal(portrait.b.x-portrait.a.x,10);
+
  }finally{f.close();}
 });
 

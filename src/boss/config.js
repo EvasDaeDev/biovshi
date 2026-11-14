@@ -1,5 +1,5 @@
 import {BOSS_FLOOR_INTERVAL} from '../build-channel.js';
-export const BOSS_CONFIG={scale:1.5,healthMultiplier:2,reward:100,behaviorEnabled:true,criticalChance:.30,speedFactor:.85,turnFactor:.75,
+export const BOSS_CONFIG={scale:1.5,headScale:.75,healthMultiplier:2,reward:100,behaviorEnabled:true,criticalChance:.30,speedFactor:.85,turnFactor:.75,
  combat:{windupSec:.50,thrustSec:.20,recoverSec:.45,attackCooldownSec:1.20},
  tactics:{phaseHealth:.60,phaseLimbLoss:.25,followupDelay:.10,seriesRest:.45,spacingDistance:68,
   first:{windupSec:.50,thrustSec:.20,recoverSec:.10},
