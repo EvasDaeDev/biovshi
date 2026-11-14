@@ -17,8 +17,15 @@ import {garageOpen} from '../src/garage/ui.js';
 import {installTowerUI} from '../src/tower/ui.js';
 import {towerFor} from '../src/tower/model.js';
 
-function setup({saved=null,tower=false}={}){
+function setup({saved=null,tower=false,legacyRects=false}={}){
  const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://tutorial.test/',pretendToBeVisual:true});
+ if(legacyRects){
+  const original=dom.window.HTMLElement.prototype.getBoundingClientRect;
+  dom.window.HTMLElement.prototype.getBoundingClientRect=function(){
+   if(this.style.zoom==='2'&&this.style.width==='10px')return {left:0,top:0,right:10,bottom:10,width:10,height:10};
+   return original.call(this);
+  };
+ }
  for(const key of ['document','localStorage','Event'])globalThis[key]=dom.window[key];
  globalThis.matchMedia=()=>({matches:false});
  globalThis.ResizeObserver=dom.window.ResizeObserver=class{observe(){}unobserve(){}disconnect(){}};
@@ -154,4 +161,23 @@ test('without localStorage permission, skip and progress survive game UI recreat
  ctx.root.__disposeTag();initializeGame({entry:'auto'});installTowerUI();initializeModalFocus();
  const api=initializeTutorial();api.sync();assert.equal(api.active,false);
  api.restart();assert.equal(api.active,true);s.cleanup();
+});
+
+for(const legacyRects of [false,true])test(`phone tutorial spotlight matches a scaled target with ${legacyRects?'legacy':'modern'} rectangles`,()=>{
+ const s=setup({legacyRects}),win=s.dom.window;
+ Object.defineProperty(win,'visualViewport',{value:{offsetLeft:40,offsetTop:20,width:700,height:250,addEventListener(){},removeEventListener(){}},configurable:true});
+ ctx.root.style.zoom='0.4';ctx.layoutScale=.4;
+ const box=(left,top,width,height)=>({x:left,y:top,left,top,right:left+width,bottom:top+height,width,height});
+ const target=s.doc.querySelector('#launch-game'),panel=s.doc.querySelector('.launch-paper');
+ target.getBoundingClientRect=()=>legacyRects?box(800,200,400,100):box(320,80,160,40);
+ target.scrollIntoView=()=>assert.fail('tutorial must not move the entire page');
+ panel.getBoundingClientRect=()=>legacyRects?box(600,100,470,200):box(240,40,188,80);
+ Object.defineProperties(panel,{offsetHeight:{value:200},clientHeight:{value:200}});
+ const dialog=s.doc.querySelector('#game-tutorial');dialog.getBoundingClientRect=()=>box(40,20,700,250);
+ dialog.querySelector('.tutorial-group').getBoundingClientRect=()=>box(0,0,500,220);
+ s.api.sync();
+ const spot=dialog.querySelector('.tutorial-spotlight');assert.equal(spot.hidden,false);
+ assert.equal(spot.style.left,'276px');assert.equal(spot.style.top,'56px');assert.equal(spot.style.width,'168px');assert.equal(spot.style.height,'48px');
+ assert.equal(win.scrollX,0);assert.equal(win.scrollY,0);assert.equal(panel.scrollTop,0);
+ s.cleanup();
 });

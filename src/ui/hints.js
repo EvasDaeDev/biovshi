@@ -1,3 +1,4 @@
+import {screenRect,visibleViewport} from './geometry.js';
 import {ctx} from '../game/state.js';
 // Native title tooltips do not expose font sizing, so use a small shared hint.
 export function initializeHints(){
@@ -20,9 +21,9 @@ export function initializeHints(){
     if(target.hasAttribute('title')){moved.set(target,message);target.dataset.hint=message;target.removeAttribute('title');}
     current=target;description=target.getAttribute('aria-describedby');target.setAttribute('aria-describedby',[description,tooltip.id].filter(Boolean).join(' '));
     tooltip.textContent=message;tooltip.hidden=false;tooltip.showPopover?.();
-    const box=target.getBoundingClientRect(),bounds=tooltip.getBoundingClientRect();
-    tooltip.style.left=Math.max(4,Math.min(box.left,win.innerWidth-bounds.width-4))+'px';
-    tooltip.style.top=Math.max(4,box.bottom+bounds.height+8<win.innerHeight?box.bottom+6:box.top-bounds.height-6)+'px';
+    const box=screenRect(target),bounds=screenRect(tooltip),view=visibleViewport(win);
+    tooltip.style.left=Math.max(view.x+4,Math.min(box.left,view.x+view.width-bounds.width-4))+'px';
+    tooltip.style.top=Math.max(view.y+4,box.bottom+bounds.height+8<view.y+view.height?box.bottom+6:box.top-bounds.height-6)+'px';
     observer.observe(target,{attributes:true,attributeFilter:['data-hint','title']});
     observer.observe(root,{childList:true,subtree:true});
   }

@@ -166,3 +166,14 @@ test('disposing expanded mode restores scrolling and removes its listeners',()=>
   assert.equal(ctx.arenaExpanded,false);assert.equal(button.onclick,null);assert.equal(button.getAttribute('aria-pressed'),'false');
   dom.window.close();
 });
+
+test('phone field uses logical layout sizes even if Safari reports unscaled client rectangles',()=>{
+ const dom=setup(),win=dom.window,main=ctx.root.querySelector('.tag7hop-main'),toolbar=ctx.root.querySelector('.atmosphere-controls');
+ Object.defineProperty(win,'innerWidth',{value:844,configurable:true});Object.defineProperty(win,'innerHeight',{value:300,configurable:true});
+ Object.defineProperty(main,'clientWidth',{value:1200,configurable:true});Object.defineProperty(toolbar,'offsetHeight',{value:60,configurable:true});
+ // Legacy WebKit reports 1200 here. Dividing it by the UI scale again must not enlarge the arena.
+ main.getBoundingClientRect=()=>({width:1200});toolbar.getBoundingClientRect=()=>({height:60});
+ fitField();assert.ok(ctx.layoutScale<.5);assert.equal(ctx.fieldWidth,1200);
+ assert.ok(ctx.fieldHeight*ctx.layoutScale+60*ctx.layoutScale<300);
+ ctx.root.__disposeTag();dom.window.close();
+});

@@ -1,3 +1,4 @@
+import {screenRect} from '../ui/geometry.js';
 import {fittedCamera} from '../render/camera.js';
 import {planPath} from '../systems/navigation.js';
 import {coreClearCircle} from '../systems/collision.js';
@@ -38,7 +39,7 @@ export function installTowerInput(){
     if(e.type==='keyup'){keys.delete(e.code);update();return;}
     if(!active()||ctx.towerControlMode==='direction')return;e.preventDefault();keys.add(e.code);update();
   };
-  const move=e=>{if(e.pointerId!==pointer||!active()||ctx.towerControlMode==='direction')return;const b=stick.getBoundingClientRect(),dx=(e.clientX-b.left-b.width/2)/(b.width*.35),dy=(e.clientY-b.top-b.height/2)/(b.height*.35),n=Math.max(1,Math.hypot(dx,dy));ctx.towerInput={x:dx/n,y:dy/n};knob.style.transform=`translate(${dx/n*45}px,${dy/n*45}px)`;};
+  const move=e=>{if(e.pointerId!==pointer||!active()||ctx.towerControlMode==='direction')return;const b=screenRect(stick),dx=(e.clientX-b.left-b.width/2)/(b.width*.35),dy=(e.clientY-b.top-b.height/2)/(b.height*.35),n=Math.max(1,Math.hypot(dx,dy));ctx.towerInput={x:dx/n,y:dy/n};knob.style.transform=`translate(${dx/n*45}px,${dy/n*45}px)`;};
   // The first finger owns the stick until release. Other fingers remain free
   // to operate UI controls; their release/cancel events must not stop movement.
   stick.onpointerdown=e=>{
@@ -53,7 +54,7 @@ export function installTowerInput(){
     const point=arenaPoint(event,surface);
     if(!point)return;
     const destination=ctx.towerDestination;
-    const bounds=surface.getBoundingClientRect(),camera=currentProjection();
+    const bounds=screenRect(surface),camera=currentProjection();
     const touchRadius=12*ctx.fieldWidth/bounds.width/camera.scale;
     if(destination&&!destination.arrived&&Math.hypot(point.x-destination.x,point.y-destination.y)<=Math.max(10*ctx.scale,touchRadius)){
       clearDestination();return;
@@ -86,7 +87,7 @@ function currentProjection(){
   return fittedCamera(ctx.fieldWidth,ctx.fieldHeight,x,y,size);
 }
 export function arenaPoint(event,surface){
-  const bounds=surface.getBoundingClientRect();
+  const bounds=screenRect(surface);
   if(!bounds.width||!bounds.height)return null;
   const camera=currentProjection();
   return {x:((event.clientX-bounds.left)*ctx.fieldWidth/bounds.width-camera.x)/camera.scale,
