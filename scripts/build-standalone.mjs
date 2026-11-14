@@ -21,6 +21,14 @@ for (const match of [...html.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)
   const css = await fs.readFile(path.join(root, match[1].replace(/^\//,'')), 'utf8');
   html = html.replace(match[0], '<style>'+css+'</style>');
 }
+// Keep browser icons self-contained when opening the HTML through file://.
+// App installation metadata applies to the hosted version only.
+for (const match of [...html.matchAll(/<link rel="(?:icon|apple-touch-icon)"[^>]*href="([^"]+)"[^>]*>/g)]) {
+  const relative = match[1].replace(/^\.\//, '');
+  const dataUrl = 'data:image/png;base64,' + (await fs.readFile(path.join(root, 'public', relative))).toString('base64');
+  html = html.replace(match[0], match[0].replace(match[1], dataUrl));
+}
+html = html.replace(/<link rel="manifest"[^>]*>\s*/g, '');
 html = html.replace(/<script type="module" src="[^"]+"><\/script>/, () => '<script>'+code.replace(/<\/script/gi,'<\\/script')+'</script>');
 await fs.mkdir(path.join(root,'dist'),{recursive:true});
 await fs.writeFile(path.join(root,'dist/biovshi.html'),html);

@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "БИОВШИ — Гладиаторские бои",
+  "short_name": "БИОВШИ",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "./assets/textures/UI/icons/app_ico_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
