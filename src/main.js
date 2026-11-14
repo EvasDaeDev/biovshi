@@ -4,6 +4,7 @@ import {towerFor} from './tower/model.js';
 import {bettingSetup,bettingCancel} from './betting/ui.js';
 import {initializeFloor} from './render/floor-history.js';
 import {initializeModalFocus} from './ui/modal-focus.js';
+import {initializeTutorial} from './ui/tutorial.js';
 import {garageOpen} from './garage/ui.js';
 import {preparePatientPortraits} from './ui/patient-portrait.js';
 import {paintTelemetry} from './ui/paint-telemetry.js';
@@ -35,6 +36,7 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null}
  gate.hidden=launchAccepted;
  installTowerUI();
  initializeModalFocus();
+ initializeTutorial();
  launchButton.onclick=()=>{
    if(launchAccepted){ctx.audio?.unlock();ctx.startDemo();return;}
    // AudioContext.resume() must happen synchronously in this user gesture.

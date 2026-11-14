@@ -122,7 +122,7 @@ export async function resetRound(destination='betting') {
 }
 // Новая случайная последовательность при каждой загрузке, без фиксированного seed.
 export function advanceStartup(dt) {
-  if (ctx.startup.phase !== 'spawning' || ctx.settingsOpen) return;
+  if (ctx.startup.phase !== 'spawning' || ctx.settingsOpen || ctx.tutorial?.active) return;
   ctx.startup.elapsed += dt;
   while (ctx.startup.nextIndex < ctx.startup.order.length && ctx.startup.elapsed + 1e-9 >= ctx.startup.nextIndex * CONFIG.startup.spawnIntervalSec) {
     const index = ctx.startup.nextIndex++;

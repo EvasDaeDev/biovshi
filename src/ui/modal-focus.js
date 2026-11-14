@@ -8,6 +8,7 @@ export function initializeModalFocus(){
  let current=null,previous=null,background=[];
  const controls=sheet=>[...sheet.querySelectorAll('button,input,select,summary,[tabindex="0"]')].filter(node=>!node.disabled&&!node.closest('[hidden]')&&!(node.closest('details')?.open===false&&node.tagName!=='SUMMARY'));
  function sync(){
+  if(ctx.tutorial?.active)return;
   const next=sheets.find(sheet=>!sheet.hidden)??null;
   if(next===current)return;
   for(const [node,inert] of background)node.inert=inert;background=[];
@@ -21,6 +22,7 @@ export function initializeModalFocus(){
   }else if(previous?.isConnected&&!previous.closest('[hidden]'))previous.focus();
  }
  const key=event=>{
+  if(ctx.tutorial?.active)return;
   sync();if(!current||current.id==='arena-settings'||doc.querySelector('.betting-input-dialog[open]'))return;
   if(event.key==='Tab'){
    const nodes=controls(current),first=nodes[0],last=nodes.at(-1);

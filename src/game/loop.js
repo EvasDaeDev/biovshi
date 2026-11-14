@@ -13,6 +13,7 @@ import { advanceStartup } from "./session.js";
 import { paint } from "../render/frame.js";
 import { cameraUpdate } from "../render/camera.js";
 export function step(dt) {
+  if(ctx.tutorial?.active)return;
   if (ctx.startup.phase !== 'running' || ctx.orientationBlocked || ctx.settingsOpen) return;
   if (ctx.combat.finished) {
     // Отдельный таймер не нужен: продолжаем время анимации, не меняя итоговую длительность боя.
@@ -101,6 +102,7 @@ export function frame(now) {
     ctx.root.__disposeTag?.();
     return;
   }
+  ctx.tutorial?.sync();
   const elapsed = ctx.last === null ? 0 : Math.max(0, (now - ctx.last) / 1000);
   ctx.last = now;
   let painted = false;

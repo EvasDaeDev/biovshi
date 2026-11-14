@@ -12,6 +12,7 @@ export function initializeSettings() {
   controlMode.value=ctx.towerControlMode;controlMode.disabled=ctx.mode!=='tower';
   controlMode.onchange=()=>{if(ctx.mode==='tower')setControlMode(controlMode.value);};
   const closeButton=panel.querySelector('#arena-settings-close');
+  const tutorialButton=panel.querySelector('#tutorial-start');
   const creditsOpen=panel.querySelector('#arena-credits-open');
   const creditsView=panel.querySelector('#arena-credits-view');
   const creditsBack=panel.querySelector('#arena-credits-back');
@@ -44,8 +45,10 @@ export function initializeSettings() {
     closeButton.focus();
   };
   button.onclick=open;closeButton.onclick=()=>close();
+  tutorialButton.onclick=()=>{close();ctx.tutorial?.restart();};
   panel.onclick=event=>{if(event.target===panel)close();};
   const onKey=event=>{
+    if(ctx.tutorial?.active)return;
     if(!ctx.settingsOpen)return;
     if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(!creditsView.hidden)showCredits(false);else close();return;}
     if(event.key==='Tab'){
@@ -57,7 +60,7 @@ export function initializeSettings() {
   };
   doc.addEventListener('keydown',onKey);
   const dispose=root.__disposeTag;
-  root.__disposeTag=()=>{close(false);controlMode.onchange=null;panel.hidden=true;button.onclick=closeButton.onclick=panel.onclick=creditsOpen.onclick=creditsBack.onclick=null;doc.removeEventListener('keydown',onKey);dispose();};
+  root.__disposeTag=()=>{close(false);controlMode.onchange=null;panel.hidden=true;tutorialButton.onclick=null;button.onclick=closeButton.onclick=panel.onclick=creditsOpen.onclick=creditsBack.onclick=null;doc.removeEventListener('keydown',onKey);dispose();};
 }
 
 function winStorage(doc){try{return doc.defaultView.localStorage;}catch{return null;}}

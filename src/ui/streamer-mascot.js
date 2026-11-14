@@ -105,7 +105,7 @@ export function initializeStreamerMascot({lines,random}={}){
  let hidden=false,disposed=false,painter=null,iconAtlas=null,loaded=false,elapsed=0,lastPaint=-Infinity;
  try{hidden=win.localStorage.getItem(STORAGE)==='true';}catch{/* Storage may be disabled. */}
  const motion=createStreamerMotion(),track=createReactionTrack(),speechPacer=createSpeechPacer(),heads={},selectQuip=createQuipSelector(lines,random);
- let spoken=null,quietFor=0;
+ let spoken=null,quietFor=0,wasTeaching=false;
  const clearSpeech=()=>{spoken=null;quietFor=0;motion.reset();speechPacer.reset();caption.hidden=true;caption.textContent='';};
  const updateToggle=()=>{
   box.hidden=hidden;toggle.textContent=hidden?'▴':'▾';toggle.setAttribute('aria-expanded',String(!hidden));
@@ -141,16 +141,21 @@ export function initializeStreamerMascot({lines,random}={}){
   painter.save();painter.translate(pivotX,pivotY);painter.rotate(angle);drawPart(rect,x-pivotX,y-pivotY);painter.restore();
  }
  const sync=(dt,now)=>{
-  if(disposed||hidden||doc.hidden||ctx.orientationBlocked||!loaded)return;
+  const teaching=Boolean(ctx.tutorial?.active);
+  // A tutorial cameo may temporarily reveal the ordinary mascot, without
+  // changing the player's saved visibility preference.
+  box.hidden=hidden&&!(teaching&&root.classList.contains('tutorial-echo'));
+  if(disposed||hidden&&!teaching||doc.hidden||ctx.orientationBlocked||!loaded)return;
   if(now-lastPaint<1000/30-1)return;
   const delta=Number.isFinite(lastPaint)?Math.min((now-lastPaint)/1000,.1):Math.min(dt,.1);lastPaint=now;elapsed+=delta;
-  const active=!ctx.paused&&!ctx.settingsOpen&&ctx.startup.phase==='running';
+  if(wasTeaching&&!teaching)spoken=null;wasTeaching=teaching;
+  const active=!teaching&&!ctx.paused&&!ctx.settingsOpen&&ctx.startup.phase==='running';
   if(active&&!ctx.combat?.finished){
    quietFor+=delta;
    if(quietFor>=20){track.offer({type:'streamer-idle'});quietFor=0;}
   }
   speechPacer.tick(delta);
-  const reaction=track.tick(delta,active),emotion=reaction?.emotion??'neutral';
+  const reaction=teaching?null:track.tick(delta,active),emotion=teaching?ctx.tutorial.emotion:reaction?.emotion??'neutral';
   if(reaction!==spoken){
    spoken=reaction;
    caption.hidden=true;
@@ -159,6 +164,7 @@ export function initializeStreamerMascot({lines,random}={}){
     caption.hidden=!caption.textContent;
    }
   }
+  if(teaching)caption.hidden=true;
   const celebrating=reaction?.event.type==='combat-end'&&reaction.event.winner!==null;
   const pose=motion.tick(delta,{celebrating}),t=elapsed;
   const bob=Math.sin(t*(reaction?9:2.7))*(reaction?2:1);
@@ -181,6 +187,10 @@ export function initializeStreamerMascot({lines,random}={}){
    }
   }
   painter.restore();box.dataset.emotion=emotion;
+  if(teaching){
+   const destination=ctx.tutorial.canvas,paint=destination?.getContext('2d');
+   if(paint){paint.clearRect(0,0,destination.width,destination.height);paint.imageSmoothingEnabled=false;paint.drawImage(canvas,0,0,destination.width,destination.height);}
+  }
  };
  const reset=()=>{track.reset();clearSpeech();lastPaint=-Infinity;};
  ctx.streamerMascot={sync,reset,hasRequiredAnnouncements:()=>!hidden&&loaded&&track.hasRequired()};

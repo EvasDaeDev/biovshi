@@ -74,6 +74,7 @@ export function bettingSetup() {
     if (!Number.isInteger(n) || n < 1 || n > 16 || !Number.isInteger(capital) || capital < 1 || capital > 1000000) return;
     if (ctx.betting && !confirm('Начать новую игру? Текущие балансы, джекпот и история будут сброшены.')) return;
     ctx.betting = betNewSession([...names.querySelectorAll('input')].map((el, i) => el.value.trim() || 'Игрок ' + (i + 1)), capital);
+    ctx.tutorial?.restart({newGame:true});
     ctx.betNotice = '';
     ctx.arenaFloors?.clear();cleanFloor();
     bettingSave();
