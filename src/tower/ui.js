@@ -119,7 +119,6 @@ export function installTowerUI(){
     ctx.startTower(ctx.menuPlayer);
   };
   ctx.root.querySelector('#launch-totalizator').onclick=async()=>{ctx.audio?.unlock();await ctx.startTotalizator();};
-  ctx.root.querySelector('#game-menu').onclick=openMenu;
   ctx.root.querySelector('#tower-prep-menu').onclick=openMenu;
   if(ctx.mode!=='tower'){
     ctx.root.querySelector('#tower-controls').hidden=true;ctx.root.querySelector('#tower-preparation').hidden=true;

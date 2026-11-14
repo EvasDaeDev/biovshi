@@ -214,7 +214,7 @@ test('keyboard changes direction in screen coordinates regardless of current hea
  assert.equal(intent.goal.y,r.y);assert.ok(intent.goal.x>r.x);assert.equal(intent.manualDrive,undefined);close(dom);
 });
 test('tower has one toolbar menu button and restores cancel-fight control in totalizator',()=>{
- const {dom,s}=manualFixture();assert.equal(document.querySelector('#tag7hop-reset').hidden,true);assert.equal(document.querySelector('#game-menu').hidden,false);
+ const {dom,s}=manualFixture();assert.equal(document.querySelector('#tag7hop-reset').hidden,true);assert.equal(document.querySelector('#game-menu'),null);
  initializeGame({session:s,entry:'betting'});installTowerUI();assert.equal(document.querySelector('#tag7hop-reset').hidden,false);assert.equal(document.querySelector('#tag7hop-reset').textContent,'Отменить бой');close(dom);
 });
 test('new tower patient is random, retained across levels and continued saves, rerolled on reset or defeat',()=>{
