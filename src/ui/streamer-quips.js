@@ -4,7 +4,7 @@ import {ROBOT_COLORS} from '../utils/colors.js';
 export function quipCategory(event){
  if(event.type==='combat-start')return 'start';
  if(event.type==='streamer-idle')return 'idle';
- if(event.type==='combat-end')return event.winner===null?'draw':'victory';
+ if(event.type==='combat-end')return event.outcome==='defeat'?'defeat':event.winner===null?'draw':'victory';
  if(event.type==='robot-immobilized')return event.reason==='погиб'?'death':'knockout';
  if(event.type==='segment-broken')return event.segment?.startsWith('arm')?'arm':event.segment?.startsWith('leg')?'leg':'detached';
  if(event.type==='hit')return event.damage===2?'critical':'hit';
@@ -39,7 +39,7 @@ export function createQuipSelector(catalog=STREAMER_LINES,random=Math.random){
 }
 
 export function quipFor(event,template=''){
- const id=event.robot??event.to??event.winner;
+ const id=event.loser??event.robot??event.to??event.winner;
  const fighter=Number.isInteger(id)&&id>=0&&id<26?String.fromCharCode(65+id):'—';
  return template.replaceAll('{fighter}',event.fighterName??fighter);
 }
@@ -56,7 +56,7 @@ export function createSpeechPacer(){
 export function renderQuip(caption,text,event={}){
  const doc=caption.ownerDocument;
  if(event.fighterName){
-  const at=text.indexOf(event.fighterName),id=event.robot??event.to??event.winner;
+  const at=text.indexOf(event.fighterName),id=event.loser??event.robot??event.to??event.winner;
   if(at<0){caption.textContent=text;return;}
   const name=doc.createElement('span');name.className='streamer-fighter';
   name.style.color=ROBOT_COLORS[id%ROBOT_COLORS.length];name.textContent=event.fighterName;

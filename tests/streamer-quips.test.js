@@ -17,6 +17,7 @@ test('events map to independent editable categories',()=>{
   [{type:'segment-broken',segment:'head'},'detached'],
   [{type:'robot-immobilized',reason:'погиб'},'death'],
   [{type:'robot-immobilized',reason:'потерял сознание'},'knockout'],
+  [{type:'combat-end',winner:null,outcome:'defeat',loser:0},'defeat'],
   [{type:'combat-end',winner:0},'victory'],[{type:'combat-end',winner:null},'draw']
  ];
  const catalog=Object.fromEntries(cases.map(([,category])=>[category,[category]]));
@@ -27,14 +28,14 @@ test('events map to independent editable categories',()=>{
 
 test('shuffled bags exhaust each category and never repeat across round resets',()=>{
  const event={type:'combat-end',winner:0},lines=['one','two','three','four'];
- for(const seed of [1,17,12345]){
+ for(const category of ['victory','defeat'])for(const seed of [1,17,12345]){
   let state=seed;const random=()=>((state=(state*1664525+1013904223)>>>0)/2**32);
-  const select=createQuipSelector({victory:lines,hit:['hit one','hit two']},random);
+  const select=createQuipSelector({[category]:lines,hit:['hit one','hit two']},random);
   const track=createReactionTrack();let previous=null;const orders=new Set();
   for(let round=0;round<20;round++){
    const cycle=[];
    for(let i=0;i<lines.length;i++){
-    track.reset();track.offer(event);track.tick(.1);
+    track.reset();track.offer(category==='defeat'?{...event,winner:null,outcome:'defeat',loser:0}:event);track.tick(.1);
     const line=select(track.tick(.1).event);
     assert.notEqual(line,previous);previous=line;cycle.push(line);
     select({type:'hit'}); // Other categories must not consume this bag.
@@ -117,7 +118,8 @@ test('tower combat names remain intact and coloured safely in mandatory and casu
  for(const event of [
   {type:'hit',to:0,fighterName:'Лис <3'},
   {type:'robot-immobilized',robot:2,fighterName:'ИИ 2',reason:'потерял сознание'},
-  {type:'combat-end',winner:0,fighterName:'Лис <3'}
+  {type:'combat-end',winner:0,fighterName:'Лис <3'},
+  {type:'combat-end',winner:null,outcome:'defeat',loser:0,fighterName:'Лис <3'}
  ]){
   const text=quipFor(event,'test {fighter}');renderQuip(caption,text,event);
   assert.equal(caption.textContent,text);

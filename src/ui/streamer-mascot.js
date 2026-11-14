@@ -25,7 +25,7 @@ const EFFECTS={
 export function reactionFor(event){
  if(event.type==='combat-start')return {emotion:'joy',priority:2,duration:2.3};
  if(event.type==='streamer-idle')return {emotion:'annoyed',priority:0,duration:2.3};
- if(event.type==='combat-end')return {emotion:event.winner===null?'annoyed':'cheer',priority:5,duration:2.7};
+ if(event.type==='combat-end')return {emotion:quipCategory(event)==='victory'?'cheer':'annoyed',priority:5,duration:2.7};
  if(event.type==='robot-immobilized')return {emotion:event.reason==='погиб'?'fear':'admire',priority:4,duration:2.1};
  if(event.type==='segment-broken')return {emotion:'fear',priority:3,duration:1.9};
  if(event.type==='hit')return {emotion:event.damage===2?'admire':(Math.floor((event.time??0)*10)%3===0?'joy':'annoyed'),priority:event.damage===2?2:1,duration:2};
@@ -132,7 +132,7 @@ export function initializeStreamerMascot({lines,random}={}){
   if(hidden)return;
   motion.offer(event);
   if(quipCategory(event)&&event.type!=='streamer-idle')quietFor=0;
-  const id=event.robot??event.to??event.winner;
+  const id=event.loser??event.robot??event.to??event.winner;
   const named=Number.isInteger(id)&&id>=0?{...event,fighterName:fighterLabel(id)}:event;
   track.offer(named);
  });
@@ -165,7 +165,7 @@ export function initializeStreamerMascot({lines,random}={}){
    }
   }
   if(teaching)caption.hidden=true;
-  const celebrating=reaction?.event.type==='combat-end'&&reaction.event.winner!==null;
+  const celebrating=reaction?.event.type==='combat-end'&&quipCategory(reaction.event)==='victory';
   const pose=motion.tick(delta,{celebrating}),t=elapsed;
   const bob=Math.sin(t*(reaction?9:2.7))*(reaction?2:1);
   // The torso ends at y=277; align it with the 288px canvas bottom.
