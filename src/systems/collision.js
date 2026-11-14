@@ -1,3 +1,4 @@
+import {capsulePolygonContact} from './surface-contact.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { arenaClearance, containsPoint, polygonPlanes } from "../game/arena.js";
@@ -82,7 +83,14 @@ export function coreClearCircle(p, r) {
   return arenaClearance(p) >= r && obstacleDistance(p) > r;
 }
 export function coreClearBone(a, b, r) {
-  return arenaClearance(a) >= r && arenaClearance(b) >= r && rectHit(a, b, null, r) === null;
+  // Use the same rounded capsule geometry as penetration correction.
+  // Expanding every polygon plane by r creates false square corners.
+  if(arenaClearance(a)<r-1e-7||arenaClearance(b)<r-1e-7)return false;
+  const capsule={a,b,r};
+  return ctx.obstacles.every(box=>{
+    const hit=capsulePolygonContact(capsule,box);
+    return !hit||hit.depth<=1e-7;
+  });
 }
 export function touchGap(a, b) {
   let best = Infinity;
