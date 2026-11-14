@@ -26,7 +26,7 @@ export function installTowerInput(){
   const marker=doc.createElement('div');marker.id='tower-direction-marker';marker.hidden=true;marker.setAttribute('aria-hidden','true');ctx.stage.append(marker);
   const clearDestination=()=>{ctx.towerDestination=null;marker.hidden=true;const robot=ctx.robots[0];robot?.cancelNavigation();};
   ctx.clearTowerDestination=clearDestination;
-  const active=()=>ctx.mode==='tower'&&ctx.startup.phase==='running'&&!ctx.paused&&!ctx.settingsOpen&&!ctx.orientationBlocked&&!ctx.combat.finished;
+  const active=()=>ctx.mode==='tower'&&ctx.startup.phase==='running'&&!ctx.paused&&!ctx.settingsOpen&&!ctx.orientationBlocked&&!ctx.tutorial?.active&&!ctx.combat.finished;
   const reset=()=>{
     const captured=pointer;pointer=null;keys.clear();ctx.towerInput={x:0,y:0};knob.style.transform='translate(0px,0px)';
     if(captured!==null&&stick.hasPointerCapture?.(captured))stick.releasePointerCapture(captured);
