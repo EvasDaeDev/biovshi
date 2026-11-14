@@ -17,6 +17,8 @@ test('compiled test channel creates a floor-two boss and isolates sessions, sett
  const channel=await import('./src/build-channel.js');
  assert.equal(channel.TEST_BUILD,true);assert.equal(channel.BOSS_FLOOR_INTERVAL,2);
  const {isBossFloor}=await import('./src/boss/config.js');
+ const {bossStats}=await import('./src/boss/progression.js');
+ for(const [floor,points] of [[2,3],[4,5],[6,7],[8,9]])assert.deepEqual(bossStats(floor),[points,points,points]);
  assert.deepEqual([1,2,3,4,5,6,10].filter(isBossFloor),[2,4,6,10]);
  const {startBossScenario}=await import('./scripts/boss-harness.mjs');
  const {ctx}=await import('./src/game/state.js');
@@ -42,6 +44,7 @@ test('compiled test channel creates a floor-two boss and isolates sessions, sett
   const audioReads=[];loadAudioSettings({getItem(key){audioReads.push(key);return null;}});assert.deepEqual(audioReads,['biovshi.test.audio.v1']);
   let database;await assert.rejects(accessFloorStore('floor',undefined,{indexedDB:{open(name){database=name;throw Error('probe');}}}),/probe/);assert.equal(database,'biovshi.test.floor-history');
  }finally{f.close();}
+ const second=startBossScenario({floor:4,variant:'arms'});try{assert.deepEqual(ctx.towerGarage[1].stats,[5,5,5]);}finally{second.close();}
  `;
  const result=spawnSync(process.execPath,['--input-type=module','-'],{cwd:new URL('../',import.meta.url),input:script,encoding:'utf8',timeout:30000});
  assert.equal(result.status,0,result.stderr||result.error?.message||result.stdout);

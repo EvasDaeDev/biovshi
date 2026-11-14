@@ -1,3 +1,4 @@
+import {patientCombatStats} from '../game/patients.js';
 import {ctx} from '../game/state.js';
 import {CONFIG} from '../config.js';
 import {random} from '../utils/random.js';
@@ -34,7 +35,7 @@ function wideCandidate(robot,target,timing,exclude){
  return null;
 }
 function applyHit(robot,victim,p,segment){
- p.resolved=true;const damage=bossDamage(random());
+ p.resolved=true;const damage=bossDamage(random(),patientCombatStats(robot.id,robot).effective[1]);
  if(!victim.damage(segment,robot.id,damage)){note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});return;}
  if(victim.mobile)victim.reactToHit(robot,segment);
  ctx.combat.hits++;ctx.combat.fighterHits[robot.id]++;ctx.combat.fighterTaken[victim.id]++;ctx.combat.lastHitTime=ctx.game.time;

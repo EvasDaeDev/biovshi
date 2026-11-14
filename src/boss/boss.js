@@ -1,3 +1,5 @@
+import {ctx} from '../game/state.js';
+import {bossStats} from './progression.js';
 import {createBossBehavior} from './behavior.js';
 import {sweepPose} from './attacks.js';
 import {paintBossTelegraph} from './telegraph.js';
@@ -8,6 +10,7 @@ import {bossSkinParts} from './skin.js';
 import {BOSS_CONFIG} from './config.js';
 import {BOSS_TEXTURES,bossTextureKey} from './assets.js';
 export function createBoss(id,start,encounter){
+ if(ctx.towerGarage?.[id])ctx.towerGarage[id].stats=bossStats(encounter.floor);
  const anatomy=bossAnatomy(encounter.variant),textureIndex=Math.max(0,BOSS_TEXTURES.indexOf(encounter.texture));
  const behavior=BOSS_CONFIG.behaviorEnabled?createBossBehavior():null;
  return createRobot(id,bossSpawn(start,anatomy),{...anatomy,isBoss:true,behavior,

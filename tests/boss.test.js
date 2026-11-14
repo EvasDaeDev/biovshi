@@ -1,3 +1,7 @@
+import {bossStats} from '../src/boss/progression.js';
+import {patientCombatStats} from '../src/game/patients.js';
+import {bossDamage} from '../src/boss/attacks.js';
+import {statMultiplier,critChance} from '../src/garage/model.js';
 import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -117,8 +121,35 @@ test('boss encounter survives serialization, rerolls only on the next boss floor
  old.preparing=false;const before=s.players[0].balance;assert.equal(rewardTower(s,0,3,0),true);assert.equal(s.players[0].balance-before,10);
 });
 
-test('extra arms do not multiply simultaneous strikes on a single player; boss timing is slower',()=>{
+test('extra arms do not multiply simultaneous strikes on a single player; boss timing matches ordinary patients',()=>{
  const candidates=['arm--1-lower','arm-1-lower','arm--1-pair2-lower'].map((key,i)=>({victim:{id:0},source:{kind:'arm',key},segment:'head',score:i}));
  assert.equal(selectSimultaneousStrikes(candidates).length,1);
- ctx.game.time=10;assert.equal(strikeProgress({started:9.6,timing:BOSS_CONFIG.combat}).phase,'windup');assert.equal(strikeProgress({started:9.6}).phase,'thrust');
+ ctx.game.time=10;assert.equal(strikeProgress({started:9.6,timing:BOSS_CONFIG.combat}).phase,'thrust');assert.equal(strikeProgress({started:9.6}).phase,'thrust');
+});
+
+
+test('successive bosses gain two points per stat, apply ordinary effects and do not stack on reload',()=>{
+ for(const [floor,points] of [[5,3],[10,5],[15,7],[20,9],[25,11]]){
+  const expected=[points,points,points];assert.deepEqual(bossStats(floor),expected);
+  for(let load=0;load<2;load++){
+   const f=startBossScenario({floor});try{
+    assert.deepEqual(ctx.towerGarage[1].stats,expected);
+    assert.deepEqual(patientCombatStats(1,f.boss).effective,expected);
+    assert.equal(f.boss.locomotion,.85);assert.equal(f.boss.turnAbility,.75);
+    assert.equal(f.boss.maxHp('head'),12);assert.equal(f.boss.body.headSizeFactor,.5);
+    const critical=Math.max(.30,critChance(points));
+    assert.equal(bossDamage(critical-1e-6,points),2);assert.equal(bossDamage(critical,points),1);
+    if(points>3)assert.ok(statMultiplier(points)>statMultiplier(3));
+   }finally{f.close();}
+  }
+ }
+});
+
+test('all boss strike styles share patient timing and a 0.9-second start interval',()=>{
+ const {windupSec,thrustSec,recoverSec,attackCooldownSec}=CONFIG.combat;
+ assert.deepEqual(BOSS_CONFIG.combat,{windupSec,thrustSec,recoverSec,attackCooldownSec});
+ for(const style of ['first','second','sweep']){
+  assert.deepEqual(BOSS_CONFIG.tactics[style],{windupSec,thrustSec,recoverSec});
+  for(const pause of ['followupDelay','seriesRest'])assert.ok(Math.abs(windupSec+thrustSec+recoverSec+BOSS_CONFIG.tactics[pause]-attackCooldownSec)<1e-9);
+ }
 });

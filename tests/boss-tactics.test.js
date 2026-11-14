@@ -61,7 +61,7 @@ test('second phase follows the first strike with a wide strike when the other ar
  const f=duel();try{
   f.state.phase=2;f.boss.body.planCombat(f.boss);const first=pendingStrikes(1)[0];assert.equal(first.comboIndex,1);
   advanceTo(f,first.endsAt+.001);ctx.game.time=f.state.followup.at+.001;f.boss.body.planCombat(f.boss);
-  const next=pendingStrikes(1)[0];assert.equal(next.comboIndex,2);assert.equal(next.style,'sweep');assert.equal(next.timing.windupSec,.70);
+  const next=pendingStrikes(1)[0];assert.equal(next.comboIndex,2);assert.equal(next.style,'sweep');assert.equal(next.timing.windupSec,BOSS_CONFIG.combat.windupSec);
  }finally{f.close();}
 });
 

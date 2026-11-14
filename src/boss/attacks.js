@@ -1,3 +1,4 @@
+import {critChance} from '../garage/model.js';
 import {ctx} from '../game/state.js';
 import {ik,segmentDistance} from '../utils/math.js';
 import {coreClearBone} from '../systems/collision.js';
@@ -61,4 +62,4 @@ export function chargePlan(robot,target){
  }
  return null;
 }
-export function bossDamage(roll){return roll<BOSS_CONFIG.criticalChance?2:1;}
+export function bossDamage(roll,strength=3){return roll<Math.max(BOSS_CONFIG.criticalChance,critChance(strength))?2:1;}
