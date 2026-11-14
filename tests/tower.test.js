@@ -1,3 +1,4 @@
+import {quipCategory} from '../src/ui/streamer-quips.js';
 import {compareStrikeCandidates} from '../src/systems/combat.js';
 import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
 import {createRobot} from '../src/robot/robot.js';
@@ -72,6 +73,8 @@ test('player elimination ends attempt immediately even while several AI remain a
  ctx.robots[0].failFromOilLoss=()=>{};
  // Removal of the head exercises real anatomy and permanent-garage isolation.
  ctx.robots[0].damage('head',1,100);step(1/60);
+ const ended=ctx.game.events.findLast(event=>event.type==='combat-end');
+ assert.equal(ended.outcome,'defeat');assert.equal(ended.loser,0);assert.equal(quipCategory(ended),'defeat');
  assert.equal(ctx.combat.finished,true);assert.equal(ctx.combat.winner,null);assert.equal(towerFor(s,0).level,1);assert.equal(s.garage[0].wins,0);
  showResults();assert.equal(ctx.resultsPanel.hidden,false);assert.match(ctx.resultsTitle.textContent,/ПРОЙДЕНО ЭТАЖЕЙ/);close(dom);
 });
@@ -79,6 +82,7 @@ test('real final strikes pay once and victory unlocks next floor with one skill 
  const s=betNewSession(['Первый'],100);let dom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.paused=false;
  const original=structuredClone(s.garage);ctx.robots[0].damage('arm--1-upper',1,100);ctx.robots[1].damage('head',0,100);
  assert.equal(s.players[0].balance,110);assert.equal(s.towerEarned,10);step(1/60);
+ assert.equal(ctx.game.events.findLast(event=>event.type==='combat-end').outcome,'victory');
  assert.equal(ctx.combat.winner,0);assert.equal(towerFor(s,0).level,2);assert.equal(towerFor(s,0).wins,1);assert.deepEqual(s.garage,original);
  const next=structuredClone(towerFor(s,0));bettingSave();assert.deepEqual(bettingLoad().towers,s.towers);close(dom);
  dom=setup(s,next);assert.equal(ctx.robots.length,3);assert.equal(ctx.robots[0].segmentCount,ctx.robots[0].segmentTotal);assert.equal(ctx.towerGarage[0].stats.reduce((a,b)=>a+b,0),10);

@@ -31,7 +31,7 @@ test('mascot renders in both modes, keeps its own visibility and uses shared hin
   const images=[];win.Image=class{constructor(){this.naturalWidth=783;this.naturalHeight=512;images.push(this);}set src(value){this.url=value;}};
   Object.assign(ctx,{root:win.document.querySelector('#root'),stage:win.document.querySelector('.tag7hop-stage'),mode,betting:{players:[{name:'Лис'}]},towerPlayer:0,combat:{finished:false},startup:{phase:'running'},paused:false,settingsOpen:false,orientationBlocked:false});
   ctx.root.__disposeTag=()=>{};
-  initializeStreamerMascot({lines:{victory:['win {fighter}','winner {fighter}'],knockout:['out {fighter}'],death:['dead {fighter}'],critical:['hit {fighter}'],idle:['idle']},random:()=>0});initializeHints();images[0].onload();
+  initializeStreamerMascot({lines:{defeat:['loss {fighter}','retry {fighter}'],draw:['draw'],victory:['win {fighter}','winner {fighter}'],knockout:['out {fighter}'],death:['dead {fighter}'],critical:['hit {fighter}'],idle:['idle']},random:()=>0});initializeHints();images[0].onload();
   const button=ctx.root.querySelector('#streamer-mascot-toggle'),box=ctx.root.querySelector('#streamer-mascot');
   assert.equal(box.parentElement,ctx.stage,'mascot stays inside the arena on both device layouts');
   assert.equal(button.parentElement,ctx.stage,'visibility toggle follows the same arena anchor');
@@ -66,6 +66,32 @@ test('mascot renders in both modes, keeps its own visibility and uses shared hin
   }
   assert.deepEqual(lines,mode==='tower'?['out ИИ 1','dead ИИ 2','winner Лис']:['out B','dead C','winner A']);
   assert.equal(ctx.streamerMascot.hasRequiredAnnouncements(),false);
+  // Defeat keeps the player's live name and must not fall back to draw copy.
+  if(mode==='tower'){
+   ctx.streamerMascot.reset();
+   emitGameEvent('robot-immobilized',{robot:0,reason:'потерял сознание'});
+   emitGameEvent('combat-end',{winner:null,outcome:'defeat',loser:0});
+   const announcements=[];let prior=null;
+   for(let i=0;i<60;i++){
+    ctx.streamerMascot.sync(.1,43000+i*100);
+    const caption=box.querySelector('.streamer-quip');
+    if(!caption.hidden&&caption.textContent!==prior){
+     prior=caption.textContent;announcements.push(prior);
+     assert.equal(caption.querySelector('.streamer-fighter').textContent,'Лис');
+    }
+   }
+   assert.deepEqual(announcements,['out Лис','loss Лис']);
+   assert.equal(ctx.streamerMascot.hasRequiredAnnouncements(),false);
+   ctx.streamerMascot.reset();
+   emitGameEvent('combat-end',{winner:null,outcome:'defeat',loser:0});
+   ctx.streamerMascot.sync(.1,50000);ctx.streamerMascot.sync(.1,50100);
+   assert.equal(box.querySelector('.streamer-quip').textContent,'retry Лис');
+   assert.equal(box.dataset.emotion,'annoyed');
+  }else{
+   ctx.streamerMascot.reset();emitGameEvent('combat-end',{winner:null,outcome:'draw'});
+   ctx.streamerMascot.sync(.1,50000);ctx.streamerMascot.sync(.1,50100);
+   assert.equal(box.querySelector('.streamer-quip').textContent,'draw');
+  }
   button.click();assert.equal(box.hidden,true);assert.equal(button.dataset.hint,'Показать маскота');
   assert.equal(win.localStorage.getItem('biovshi.streamer-hidden.v1'),'true');
   const count=calls.length;emitGameEvent('segment-broken',{});ctx.streamerMascot.sync(.1,500);assert.equal(calls.length,count);

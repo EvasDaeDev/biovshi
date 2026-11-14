@@ -333,8 +333,12 @@ export function combatAttacks() {
     ctx.combat.pending.fill(null); // Замахи больше не рисуются после финального удара.
     if(mobile.length===1&&ctx.combat.winner!==null)mobile[0].celebrateVictory();
     if(ctx.mode==='tower')settleTower(ctx.combat.winner);else bettingSettle(ctx.combat.winner);
+    // A tower attempt ends in defeat when its player drops, even if AI remain.
+    const outcome=ctx.mode==='tower'&&ctx.combat.winner!==0?'defeat':ctx.combat.winner===null?'draw':'victory';
     note('combat-end', {
-      winner: ctx.combat.winner
+      winner: ctx.combat.winner,
+      outcome,
+      loser: outcome==='defeat'?0:null
     });
     // Итоги будут показаны после трёх секунд работы существующего игрового цикла.
   }
