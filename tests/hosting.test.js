@@ -17,7 +17,10 @@ test('entry, styles and all module imports resolve inside a GitHub Pages reposit
     assert.ok(url.href.startsWith(base.href),`Resource escapes repository: ${url.href}`);
     if(visited.has(url.href))return;
     visited.add(url.href);
-    const file=path.join(root,decodeURIComponent(url.pathname.slice(base.pathname.length)));
+    const relative=decodeURIComponent(url.pathname.slice(base.pathname.length));
+    const sourceFile=path.join(root,relative);
+    // Vite serves public/ at the site root and copies it unchanged into dist/.
+    const file=fs.existsSync(sourceFile)?sourceFile:path.join(root,'public',relative);
     assert.ok(fs.statSync(file).isFile(),`Missing resource: ${url.href}`);
     if(file.endsWith('.js')){
       const code=fs.readFileSync(file,'utf8');
