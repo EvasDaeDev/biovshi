@@ -7,6 +7,7 @@ import {openMenu} from '../tower/ui.js';
 export function initializeSettings() {
   const root=ctx.root,doc=root.ownerDocument;
   const panel=root.querySelector('#arena-settings'),button=root.querySelector('#arena-settings-button');
+  panel.querySelector('#settings-build-version').textContent=typeof __BUILD_VERSION__==='string'?__BUILD_VERSION__:'0.1.0+dev';
   button.innerHTML=uiIcon('settings');
   const controlMode=root.querySelector('#tower-control-mode');
   ctx.towerControlMode=loadControlMode(winStorage(doc));
@@ -19,7 +20,8 @@ export function initializeSettings() {
   const creditsView=panel.querySelector('#arena-credits-view');
   const creditsBack=panel.querySelector('#arena-credits-back');
   const settingsHeader=panel.querySelector('header');
-  const settingsMain=[...panel.querySelector('.settings-panel').children].filter(node=>node!==settingsHeader&&node!==creditsView);
+  const copyright=panel.querySelector('.settings-copyright');
+  const settingsMain=[...panel.querySelector('.settings-panel').children].filter(node=>node!==settingsHeader&&node!==creditsView&&node!==copyright);
   const showCredits=visible=>{
     creditsView.hidden=!visible;
     for(const node of settingsMain)node.hidden=visible;

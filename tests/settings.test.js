@@ -109,7 +109,7 @@ test('Settings preserves an existing manual pause and closes with Escape or back
   assert.equal(document.getElementById('arena-settings').hidden,true);dom.window.close();
 });
 
-test('rules are removed, graphics and diagnostics live in Settings and the rectangular viewport contains a square arena',()=>{
+test('rules are removed, graphics and display options live in Settings and the rectangular viewport contains a square arena',()=>{
   const dom=setup();assert.equal(document.getElementById('tag7hop-info'),null);
   assert.equal(document.querySelectorAll('.render-diagnostics').length,1);
   assert.ok(document.querySelector('#arena-settings-content .render-diagnostics'));
@@ -123,9 +123,9 @@ test('rules are removed, graphics and diagnostics live in Settings and the recta
   assert.equal(ctx.root.querySelector('.atmosphere-controls #graphics-quality'),null);
   assert.ok(ctx.root.querySelector('#arena-settings #graphics-quality'));
   assert.equal(ctx.root.querySelectorAll('#graphics-quality').length,1);
-  const output=document.querySelector('.performance-details output');
-  ctx.diagnostics.last=0;ctx.diagnostics.samples={simulation:{ms:2,count:2}};ctx.updateDiagnostics(1000);
-  const before=output.textContent;open();ctx.updateDiagnostics(3000);assert.equal(output.textContent,before,'Settings retains the last active timing snapshot');close();
+  assert.equal(document.querySelector('.performance-details'),null);
+  assert.equal(ctx.diagnostics,null);assert.equal(ctx.updateDiagnostics,null);
+  assert.equal(timed('simulation',()=>42),42);
   ctx.root.__disposeTag();dom.window.close();
 });
 
