@@ -5,6 +5,7 @@ import { el } from './svg.js';
 import { bakeStaticLighting } from './atmosphere.js';
 import { loadTextureImage } from '../assets/preload.js';
 import { tintPixels } from './texture-tint.js';
+import { coolantRgb } from '../utils/colors.js';
 
 const tintCache = new Map();
 const TILE_CM = 100; // One complete texture repeats every metre in world coordinates.
@@ -73,6 +74,14 @@ export async function applyTextures() {
     }
   }
   const liquidUrl=assetUrl(ASSETS.textures.liquids);
+  // Recolour once at load time. Full-strength luminance tint removes the red hue
+  // while retaining the sprite's texture and alpha; it is not RGB multiplication.
+  if(liquidUrl&&ctx.textureAssets?.liquids?.loaded!==false)try {
+    const coolant=await Promise.all([0,1/3,2/3,1].map(level=>
+      tintedTexture(liquidUrl,`rgb(${coolantRgb(level).join(' ')})`,1)));
+    if(svg!==ctx.svg||!svg.isConnected||ctx.disposed)return;
+    ctx.coolantAtlasSources=coolant;
+  } catch(error) {console.warn('Coolant texture:',error);}
   if(liquidUrl&&ctx.textureAssets?.liquids?.loaded!==false)try {
     const dry=await Promise.all([1/3,2/3,1].map(level=>
       tintedTexture(liquidUrl,CONFIG.oil.spriteDryColor,level*CONFIG.oil.spriteDryStrength)));

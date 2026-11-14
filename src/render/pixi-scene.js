@@ -33,7 +33,7 @@ export class PixiArena {
     this.owned.add(texture);return texture;
   }
   async prepareSources() {
-    const urls=[...Object.entries(ASSETS.textures).filter(([key])=>/^robot|liquids|hat/.test(key)).map(([,file])=>assetUrl(file)),...(ctx.liquidAtlasSources??[])];
+    const urls=[...Object.entries(ASSETS.textures).filter(([key])=>/^robot|liquids|hat/.test(key)).map(([,file])=>assetUrl(file)),...(ctx.liquidAtlasSources??[]),...(ctx.coolantAtlasSources??[])];
     await Promise.all([...new Set(urls.filter(Boolean))].map(async url=>{
       try{this.sources.set(url,this.texture(await loadTextureImage(url)));}catch{/* Vector fallback is already prepared by the game. */}
     }));

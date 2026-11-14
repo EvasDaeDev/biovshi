@@ -13,9 +13,11 @@ export function liquidVariant(seed,index,owner) {
   };
 }
 
-export function createLiquidSprite(owner,x,y,radius) {
-  const url=assetUrl(ASSETS.textures.liquids);
-  if(!url||ctx.textureAssets?.liquids?.loaded===false)return null;
+export function createLiquidSprite(owner,x,y,radius,fluid='blood') {
+  const sources=fluid==='coolant'?ctx.coolantAtlasSources:ctx.liquidAtlasSources;
+  const url=sources?.[0]??assetUrl(ASSETS.textures.liquids);
+  // If blue atlases cannot be prepared, use the blue vector fallback, never red.
+  if(!url||ctx.textureAssets?.liquids?.loaded===false||fluid==='coolant'&&!sources?.length)return null;
   const variant=liquidVariant(ctx.seed,ctx.combat.oilDrops.length,owner);
   const col=variant.index%CONFIG.oil.spriteColumns,row=Math.floor(variant.index/CONFIG.oil.spriteColumns);
   const node=el('g',{
@@ -27,11 +29,11 @@ export function createLiquidSprite(owner,x,y,radius) {
     viewBox:`${col*64} ${row*64} 64 64`,overflow:'hidden',preserveAspectRatio:'none',
   },node);
   const image=el('image',{
-    href:ctx.liquidAtlasSources?.[0]??url,x:0,y:0,
+    href:url,x:0,y:0,
     width:CONFIG.oil.spriteColumns*64,height:CONFIG.oil.spriteRows*64,
     style:CONFIG.rendering.texturePixelated?'image-rendering:crisp-edges;image-rendering:pixelated':'',
   },viewport);
-  const sprite={node,viewport,image,fallback:null,url,owner,radius,dry:0};
+  const sprite={node,viewport,image,fallback:null,url,owner,radius,dry:0,fluid};
   image.addEventListener('error',()=>{
     sprite.failed=true;
     if(!sprite.fallback)sprite.fallback=el('circle',{cx:0,cy:0},node);
@@ -48,7 +50,7 @@ export function createLiquidSprite(owner,x,y,radius) {
 
 function paintFallback(sprite) {
   attr(sprite.fallback,'r',sprite.paintedRadius===undefined?sprite.radius:sprite.radius.toFixed(2));
-  attr(sprite.fallback,'fill',oilColor(sprite.owner,.9,sprite.dry));
+  attr(sprite.fallback,'fill',oilColor(sprite.owner,.9,sprite.dry,sprite.fluid));
 }
 
 export function paintLiquidSprite(drop,radius,dry) {
@@ -62,7 +64,7 @@ export function paintLiquidSprite(drop,radius,dry) {
   }
   sprite.radius=radius;
   sprite.dry=dry;
-  const sources=ctx.liquidAtlasSources??[sprite.url];
+  const sources=(sprite.fluid==='coolant'?ctx.coolantAtlasSources:ctx.liquidAtlasSources)??[sprite.url];
   const bucket=Math.min(sources.length-1,Math.round(dry*(sources.length-1)));
   if(sprite.source!==sources[bucket]) {
     attr(sprite.image,'href',sources[bucket]);

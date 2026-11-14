@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {CONFIG} from '../src/config.js';
+import {createOilDrop,paintOil,updateOilLeaks,paintDetachedAnatomy} from '../src/render/effects.js';
+import {oilColor} from '../src/utils/colors.js';
 import {ctx} from '../src/game/state.js';
 import {initializeGame} from '../src/game/initialize.js';
 import {patientCombatStats} from '../src/game/patients.js';
@@ -133,4 +135,47 @@ test('hints open by tap and keyboard, refresh while visible, dismiss outside and
   select.value='4';select.dispatchEvent(new Event('change'));near(patientCombatStats(0).effective[0],4.24);
   assert.ok(ctx.towerRun.stats.every(Number.isInteger));
  }finally{tower.close();}
+});
+
+
+test('leaks from the same patient retain the broken segment fluid, including after death',()=>{
+ const f=setup();try{
+  const r=ctx.robots[0];r.damage('arm--1-upper',1,3);r.damage('arm-1-lower',1,3);
+  assert.equal(ctx.combat.oilLeaks.find(l=>l.key==='arm--1-upper').fluid,'coolant');
+  assert.equal(ctx.combat.oilLeaks.find(l=>l.key==='arm-1-lower').fluid,'blood');
+  ctx.game.time=Math.max(...ctx.combat.oilLeaks.map(l=>l.nextAt))+.01;updateOilLeaks();
+  const drops=ctx.combat.oilDrops;assert.ok(drops.some(d=>d.fluid==='coolant'));assert.ok(drops.some(d=>d.fluid==='blood'));
+  const coolant=drops.find(d=>d.fluid==='coolant');
+  assert.equal(coolant.sprite,null,'failed atlas preparation falls back to blue geometry');
+  assert.equal(coolant.node.getAttribute('fill'),oilColor(0,.9,0,'coolant'));
+  const seed=ctx.seed;paintOil();assert.equal(ctx.seed,seed,'colour rendering does not consume combat randomness');
+  r.damage('head',1,6);assert.deepEqual(f.session.garage[0].prosthetics,[]);
+  ctx.game.time=coolant.born+CONFIG.oil.drySec+1;paintOil();
+  assert.equal(coolant.fluid,'coolant');assert.equal(coolant.node.getAttribute('fill'),oilColor(0,.9,1,'coolant'));
+ }finally{f.close();}
+});
+
+test('blue sprites keep their own drying atlases and blue error fallback',()=>{
+ const f=setup([]);try{
+  ctx.liquidAtlasSources=['blood-fresh','blood-early','blood-late','blood-dry'];
+  ctx.coolantAtlasSources=['blue-fresh','blue-early','blue-late','blue-dry'];
+  createOilDrop(0,350,350,3,'coolant');const blue=ctx.combat.oilDrops.at(-1);
+  createOilDrop(0,350,350,3);const blood=ctx.combat.oilDrops.at(-1);
+  assert.equal(blue.sprite.image.getAttribute('href'),'blue-fresh');assert.equal(blood.sprite.image.getAttribute('href'),'blood-fresh');
+  ctx.game.time+=CONFIG.oil.drySec+1;paintOil();
+  assert.equal(blue.sprite.image.getAttribute('href'),'blue-dry');assert.equal(blood.sprite.image.getAttribute('href'),'blood-dry');
+  blue.sprite.image.dispatchEvent(new Event('error'));
+  assert.equal(blue.sprite.fallback.getAttribute('fill'),oilColor(0,.9,1,'coolant'));
+  blue.sprite.image.dispatchEvent(new Event('load'));assert.equal(blue.sprite.fallback.getAttribute('display'),'none');
+ }finally{f.close();}
+});
+
+test('detached mixed limbs leave separate biological and prosthetic puddles exactly once',()=>{
+ const f=setup(['arm--1-lower']);try{
+  ctx.robots[0].damage('arm--1-upper',1,3);
+  assert.deepEqual(ctx.combat.detached[0].pieces.map(p=>p.fluid),['blood','coolant']);
+  ctx.game.time+=3;paintDetachedAnatomy();
+  assert.deepEqual(new Set(ctx.combat.oilDrops.map(d=>d.fluid)),new Set(['blood','coolant']));
+  const count=ctx.combat.oilDrops.length;paintDetachedAnatomy();assert.equal(ctx.combat.oilDrops.length,count);
+ }finally{f.close();}
 });

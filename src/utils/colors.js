@@ -10,8 +10,16 @@ export function limbColor(limbs, total = 4) {
   if (q >= 0.5) return mixColor(ctx.WARNING_LIMB_COLOR, ctx.SAFE_LIMB_COLOR, (q - .5) / .5);
   return mixColor(ctx.CRITICAL_LIMB_COLOR, ctx.WARNING_LIMB_COLOR, q / .5);
 }
-// Fresh dark red slowly settles into a muted brown-black stain.
-export function oilColor(robotId, alpha = .9, age = 0) {
+// Both coolant atlases and vector fallback share the same drying palette.
+export function coolantRgb(age=0){
+  const q=clamp(age,0,1);
+  const rgb=hex=>[1,3,5].map(index=>parseInt(hex.slice(index,index+2),16));
+  const fresh=rgb(CONFIG.oil.coolantColor),dry=rgb(CONFIG.oil.coolantDryColor);
+  return fresh.map((value,index)=>Math.round(value+(dry[index]-value)*q));
+}
+// Biological fluid stays dark red and slowly dries to brown-black.
+export function oilColor(robotId, alpha = .9, age = 0, fluid = 'blood') {
+  if(fluid==='coolant')return `rgba(${coolantRgb(age).join(',')},${alpha})`;
   const q=clamp(age,0,1),offset=ctx.OIL_HUES[robotId % ctx.OIL_HUES.length];
   const hue=(CONFIG.oil.baseHue+offset+(8-offset*.65)*q)%360;
   const saturation=CONFIG.oil.saturation+(45-CONFIG.oil.saturation)*q;
