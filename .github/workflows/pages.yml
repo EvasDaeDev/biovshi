@@ -4,11 +4,13 @@ on:
   push:
     branches: [main, master]
   workflow_dispatch:
+  workflow_run:
+    workflows: [Request test preview deployment]
+    branches: [experiment/tower-bosses]
+    types: [completed]
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: github-pages
@@ -16,30 +18,76 @@ concurrency:
 
 jobs:
   build:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out stable game
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: stable
+          persist-credentials: false
+      - name: Check out test game
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || 'experiment/tower-bosses' }}
+          path: preview
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            stable/package-lock.json
+            preview/package-lock.json
       - uses: actions/configure-pages@v5
-      - run: npm ci
-      - name: Run tests with per-test timeout
+      - name: Install stable dependencies
+        working-directory: stable
+        run: npm ci
+      - name: Test stable game
+        working-directory: stable
         run: npm test -- --test-timeout=30000
         timeout-minutes: 5
-      - run: npm run build
+      - name: Build stable game
+        working-directory: stable
+        run: npm run build
+      - name: Install test dependencies
+        working-directory: preview
+        run: npm ci
+      - name: Test experimental game and isolated storage
+        working-directory: preview
+        run: npm test -- --test-timeout=30000
+        timeout-minutes: 5
+      - name: Build experimental game with bosses every second floor
+        working-directory: preview
+        run: npm run build -- --mode test
+      - name: Assemble both versions
+        run: |
+          mkdir -p site/test
+          cp -a stable/dist/. site/
+          cp -a preview/dist/. site/test/
+          touch site/.nojekyll
+          node preview/scripts/check-pages-preview.mjs site
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: site
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy
+      - name: Deploy both versions
         id: deployment
         uses: actions/deploy-pages@v4

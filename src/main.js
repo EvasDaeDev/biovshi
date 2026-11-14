@@ -1,3 +1,4 @@
+import {SESSION_STORAGE} from './build-channel.js';
 import {setPaused} from './ui/controls.js';
 import {randomArenaId} from './game/arenas.js';
 import {installTowerUI,openMenu} from './tower/ui.js';
@@ -54,7 +55,7 @@ async function boot(){
  let loading=document.getElementById('texture-loading');
  if(!loading){loading=document.createElement('div');loading.id='texture-loading';loading.textContent='Подготовка арены…';loading.setAttribute('role','status');document.body.prepend(loading);}
  root.inert=true;const textures=await preloadTextures();if(cancelled)return;
- ctx.BET_STORAGE='biovshi.local-totalizator.v1';const session=bettingLoad();
+ ctx.BET_STORAGE=SESSION_STORAGE;const session=bettingLoad();
  ctx.switchArena=async arenaId=>{
    if(arenaId===ctx.arenaId)return;
    const session=ctx.betting,expanded=ctx.arenaExpanded;

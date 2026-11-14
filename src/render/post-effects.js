@@ -1,6 +1,7 @@
+import {storageKey} from '../build-channel.js';
 import { CONFIG } from '../config.js';
 
-export const POST_EFFECTS_STORAGE='biovshi.post-effects.v1';
+export const POST_EFFECTS_STORAGE=storageKey('biovshi.post-effects.v1');
 export function readPostEffectsPreference() {
   try {
     const saved=globalThis.localStorage?.getItem(POST_EFFECTS_STORAGE);

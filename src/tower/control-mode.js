@@ -1,5 +1,6 @@
+import {storageKey} from '../build-channel.js';
 import {ctx} from '../game/state.js';
-const STORAGE='biovshi.tower-control.v1';
+const STORAGE=storageKey('biovshi.tower-control.v1');
 export function loadControlMode(storage=globalThis.localStorage){
   try{return storage?.getItem(STORAGE)==='direction'?'direction':'control';}catch{return 'control';}
 }

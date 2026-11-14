@@ -1,3 +1,4 @@
+import {storageKey} from '../build-channel.js';
 import {createStreamerMotion} from './streamer-motion.js';
 import {ctx} from '../game/state.js';
 import {onGameEvent} from '../game/event-bus.js';
@@ -5,7 +6,7 @@ import {fighterLabel} from '../game/patients.js';
 import {quipCategory,createQuipSelector,createSpeechPacer,renderQuip} from './streamer-quips.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
 
-const STORAGE='biovshi.streamer-hidden.v1';
+const STORAGE=storageKey('biovshi.streamer-hidden.v1');
 // Match the chin-to-collar placement in girl_prv.png for every expression.
 const HEAD_OFFSET_Y=22;
 const SHOULDER_OFFSET_Y=20;

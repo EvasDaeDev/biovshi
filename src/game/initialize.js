@@ -1,3 +1,4 @@
+import {SESSION_STORAGE} from '../build-channel.js';
 import {initializeStreamerMascot} from '../ui/streamer-mascot.js';
 import {towerEnemyCount} from '../tower/model.js';
 import {arenaDefinition} from './arenas.js';
@@ -442,7 +443,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   initializeOrientation();
   ctx.frameId = requestAnimationFrame(frame);
   // Local pari-mutuel ledger. All values are whole virtual chips.
-  ctx.BET_STORAGE = 'biovshi.local-totalizator.v1';
+  ctx.BET_STORAGE = SESSION_STORAGE;
   ctx.betOverlay = ctx.root.querySelector('#bet-overlay');
   ctx.betContent = ctx.root.querySelector('#bet-content');
   ctx.betTitle = ctx.root.querySelector('#bet-title');

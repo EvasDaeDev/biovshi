@@ -1,9 +1,10 @@
+import {storageKey} from '../build-channel.js';
 import {patientSkin} from '../game/patients.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { onGameEvent } from '../game/event-bus.js';
 import { ctx } from '../game/state.js';
 
-const STORAGE='biovshi.audio.v1';
+const STORAGE=storageKey('biovshi.audio.v1');
 const DEFAULTS={sounds:50,music:50};
 const rawFiles=new Map(),decodedFiles=new WeakMap();
 const vocalGainCache=new WeakMap();

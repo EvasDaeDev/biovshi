@@ -6,8 +6,8 @@ import {fileURLToPath} from 'node:url';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
 
-test('entry, styles and all module imports resolve inside a GitHub Pages repository subpath', () => {
-  const base=new URL('https://example.github.io/biovshi/');
+for(const suffix of ['', 'test/'])test(`entry, styles and all module imports resolve inside /biovshi/${suffix}`, () => {
+  const base=new URL('https://example.github.io/biovshi/'+suffix);
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const entries=[...html.matchAll(/<(?:link|script)\b[^>]*\b(?:href|src)="([^"]+)"/g)].map(m=>m[1]);
   assert.ok(entries.length>=5);
