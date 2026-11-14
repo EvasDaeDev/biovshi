@@ -14,6 +14,10 @@ import {PORTRAIT_BONES,paintPatientPortrait,tintPortraitPixels,preparePatientPor
 import {TELEMETRY_COLOURS} from '../src/ui/telemetry-colours.js';
 import {segmentDisplayState} from '../src/ui/telemetry.js';
 import {paintTelemetry} from '../src/ui/paint-telemetry.js';
+import {installTowerUI} from '../src/tower/ui.js';
+import {initializeModalFocus} from '../src/ui/modal-focus.js';
+import {betCommit} from '../src/betting/ledger.js';
+import {bettingCancel} from '../src/betting/ui.js';
 
 function setup(start=true){
   const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://settings.test/',pretendToBeVisual:true});
@@ -27,6 +31,60 @@ function setup(start=true){
 }
 const open=()=>document.querySelector('#arena-settings-button').click();
 const close=()=>document.querySelector('#arena-settings-close').click();
+
+test('Settings opens above every game sheet, keeps its focus and returns to the same sheet',async()=>{
+ for(const id of ['launch-overlay','tower-preparation','bet-overlay','gladiator-results']){
+  const dom=setup();installTowerUI();
+  for(const other of ['launch-overlay','tower-preparation','bet-overlay','gladiator-results'])document.getElementById(other).hidden=other!==id;
+  initializeModalFocus();
+  const sheet=document.getElementById(id),settings=document.getElementById('arena-settings-button');
+  assert.equal(Boolean(settings.closest('[inert]')),false);
+  assert.equal(Boolean(settings.inert),false);assert.equal(ctx.button.inert,true);
+  let expanded=false;const expandButton=document.getElementById('arena-expand-button');
+  expandButton.onclick=()=>{expanded=true;};expandButton.click();assert.equal(expanded,false);
+  open();await Promise.resolve();
+  assert.equal(ctx.settingsOpen,true);assert.equal(sheet.hidden,false);
+  assert.equal(document.activeElement.id,'arena-settings-close');
+  assert.ok(sheet.inert||sheet.closest('.tag7hop-layout').inert);
+  close();await Promise.resolve();
+  assert.equal(sheet.hidden,false);assert.equal(ctx.settingsOpen,false);
+  assert.equal(Boolean(settings.inert),false);assert.equal(ctx.button.inert,true);
+  ctx.root.__disposeTag();dom.window.close();
+ }
+});
+
+test('Settings menu exit confirms cancellation, refunds bets and restores patient progression only after acceptance',async()=>{
+ const dom=setup();installTowerUI();document.getElementById('launch-overlay').hidden=true;
+ bettingCancel();
+ const session=ctx.betting,before=structuredClone(session.garage);
+ betCommit(session,[{player:0,robot:0,amount:20},{player:1,robot:1,amount:10}]);
+ session.garage[0].stats=[4,2,3];
+ initializeModalFocus();open();await Promise.resolve();
+ let prompts=0;globalThis.confirm=()=>{prompts++;return false;};
+ document.getElementById('settings-main-menu').click();
+ assert.equal(prompts,1);assert.equal(ctx.settingsOpen,true);assert.equal(ctx.paused,true);
+ assert.equal(ctx.startup.phase,'running');assert.equal(session.players[0].balance,80);
+ assert.equal(document.getElementById('launch-overlay').hidden,true);
+ globalThis.confirm=()=>{prompts++;return true;};
+ document.getElementById('settings-main-menu').click();await Promise.resolve();
+ assert.equal(prompts,2);assert.equal(ctx.settingsOpen,false);assert.equal(ctx.paused,true);
+ assert.equal(ctx.startup.phase,'menu');assert.equal(session.phase,'betting');
+ assert.deepEqual(session.players.map(p=>p.balance),[100,100]);assert.deepEqual(session.garage,before);
+ assert.equal(document.getElementById('launch-overlay').hidden,false);
+ assert.equal(document.getElementById('launch-overlay').inert,false);
+ assert.equal(document.activeElement.id,'launch-tower');
+ ctx.root.__disposeTag();dom.window.close();
+});
+
+test('Settings menu exit after a finished battle needs no cancellation confirmation',()=>{
+ const dom=setup();installTowerUI();document.getElementById('launch-overlay').hidden=true;
+ ctx.combat.finished=true;ctx.resultsPanel.hidden=false;
+ globalThis.confirm=()=>{throw Error('Finished battle must not ask to cancel');};
+ open();document.getElementById('settings-main-menu').click();
+ assert.equal(ctx.settingsOpen,false);assert.equal(ctx.resultsPanel.hidden,true);
+ assert.equal(document.getElementById('launch-overlay').hidden,false);assert.equal(ctx.paused,true);
+ ctx.root.__disposeTag();dom.window.close();
+});
 
 test('Settings pauses an active fight, blocks background controls and restores speed and clock without catch-up',()=>{
   const dom=setup();toggleSpeed();const seed=ctx.seed,time=ctx.game.time,round=ctx.round.elapsedSec;
@@ -177,3 +235,4 @@ test('phone field uses logical layout sizes even if Safari reports unscaled clie
  assert.ok(ctx.fieldHeight*ctx.layoutScale+60*ctx.layoutScale<300);
  ctx.root.__disposeTag();dom.window.close();
 });
+

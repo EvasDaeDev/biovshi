@@ -25,12 +25,29 @@ function setup(s,tower,arenaId='ward'){
  for(const key of ['document','localStorage','Event'])globalThis[key]=dom.window[key];
  globalThis.matchMedia=()=>({matches:false});globalThis.ResizeObserver=class{observe(){}disconnect(){}};globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
  ctx.arenaRenderer=null;ctx.towerPlayer=0;
+ globalThis.confirm=()=>true;
  initializeGame({session:s,entry:'tower',tower:structuredClone(tower),arenaId});
  // Pixi copies the SVG handler before installTowerUI; exercise that exact order.
  const canvas=document.createElement('canvas');canvas.id='copied-arena';canvas.onclick=ctx.svg.onclick;ctx.svg.after(canvas);
  installTowerUI();return dom;
 }
 function close(dom){ctx.root.__disposeTag();dom.window.close();ctx.mode='spectator';}
+test('leaving a spawning or running tower battle confirms cancellation without recording defeat',()=>{
+ for(const phase of ['spawning','running']){
+  const s=betNewSession(['Первый'],100),dom=setup(s,towerFor(s,0));
+  document.querySelector('#launch-overlay').hidden=true;
+  document.querySelector('#tower-fight').click();if(phase==='running')advanceStartup(10);
+  const before=structuredClone(towerFor(s,0)),time=ctx.game.time;
+  globalThis.confirm=()=>false;
+  assert.equal(openMenu(),false);assert.equal(ctx.startup.phase,phase);
+  assert.equal(document.querySelector('#launch-overlay').hidden,true);
+  globalThis.confirm=()=>true;
+  assert.equal(openMenu(),true);assert.equal(ctx.startup.phase,'menu');assert.equal(ctx.paused,true);
+  assert.deepEqual(towerFor(s,0),before);assert.equal(ctx.towerSettled,false);
+  step(1);advanceStartup(10);assert.equal(ctx.game.time,time);assert.equal(ctx.startup.phase,'menu');
+  close(dom);
+ }
+});
 test('rewards survive restart and defeat, are once per enemy per floor and isolated per player',()=>{
  const s=betNewSession(['Первый','Второй'],100);
  assert.equal(rewardTower(s,0,1,1),false);assert.equal(rewardTower(s,0,1,0),true);assert.equal(rewardTower(s,0,1,0),false);
@@ -283,3 +300,4 @@ test('tower carries restored android segments between floors and clears them for
   assert.deepEqual(completeTower(s,0,false).prosthetics,[]);
  }finally{ctx.root.__disposeTag();dom.window.close();}
 });
+

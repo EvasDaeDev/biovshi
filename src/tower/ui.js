@@ -2,7 +2,7 @@ import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {ctx} from '../game/state.js';
 import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount} from './model.js';
 import {bettingSave} from '../betting/storage.js';
-import {bettingSetup} from '../betting/ui.js';
+import {bettingSetup,bettingCancel,bettingReadDraft} from '../betting/ui.js';
 import {patientRecovery,validStats,earnedStats,redistributeStat,statMultiplier,critChance} from '../garage/model.js';
 import {startSpawnSequence} from '../game/session.js';
 import {onGameEvent} from '../game/event-bus.js';
@@ -27,12 +27,20 @@ export function refreshMenu(){
   ctx.root.querySelector('#launch-setup').textContent=s?'НОВАЯ ИГРА':'СОЗДАТЬ ИГРУ';
 }
 export function openMenu(){
+  const active=['spawning','running'].includes(ctx.startup.phase)&&!ctx.combat.finished;
+  if(active&&!confirm('Вернуться в главное меню? Текущий бой будет отменён.'))return false;
+  if(active)bettingCancel();
+  if(!ctx.betOverlay.hidden&&ctx.betContent.querySelector('#bet-stakes-form')){
+    ctx.betDraft={session:ctx.betting,round:ctx.betting.round,bets:bettingReadDraft(),arenaId:ctx.selectedArenaId};
+  }
+  ctx.startup.phase='menu';
   ctx.clearTowerInput?.();ctx.clearTowerDestination?.();ctx.paused=true;ctx.audio?.sync();
   ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;
   ctx.root.querySelector('#tower-preparation').hidden=true;
   ctx.root.querySelector('#tower-controls').hidden=true;
   refreshMenu();ctx.root.querySelector('#launch-overlay').hidden=false;
   ctx.root.querySelector('#launch-tower').focus();
+  return true;
 }
 export function towerPreparation(){
   const t=towerFor(ctx.betting,ctx.towerPlayer),panel=ctx.root.querySelector('#tower-preparation');
@@ -132,3 +140,4 @@ export function installTowerUI(){
   ctx.speedButton.disabled=true;ctx.svg.onclick=null;ctx.svg.style.cursor='default';
   installTowerInput();towerPreparation();
 }
+

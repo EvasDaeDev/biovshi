@@ -1,4 +1,10 @@
 /* Patient identity follows the same rule on every paper surface. */
+/* Sheet backdrops leave the visible Settings button reachable. The actual
+   paper keeps hit testing, so it still covers the button when they overlap. */
+#robot-tag-hops-v22 :is(.launch-overlay,.bet-overlay,.gladiator-results) {pointer-events:none}
+#robot-tag-hops-v22 :is(.launch-paper,.bet-panel,.gladiator-results-card) {pointer-events:auto}
+#robot-tag-hops-v22 #settings-main-menu {display:block;width:100%;min-height:42px;margin-top:12px;cursor:pointer}
+#robot-tag-hops-v22 .settings-overlay {z-index:1800}
 #robot-tag-hops-v22 :is(.bet-panel,.gladiator-results-card,.settings-panel) .patient-name,
 #robot-tag-hops-v22 .bet-panel .patient-select {
  display:inline-block;background:#202219;color:inherit;border:1px solid #555643;
@@ -111,3 +117,4 @@
 #robot-tag-hops-v22 .patient-skills img.ui-icon{width:22px;height:22px;vertical-align:middle}
 #robot-tag-hops-v22 :is(.garage-stat-list label>span,#tower-stats label>span){display:inline-flex;align-items:center;gap:4px}
 #robot-tag-hops-v22 .tower-result-numbers img.chip-icon{font-size:.55em;vertical-align:.04em}
+
