@@ -1,3 +1,4 @@
+import {bossName} from '../boss/names.js';
 import {setPaused} from '../ui/controls.js';
 import {hasBoss} from '../boss/config.js';
 import {bossFloorReward} from '../boss/encounter.js';
@@ -48,9 +49,11 @@ export function openMenu(){
 export function towerPreparation(){
   const t=towerFor(ctx.betting,ctx.towerPlayer),panel=ctx.root.querySelector('#tower-preparation');
   ctx.startup.phase='tower-ready';ctx.resultsPanel.hidden=true;ctx.root.querySelector('#tower-controls').hidden=true;
-  panel.hidden=false;ctx.root.querySelector('#tower-prep-title').textContent=`БАШНЯ · ЭТАЖ ${t.level}`;
+  panel.hidden=false;const title=ctx.root.querySelector('#tower-prep-title');
+  title.classList.toggle('boss-floor-title',hasBoss(t));
+  title.textContent=hasBoss(t)?`${bossName(t.level)} · ЭТАЖ №${t.level}`:`БАШНЯ · ЭТАЖ ${t.level}`;
   ctx.root.querySelector('#tower-prep-name').textContent=ctx.betting.players[ctx.towerPlayer].name;
-  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?'БОСС · ':''}${formatChips(bossFloorReward(t))} ЗА ЛИЧНОЕ ВЫБИВАНИЕ</span></div>`;
+  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(bossFloorReward(t))} ЗА ЛИЧНОЕ ВЫБИВАНИЕ</span></div>`;
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   function renderSkills(){
     const snapshot=prostheticStatSnapshot(t),stats=snapshot.effective;
@@ -78,7 +81,8 @@ export function towerPreparation(){
 }
 export function updateTowerHud(){
   const count=ctx.ROBOT_COUNT-1,remaining=ctx.startup.phase==='running'?ctx.robots.filter(r=>r.id!==0&&r.mobile&&r.visible).length:count;
-  ctx.root.querySelector('#tower-wallet').innerHTML=`ЭТАЖ ${ctx.towerRun.level} · ПРОТИВНИКОВ ${remaining}/${count} · БАНК ${formatChips(ctx.betting.players[ctx.towerPlayer].balance)}`;
+  const floor=ctx.towerRun.level;
+  ctx.root.querySelector('#tower-wallet').innerHTML=`${hasBoss(ctx.towerRun)?'':`ЭТАЖ ${floor} · ПРОТИВНИКОВ ${remaining}/${count} · `}БАНК ${formatChips(ctx.betting.players[ctx.towerPlayer].balance)}`;
 }
 export function settleTower(winner){
   if(ctx.towerSettled)return;ctx.towerSettled=true;

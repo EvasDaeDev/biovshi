@@ -1,16 +1,16 @@
 /* One side-by-side layout at every width. fitInterface supplies logical size. */
 html body #robot-tag-hops-v22 {flex:none;max-width:none;--card-height:clamp(112px,calc((var(--game-height,100dvh) - 122px) / 4),164px)}
-#robot-tag-hops-v22 .tag7hop-layout {display:grid;grid-template-columns:var(--card-width) minmax(0,1fr) calc(var(--card-width) + 20px);gap:16px;align-items:start}
-#robot-tag-hops-v22 .tag7hop-sidebar-wrap {width:var(--card-width);max-height:calc(var(--game-height,100dvh) - 100px);overflow-y:auto;overflow-x:hidden}
-#robot-tag-hops-v22 .tag7hop-sidebar {display:flex;flex-direction:column;flex-wrap:nowrap;gap:8px}
+#robot-tag-hops-v22 .tag7hop-layout {display:grid;grid-template-columns:calc(var(--card-width) + 24px) minmax(0,1fr) calc(var(--card-width) + 20px);gap:16px;align-items:start}
+#robot-tag-hops-v22 .tag7hop-sidebar-wrap {box-sizing:border-box;width:100%;padding-right:4px;scrollbar-gutter:stable;max-height:calc(var(--game-height,100dvh) - 100px);overflow-y:auto;overflow-x:hidden}
+#robot-tag-hops-v22 .tag7hop-sidebar {flex:none;width:var(--card-width);display:flex;flex-direction:column;flex-wrap:nowrap;gap:8px}
 #robot-tag-hops-v22 .tag7hop-main {width:auto;min-width:0}
 #robot-tag-hops-v22 #bet-hud {grid-column:auto;display:flex;flex-direction:column;flex-wrap:nowrap;width:auto;max-height:calc(var(--game-height,100dvh) - 100px);overflow:auto;padding:0}
 #robot-tag-hops-v22 #bet-hud[hidden] {display:none}
 #robot-tag-hops-v22 .bet-hud-bank {flex-basis:auto;margin:0 0 12px}
 #robot-tag-hops-v22.compact-layout {--card-width:215px}
-#robot-tag-hops-v22.compact-layout .tag7hop-layout {grid-template-columns:215px minmax(0,1fr) 185px;gap:12px}
+#robot-tag-hops-v22.compact-layout .tag7hop-layout {grid-template-columns:239px minmax(0,1fr) 185px;gap:12px}
 #robot-tag-hops-v22.compact-layout .bet-hud-player {width:185px;min-width:185px}
-#robot-tag-hops-v22[data-game-mode="tower"] .tag7hop-layout {grid-template-columns:var(--card-width) minmax(0,1fr)}
+#robot-tag-hops-v22[data-game-mode="tower"] .tag7hop-layout {grid-template-columns:calc(var(--card-width) + 24px) minmax(0,1fr)}
 #robot-tag-hops-v22.cards-hidden .tag7hop-layout {grid-template-columns:minmax(0,1fr) calc(var(--card-width) + 20px)}
 #robot-tag-hops-v22.compact-layout.cards-hidden .tag7hop-layout {grid-template-columns:minmax(0,1fr) 185px}
 #robot-tag-hops-v22[data-game-mode="tower"].cards-hidden .tag7hop-layout {grid-template-columns:minmax(0,1fr)}

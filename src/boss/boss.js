@@ -1,3 +1,4 @@
+import {bossName} from './names.js';
 import {ctx} from '../game/state.js';
 import {bossStats} from './progression.js';
 import {createBossBehavior} from './behavior.js';
@@ -16,5 +17,5 @@ export function createBoss(id,start,encounter){
  return createRobot(id,bossSpawn(start,anatomy),{...anatomy,isBoss:true,behavior,
   ...(behavior?{intent:behavior.intent,resolveCombat:behavior.resolveCombat,planCombat:behavior.planCombat,strikePose:sweepPose,paint:paintBossTelegraph}:{}),scaleMultiplier:BOSS_CONFIG.scale,speedFactor:BOSS_CONFIG.speedFactor,turnFactor:BOSS_CONFIG.turnFactor,
   traumaEnabled:false,failFromOilLoss:destroyFromBloodLoss,combat:BOSS_CONFIG.combat,allowPounce:false,
-  skinParts:bossSkinParts(anatomy),skinKey:bossTextureKey(textureIndex),name:anatomy.variant.name,arenaLabel:'БОСС'});
+  skinParts:bossSkinParts(anatomy),skinKey:bossTextureKey(textureIndex),name:bossName(encounter.floor),arenaLabel:bossName(encounter.floor)});
 }

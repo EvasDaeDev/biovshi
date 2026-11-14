@@ -13,10 +13,10 @@ export function local(robotState, s, a, b) {
   };
 }
 export function headFrameAt(robotState, yaw) {
-  const p = robotState.local(robotState.chest, 14, 0);
+  const p = robotState.local(robotState.chest, 14, 0),neckOffset=14+25-(robotState.body?.headOffset??25);
   return {
-    x: p.x - Math.cos(yaw) * 14 * (robotState.scale??ctx.scale),
-    y: p.y - Math.sin(yaw) * 14 * (robotState.scale??ctx.scale),
+    x: p.x - Math.cos(yaw) * neckOffset * (robotState.scale??ctx.scale),
+    y: p.y - Math.sin(yaw) * neckOffset * (robotState.scale??ctx.scale),
     angle: yaw
   };
 }

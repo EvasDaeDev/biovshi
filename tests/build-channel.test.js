@@ -18,6 +18,8 @@ test('compiled test channel creates a floor-two boss and isolates sessions, sett
  assert.equal(channel.TEST_BUILD,true);assert.equal(channel.BOSS_FLOOR_INTERVAL,2);
  const {isBossFloor}=await import('./src/boss/config.js');
  const {bossStats}=await import('./src/boss/progression.js');
+ const {bossName}=await import('./src/boss/names.js');
+ assert.equal(bossName(2),'Потрошитель');assert.equal(bossName(4),'Костолом');assert.equal(bossName(24),'Перешив');assert.equal(bossName(26),'Потрошитель 2');
  for(const [floor,points] of [[2,3],[4,5],[6,7],[8,9]])assert.deepEqual(bossStats(floor),[points,points,points]);
  assert.deepEqual([1,2,3,4,5,6,10].filter(isBossFloor),[2,4,6,10]);
  const {startBossScenario}=await import('./scripts/boss-harness.mjs');

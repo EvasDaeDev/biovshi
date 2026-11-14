@@ -5,7 +5,7 @@ import {ik} from '../utils/math.js';
 import {limbKey} from '../robot/body.js';
 const boneCache=new Map();
 export function bossPortraitBones(body){
- const headSize=body.headSizeFactor??1,id=body.variant.id+':'+headSize;
+ const headSize=body.headSizeFactor??1,head=body.headOffset??25,id=body.variant.id+':'+headSize+':'+head;
  if(boneCache.has(id))return boneCache.get(id);
  const bones=[];
  for(const l of body.limbs){
@@ -16,7 +16,7 @@ export function bossPortraitBones(body){
   bones.push({key:limbKey(l)+'-upper',a,b:pose.joint},{key:limbKey(l)+'-lower',a:pose.joint,b:pose.end});
  }
  for(let i=body.spineSegments-1;i>=0;i--)bones.push({key:'spine-'+i,a:{x:-i*10,y:0},b:{x:-(i+1)*10,y:0}});
- bones.push({key:'head',a:{x:25-10*headSize,y:0},b:{x:25+10*headSize,y:0}});
+ bones.push({key:'head',a:{x:head-10*headSize,y:0},b:{x:head+10*headSize,y:0}});
  const result=bones.map(bone=>({...bone,part:body.skinParts[bone.key],matrix:skinMatrix(bone.a,bone.b,body.skinParts[bone.key])}));
  boneCache.set(id,result);return result;
 }

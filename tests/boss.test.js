@@ -1,3 +1,8 @@
+import {BOSS_NAMES,bossName} from '../src/boss/names.js';
+import {BOSS_FLOOR_INTERVAL} from '../src/build-channel.js';
+import {fighterLabel} from '../src/game/patients.js';
+import {towerPreparation,updateTowerHud} from '../src/tower/ui.js';
+import {paint} from '../src/render/frame.js';
 import {bossStats} from '../src/boss/progression.js';
 import {patientCombatStats} from '../src/game/patients.js';
 import {bossDamage} from '../src/boss/attacks.js';
@@ -26,9 +31,11 @@ for(const variant of BOSS_VARIANTS)for(const arena of ['ward','ring','annulus'])
  try{
   const r=f.boss;assert.equal(ctx.robots.length,2);assert.ok(r.isBoss);assert.equal(r.scale,f.player.scale*1.5);assert.equal(ctx.scale,CONFIG.robot.scale);
   const head=r.capsules.filter(c=>c.segment==='head'),normalHead=f.player.capsules.filter(c=>c.segment==='head');
-  head.forEach((c,i)=>assert.ok(Math.abs(c.r-normalHead[i].r*.75)<1e-9));
-  assert.ok(Math.abs(Math.hypot(head[1].a.x-head[0].a.x,head[1].a.y-head[0].a.y)-14*f.player.scale*.75)<1e-9);
-  const outer={x:head[0].a.x-Math.sin(r.angle)*10*f.player.scale,y:head[0].a.y+Math.cos(r.angle)*10*f.player.scale};
+  head.forEach((c,i)=>assert.ok(Math.abs(c.r-normalHead[i].r)<1e-9));
+  assert.ok(Math.abs(Math.hypot(head[1].a.x-head[0].a.x,head[1].a.y-head[0].a.y)-14*f.player.scale)<1e-9);
+  const {chest,headMotion}=r.actualPose,pivot={x:chest.x+Math.cos(chest.angle)*14*r.scale,y:chest.y+Math.sin(chest.angle)*14*r.scale};
+  assert.ok(Math.abs(Math.hypot(r.eye.x-pivot.x,r.eye.y-pivot.y)-(4+headMotion)*r.scale)<1e-9,'head sits next to the shoulder pivot');
+  const outer={x:head[0].a.x-Math.sin(r.angle)*15*f.player.scale,y:head[0].a.y+Math.cos(r.angle)*15*f.player.scale};
   assert.equal(pounceContactSegment(outer,outer,head,()=>true,0),null,'old outer head area no longer takes hits');
   assert.equal(pounceContactSegment(head[0].a,head[0].a,head,()=>true,0),'head');
   assert.equal(r.spineCount,variant.spineSegments);assert.equal(r.movementLimbs,variant.extra?6:4);assert.equal(r.limbIntegrity,1);
@@ -50,8 +57,9 @@ for(const variant of BOSS_VARIANTS)for(const arena of ['ward','ring','annulus'])
   r.paint(0);assert.doesNotMatch(r.actor.outerHTML,/NaN|undefined/);
   const matrix=actor=>actor.querySelector('[data-skin-segment="head"]').getAttribute('transform').match(/matrix\(([^)]+)\)/)[1].split(/\s+/).map(Number);
   f.player.paint(0);const hm=matrix(r.actor),nm=matrix(f.player.actor);
-  assert.ok(Math.abs(Math.hypot(hm[0],hm[1])/Math.hypot(nm[0],nm[1])-.75)<1e-9,'head texture is 75% of ordinary head');
-  const portrait=bossPortraitBones(r.body).find(b=>b.key==='head');assert.equal(portrait.b.x-portrait.a.x,10);
+  assert.ok(Math.abs(Math.hypot(hm[0],hm[1])/Math.hypot(nm[0],nm[1])-1)<1e-9,'head texture matches ordinary head');
+  const portrait=bossPortraitBones(r.body).find(b=>b.key==='head');assert.ok(Math.abs(portrait.b.x-portrait.a.x-20/1.5)<1e-9);
+  assert.equal((portrait.a.x+portrait.b.x)/2,18);
 
  }finally{f.close();}
 });
@@ -100,7 +108,7 @@ test('extra limbs sever independently and retain boss atlas mapping in detached 
 test('boss card conceals stats with skulls, hides trauma and describes destruction accurately',()=>{
  const f=startBossScenario({variant:'long'});
  try{
-  paintTelemetry();const c=ctx.cardNodes[1];assert.equal(c.card.dataset.boss,'true');assert.ok(c.trauma.hidden);assert.equal(c.strength.querySelectorAll('svg').length,1);assert.equal(c.speed.textContent,'');assert.match(c.card.textContent,/Босс · Длинный/);
+  paintTelemetry();const c=ctx.cardNodes[1];assert.equal(c.card.dataset.boss,'true');assert.ok(c.trauma.hidden);assert.equal(c.strength.querySelectorAll('svg').length,1);assert.equal(c.speed.textContent,'');assert.match(c.card.textContent,/Босс · Потрошитель/);
   for(const n of [c.strength,c.speed,c.maneuver])assert.match(n.parentElement.dataset.hint,/неизвестны/);
   assert.ok(!ctx.cardNodes[0].trauma.hidden);assert.match(ctx.cardNodes[0].strength.textContent,/\d/);
   f.boss.damage('head',0,100);ctx.telemetryDirty=true;paintTelemetry();assert.equal(c.action.textContent,'Уничтожен');
@@ -136,7 +144,7 @@ test('successive bosses gain two points per stat, apply ordinary effects and do 
     assert.deepEqual(ctx.towerGarage[1].stats,expected);
     assert.deepEqual(patientCombatStats(1,f.boss).effective,expected);
     assert.equal(f.boss.locomotion,.85);assert.equal(f.boss.turnAbility,.75);
-    assert.equal(f.boss.maxHp('head'),12);assert.equal(f.boss.body.headSizeFactor,.5);
+    assert.equal(f.boss.maxHp('head'),12);assert.equal(f.boss.body.headSizeFactor,1/1.5);
     const critical=Math.max(.30,critChance(points));
     assert.equal(bossDamage(critical-1e-6,points),2);assert.equal(bossDamage(critical,points),1);
     if(points>3)assert.ok(statMultiplier(points)>statMultiplier(3));
@@ -152,4 +160,33 @@ test('all boss strike styles share patient timing and a 0.9-second start interva
   assert.deepEqual(BOSS_CONFIG.tactics[style],{windupSec,thrustSec,recoverSec});
   for(const pause of ['followupDelay','seriesRest'])assert.ok(Math.abs(windupSec+thrustSec+recoverSec+BOSS_CONFIG.tactics[pause]-attackCooldownSec)<1e-9);
  }
+});
+
+
+test('boss names follow the exact list, repeat with increasing suffixes and reset by floor',()=>{
+ assert.deepEqual(BOSS_NAMES,['Потрошитель','Костолом','Гниломорд','Мясоруб','Хряп','Кадавр','Шрамыч','Костогрыз','Недодел','Живодёр','Трупоед','Перешив']);
+ const seen=new Set();
+ for(let ordinal=1;ordinal<=36;ordinal++){
+  const cycle=Math.floor((ordinal-1)/12)+1,expected=BOSS_NAMES[(ordinal-1)%12]+(cycle>1?' '+cycle:'');
+  const name=bossName(ordinal*BOSS_FLOOR_INTERVAL);assert.equal(name,expected);assert.ok(!seen.has(name));seen.add(name);
+ }
+ assert.equal(bossName(BOSS_FLOOR_INTERVAL),'Потрошитель');
+});
+
+test('named boss announcement, card, arena label and combat identity survive saved encounter reload',()=>{
+ for(const variant of ['brute','legs']){
+  const f=startBossScenario({floor:65,variant});try{
+   assert.equal(f.boss.bossName,'Потрошитель 2');assert.equal(fighterLabel(1),'Босс · Потрошитель 2');
+   const encounter=JSON.parse(JSON.stringify(f.tower));assert.equal(bossName(ensureBossEncounter(encounter,()=>.99).floor),'Потрошитель 2');
+   towerPreparation();const title=document.querySelector('#tower-prep-title');
+   assert.equal(title.textContent,'Потрошитель 2 · ЭТАЖ №65');assert.ok(title.classList.contains('boss-floor-title'));
+   document.querySelector('#tower-fight').click();updateTowerHud();paint();
+   assert.match(ctx.status.textContent,/Потрошитель 2 · ЭТАЖ №65/);assert.ok(ctx.status.classList.contains('boss-floor-badge'));
+   assert.match(ctx.cardNodes[1].card.textContent,/Потрошитель 2/);assert.equal(f.boss.label.textContent,'Потрошитель 2');
+   assert.doesNotMatch(document.querySelector('#tower-wallet').textContent,/Потрошитель/);
+  }finally{f.close();}
+ }
+ const f=startBossScenario({floor:3,ordinary:true});try{
+  towerPreparation();paint();assert.equal(document.querySelector('#tower-prep-title').classList.contains('boss-floor-title'),false);assert.equal(ctx.status.classList.contains('boss-floor-badge'),false);
+ }finally{f.close();}
 });

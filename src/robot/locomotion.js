@@ -414,7 +414,7 @@ export function updateHead(robotState, dt) {
   }
   const before = robotState.headFrame;
   robotState.headFrame = robotState.headFrameAt(robotState.gazeYaw);
-  if (!robotState.clearCircle(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13 * (robotState.scale??ctx.scale)) || !robotState.clearCircle(robotState.local(robotState.headFrame, 39 + robotState.headMotion, 0), 2.5 * (robotState.scale??ctx.scale))) {
+  if (!robotState.clearCircle(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13 * (robotState.body?.headSizeFactor??1) * (robotState.scale??ctx.scale)) || !robotState.clearCircle(robotState.local(robotState.headFrame, 25 + 14*(robotState.body?.headSizeFactor??1) + robotState.headMotion, 0), 2.5 * (robotState.body?.headSizeFactor??1) * (robotState.scale??ctx.scale))) {
     robotState.headFrame = before;
     robotState.gazeYaw = before.angle;
     robotState.look = clamp(wrap(robotState.gazeYaw - robotState.chest.angle),-ctx.HEAD_LIMIT,ctx.HEAD_LIMIT);
