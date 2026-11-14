@@ -2,6 +2,7 @@ import {loadControlMode,setControlMode} from '../tower/control-mode.js';
 import {uiIcon} from './icons.js';
 import {ctx} from '../game/state.js';
 import {setPaused} from './controls.js';
+import {openMenu} from '../tower/ui.js';
 
 export function initializeSettings() {
   const root=ctx.root,doc=root.ownerDocument;
@@ -13,6 +14,7 @@ export function initializeSettings() {
   controlMode.onchange=()=>{if(ctx.mode==='tower')setControlMode(controlMode.value);};
   const closeButton=panel.querySelector('#arena-settings-close');
   const tutorialButton=panel.querySelector('#tutorial-start');
+  const menuButton=panel.querySelector('#settings-main-menu');
   const creditsOpen=panel.querySelector('#arena-credits-open');
   const creditsView=panel.querySelector('#arena-credits-view');
   const creditsBack=panel.querySelector('#arena-credits-back');
@@ -39,13 +41,14 @@ export function initializeSettings() {
     if(ctx.settingsOpen)return;
     wasPaused=ctx.paused;
     ctx.settingsOpen=true;setPaused(true);panel.hidden=false;button.setAttribute('aria-expanded','true');
-    background=[root.querySelector('.atmosphere-controls'),root.querySelector('.tag7hop-layout'),root.querySelector('#bet-overlay')]
+    background=[root.querySelector('.atmosphere-controls'),root.querySelector('.tag7hop-layout'),root.querySelector('#bet-overlay'),root.querySelector('#launch-overlay'),root.querySelector('#tower-preparation')]
       .map(node=>[node,Boolean(node.inert)]);
     for(const [node] of background)node.inert=true;
     closeButton.focus();
   };
   button.onclick=open;closeButton.onclick=()=>close();
   tutorialButton.onclick=()=>{close();ctx.tutorial?.restart();};
+  menuButton.onclick=()=>{if(openMenu())close(false);};
   panel.onclick=event=>{if(event.target===panel)close();};
   const onKey=event=>{
     if(ctx.tutorial?.active)return;
@@ -60,7 +63,8 @@ export function initializeSettings() {
   };
   doc.addEventListener('keydown',onKey);
   const dispose=root.__disposeTag;
-  root.__disposeTag=()=>{close(false);controlMode.onchange=null;panel.hidden=true;tutorialButton.onclick=null;button.onclick=closeButton.onclick=panel.onclick=creditsOpen.onclick=creditsBack.onclick=null;doc.removeEventListener('keydown',onKey);dispose();};
+  root.__disposeTag=()=>{close(false);controlMode.onchange=null;panel.hidden=true;tutorialButton.onclick=menuButton.onclick=null;button.onclick=closeButton.onclick=panel.onclick=creditsOpen.onclick=creditsBack.onclick=null;doc.removeEventListener('keydown',onKey);dispose();};
 }
 
 function winStorage(doc){try{return doc.defaultView.localStorage;}catch{return null;}}
+
