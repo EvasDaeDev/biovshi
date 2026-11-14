@@ -229,6 +229,7 @@ export function robotDamage(robotState, key, by, damage=1) {
     const wreckKeys=[key,...attached];
     const wreckPieces = wreckKeys.map(part => ({
       key: part,
+      fluid: robotState.prosthetics.includes(part)?'coolant':'blood',
       geometry: robotState.segmentGeometry(part),
       skin: snapshotRobotSkin(robotState,part)
     })).filter(p => p.geometry);
@@ -260,6 +261,7 @@ export function robotDamage(robotState, key, by, damage=1) {
     if (robotState.mobile()) ctx.combat.oilLeaks.push({
       robot: robotState.id,
       key,
+      fluid: robotState.prosthetics.includes(key)?'coolant':'blood',
       nextAt: ctx.game.time + CONFIG.oil.minIntervalSec + random() * (CONFIG.oil.maxIntervalSec - CONFIG.oil.minIntervalSec)
     });
     if (key === 'head') robotState.currentIntent.lookPoint = null;

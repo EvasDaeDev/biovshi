@@ -99,19 +99,20 @@ export function updatePulses() {
 // Неудачная атака не должна немедленно возобновляться от того же касания лап.
 
 // Выполняется после движения: охотник доводит прыжок к актуальному положению жертвы.
-export function createOilDrop(robotId, x, y, baseRadius) {
-  const sprite=createLiquidSprite(robotId,x,y,baseRadius);
+export function createOilDrop(robotId, x, y, baseRadius, fluid='blood') {
+  const sprite=createLiquidSprite(robotId,x,y,baseRadius,fluid);
   const node = sprite?.node??el('circle', {
     cx: x,
     cy: y,
     r: baseRadius,
-    fill: oilColor(robotId),
+    fill: oilColor(robotId,.9,0,fluid),
     opacity: .92
   }, ctx.oilG);
   ctx.combat.oilDrops.push({
     node,
     sprite,
     robot: robotId,
+    fluid,
     born: ctx.game.time,
     x,
     y,
@@ -134,7 +135,7 @@ export function updateOilLeaks() {
         y = origin.y + Math.sin(angle) * distance;
       const jitter = 1 + (random() * 2 - 1) * CONFIG.oil.sizeJitter;
       const baseRadius = (2.8 + random() * 1.8) * jitter * 0.7 * CONFIG.oil.dropSizeScale;
-      createOilDrop(leak.robot, x, y, baseRadius);
+      createOilDrop(leak.robot, x, y, baseRadius,leak.fluid);
       leak.nextAt += CONFIG.oil.minIntervalSec + random() * (CONFIG.oil.maxIntervalSec - CONFIG.oil.minIntervalSec);
     }
   }
@@ -148,7 +149,7 @@ export function paintOil() {
     const dry=smooth((ctx.game.time-drop.born)/CONFIG.oil.drySec);
     if(drop.sprite)paintLiquidSprite(drop,radius,dry);
     else {
-      attr(drop.node,'fill',oilColor(drop.robot,.9,dry));
+      attr(drop.node,'fill',oilColor(drop.robot,.9,dry,drop.fluid));
       attr(drop.node, 'r', radius.toFixed(2));
     }
     attr(drop.node, 'opacity', opacity.toFixed(3));
@@ -190,8 +191,11 @@ export function paintDetachedAnatomy() {
       attr(part.node,'transform',`translate(${slide.x} ${slide.y})`);
       part.settled=slide.settled;
       if(slide.settled&&!part.puddleCreated) {
-        const center=detachedCenter(part.pieces);
-        createOilDrop(part.id,center.x+slide.x,center.y+slide.y,CONFIG.oil.settledPuddleRadiusCm);
+        for(const fluid of new Set(part.pieces.map(piece=>piece.fluid??'blood'))){
+          const pieces=part.pieces.filter(piece=>(piece.fluid??'blood')===fluid);
+          const center=detachedCenter(pieces);
+          createOilDrop(part.id,center.x+slide.x,center.y+slide.y,CONFIG.oil.settledPuddleRadiusCm,fluid);
+        }
         part.puddleCreated=true;
       }
     }

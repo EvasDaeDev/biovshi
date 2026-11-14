@@ -30,3 +30,13 @@ test('half strength blends the original texture with the tinted colour', () => {
   tintPixels(pixels,[1,4,9],0.5);
   assert.deepEqual([...pixels],[65,66,69,255]);
 });
+
+
+test('recolouring a red liquid sprite removes red hue while preserving alpha and shading',()=>{
+ const pixels=new Uint8ClampedArray([180,12,8,255,90,6,4,128,0,0,0,0]);
+ const alpha=[pixels[3],pixels[7],pixels[11]];
+ tintPixels(pixels,[99,217,255],1);
+ assert.deepEqual([pixels[3],pixels[7],pixels[11]],alpha);
+ for(const i of [0,4]){assert.ok(pixels[i+2]>=pixels[i+1]);assert.ok(pixels[i+1]>pixels[i]);}
+ assert.ok(pixels[0]>pixels[4],'source light and dark details survive the colour replacement');
+});

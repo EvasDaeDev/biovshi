@@ -110,6 +110,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.cache = new WeakMap();
   setTimeScale(1);
   ctx.liquidAtlasSources=null;
+  ctx.coolantAtlasSources=null;
   initializePerformance();
   ctx.SAFE_LIMB_COLOR = [101, 238, 255];
   ctx.WARNING_LIMB_COLOR = [255, 214, 64];

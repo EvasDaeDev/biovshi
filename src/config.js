@@ -234,6 +234,8 @@ const CONFIG = {
     spriteRows: 4,
     spriteDryColor: '#160c09',
     spriteDryStrength: 0.95,
+    coolantColor: '#63d9ff', // Голубой антифриз протезов; заменяет цвет красного атласа.
+    coolantDryColor: '#123640', // Высыхая, темнеет без перехода в красный/бурый.
     minIntervalSec: 0.5,
     // Минимальный интервал между каплями масла из раны.
     maxIntervalSec: 0.7,
