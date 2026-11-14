@@ -1,3 +1,4 @@
+import {bossAction} from '../boss/card.js';
 import {uiIcon} from './icons.js';
 import {patientName} from './patient.js';
 import { TELEMETRY_COLOURS } from './telemetry-colours.js';
@@ -85,6 +86,7 @@ export function moduleBadge(snapshot) {
   return `${snapshot.alive}/${snapshot.count}`;
 }
 export function friendlyAction(robot) {
+  if(robot.isBoss){const action=bossAction(robot);if(action)return action;}
   const deadline = ctx.combat.unarmedDeadline[robot.id];
   if (!robot.visible) return 'Ожидает выхода на арену';
   if (!robot.hasHead) return 'Погиб';

@@ -1,3 +1,4 @@
+import {limbKey} from './body.js';
 import {pendingStrikes} from '../systems/strikes.js';
 import {resolveSurfaceContacts} from '../systems/surface-contact.js';
 import {patientCombatStats} from '../game/patients.js';
@@ -248,7 +249,7 @@ export function retreatFromBoundary(robotState, dt) {
 }
 export function watchProgress(robotState, dt, previous) {
   const actualMoved = Math.hypot(robotState.x - previous.x, robotState.y - previous.y);
-  const attemptingMove = robotState.requestedSpeed > 5 * ctx.scale || !!robotState.leap && !robotState.leap.launched;
+  const attemptingMove = robotState.requestedSpeed > 5 * (robotState.scale??ctx.scale) || !!robotState.leap && !robotState.leap.launched;
   if (attemptingMove && actualMoved < Math.max(20, robotState.requestedSpeed) * dt * .12) {
     robotState.boundaryBlockedFor += dt;
     if (robotState.boundaryBlockedFor >= CONFIG.movement.boundaryStuckSec) {
@@ -265,12 +266,12 @@ export function watchProgress(robotState, dt, previous) {
     }
   } else robotState.boundaryBlockedFor = Math.max(0, robotState.boundaryBlockedFor - dt * 2);
   const navigating = robotState.behavior === 'follow' || robotState.behavior === 'wander' || robotState.behavior === 'search';
-  if (navigating && robotState.t >= robotState.recoveryUntil && robotState.requestedSpeed > 5 * ctx.scale) {
+  if (navigating && robotState.t >= robotState.recoveryUntil && robotState.requestedSpeed > 5 * (robotState.scale??ctx.scale)) {
     const moved = Math.hypot(robotState.x - previous.x, robotState.y - previous.y),
       turned = Math.abs(wrap(robotState.angle - previous.angle));
     robotState.stuckFor = moved < robotState.requestedSpeed * dt * .12 && turned < .006 ? robotState.stuckFor + dt : Math.max(0, robotState.stuckFor - dt * 2);
     if (robotState.stuckFor > .5) {
-      robotState.routePadding = Math.min(95 * ctx.scale, robotState.routePadding + CONFIG.robot.vertebraBaseCm * ctx.scale);
+      robotState.routePadding = Math.min(95 * (robotState.scale??ctx.scale), robotState.routePadding + CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale));
       robotState.route = [];
       robotState.routeGoal = null;
       robotState.recoveryUntil = robotState.t + 1;
@@ -293,8 +294,8 @@ export function contacts(robotState, dt, previous) {
   const pending = limbs.filter(l => l.phase >= 1 && !robotState.lifted(l)).map(l => {
     const a = robotState.origin(l),
       r = robotState.rest(l),
-      error = Math.hypot(r.x - l.foot.x, r.y - l.foot.y) / ctx.scale,
-      urgent = !robotState.validContact(l) || !robotState.limbClear(l) || Math.hypot(l.foot.x - a.x, l.foot.y - a.y) > 44 * ctx.scale,
+      error = Math.hypot(r.x - l.foot.x, r.y - l.foot.y) / (robotState.scale??ctx.scale),
+      urgent = !robotState.validContact(l) || !robotState.limbClear(l) || Math.hypot(l.foot.x - a.x, l.foot.y - a.y) > 44 * (robotState.scale??ctx.scale),
       cycle = (robotState.gait / (Math.PI * 2) + (l.kind === 'arm' ? l.side === 1 ? 0 : .5 : l.side === -1 ? 0 : .5)) % 1;
     return {
       l,
@@ -305,7 +306,7 @@ export function contacts(robotState, dt, previous) {
     };
   }).sort((a, b) => (b.urgent ? 1000 : 0) + b.error - ((a.urgent ? 1000 : 0) + a.error));
   for (const p of pending) {
-    const nearFood = robotState.hasGoal() && robotState.currentTargetVisible() && Math.hypot(robotState.target.x - robotState.x, robotState.target.y - robotState.y) < 50 * ctx.scale,
+    const nearFood = robotState.hasGoal() && robotState.currentTargetVisible() && Math.hypot(robotState.target.x - robotState.x, robotState.target.y - robotState.y) < 50 * (robotState.scale??ctx.scale),
       normal = robotState.mode !== 'eat' && (robotState.behavior === 'follow' || robotState.behavior === 'wander' || robotState.behavior === 'search') && !nearFood && p.error > 12 && p.cycle < .4;
     if (airborne < 2 && (p.urgent || normal)) {
       p.l.from = {
@@ -347,24 +348,24 @@ export function contacts(robotState, dt, previous) {
         ...l.foot
       },
       oldPhase = l.phase;
-    l.phase = Math.min(1, l.phase + dt * 5 / ctx.scale);
+    l.phase = Math.min(1, l.phase + dt * 5 / (robotState.scale??ctx.scale));
     const q = smooth(l.phase),
-      arc = Math.sin(l.phase * Math.PI) * (l.kind === 'leg' ? 5 : 3) * ctx.scale,
+      arc = Math.sin(l.phase * Math.PI) * (l.kind === 'leg' ? 5 : 3) * (robotState.scale??ctx.scale),
       frame = robotState.limbFrame(l);
     let desired = {
       x: l.from.x + (l.to.x - l.from.x) * q - Math.sin(frame.angle) * l.side * arc,
       y: l.from.y + (l.to.y - l.from.y) * q + Math.cos(frame.angle) * l.side * arc
     };
     // Only a lifted limb may adjust its landing position to stay reachable.
-    const rx = ((desired.x - frame.x) * Math.cos(frame.angle) + (desired.y - frame.y) * Math.sin(frame.angle)) / ctx.scale,
-      ry = (-(desired.x - frame.x) * Math.sin(frame.angle) + (desired.y - frame.y) * Math.cos(frame.angle)) / ctx.scale;
+    const rx = ((desired.x - frame.x) * Math.cos(frame.angle) + (desired.y - frame.y) * Math.sin(frame.angle)) / (robotState.scale??ctx.scale),
+      ry = (-(desired.x - frame.x) * Math.sin(frame.angle) + (desired.y - frame.y) * Math.cos(frame.angle)) / (robotState.scale??ctx.scale);
     desired = robotState.local(frame, l.kind === 'extra' ? clamp(rx, -14, 18) : l.kind === 'arm' ? Math.max(7, rx) : clamp(rx, -44, -7), l.side * Math.max(l.kind === 'arm' ? 5 : 23, ry * l.side));
     const a = robotState.origin(l),
       [u, v] = robotState.lengths(l),
       dx = desired.x - a.x,
       dy = desired.y - a.y,
       d = Math.hypot(dx, dy) || 1,
-      rad = clamp(d, Math.abs(u - v) + 2 * ctx.scale, u + v - 2 * ctx.scale);
+      rad = clamp(d, Math.abs(u - v) + 2 * (robotState.scale??ctx.scale), u + v - 2 * (robotState.scale??ctx.scale));
     desired = {
       x: a.x + dx / d * rad,
       y: a.y + dy / d * rad
@@ -412,7 +413,7 @@ export function updateHead(robotState, dt) {
   }
   const before = robotState.headFrame;
   robotState.headFrame = robotState.headFrameAt(robotState.gazeYaw);
-  if (!robotState.clearCircle(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13 * ctx.scale) || !robotState.clearCircle(robotState.local(robotState.headFrame, 39 + robotState.headMotion, 0), 2.5 * ctx.scale)) {
+  if (!robotState.clearCircle(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13 * (robotState.scale??ctx.scale)) || !robotState.clearCircle(robotState.local(robotState.headFrame, 39 + robotState.headMotion, 0), 2.5 * (robotState.scale??ctx.scale))) {
     robotState.headFrame = before;
     robotState.gazeYaw = before.angle;
     robotState.look = clamp(wrap(robotState.gazeYaw - robotState.chest.angle),-ctx.HEAD_LIMIT,ctx.HEAD_LIMIT);
@@ -559,7 +560,7 @@ export function robotTick(robotState, dt, intent) {
       x: robotState.x,
       y: robotState.y
     },
-    waypoint = intent.navigate?robotState.steerTo(goal,intent.navigationPadding,6*ctx.scale):intent.manual?goal:robotState.steerTo(goal),
+    waypoint = intent.navigate?robotState.steerTo(goal,intent.navigationPadding,6*(robotState.scale??ctx.scale)):intent.manual?goal:robotState.steerTo(goal),
     dx = waypoint.x - robotState.x,
     dy = waypoint.y - robotState.y,
     heading = intent.manual || robotState.t >= robotState.recoveryUntil ? headingForIntent(robotState.angle, robotState, waypoint, intent) : robotState.angle,
@@ -620,7 +621,7 @@ export function robotTick(robotState, dt, intent) {
   if (!flinching && robotState.hitReaction) robotState.hitReaction = null;
   robotState.x += robotState.vx * dt;
   robotState.y += robotState.vy * dt;
-  robotState.gait += Math.hypot(robotState.vx, robotState.vy) * dt / (7 * ctx.scale);
+  robotState.gait += Math.hypot(robotState.vx, robotState.vy) * dt / (7 * (robotState.scale??ctx.scale));
   robotState.layoutBody(dt);
   resolveSurfaceContacts(robotState);
   robotState.contacts(dt, old);

@@ -1,3 +1,5 @@
+import {hasBoss} from '../boss/config.js';
+import {bossFloorReward} from '../boss/encounter.js';
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {ctx} from '../game/state.js';
 import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount} from './model.js';
@@ -47,7 +49,7 @@ export function towerPreparation(){
   ctx.startup.phase='tower-ready';ctx.resultsPanel.hidden=true;ctx.root.querySelector('#tower-controls').hidden=true;
   panel.hidden=false;ctx.root.querySelector('#tower-prep-title').textContent=`БАШНЯ · ЭТАЖ ${t.level}`;
   ctx.root.querySelector('#tower-prep-name').textContent=ctx.betting.players[ctx.towerPlayer].name;
-  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':`<span>${formatChips(10)} ЗА ЛИЧНОЕ ВЫБИВАНИЕ</span>`}</div>`;
+  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?'БОСС · ':''}${formatChips(bossFloorReward(t))} ЗА ЛИЧНОЕ ВЫБИВАНИЕ</span></div>`;
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   function renderSkills(){
     const snapshot=prostheticStatSnapshot(t),stats=snapshot.effective;
@@ -128,8 +130,8 @@ export function installTowerUI(){
   ctx.towerSettled=false;ctx.towerFloorCoins=0;ctx.towerOutcome=null;ctx.towerFeedbackUntil=0;
   const off=onGameEvent(event=>{
     if(event.type==='robot-immobilized'&&!ctx.towerSettled&&rewardTower(ctx.betting,ctx.towerPlayer,event.robot,event.lastAttacker)){
-      ctx.towerFloorCoins+=10;bettingSave();
-      const toast=ctx.root.querySelector('#tower-reward-toast');toast.innerHTML='+'+formatChips(10);toast.hidden=false;ctx.towerFeedbackUntil=ctx.game.time+1.2;
+      const reward=bossFloorReward(ctx.towerRun);ctx.towerFloorCoins+=reward;bettingSave();
+      const toast=ctx.root.querySelector('#tower-reward-toast');toast.innerHTML='+'+formatChips(reward);toast.hidden=false;ctx.towerFeedbackUntil=ctx.game.time+1.2;
     }
     if(event.type==='robot-immobilized')updateTowerHud();
   });

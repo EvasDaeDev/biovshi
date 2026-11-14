@@ -1,3 +1,4 @@
+import {limbKey} from './body.js';
 import {cancelStrikesAgainst} from '../systems/strikes.js';
 import {patientDeath} from '../garage/model.js';
 import {bettingSave} from '../betting/storage.js';
@@ -31,11 +32,11 @@ export function segmentGeometry(robotState, key) {
     kind: 'head',
     x: robotState.api.eye.x,
     y: robotState.api.eye.y,
-    r: 10 * ctx.scale
+    r: 10 * (robotState.scale??ctx.scale)
   };
   if (key.startsWith('spine-')) {
     const i = Number(key.slice(6));
-    if (i >= 0 && i < 4) return {
+    if (i >= 0 && i < (robotState.spineSegmentTotal??4)) return {
       kind: 'bone',
       a: {
         ...robotState.spine[i]
@@ -43,16 +44,16 @@ export function segmentGeometry(robotState, key) {
       b: {
         ...robotState.spine[i + 1]
       },
-      w: CONFIG.robot.vertebraBaseCm * ctx.scale
+      w: CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale)
     };
   }
-  const m = /^(arm|leg)-(-?1)-(upper|lower)$/.exec(key);
-  if (!m) return null;
-  const limb = (m[1] === 'arm' ? robotState.arms : robotState.legs).find(l => l.side === Number(m[2]));
+  const half=key.endsWith('-upper')?'upper':key.endsWith('-lower')?'lower':null;
+  if(!half)return null;
+  const limb=[...robotState.arms,...robotState.legs].find(l=>limbKey(l)===key.slice(0,-half.length-1));
   if (!limb) return null;
   const a = robotState.origin(limb),
     pose = ik(a, robotState.handEnd(limb), ...robotState.lengths(limb), limb.kind === 'arm' ? limb.side : -limb.side);
-  return m[3] === 'upper' ? {
+  return half === 'upper' ? {
     kind: 'bone',
     a: {
       ...a
@@ -60,7 +61,7 @@ export function segmentGeometry(robotState, key) {
     b: {
       ...pose.joint
     },
-    w: 3 * ctx.scale
+    w: 3 * (robotState.scale??ctx.scale)
   } : {
     kind: 'bone',
     a: {
@@ -69,25 +70,21 @@ export function segmentGeometry(robotState, key) {
     b: {
       ...pose.end
     },
-    w: 3 * ctx.scale
+    w: 3 * (robotState.scale??ctx.scale)
   };
 }
 export function leakOrigin(robotState, key) {
   if (key === 'head') return robotState.local(robotState.headFrame, 18 + robotState.headMotion, 0);
   if (key.startsWith('spine-')) {
-    const i = Math.max(0, Math.min(3, Number(key.split('-')[1]) || 0));
+    const i = Math.max(0, Math.min((robotState.spineSegmentTotal??4)-1, Number(key.split('-')[1]) || 0));
     return {
       x: (robotState.spine[i].x + robotState.spine[i + 1].x) / 2,
       y: (robotState.spine[i].y + robotState.spine[i + 1].y) / 2
     };
   }
-  const parts = /^(arm|leg)-(-?1)-(upper|lower)$/.exec(key);
-  if (parts) {
-    const kind = parts[1],
-      side = Number(parts[2]),
-      part = parts[3];
-    const pool = kind === 'arm' ? robotState.arms : kind === 'leg' ? robotState.legs : [];
-    const limb = pool.find(l => l.side === side);
+  const part=key.endsWith('-upper')?'upper':key.endsWith('-lower')?'lower':null;
+  if (part) {
+    const limb=[...robotState.arms,...robotState.legs].find(l=>limbKey(l)===key.slice(0,-part.length-1));
     if (limb) {
       const a = robotState.origin(limb),
         solved = ik(a, robotState.handEnd(limb), ...robotState.lengths(limb), limb.kind === 'arm' ? limb.side : -limb.side);
@@ -197,7 +194,7 @@ export function robotDamage(robotState, key, by, damage=1) {
   robotState.hitAt.set(key, ctx.game.time);
   const actualDamage = Math.min(robotState.hp.get(key), damage);
   robotState.hp.set(key, robotState.hp.get(key) - actualDamage);
-  if (CONFIG.combat.trauma.enabled) {
+  if (CONFIG.combat.trauma.enabled && robotState.body?.traumaEnabled!==false) {
     robotState.trauma += actualDamage * (key === 'head' ? CONFIG.combat.trauma.headMultiplier : 1);
   }
   const caps = robotState.api.capsules.filter(c => c.segment === key);
@@ -280,7 +277,7 @@ export function robotDamage(robotState, key, by, damage=1) {
   });
   // Finish anatomical destruction first: a lethal head hit remains a death.
   // Descendant HP removed by severing is never counted as a second injury.
-  if (CONFIG.combat.trauma.enabled && robotState.mobile()
+  if (CONFIG.combat.trauma.enabled && robotState.body?.traumaEnabled!==false && robotState.mobile()
       && robotState.trauma >= CONFIG.combat.trauma.threshold) knockOut(robotState, 'trauma');
   robotState.api.capsules = robotState.makeCapsules();
   return true;

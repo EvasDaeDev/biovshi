@@ -1,3 +1,4 @@
+import {limbKey,standardLimbs,bodySegments,bodyParents} from './body.js';
 import {patientSkin,patientGarage} from '../game/patients.js';
 import { clamp } from '../utils/math.js';
 import { descendants, finishMobility, leakOrigin, reactToHit, robotDamage, robotFailFromOilLoss, segmentGeometry } from "./anatomy.js";
@@ -16,10 +17,14 @@ import { createRobotSkin } from '../render/robot-skin.js';
 import { createTorsoShadow } from '../render/ground-spots.js';
 export
 // Один робот: скелет, опоры, хвост, анимации и отрисовка.
-function createRobot(id, start) {
+function createRobot(id, start, body = {}) {
   const robotState = {
     id,
-    start
+    start, body,
+    scale:ctx.scale*(body.scaleMultiplier??1),
+    spineSegmentTotal:body.spineSegments??4,
+    pelvisKey:body.pelvisKey??'spine-3',
+    skinParts:body.skinParts,
   };
   robotState.descendants = descendants.bind(null, robotState);
   robotState.segmentGeometry = segmentGeometry.bind(null, robotState);
@@ -179,7 +184,7 @@ function createRobot(id, start) {
   robotState.scanDirection = id%2 ? -1 : 1;
   robotState.stuckFor = 0;
   robotState.recoveryUntil = 0;
-  robotState.routePadding = 70 * ctx.scale;
+  robotState.routePadding = 70 * (robotState.scale??ctx.scale);
   robotState.recoveries = 0;
   robotState.route = [];
   robotState.routeGoal = null;
@@ -205,38 +210,25 @@ function createRobot(id, start) {
   robotState.broken = new Set();
   robotState.prosthetics = [...(patientGarage()?.[robotState.id]?.prosthetics??[])];
   robotState.hitAt = new Map();
-  robotState.segments = ['head', ...Array.from({
-    length: 4
-  }, (_, i) => 'spine-' + i), ...['arm', 'leg'].flatMap(kind => [-1, 1].flatMap(side => [`${kind}-${side}-upper`, `${kind}-${side}-lower`])), ...(robotState.id === 3 ? Array.from({
-    length: CONFIG.robot.tailSegments
-  }, (_, i) => 'tail-' + i) : [])];
-  robotState.maxHp = key => key === 'head' ? 6 : key === 'spine-3' ? 4 : CONFIG.combat.healthPerSegment;
-  robotState.isDamageable = key => key !== 'spine-0';
-  robotState.DAMAGEABLE_HP_TOTAL = robotState.segments.filter(robotState.isDamageable).reduce((sum, key) => sum + robotState.maxHp(key), 0);
-  // 39 HP
-  robotState.segments.forEach(key => robotState.hp.set(key, robotState.maxHp(key)));
-  // Anatomical tree. Chest is the root: arms/head are attached there;
-  // spine-0..3 form a front-to-back chain, with legs attached to the pelvis.
-  robotState.parent = new Map([['spine-0', null], ['head', null]]);
-  for (let i = 1; i < 4; i++) robotState.parent.set('spine-' + i, 'spine-' + (i - 1));
-  for (const kind of ['arm', 'leg']) for (const side of [-1, 1]) {
-    const upper = `${kind}-${side}-upper`,
-      lower = `${kind}-${side}-lower`;
-    robotState.parent.set(upper, kind === 'arm' ? null : 'spine-3');
-    robotState.parent.set(lower, upper);
-  }
+  const limbSpecs=body.limbs??standardLimbs();
+  robotState.segments=body.segments??[...bodySegments(robotState.spineSegmentTotal,limbSpecs),...(id===3?Array.from({length:CONFIG.robot.tailSegments},(_,i)=>'tail-'+i):[])];
+  robotState.maxHp=body.maxHp??(key=>key==='head'?6:key===robotState.pelvisKey?4:CONFIG.combat.healthPerSegment);
+  robotState.isDamageable=key=>key!=='spine-0';
+  robotState.DAMAGEABLE_HP_TOTAL=robotState.segments.filter(robotState.isDamageable).reduce((sum,key)=>sum+robotState.maxHp(key),0);
+  robotState.segments.forEach(key=>robotState.hp.set(key,robotState.maxHp(key)));
+  robotState.parent=body.parent??bodyParents(robotState.spineSegmentTotal,limbSpecs);
   // Children of a severed node detach with it, regardless of remaining HP.
   robotState.healthy = key => !robotState.broken.has(key);
   robotState.hasHead = () => robotState.healthy('head');
-  robotState.healthyLimb = l => robotState.healthy(`${l.kind}-${l.side}-upper`) && robotState.healthy(`${l.kind}-${l.side}-lower`);
+  robotState.healthyLimb = l => robotState.healthy(`${limbKey(l)}-upper`) && robotState.healthy(`${limbKey(l)}-lower`);
   let anatomyRevision=-1,anatomy;
   const anatomyCounts=()=>{
     if(anatomyRevision!==robotState.broken.size){
       anatomyRevision=robotState.broken.size;
       anatomy={
         limbs:[...robotState.arms,...robotState.legs].filter(robotState.healthyLimb).length,
-        arms:robotState.arms.filter(l=>robotState.healthy(`arm-${l.side}-upper`)).length,
-        spine:Array.from({length:4},(_,i)=>'spine-'+i).filter(robotState.healthy).length,
+        arms:robotState.arms.filter(l=>robotState.healthy(`${limbKey(l)}-upper`)).length,
+        spine:Array.from({length:robotState.spineSegmentTotal},(_,i)=>'spine-'+i).filter(robotState.healthy).length,
       };
     }
     return anatomy;
@@ -251,10 +243,10 @@ function createRobot(id, start) {
   robotState.mobile = () => robotState.hasHead() && !robotState.bledOut;
   robotState.armCount = () => anatomyCounts().arms;
   robotState.spineCount = () => anatomyCounts().spine;
-  robotState.limbIntegrity = () => robotState.movementLimbs() / 4;
-  robotState.anatomyColor = () => limbColor(robotState.movementLimbs(), 4);
-  robotState.locomotion = () => clamp((robotState.movementLimbs()===0 ? .12 : .25 + .75 * robotState.movementLimbs() / 4) * (.50 + .50 * robotState.spineCount() / 4), 0, 1);
-  robotState.turnAbility = () => clamp(.38 + .62 * robotState.spineCount() / 4, 0, 1) * (robotState.hasHead() ? 1 : .5);
+  robotState.limbIntegrity = () => robotState.movementLimbs() / limbSpecs.length;
+  robotState.anatomyColor = () => limbColor(robotState.movementLimbs(), limbSpecs.length);
+  robotState.locomotion = () => clamp((robotState.movementLimbs()===0 ? .12 : .25 + .75 * robotState.movementLimbs() / limbSpecs.length) * (.50 + .50 * robotState.spineCount() / robotState.spineSegmentTotal), 0, 1) * (body.speedFactor??1);
+  robotState.turnAbility = () => clamp(.38 + .62 * robotState.spineCount() / robotState.spineSegmentTotal, 0, 1) * (robotState.hasHead() ? 1 : .5) * (body.turnFactor??1);
   robotState.peerRobots = () => ctx.robots.filter(r => r.id !== robotState.id && r.mobile && Math.hypot(r.x - robotState.x, r.y - robotState.y) < 220 && !(robotState.leap?.kind === 'rebound' && robotState.leap.launched && r.id === robotState.leap.victim) && !(r.actualPose.leap?.kind === 'rebound' && r.actualPose.leap.launched && r.actualPose.leap.victim === robotState.id));
   robotState.extraWeight = 0;
   robotState.extraActive = false;
@@ -281,10 +273,10 @@ function createRobot(id, start) {
   robotState.idleKinds = ['stretch', 'scratch', 'hops'];
   robotState.idleSequence = robotState.id;
   robotState.nextIdleAt = ctx.game.time + 8 + robotState.id * 3;
-  robotState.neck = el('path', {'stroke-width':3*ctx.scale}, robotState.bodyG);
-  for (const side of [-1,1]) for (const kind of ['arm','leg']) {
-    const l={kind,side,phase:1,foot:{x:0,y:0},from:{x:0,y:0},to:{x:0,y:0}};
-    (kind==='arm'?robotState.arms:kind==='leg'?robotState.legs:robotState.extraLimbs).push(l);
+  robotState.neck = el('path', {'stroke-width':3*(robotState.scale??ctx.scale)}, robotState.bodyG);
+  for (const spec of limbSpecs) {
+    const l={...spec,phase:1,foot:{x:0,y:0},from:{x:0,y:0},to:{x:0,y:0}};
+    (l.kind==='arm'?robotState.arms:robotState.legs).push(l);
   }
   robotState.horns=[];robotState.spheres=[];robotState.spineBones=[];robotState.spineDots=[];
   robotState.tailPath=null;robotState.tailDots=[];robotState.tailBones=[];
@@ -298,20 +290,20 @@ function createRobot(id, start) {
       robotState.torso = el('path', {
         fill: 'none',
         class: 'shirt',
-        'stroke-width': CONFIG.robot.vertebraBaseCm * ctx.scale
+        'stroke-width': CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale)
       }, robotState.fallbackBody);
       robotState.spineBones = Array.from({
-        length: 4
+        length: robotState.spineSegmentTotal
       }, () => el('path', {
         fill: 'none',
         class: 'shirt',
-        'stroke-width': CONFIG.robot.vertebraBaseCm * ctx.scale
+        'stroke-width': CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale)
       }, robotState.fallbackBody));
       robotState.head = el('ellipse', {
         class: 'head'
       }, robotState.fallbackBody);
       robotState.nose = el('path', {
-        'stroke-width': 2 * ctx.scale,
+        'stroke-width': 2 * (robotState.scale??ctx.scale),
         fill: 'none'
       }, robotState.fallbackBody);
       robotState.mouth = el('ellipse', {
@@ -319,37 +311,37 @@ function createRobot(id, start) {
         stroke: 'none'
       }, robotState.fallbackBody);
       robotState.pelvicBar = el('path', {
-        'stroke-width': 3 * ctx.scale
+        'stroke-width': 3 * (robotState.scale??ctx.scale)
       }, robotState.fallbackBody);
       robotState.shoulderBar = el('path', {
         class: 'shirt',
         fill: 'none',
-        'stroke-width': 3 * ctx.scale,
+        'stroke-width': 3 * (robotState.scale??ctx.scale),
         'stroke-linecap': 'round'
       }, robotState.fallbackBody);
       robotState.horns = robotState.id === 1 ? [-1, 1].map(() => el('path', {
         class: 'robot-horn',
         fill: 'none',
-        'stroke-width': 3 * ctx.scale,
+        'stroke-width': 3 * (robotState.scale??ctx.scale),
         'stroke-linejoin': 'round',
         'stroke-linecap': 'round'
       }, robotState.fallbackBody)) : [];
       robotState.spheres = robotState.id === 2 ? [-1, 1].map(() => el('circle', {
         class: 'head robot-sphere',
         r: CONFIG.robot.sphereRadiusCm,
-        'stroke-width': 3 * ctx.scale
+        'stroke-width': 3 * (robotState.scale??ctx.scale)
       }, robotState.sphereLayer)) : [];
       robotState.spineDots = Array.from({
-        length: 5
+        length: robotState.spineSegmentTotal+1
       }, () => el('circle', {
-        r: 2 * ctx.scale,
+        r: 2 * (robotState.scale??ctx.scale),
         fill: 'var(--background)'
       }, robotState.fallbackBody));
       for(const l of [...robotState.arms,...robotState.legs])Object.assign(l,{
-        upper:el('path',{'stroke-width':3*ctx.scale,fill:'none'},robotState.fallbackLimbs),
-        lower:el('path',{'stroke-width':3*ctx.scale,fill:'none'},robotState.fallbackLimbs),
-        joint:el('circle',{r:3*ctx.scale},robotState.fallbackLimbs),
-        endShape:el('circle',{r:3*ctx.scale},robotState.fallbackLimbs),
+        upper:el('path',{'stroke-width':3*(robotState.scale??ctx.scale),fill:'none'},robotState.fallbackLimbs),
+        lower:el('path',{'stroke-width':3*(robotState.scale??ctx.scale),fill:'none'},robotState.fallbackLimbs),
+        joint:el('circle',{r:3*(robotState.scale??ctx.scale)},robotState.fallbackLimbs),
+        endShape:el('circle',{r:3*(robotState.scale??ctx.scale)},robotState.fallbackLimbs),
       });
     }
     robotState.bodyG.insertBefore(robotState.fallbackBody,robotState.neck);
@@ -358,7 +350,7 @@ function createRobot(id, start) {
   robotState.detachFallback=()=>{
     robotState.fallbackBody?.remove();robotState.fallbackLimbs?.remove();
   };
-  const skinKey=['robotA','robotB','robotC','robotD'][patientSkin(robotState.id)];
+  const skinKey=body.skinKey??['robotA','robotB','robotC','robotD'][patientSkin(robotState.id)];
   if(!ctx.textureAssets?.[skinKey]?.loaded)robotState.ensureFallback();
   robotState.boundaryBlockedFor = 0;
   robotState.boundaryRecovery = false;
@@ -368,6 +360,13 @@ function createRobot(id, start) {
   robotState.recoveryStartedAt = 0;
   robotState.api = {
     id: robotState.id,
+    isBoss:body.isBoss??false,
+    bossName:body.name,
+    body,
+    scale:robotState.scale,
+    spineSegmentTotal:robotState.spineSegmentTotal,
+    movementLimbTotal:limbSpecs.length,
+    get unconscious() { return robotState.bledOut&&!body.isBoss; },
     actor: robotState.actor,
     vision: robotState.vision,
     label: robotState.label,
@@ -426,7 +425,6 @@ function createRobot(id, start) {
     get segmentTotal() {
       return robotState.segments.length;
     },
-    get unconscious() { return robotState.bledOut; },
     get trauma() { return robotState.trauma; },
     get knockoutCause() { return robotState.knockoutCause; },
      get movementLimbs() {
@@ -455,20 +453,21 @@ function createRobot(id, start) {
     },
     get attackSources() {
       const result = [];
-      for (const l of [...robotState.arms,...robotState.legs]) if (robotState.healthy(`${l.kind}-${l.side}-upper`)) {
-        const whole = robotState.healthy(`${l.kind}-${l.side}-lower`);
+      for (const l of [...robotState.arms,...robotState.legs]) if (robotState.healthy(`${limbKey(l)}-upper`)) {
+        const whole = robotState.healthy(`${limbKey(l)}-lower`);
         const [u, v] = robotState.lengths(l),
           shoulder = robotState.origin(l);
         const joint = ik(shoulder, robotState.handEnd(l), u, v, l.kind === 'arm' ? l.side : -l.side).joint;
         result.push({
           kind: l.kind,
           side: l.side,
+          ...(l.anchor!==undefined?{frame:robotState.limbFrame(l)}:{}),
           point: whole ? {
             ...l.foot
           } : {
             ...joint
           },
-          key: `${l.kind}-${l.side}-${whole ? 'lower' : 'upper'}`,
+          key: `${limbKey(l)}-${whole ? 'lower' : 'upper'}`,
           reachFactor: whole ? 1 : .5
         });
       }
@@ -486,7 +485,7 @@ function createRobot(id, start) {
     reactToHit(attacker, segment) {
       robotState.reactToHit(attacker, segment);
     },
-    failFromOilLoss: robotFailFromOilLoss.bind(null, robotState),
+    failFromOilLoss: (body.failFromOilLoss??robotFailFromOilLoss).bind(null, robotState),
     get hasHead() {
       return robotState.hasHead();
     },

@@ -1,0 +1,12 @@
+/* Keep the longer boss name and destruction status inside the standard card. */
+#robot-tag-hops-v22 .robot-card[data-boss="true"] .robot-card-header {
+ display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;
+}
+#robot-tag-hops-v22 .robot-card[data-boss="true"] .robot-card-name {
+ grid-column:1;grid-row:1;min-width:0;overflow:hidden;
+}
+#robot-tag-hops-v22 .robot-card[data-boss="true"] .robot-card-name strong {
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+#robot-tag-hops-v22 .robot-card[data-boss="true"] .robot-card-score {grid-column:2;grid-row:1}
+#robot-tag-hops-v22 .robot-card[data-boss="true"] .robot-card-action {grid-column:1 / -1;grid-row:2}

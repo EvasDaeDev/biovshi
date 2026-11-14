@@ -1,3 +1,4 @@
+import {limbKey} from '../robot/body.js';
 import {pendingStrikes} from '../systems/strikes.js';
 import {fighterLabel} from '../game/patients.js';
 import { clamp, smooth } from '../utils/math.js';
@@ -84,9 +85,9 @@ export function draw(robotState, dt) {
     robotState.spineBones.forEach((node, i) => attr(node, 'd', robotState.healthy('spine-' + i) ? path([robotState.spine[i], robotState.spine[i + 1]]) : ''));
     for (let i = 0; i < robotState.spine.length; i++) {
       dot(robotState.spineDots[i], robotState.spine[i]);
-      attr(robotState.spineDots[i], 'opacity', i === 0 ? Number(robotState.healthy('spine-0')) : Number(robotState.healthy('spine-' + Math.min(3, i - 1))));
+      attr(robotState.spineDots[i], 'opacity', i === 0 ? Number(robotState.healthy('spine-0')) : Number(robotState.healthy('spine-' + Math.min((robotState.spineSegmentTotal??4)-1, i - 1))));
     }
-    attr(robotState.pelvicBar, 'd', robotState.healthy('spine-3') ? path([robotState.local(robotState.pelvis, -5, -12), robotState.local(robotState.pelvis, -5, 12)]) : '');
+    attr(robotState.pelvicBar, 'd', robotState.healthy(robotState.pelvisKey??'spine-3') ? path([robotState.local(robotState.pelvis, -5, -12), robotState.local(robotState.pelvis, -5, 12)]) : '');
     // Shoulder girdle belongs to the unbreakable chest and joins both arm roots.
     attr(robotState.shoulderBar, 'd', path([robotState.local(robotState.chest, 3, -15), robotState.local(robotState.chest, 3, 15)]));
   }
@@ -108,14 +109,14 @@ export function draw(robotState, dt) {
     for (const horn of robotState.horns) attr(horn, 'display', robotState.hasHead() ? '' : 'none');
     attr(robotState.head, 'cx', robotState.headCenter.x);
     attr(robotState.head, 'cy', robotState.headCenter.y);
-    attr(robotState.head, 'rx', (robotState.mode === 'caught' ? 10 - 3 * robotState.sceneEnvelope() : 10) * ctx.scale);
-    attr(robotState.head, 'ry', 10 * ctx.scale);
+    attr(robotState.head, 'rx', (robotState.mode === 'caught' ? 10 - 3 * robotState.sceneEnvelope() : 10) * (robotState.scale??ctx.scale));
+    attr(robotState.head, 'ry', 10 * (robotState.scale??ctx.scale));
     attr(robotState.head, 'transform', `rotate(${robotState.headFrame.angle * 180 / Math.PI} ${robotState.headCenter.x} ${robotState.headCenter.y})`);
     attr(robotState.nose, 'd', path([robotState.local(robotState.headFrame, 30 + robotState.headMotion, 0), robotState.local(robotState.headFrame, 38 + robotState.headMotion, 0)]));
     attr(robotState.mouth, 'cx', robotState.mouthPoint.x);
     attr(robotState.mouth, 'cy', robotState.mouthPoint.y);
-    attr(robotState.mouth, 'rx', (1 + chew * 3) * ctx.scale);
-    attr(robotState.mouth, 'ry', (1 + chew * 2) * ctx.scale);
+    attr(robotState.mouth, 'rx', (1 + chew * 3) * (robotState.scale??ctx.scale));
+    attr(robotState.mouth, 'ry', (1 + chew * 2) * (robotState.scale??ctx.scale));
     if (strikePose?.kind === 'head') {
       const ox = strikePose.tip.x - strikePose.base.x,
         oy = strikePose.tip.y - strikePose.base.y;
@@ -133,7 +134,7 @@ export function draw(robotState, dt) {
     const attackEnd = (strikePose?.kind === 'arm' || strikePose?.kind === 'leg') && strikePose.limb === l ? strikePose.tip : robotState.handEnd(l);
     const a = robotState.origin(l),
       solved = ik(a, attackEnd, ...robotState.lengths(l), l.kind === 'arm' ? l.side : -l.side);
-    const prefix = `${l.kind}-${l.side}-`;
+    const prefix = `${limbKey(l)}-`;
     const stumpStrike = (strikePose?.kind === 'arm' || strikePose?.kind === 'leg') && strikePose.limb === l && !strikePose.complete;
     if (!skinned || l.kind === 'extra') {
       attr(l.upper, 'd', robotState.healthy(prefix + 'upper') ? path([a, stumpStrike ? strikePose.tip : solved.joint]) : '');
@@ -211,7 +212,7 @@ export function robotPaint(robotState) {
     attr(robotState.trailNodes[i], 'fill', 'var(--night-trail)');
     if (sample) dot(robotState.trailNodes[i], sample);
   }
-  const name = fighterLabel(robotState.id);
+  const name = robotState.body?.arenaLabel??fighterLabel(robotState.id);
   if (robotState.label.textContent !== name) robotState.label.textContent = name;
   attr(robotState.label, 'x', robotState.spine[2].x);
   attr(robotState.label, 'y', robotState.spine[2].y - 18);

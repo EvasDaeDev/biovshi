@@ -1,3 +1,4 @@
+import {limbKey} from './body.js';
 import {limbCapsuleClear} from '../systems/surface-contact.js';
 import { clamp } from '../utils/math.js';
 import { arenaClearance } from "../game/arena.js";
@@ -45,18 +46,18 @@ export function limbClear(robotState, l, endpoint = robotState.handEnd(l)) {
     [u, v] = robotState.lengths(l),
     solved = ik(a, endpoint, u, v, l.kind === 'arm' ? l.side : -l.side),
     r = l.kind === 'arm' ? [4.8, 3.8, 4.8] : [6.8, 4.8, 5.8];
-  const clear=(from,to,radius)=>robotState.clearBone(from,to,radius*ctx.scale,false)||limbCapsuleClear(from,to,radius*ctx.scale,5);
-  if (!robotState.healthy(`${l.kind}-${l.side}-lower`)) return clear(a,solved.joint,r[0]);
+  const clear=(from,to,radius)=>robotState.clearBone(from,to,radius*(robotState.scale??ctx.scale),false)||limbCapsuleClear(from,to,radius*(robotState.scale??ctx.scale),5);
+  if (!robotState.healthy(`${limbKey(l)}-lower`)) return clear(a,solved.joint,r[0]);
   return clear(a,solved.joint,r[0])&&clear(solved.joint,solved.end,r[1])&&clear(solved.end,solved.end,r[2]);
 }
 export function rigClear(robotState) {
   // Проверяем только физически сохранившиеся части. Отделённый таз,
   // позвоночник и конечности больше не могут блокировать шаг своего владельца.
-  if (!robotState.clearCircle(robotState.chest, 19 * ctx.scale)) return false;
-  if (robotState.healthy('spine-3') && !robotState.clearCircle(robotState.pelvis, 24 * ctx.scale)) return false;
-  for (let i = 1; i < robotState.spine.length; i++) if (robotState.healthy('spine-' + (i - 1)) && !robotState.clearBone(robotState.spine[i - 1], robotState.spine[i], 17 * ctx.scale)) return false;
-  for (let i = 1; i < robotState.tail.length; i++) if (robotState.healthy('tail-' + (i - 1)) && !robotState.clearBone(robotState.tail[i - 1], robotState.tail[i], 3 * ctx.scale, false)) return false;
-  return (!robotState.hasHead() || robotState.clearCircle(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13 * ctx.scale) && robotState.clearCircle(robotState.local(robotState.headFrame, 39 + robotState.headMotion, 0), 2.5 * ctx.scale)) && [...robotState.arms, ...robotState.legs].filter(l => robotState.healthy(`${l.kind}-${l.side}-upper`)).every(l => robotState.limbClear(l));
+  if (!robotState.clearCircle(robotState.chest, 19 * (robotState.scale??ctx.scale))) return false;
+  if (robotState.healthy(robotState.pelvisKey??'spine-3') && !robotState.clearCircle(robotState.pelvis, 24 * (robotState.scale??ctx.scale))) return false;
+  for (let i = 1; i < robotState.spine.length; i++) if (robotState.healthy('spine-' + (i - 1)) && !robotState.clearBone(robotState.spine[i - 1], robotState.spine[i], 17 * (robotState.scale??ctx.scale))) return false;
+  for (let i = 1; i < robotState.tail.length; i++) if (robotState.healthy('tail-' + (i - 1)) && !robotState.clearBone(robotState.tail[i - 1], robotState.tail[i], 3 * (robotState.scale??ctx.scale), false)) return false;
+  return (!robotState.hasHead() || robotState.clearCircle(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13 * (robotState.scale??ctx.scale)) && robotState.clearCircle(robotState.local(robotState.headFrame, 39 + robotState.headMotion, 0), 2.5 * (robotState.scale??ctx.scale))) && [...robotState.arms, ...robotState.legs].filter(l => robotState.healthy(`${limbKey(l)}-upper`)).every(l => robotState.limbClear(l));
 }
 export function freeBlockedJoint(robotState, l, dt) {
   const a = robotState.origin(l),
@@ -86,7 +87,7 @@ export function freeBlockedJoint(robotState, l, dt) {
         x: joint.x + Math.cos(tb) * v,
         y: joint.y + Math.sin(tb) * v
       };
-    if (lateral(joint) < Math.min(3 * ctx.scale, lateral(pose.joint)) - 1e-6 || lateral(end) < Math.min(3 * ctx.scale, lateral(pose.end)) - 1e-6 || !robotState.limbClear(l, end)) continue;
+    if (lateral(joint) < Math.min(3 * (robotState.scale??ctx.scale), lateral(pose.joint)) - 1e-6 || lateral(end) < Math.min(3 * (robotState.scale??ctx.scale), lateral(pose.end)) - 1e-6 || !robotState.limbClear(l, end)) continue;
     const midJoint = {
         x: a.x + Math.cos(theta + da / 2) * u,
         y: a.y + Math.sin(theta + da / 2) * u
@@ -96,7 +97,7 @@ export function freeBlockedJoint(robotState, l, dt) {
         y: midJoint.y + Math.sin(phi + db / 2) * v
       };
     if (!robotState.limbClear(l, midEnd)) continue;
-    const score = distance(joint) * 4 + distance(end) * .25 + Math.min(3 * ctx.scale, lateral(joint)) * 8 + Math.min(3 * ctx.scale, lateral(end)) * 8 - Math.hypot(end.x - goal.x, end.y - goal.y) * .07;
+    const score = distance(joint) * 4 + distance(end) * .25 + Math.min(3 * (robotState.scale??ctx.scale), lateral(joint)) * 8 + Math.min(3 * (robotState.scale??ctx.scale), lateral(end)) * 8 - Math.hypot(end.x - goal.x, end.y - goal.y) * .07;
     if (score > bestScore) {
       best = end;
       bestScore = score;
@@ -158,18 +159,18 @@ export function validContact(robotState, l) {
   const a = robotState.origin(l),
     [u, v] = robotState.lengths(l),
     d = Math.hypot(l.foot.x - a.x, l.foot.y - a.y);
-  if (d > u + v - .1 * ctx.scale || d < Math.abs(u - v) + .1 * ctx.scale) return false;
+  if (d > u + v - .1 * (robotState.scale??ctx.scale) || d < Math.abs(u - v) + .1 * (robotState.scale??ctx.scale)) return false;
   const frame = robotState.limbFrame(l),
     solved = ik(a, l.foot, u, v, l.kind === 'arm' ? l.side : -l.side),
     lateral = p => (-(p.x - frame.x) * Math.sin(frame.angle) + (p.y - frame.y) * Math.cos(frame.angle)) * l.side;
-  return lateral(l.foot) > 2 * ctx.scale && lateral(solved.joint) > 2 * ctx.scale;
+  return lateral(l.foot) > 2 * (robotState.scale??ctx.scale) && lateral(solved.joint) > 2 * (robotState.scale??ctx.scale);
 }
 export function makeCapsules(robotState) {
   // Incapacitated robots remain drawn but never obstruct other fighters.
   if (!robotState.mobile()) return [];
   const out = [],
     push = (a, b, r, segment) => {
-      r *= ctx.scale;
+      r *= (robotState.scale??ctx.scale);
       if (segment && !robotState.healthy(segment)) return;
       out.push({
         segment,
@@ -191,14 +192,14 @@ export function makeCapsules(robotState) {
   for (let i = 1; i < robotState.spine.length; i++) push(robotState.spine[i - 1], robotState.spine[i], 17, 'spine-' + (i - 1));
   for (let i = 1; i < robotState.tail.length; i++) push(robotState.tail[i - 1], robotState.tail[i], 3, 'tail-' + (i - 1));
   push(robotState.chest, robotState.chest, 19, 'spine-0');
-  push(robotState.pelvis, robotState.pelvis, 24, 'spine-3');
+  push(robotState.pelvis, robotState.pelvis, 24, robotState.pelvisKey??'spine-3');
   push(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13, 'head');
   push(robotState.local(robotState.headFrame, 39 + robotState.headMotion, 0), robotState.local(robotState.headFrame, 39 + robotState.headMotion, 0), 2.5, 'head');
   for (const l of [...robotState.arms, ...robotState.legs]) {
     const a = robotState.origin(l),
       ls = robotState.lengths(l),
       p = ik(a, robotState.handEnd(l), ...ls, l.kind === 'arm' ? l.side : -l.side);
-    const prefix = `${l.kind}-${l.side}-`;
+    const prefix = `${limbKey(l)}-`;
     push(a, p.joint, l.kind === 'arm' ? 4.8 : 6.8, prefix + 'upper');
     push(p.joint, p.end, l.kind === 'arm' ? 3.8 : 4.8, prefix + 'lower');
     push(p.end, p.end, l.kind === 'arm' ? 4.8 : 5.8, prefix + 'lower');

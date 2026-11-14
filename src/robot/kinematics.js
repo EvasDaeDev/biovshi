@@ -1,11 +1,12 @@
+import {limbKey} from './body.js';
 import { clamp, wrap } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { strikeProgress } from "../systems/combat.js";
 import { ik } from "../utils/math.js";
 import { CONFIG } from "../config.js";
 export function local(robotState, s, a, b) {
-  a *= ctx.scale;
-  b *= ctx.scale;
+  a *= (robotState.scale??ctx.scale);
+  b *= (robotState.scale??ctx.scale);
   return {
     x: s.x + (Math.cos(s.angle) * a - Math.sin(s.angle) * b),
     y: s.y + (Math.sin(s.angle) * a + Math.cos(s.angle) * b)
@@ -14,8 +15,8 @@ export function local(robotState, s, a, b) {
 export function headFrameAt(robotState, yaw) {
   const p = robotState.local(robotState.chest, 14, 0);
   return {
-    x: p.x - Math.cos(yaw) * 14 * ctx.scale,
-    y: p.y - Math.sin(yaw) * 14 * ctx.scale,
+    x: p.x - Math.cos(yaw) * 14 * (robotState.scale??ctx.scale),
+    y: p.y - Math.sin(yaw) * 14 * (robotState.scale??ctx.scale),
     angle: yaw
   };
 }
@@ -23,12 +24,12 @@ export function allLimbs(robotState) {
   return [...robotState.arms, ...robotState.legs].filter(robotState.healthyLimb);
 }
 export function limbFrame(robotState, l) {
-  return l.kind === 'extra' ? robotState.spine[2] : l.kind === 'arm' ? robotState.chest : robotState.pelvis;
+  return l.anchor!==undefined?robotState.spine[l.anchor]:l.kind === 'extra' ? robotState.spine[2] : l.kind === 'arm' ? robotState.chest : robotState.pelvis;
 }
 export function handEnd(robotState, l) {
   // An amputated forearm is no longer a planted world-space support.
   // Keep its upper segment attached to the moving body, not the old hand position.
-  if (robotState.healthy(`${l.kind}-${l.side}-upper`) && !robotState.healthy(`${l.kind}-${l.side}-lower`)) return robotState.rest(l);
+  if (robotState.healthy(`${limbKey(l)}-upper`) && !robotState.healthy(`${limbKey(l)}-lower`)) return robotState.rest(l);
   return l.renderEnd || l.foot;
 }
 // The striking hand or foot moves relative to its limb root; other limbs stay planted.
@@ -38,7 +39,7 @@ export function attackPose(robotState, p) {
     const progress = p.preview ? {
         wind: 0,
         reach: 1
-      } : strikeProgress(p),
+      } : strikeProgress(robotState.body?.combat?{...p,timing:robotState.body.combat}:p),
       base = robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0);
     const dx = p.aim.x - base.x,
       dy = p.aim.y - base.y,
@@ -55,12 +56,12 @@ export function attackPose(robotState, p) {
       progress
     };
   }
-  const match = /^(arm|leg)-(-?1)-(lower|upper)$/.exec(p.source);
-  if (!match) return null;
-  const l = (match[1] === 'arm' ? robotState.arms : robotState.legs).find(item => item.side === Number(match[2]));
-  if (!l || !robotState.healthy(`${l.kind}-${l.side}-upper`)) return null;
-  const complete = robotState.healthy(`${l.kind}-${l.side}-lower`);
-  if ((match[3] === 'lower') !== complete) return null;
+  const half=p.source.endsWith('-lower')?'lower':p.source.endsWith('-upper')?'upper':null;
+  if(!half)return null;
+  const l=[...robotState.arms,...robotState.legs].find(item=>limbKey(item)===p.source.slice(0,-half.length-1));
+  if (!l || !robotState.healthy(`${limbKey(l)}-upper`)) return null;
+  const complete = robotState.healthy(`${limbKey(l)}-lower`);
+  if ((half === 'lower') !== complete) return null;
   const shoulder = robotState.origin(l),
     [upper, lower] = robotState.lengths(l);
   const restJoint = ik(shoulder, robotState.handEnd(l), upper, lower, l.kind === 'arm' ? l.side : -l.side).joint;
@@ -81,7 +82,7 @@ export function attackPose(robotState, p) {
     wind: 0,
     reach: 1,
     phase: 'recover'
-  } : strikeProgress(p);
+  } : strikeProgress(robotState.body?.combat?{...p,timing:robotState.body.combat}:p);
   // Подготовка: кисть уходит назад. Выпад: вытягивание к ЗАФИКСИРОВАННОЙ при замахе точке.
   const rear = {
     x: base.x - Math.cos(robotState.angle) * 5,
@@ -125,7 +126,7 @@ export function hornPoints(robotState, side) {
   return [robotState.local(robotState.headFrame, 24 + robotState.headMotion, side * 8), robotState.local(robotState.headFrame, 44 + robotState.headMotion, side * 10), robotState.local(robotState.headFrame, 32 + robotState.headMotion, side * 4)];
 }
 export function sphereCenters(robotState) {
-  return [-1, 1].map(side => robotState.local(robotState.spine[1], 0, side * CONFIG.robot.sphereOffsetCm / ctx.scale));
+  return [-1, 1].map(side => robotState.local(robotState.spine[1], 0, side * CONFIG.robot.sphereOffsetCm / (robotState.scale??ctx.scale)));
 }
 export function updateExtraLimbs(robotState) {
   // The retired third pair is not part of the current patients.
@@ -140,8 +141,8 @@ export function updateTail(robotState) {
   for (let i = 0; i < CONFIG.robot.tailSegments; i++) {
     const yaw = robotState.pelvis.angle + (robotState.reduced ? 0 : Math.sin(robotState.gait * .65 - i * .6) * .24 * robotState.gaitBlend) + clamp(robotState.turnRate, -2, 2) * i * .06;
     p = {
-      x: p.x - Math.cos(yaw) * CONFIG.robot.vertebraBaseCm * ctx.scale,
-      y: p.y - Math.sin(yaw) * CONFIG.robot.vertebraBaseCm * ctx.scale
+      x: p.x - Math.cos(yaw) * CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale),
+      y: p.y - Math.sin(yaw) * CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale)
     };
     robotState.tail.push(p);
   }
@@ -156,44 +157,46 @@ export function layoutBody(robotState, dt) {
     angle: backingOut ? robotState.chest.angle : robotState.angle + sway
   };
   if (dt === 0 || robotState.spine.length === 0) robotState.spine = Array.from({
-    length: 5
+    length: (robotState.spineSegmentTotal??4)+1
   }, (_, i) => ({
-    x: robotState.x - i * CONFIG.robot.vertebraBaseCm * ctx.scale,
+    x: robotState.x - i * CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale),
     y: robotState.y,
     angle: robotState.angle
   }));
   robotState.spine[0] = {
     ...robotState.chest
   };
-  for (let i = 1; i < 5; i++) {
+  for (let i = 1; i < (robotState.spineSegmentTotal??4)+1; i++) {
     const p = robotState.spine[i - 1],
       s = robotState.spine[i],
       wave = robotState.reduced ? 0 : Math.sin(robotState.gait - i * .7) * .055 * robotState.gaitBlend,
       aim = robotState.angle - clamp(robotState.turnRate, -2, 2) * i * .10 + wave + (robotState.reduced ? 0 : stretching * Math.sin(robotState.gesture.time * 2.8 - i * .5) * i * .065);
     s.angle += wrap(aim - s.angle) * (dt === 0 ? 1 : backingOut ? 0 : 1 - Math.exp(-dt * (9 - i)));
     s.angle = p.angle + clamp(wrap(s.angle - p.angle), -.48, .48);
-    s.x = p.x - Math.cos(s.angle) * CONFIG.robot.vertebraBaseCm * ctx.scale;
-    s.y = p.y - Math.sin(s.angle) * CONFIG.robot.vertebraBaseCm * ctx.scale;
+    s.x = p.x - Math.cos(s.angle) * CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale);
+    s.y = p.y - Math.sin(s.angle) * CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale);
   }
   robotState.pelvis = {
-    ...robotState.spine[4]
+    ...robotState.spine[robotState.spineSegmentTotal??4]
   };
   robotState.updateTail();
   robotState.headFrame = robotState.headFrameAt(robotState.currentIntent.lookPoint ? robotState.gazeYaw : robotState.chest.angle + robotState.look);
 }
 export function handRest(robotState, side) {
-  return robotState.local(robotState.chest, 30 + clamp(Math.hypot(robotState.vx, robotState.vy) / ctx.scale * .1, 0, 8), side * (27 + Math.abs(robotState.turnRate) * 2));
+  return robotState.local(robotState.chest, 30 + clamp(Math.hypot(robotState.vx, robotState.vy) / (robotState.scale??ctx.scale) * .1, 0, 8), side * (27 + Math.abs(robotState.turnRate) * 2));
 }
 export function legRest(robotState, side) {
-  return robotState.local(robotState.pelvis, -28 + clamp(Math.hypot(robotState.vx, robotState.vy) / ctx.scale * .14, 0, 10), side * 31);
+  return robotState.local(robotState.pelvis, -28 + clamp(Math.hypot(robotState.vx, robotState.vy) / (robotState.scale??ctx.scale) * .14, 0, 10), side * 31);
 }
 export function origin(robotState, l) {
+  if(l.anchor!==undefined)return robotState.local(robotState.spine[l.anchor],l.kind==='arm'?3:-5,l.side*(l.kind==='arm'?15:12));
   return l.kind === 'extra' ? robotState.local(robotState.spine[2], 0, l.side * 12) : l.kind === 'arm' ? robotState.local(robotState.chest, 3, l.side * 15) : robotState.local(robotState.pelvis, -5, l.side * 12);
 }
 export function lengths(robotState, l) {
-  return l.kind === 'extra' ? [CONFIG.robot.extraLimbLengthCm, CONFIG.robot.extraLimbLengthCm] : l.kind === 'arm' ? [27 * ctx.scale, 29 * ctx.scale] : [32 * ctx.scale, 33 * ctx.scale];
+  return l.kind === 'extra' ? [CONFIG.robot.extraLimbLengthCm, CONFIG.robot.extraLimbLengthCm] : l.kind === 'arm' ? [27 * (robotState.scale??ctx.scale), 29 * (robotState.scale??ctx.scale)] : [32 * (robotState.scale??ctx.scale), 33 * (robotState.scale??ctx.scale)];
 }
 export function rest(robotState, l) {
+  if(l.anchor!==undefined)return robotState.local(robotState.spine[l.anchor],l.kind==='arm'?30:-28,l.side*(l.kind==='arm'?35:40));
   return l.kind === 'extra' ? robotState.local(robotState.spine[2], 6, l.side * 44) : l.kind === 'arm' ? robotState.handRest(l.side) : robotState.legRest(l.side);
 }
 export function savePose(robotState) {
@@ -218,15 +221,15 @@ export function mixPose(robotState, a, b, q) {
   robotState.spine[0] = {
     ...robotState.chest
   };
-  for (let i = 1; i < 5; i++) {
+  for (let i = 1; i < (robotState.spineSegmentTotal??4)+1; i++) {
     const s = robotState.spine[i],
       p = robotState.spine[i - 1];
     s.angle = a.angles[i] + wrap(b.angles[i] - a.angles[i]) * q;
-    s.x = p.x - Math.cos(s.angle) * CONFIG.robot.vertebraBaseCm * ctx.scale;
-    s.y = p.y - Math.sin(s.angle) * CONFIG.robot.vertebraBaseCm * ctx.scale;
+    s.x = p.x - Math.cos(s.angle) * CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale);
+    s.y = p.y - Math.sin(s.angle) * CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale);
   }
   robotState.pelvis = {
-    ...robotState.spine[4]
+    ...robotState.spine[robotState.spineSegmentTotal??4]
   };
   robotState.updateTail();
   robotState.headFrame = robotState.headFrameAt(a.headAngle + wrap(b.headAngle - a.headAngle) * q);

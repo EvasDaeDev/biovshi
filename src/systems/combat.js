@@ -14,7 +14,7 @@ import { bettingSettle } from "../betting/ui.js";
 export
 // Непрерывная кинематика удара. Урон возможен лишь в конце фазы выпада.
 function strikeProgress(p) {
-  const cfg = CONFIG.combat,
+  const cfg = p.timing??CONFIG.combat,
     age = Math.max(0, ctx.game.time - p.started);
   const wind = cfg.windupSec,
     thrust = cfg.thrustSec,
@@ -42,22 +42,22 @@ function strikeProgress(p) {
 }
 // Legs strike away from the pelvis: their own side and a shared rear cone.
 export function inStrikeSector(attacker, source, point) {
-  const frame = source.kind === 'leg' ? attacker.actualPose.pelvis : attacker;
+  const frame = source.kind === 'leg' ? source.frame??attacker.actualPose.pelvis : attacker;
   const angle = wrap(Math.atan2(point.y-frame.y, point.x-frame.x)-frame.angle);
   if (source.kind !== 'leg') return Math.abs(angle) <= (source.kind === 'head' ? .48 : 1.28);
   // Own side from 60 degrees back; the rear 40-degree cone is shared.
   return Math.abs(angle) >= Math.PI*8/9 || angle*source.side >= Math.PI/3;
 }
 export function kickPathClear(attacker, pending) {
-  const cfg=CONFIG.combat;
+  const cfg=attacker.body?.combat??CONFIG.combat;
   // Check the knee and both bones throughout tuck, extension and return.
   const duration=cfg.windupSec+cfg.thrustSec+cfg.recoverSec;
   const ages=[cfg.windupSec,cfg.windupSec+cfg.thrustSec,
     ...Array.from({length:17},(_,i)=>duration*i/16)];
   for(const age of ages){
     const pose=attacker.attackPose({...pending,preview:false,started:ctx.game.time-age});
-    if(!pose || !coreClearBone(pose.shoulder,pose.joint,6.8*ctx.scale)
-      || pose.complete && !coreClearBone(pose.joint,pose.tip,5.8*ctx.scale))return false;
+    if(!pose || !coreClearBone(pose.shoulder,pose.joint,6.8*(attacker.scale??ctx.scale))
+      || pose.complete && !coreClearBone(pose.joint,pose.tip,5.8*(attacker.scale??ctx.scale)))return false;
   }
   return true;
 }
@@ -76,7 +76,7 @@ export function strikeCandidates(attacker, victim, source) {
     };
     if (source.kind==='leg' && !inStrikeSector(attacker,source,aim)) return null;
     const dist = pointSegment(source.point, c.a, c.b) - c.r;
-    if(dist>(CONFIG.combat.strikeReachCm+(source.kind==='head'?9:17.25))*(source.reachFactor||1))return null;
+    if(dist>(CONFIG.combat.strikeReachCm+(source.kind==='head'?9:17.25))*(source.reachFactor||1)*(attacker.body?.scaleMultiplier??1))return null;
     // An unseen rear opponent is sensed only near the attacking foot/stump.
     if(source.kind==='leg' && !attacker.canSee(victim.center)
       && dist>CONFIG.combat.contactSenseCm)return null;
@@ -103,7 +103,7 @@ export function strikeCandidates(attacker, victim, source) {
       aim,
       gap
     };
-  }).filter(c => c && c.dist <= (CONFIG.combat.strikeReachCm + (source.kind === 'head' ? 9 : 17.25)) * (source.reachFactor || 1) && c.gap <= 3.5).sort(compareStrikeCandidates);
+  }).filter(c => c && c.dist <= (CONFIG.combat.strikeReachCm + (source.kind === 'head' ? 9 : 17.25)) * (source.reachFactor || 1) * (attacker.body?.scaleMultiplier??1) && c.gap <= 3.5).sort(compareStrikeCandidates);
 }
 export function struckSegment(attacker, victim, p) {
   const pose = attacker.attackPose(p);
@@ -111,7 +111,7 @@ export function struckSegment(attacker, victim, p) {
   if (pose.kind==='leg' && !kickPathClear(attacker,p)) return null;
   if (!sightClear(attacker.center, victim.center)) return null;
   const rest = attacker.attackPose({...p,
-    started:ctx.game.time-(pose.kind==='leg'?CONFIG.combat.windupSec:0),preview:false});
+    started:ctx.game.time-(pose.kind==='leg'?(attacker.body?.combat??CONFIG.combat).windupSec:0),preview:false});
   if (!rest) return null;
   const capsules = victim.capsules.filter(c=>c.segment && victim.isDamageable(c.segment));
   // Sweep along the actual limb/head thrust rather than teleporting the hit
@@ -159,7 +159,7 @@ export function selectSimultaneousStrikes(candidates,{moving=false}={}){
 export function pounceOpportunity(attacker,victim) {
   const cfg=CONFIG.attack;
   const distance=Math.hypot(attacker.x-victim.x,attacker.y-victim.y);
-  return attacker.hasHead && attacker.movementLimbs>=2
+  return attacker.body?.allowPounce!==false && attacker.hasHead && attacker.movementLimbs>=2
     && victim.mobile && victim.visible
     && distance>=cfg.combatPounceMinCm && distance<=cfg.combatPounceMaxCm
     && attacker.canSee(victim.center)
@@ -198,7 +198,7 @@ function resolvePounceImpacts() {
     const victim=ctx.robots[leap.victim];
     if(!victim?.mobile||!victim.visible||!attacker.hasHead)return;
     const touched=pounceContactSegment(previous,current,victim.capsules,
-      segment=>victim.isDamageable(segment),13*ctx.scale+.5);
+      segment=>victim.isDamageable(segment),13*(attacker.scale??ctx.scale)+.5);
     if(!touched)return;
     leap.impactDone=true;
     const id=attacker.id;
@@ -212,7 +212,7 @@ function resolvePounceImpacts() {
       ctx.agentAI[victim.id].lastHitAt=ctx.game.time;
       note('combat-strike',{from:id,to:victim.id,
         source:'head',segment:touched,pounce:true});
-      if(victim.mobile&&victim.movementLimbs<4){
+      if(victim.mobile&&victim.movementLimbs<(victim.movementLimbTotal??4)){
         ctx.combat.retreatUntil[victim.id]=ctx.game.time+CONFIG.combat.retreatSec;
         ctx.combat.retreatFrom[victim.id]=id;
       }
@@ -280,7 +280,7 @@ export function combatAttacks() {
               source: pending.source,
               segment: touched
             });
-            if (victim.mobile && victim.movementLimbs < 4) {
+            if (victim.mobile && victim.movementLimbs < (victim.movementLimbTotal??4)) {
               ctx.combat.retreatUntil[victim.id] = ctx.game.time + CONFIG.combat.retreatSec;
               ctx.combat.retreatFrom[victim.id] = id;
             }
@@ -309,16 +309,17 @@ export function combatAttacks() {
     }
     const selected=selectSimultaneousStrikes(candidates,{moving});
     if(selected.length){
+      const timing=attacker.body?.combat??CONFIG.combat;
       setPendingStrikes(id,selected.map(best=>({
         victim:best.victim.id,segment:best.segment,source:best.source.key,aim:{...best.aim},
         started:ctx.game.time,
-        impactAt:ctx.game.time+CONFIG.combat.windupSec+CONFIG.combat.thrustSec,
-        endsAt:ctx.game.time+CONFIG.combat.windupSec+CONFIG.combat.thrustSec+CONFIG.combat.recoverSec,
-        at:ctx.game.time+CONFIG.combat.windupSec,resolved:false
+        impactAt:ctx.game.time+timing.windupSec+timing.thrustSec,
+        endsAt:ctx.game.time+timing.windupSec+timing.thrustSec+timing.recoverSec,
+        at:ctx.game.time+timing.windupSec,resolved:false,...(attacker.body?.combat?{timing}:{})
       })));
       ctx.combat.strikes+=selected.length;
       ctx.combat.fighterSwings[id]+=selected.length;
-      ctx.combat.nextStrike[id]=ctx.game.time+CONFIG.combat.attackCooldownSec*(1+.16*(4-attacker.spineCount));
+      ctx.combat.nextStrike[id]=ctx.game.time+timing.attackCooldownSec*(1+.16*4*(1-attacker.spineCount/(attacker.spineSegmentTotal??4)));
       for(const best of selected)note('combat-windup',{from:id,to:best.victim.id,source:best.source.key});
     }
   }

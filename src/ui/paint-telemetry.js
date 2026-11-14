@@ -1,3 +1,4 @@
+import {paintBossCard,bossPortraitBones} from '../boss/card.js';
 import {patientCombatStats} from '../game/patients.js';
 import {SKILLS,skillValue,skillHint} from './patient.js';
 import { CONFIG } from '../config.js';
@@ -23,8 +24,9 @@ export function paintTelemetry() {
     setText(card.segments, `${n}/${r.segmentTotal}`);
     const actionText = friendlyAction(r);
     if (card.action.textContent !== actionText) card.action.textContent = actionText;
+    if(r.isBoss)paintBossCard(card,r);
     const stats=patientCombatStats(r.id,r);
-    for(const [index,node] of [[0,card.speed],[1,card.strength],[2,card.maneuver]]){
+    if(!r.isBoss)for(const [index,node] of [[0,card.speed],[1,card.strength],[2,card.maneuver]]){
       const value=skillValue(stats,index),field=node.parentElement;
       setText(node,value);
       setClass(field,'is-prosthetic',stats.count>0);
@@ -32,9 +34,9 @@ export function paintTelemetry() {
       setAttribute(field,'aria-label',`${SKILLS[index].name}: ${value}`);
     }
     const {enabled,threshold}=CONFIG.combat.trauma;
-    const traumaHidden=!enabled;
+    const traumaHidden=!enabled||r.isBoss;
     if(card.trauma.hidden!==traumaHidden)card.trauma.hidden=traumaHidden;
-    if(enabled){
+    if(enabled&&!r.isBoss){
       const value=Math.min(threshold,Math.max(0,r.trauma??0)),ratio=value/threshold;
       setText(card.traumaValue,`${formatTrauma.format(value)} / ${formatTrauma.format(threshold)}`);
       setAttribute(card.traumaTrack,'aria-valuemax',String(threshold));
@@ -46,6 +48,7 @@ export function paintTelemetry() {
     }
     setClass(card.card,'bleeding', ctx.combat.unarmedDeadline[r.id] !== null && r.mobile);
     setClass(card.card,'disabled', !r.mobile);
-    paintPatientPortrait(card,r.id,PORTRAIT_BONES.map(({key})=>({key,...segmentDisplayState(r,key)})));
+    const bones=r.isBoss?bossPortraitBones(r.body):PORTRAIT_BONES;
+    paintPatientPortrait(card,r.id,bones.map(({key})=>({key,...segmentDisplayState(r,key)})),bones);
   }
 }

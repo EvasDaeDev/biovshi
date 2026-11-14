@@ -1,3 +1,4 @@
+import {limbKey} from '../robot/body.js';
 import {patientSkin,patientGarage} from '../game/patients.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { CONFIG } from '../config.js';
@@ -35,8 +36,7 @@ export function skinMatrix(a,b,part) {
   return [A,B,C,D,a.x-A*from-C*32,a.y-B*from-D*32];
 }
 
-function createPiece(key,url,parent) {
-  const part=ROBOT_PARTS[key];
+function createPiece(key,url,parent,part=ROBOT_PARTS[key]) {
   if (!part) return null;
   const group=el('g',{'data-skin-segment':key,stroke:'none'},parent);
   const viewport=el('svg',{
@@ -52,7 +52,7 @@ function createPiece(key,url,parent) {
 }
 
 export function createRobotSkin(robot) {
-  const assetKey=['robotA','robotB','robotC','robotD'][patientSkin(robot.id)];
+  const assetKey=robot.body?.skinKey??['robotA','robotB','robotC','robotD'][patientSkin(robot.id)];
   const url=assetUrl(ASSETS.textures[assetKey]);
   if (!url || ctx.textureAssets?.[assetKey]?.loaded===false) return;
   const limbs=el('g',{'data-skin-layer':'limbs',display:'none'},robot.limbG);
@@ -69,11 +69,12 @@ export function createRobotSkin(robot) {
     if(wasReady!==ready)robot.draw(0);
   };
   // Back-to-front body order; head remains above the chest, limbs below it.
-  const keys=[...Object.keys(ROBOT_PARTS).filter(k=>/^(arm|leg)/.test(k)),
+  const parts=robot.skinParts??ROBOT_PARTS;
+  const keys=robot.skinParts?Object.keys(parts):[...Object.keys(ROBOT_PARTS).filter(k=>/^(arm|leg)/.test(k)),
     'spine-3','spine-2','spine-1','spine-0','head'];
   for(const key of keys) {
     const android=robot.prosthetics.includes(key)&&ctx.textureAssets?.robotAndroid?.loaded!==false;
-    const piece=createPiece(key,android?assetUrl(ASSETS.textures.robotAndroid):url,/^(arm|leg)/.test(key)?limbs:body);
+    const piece=createPiece(key,android?assetUrl(ASSETS.textures.robotAndroid):url,/^(arm|leg)/.test(key)?limbs:body,parts[key]);
     piece.image.addEventListener('load',()=>activate(true),{once:true});
     piece.image.addEventListener('error',()=>activate(false));
     pieces.set(key,piece);
@@ -91,20 +92,20 @@ export function paintRobotSkin(robot,strikePoses=[]) {
     if (robot.healthy(key))attr(piece.group,'transform',
       'matrix('+skinMatrix(a,b,piece.part).join(' ')+')');
   };
-  for(let i=0;i<4;i++) {
+  for(let i=0;i<(robot.spineSegmentTotal??4);i++) {
     position('spine-'+i,robot.spine[i],robot.spine[i+1]);
   }
   const head=robot.headCenter;
   const offset=strikePose?.kind==='head'?{
     x:strikePose.tip.x-strikePose.base.x,y:strikePose.tip.y-strikePose.base.y,
   }:{x:0,y:0};
-  const dx=Math.cos(robot.headFrame.angle)*10*ctx.scale;
-  const dy=Math.sin(robot.headFrame.angle)*10*ctx.scale;
+  const dx=Math.cos(robot.headFrame.angle)*10*(robot.scale??ctx.scale);
+  const dy=Math.sin(robot.headFrame.angle)*10*(robot.scale??ctx.scale);
   position('head',{x:head.x+offset.x-dx,y:head.y+offset.y-dy},
     {x:head.x+offset.x+dx,y:head.y+offset.y+dy});
   for(const limb of [...robot.arms,...robot.legs]) {
     if (!limb.pose) continue;
-    const [a,joint,end]=limb.pose,key=`${limb.kind}-${limb.side}-`;
+    const [a,joint,end]=limb.pose,key=`${limbKey(limb)}-`;
     const limbStrike=strikePoses.find(p=>p.limb===limb);
     const stump=(limbStrike?.kind==='arm'||limbStrike?.kind==='leg')&&limbStrike.limb===limb&&!limbStrike.complete;
     position(key+'upper',a,stump?limbStrike.tip:joint);
@@ -122,11 +123,11 @@ export function snapshotRobotSkin(robot,key) {
     const transform=node.getAttribute?.('transform');
     if (transform)transforms.unshift(transform);
   }
-  return {key,url:piece.url,transform:transforms.join(' '),hat:key==='head'?patientGarage()?.[robot.id]?.head?.hat:null};
+  return {key,part:piece.part,url:piece.url,transform:transforms.join(' '),hat:key==='head'?patientGarage()?.[robot.id]?.head?.hat:null};
 }
 
 export function drawDetachedSkin(snapshot,parent) {
-  const piece=createPiece(snapshot.key,snapshot.url,parent);
+  const piece=createPiece(snapshot.key,snapshot.url,parent,snapshot.part);
   if (!piece) return false;
   attr(piece.group,'transform',snapshot.transform);
   if(snapshot.hat){const hat=createHat(snapshot.hat,parent);attr(hat,'transform',snapshot.transform);}
@@ -143,7 +144,7 @@ export function paintHeadDecor(robot,strikePose){
   if(robot.decorHatId!==hat){robot.decorHat?.remove();robot.decorHat=hat?createHat(hat,robot.bodyG):null;robot.decorHatId=hat;}
   if(!robot.decorHat)return;
   attr(robot.decorHat,'display',robot.healthy('head')?'':'none');
-  const dx=Math.cos(robot.headFrame.angle)*10*ctx.scale,dy=Math.sin(robot.headFrame.angle)*10*ctx.scale;
+  const dx=Math.cos(robot.headFrame.angle)*10*(robot.scale??ctx.scale),dy=Math.sin(robot.headFrame.angle)*10*(robot.scale??ctx.scale);
   const offset=strikePose?.kind==='head'?{x:strikePose.tip.x-strikePose.base.x,y:strikePose.tip.y-strikePose.base.y}:{x:0,y:0};
   const head=robot.headCenter;
   attr(robot.decorHat,'transform','matrix('+skinMatrix({x:head.x+offset.x-dx,y:head.y+offset.y-dy},{x:head.x+offset.x+dx,y:head.y+offset.y+dy},ROBOT_PARTS.head).join(' ')+')');
