@@ -49,6 +49,7 @@ export function steerTo(robotState, goal, padding=robotState.routePadding, waypo
   return robotState.route[robotState.routeIndex] || goal;
 }
 export function headingForIntent(currentAngle, position, waypoint, intent) {
+  if(Number.isFinite(intent.heading))return intent.heading;
   const dx=waypoint.x-position.x,dy=waypoint.y-position.y;
   if (intent.mode === 'атакует' && intent.lookPoint) {
     const tx=intent.lookPoint.x-position.x,ty=intent.lookPoint.y-position.y;

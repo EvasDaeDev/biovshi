@@ -49,7 +49,7 @@ export function inStrikeSector(attacker, source, point) {
   return Math.abs(angle) >= Math.PI*8/9 || angle*source.side >= Math.PI/3;
 }
 export function kickPathClear(attacker, pending) {
-  const cfg=attacker.body?.combat??CONFIG.combat;
+  const cfg=pending.timing??attacker.body?.combat??CONFIG.combat;
   // Check the knee and both bones throughout tuck, extension and return.
   const duration=cfg.windupSec+cfg.thrustSec+cfg.recoverSec;
   const ages=[cfg.windupSec,cfg.windupSec+cfg.thrustSec,
@@ -111,7 +111,7 @@ export function struckSegment(attacker, victim, p) {
   if (pose.kind==='leg' && !kickPathClear(attacker,p)) return null;
   if (!sightClear(attacker.center, victim.center)) return null;
   const rest = attacker.attackPose({...p,
-    started:ctx.game.time-(pose.kind==='leg'?(attacker.body?.combat??CONFIG.combat).windupSec:0),preview:false});
+    started:ctx.game.time-(pose.kind==='leg'?(p.timing??attacker.body?.combat??CONFIG.combat).windupSec:0),preview:false});
   if (!rest) return null;
   const capsules = victim.capsules.filter(c=>c.segment && victim.isDamageable(c.segment));
   // Sweep along the actual limb/head thrust rather than teleporting the hit
@@ -258,6 +258,7 @@ export function combatAttacks() {
   // Каждый удар: замах -> движение -> касание -> возврат в опору.
   for (const attacker of ctx.robots) {
     const id = attacker.id;
+    if(attacker.body?.resolveCombat){attacker.body.resolveCombat(attacker);continue;}
     for(const pending of pendingStrikes(id)){
       if (!pending.resolved && ctx.game.time >= pending.impactAt) {
         pending.resolved = true;
@@ -298,6 +299,7 @@ export function combatAttacks() {
   // Each limb attacks one target; each cycle can attack at most two opponents.
   for (const attacker of ctx.robots) {
     const id = attacker.id;
+    if(attacker.body?.planCombat){attacker.body.planCombat(attacker);continue;}
     if (!attacker.visible || !attacker.mobile || ctx.game.time < ctx.combat.nextStrike[id] || ctx.combat.pending[id] || attacker.actualPose.leap || ctx.game.time < attacker.combatRecoverUntil) continue;
     // Reach is measured from each attacking limb, including the rear pelvis.
     const preferredVictims = activeOpponents(id);

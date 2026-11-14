@@ -55,7 +55,7 @@ export function step(dt) {
   }
   if (ctx.brainDebt >= .1 || !ctx.intents.length) {
     ctx.brainDebt = 0;
-    ctx.intents = ctx.robots.map(r=>ctx.mode==='tower'&&r.id===0?controlledIntent(r):fighterIntent(r));
+    ctx.intents = ctx.robots.map(r=>ctx.mode==='tower'&&r.id===0?controlledIntent(r):r.body?.intent?r.body.intent(r):fighterIntent(r));
   }
   if(ctx.mode==='tower')ctx.intents[0]=controlledIntent(ctx.robots[0]);
   for (const r of ctx.robots) r.tick(dt, ctx.intents[r.id]);

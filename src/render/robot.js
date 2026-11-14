@@ -176,6 +176,7 @@ export function robotPaint(robotState) {
   attr(robotState.bodyG, 'transform', robotState.bodyTransform(height));
   attr(robotState.actor, 'class', 'robot');
   robotState.draw(0);
+  robotState.body?.paint?.(robotState);
   if(robotState.corpsePuddlePending&&inertiaOffset(robotState.corpseInertia).settled) {
     const center=robotState.visiblePoint(robotState.api.center);
     createOilDrop(robotState.id,center.x,center.y,CONFIG.oil.settledPuddleRadiusCm);

@@ -39,7 +39,7 @@ export function attackPose(robotState, p) {
     const progress = p.preview ? {
         wind: 0,
         reach: 1
-      } : strikeProgress(robotState.body?.combat?{...p,timing:robotState.body.combat}:p),
+      } : strikeProgress(p.timing?p:robotState.body?.combat?{...p,timing:robotState.body.combat}:p),
       base = robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0);
     const dx = p.aim.x - base.x,
       dy = p.aim.y - base.y,
@@ -82,7 +82,8 @@ export function attackPose(robotState, p) {
     wind: 0,
     reach: 1,
     phase: 'recover'
-  } : strikeProgress(robotState.body?.combat?{...p,timing:robotState.body.combat}:p);
+  } : strikeProgress(p.timing?p:robotState.body?.combat?{...p,timing:robotState.body.combat}:p);
+  if(p.style==='sweep'&&robotState.body?.strikePose)return robotState.body.strikePose(robotState,p,{limb:l,shoulder,upper,lower,maxReach,base,complete,progress});
   // Подготовка: кисть уходит назад. Выпад: вытягивание к ЗАФИКСИРОВАННОЙ при замахе точке.
   const rear = {
     x: base.x - Math.cos(robotState.angle) * 5,
