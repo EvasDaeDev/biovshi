@@ -10,8 +10,7 @@ function fitField() {
   const scale=ctx.layoutScale||1;
   const main = ctx.root.querySelector('.tag7hop-main');
   const columnWidth = main.clientWidth || screenRect(main).width/scale || 700;
-  const win=ctx.root.ownerDocument.defaultView;
-  const viewportHeight=(win.visualViewport?.height||win.innerHeight)/scale;
+  const viewportHeight=ctx.layoutViewport.height/scale;
   const toolbar=ctx.root.querySelector('.atmosphere-controls');
   const toolbarHeight=toolbar.offsetHeight||screenRect(toolbar).height/scale;
   // The WINDOW is rectangular; the camera fits the square arena inside it.

@@ -13,7 +13,8 @@ export function initializeOrientation(){
   const update=()=>{
     // Window dimensions also cover tablet split view. Screen orientation alone
     // can stay landscape while the browser's actual viewport is portrait.
-    const blocked=Boolean(ctx.touchDevice&&win.innerHeight>win.innerWidth);
+    const size=ctx.keyboardViewport?.size()??{width:win.innerWidth,height:win.innerHeight};
+    const blocked=Boolean(ctx.touchDevice&&size.height>size.width);
     if(ctx.orientationBlocked!==blocked){resetFrameClock();ctx.clearTowerInput?.();}
     ctx.orientationBlocked=blocked;
     if(blocked){
