@@ -1,5 +1,5 @@
 import {limbKey,standardLimbs,bodySegments,bodyParents} from './body.js';
-import {patientSkin,patientGarage} from '../game/patients.js';
+import {patientSkin,patientGarage,patientIdentity} from '../game/patients.js';
 import { clamp } from '../utils/math.js';
 import { descendants, finishMobility, leakOrigin, reactToHit, robotDamage, robotFailFromOilLoss, segmentGeometry } from "./anatomy.js";
 import { allLimbs, attackPose, handEnd, handRest, headFrameAt, hornPoints, layoutBody, legRest, lengths, limbFrame, local, mixPose, origin, rest, savePose, sphereCenters, updateExtraLimbs, updateTail } from "./kinematics.js";
@@ -20,6 +20,7 @@ export
 function createRobot(id, start, body = {}) {
   const robotState = {
     id,
+    patientIdentity:patientIdentity(id),
     start, body,
     scale:ctx.scale*(body.scaleMultiplier??1),
     spineSegmentTotal:body.spineSegments??4,
@@ -360,6 +361,7 @@ function createRobot(id, start, body = {}) {
   robotState.recoveryStartedAt = 0;
   robotState.api = {
     id: robotState.id,
+    patientIdentity:robotState.patientIdentity,
     isBoss:body.isBoss??false,
     bossName:body.name,
     body,

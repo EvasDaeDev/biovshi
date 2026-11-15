@@ -125,7 +125,7 @@ test('boss critical chance is 30 percent with the same 1/2HP limit; ordinary pat
 test('telegraph follows actual strike geometry, displays phase, disappears on death and consumes no RNG',()=>{
  const f=duel();try{
   prepareWide(f);const seed=ctx.seed;f.boss.paint(0);
-  const cue=f.boss.actor.querySelector('[data-boss-cue]');assert.ok(cue);assert.match(cue.textContent,/РАЗМАХ/);assert.ok(cue.querySelector('path').getAttribute('d').length>20);assert.equal(ctx.seed,seed);
+  const cue=f.boss.actor.querySelector('[data-boss-cue]');assert.ok(cue);assert.equal(cue.querySelector('text'),null);assert.equal(cue.textContent,'');assert.ok(cue.querySelector('path').getAttribute('d').length>20);assert.equal(ctx.seed,seed);
   assert.equal(f.boss.actor.getAttribute('data-boss-phase'),'1');f.state.phase=2;f.boss.paint(0);assert.equal(f.boss.actor.getAttribute('data-boss-phase'),'2');
   f.boss.damage('head',0,100);f.boss.paint(0);assert.equal(cue.getAttribute('display'),'none');assert.doesNotMatch(f.boss.actor.outerHTML,/NaN|undefined/);
  }finally{f.close();}

@@ -71,7 +71,7 @@ test('all arenas spawn variable counts; tower stats and cosmetics never touch re
  const original=structuredClone(s.garage);
  for(const arena of ['ward','ring','annulus']){
    const dom=setup(s,t,arena);assert.equal(ctx.robots.length,6);assert.equal(ctx.cardNodes.length,6);assert.equal(patientSkin(0),3);assert.equal(patientSkin(8),0);
-   assert.deepEqual(patientGarage()[1].stats,[3,3,3]);assert.deepEqual(s.garage,original);assert.match(patientName(0),/&lt;Игрок&gt;/);assert.match(patientName(8),/ИИ 8/);
+   assert.deepEqual(patientGarage()[1].stats,[3,3,3]);assert.deepEqual(s.garage,original);assert.match(patientName(0),/&lt;Игрок&gt;/);assert.match(patientName(8),/>I</);
    for(const r of ctx.robots)assert.ok(Number.isFinite(r.x)&&Number.isFinite(r.y));close(dom);
  }
 });
@@ -204,7 +204,7 @@ test('tower detailed statistics show totals and every patient after victory and 
   const details=document.querySelector('.gladiator-results-details');details.open=true;
   assert.equal(ctx.resultsTotals.children.length,3);assert.deepEqual([...ctx.resultsTotals.querySelectorAll('strong')].map(n=>n.textContent),['7','4','1']);
   assert.equal(ctx.resultsRows.children.length,2);const rows=[...ctx.resultsRows.querySelectorAll('tr')].map(row=>[...row.cells].map(cell=>cell.textContent));
-  assert.deepEqual(rows[0].slice(0,4),['Статистик',won?'13/13':'12/13','3','1']);assert.equal(rows[0][4],won?'ПОБЕДИЛ':'ПОГИБ');assert.equal(rows[1][0],'ИИ 1');
+  assert.deepEqual(rows[0].slice(0,4),['Статистик',won?'13/13':'12/13','3','1']);assert.equal(rows[0][4],won?'ПОБЕДИЛ':'ПОГИБ');assert.equal(rows[1][0],'B');
   assert.equal(rows[1][4],won?'ПОГИБ':'ПОДВИЖЕН');close(dom);
  }
 });
@@ -301,3 +301,19 @@ test('tower carries restored android segments between floors and clears them for
  }finally{ctx.root.__disposeTag();dom.window.close();}
 });
 
+
+test('tower enemy letters persist generations across floors, saves and resets without renaming corpses',()=>{
+ const s=betNewSession(['Первый'],100),dom=setup(s,towerFor(s,0));
+ const enemy=ctx.robots[1];enemy.setVisible(true);
+ assert.match(patientName(1),/>B</);
+ assert.equal(enemy.damage('head',0,100),true);
+ assert.equal(s.towerEnemyGenerations[1],1);
+ assert.match(patientName(1),/>B</,'the dead body keeps its old identity');
+ bettingSave();const loaded=bettingLoad();assert.equal(loaded.towerEnemyGenerations[1],1);
+ resetTower(loaded,0);assert.equal(loaded.towerEnemyGenerations[1],1);
+ close(dom);
+ const next=setup(loaded,towerFor(loaded,0));
+ assert.match(patientName(1),/>B-1</);
+ assert.match(patientName(0),/Первый/);
+ close(next);
+});

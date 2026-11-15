@@ -33,7 +33,9 @@ export function patientRecovery(patient,robot) {
   if(!robot?.hasHead)return;
   patient.prosthetics=normalizeProsthetics([...(patient.prosthetics??[]),...robot.missingSegments]);
 }
+export const patientGeneration=patient=>Number.isSafeInteger(patient?.generation)&&patient.generation>=0?patient.generation:0;
 export function normalizePatient(patient) {
+  patient.generation=patientGeneration(patient);
   patient.prosthetics=normalizeProsthetics(patient.prosthetics);
   patient.wins=Number.isSafeInteger(patient.wins)&&patient.wins>=0?patient.wins:0;
   if(!validStats(patient.stats,patient.wins))patient.stats=earnedStats(patient.wins);
@@ -47,6 +49,7 @@ export function patientVictory(patient) {
   patient.stats=patient.stats.map((n,i)=>n+next[i]-old[i]);
 }
 export function patientDeath(patient) {
+  patient.generation=patientGeneration(patient)+1;
   patient.prosthetics=[];
   patient.wins=0;
   patient.stats=[...BASE_STATS];
@@ -55,7 +58,7 @@ export function patientDeath(patient) {
   if(patient.decor)patient.decor={};
   if(patient.decorations)patient.decorations={};
 }
-export function newGarage(){return Array.from({length:4},()=>({stats:[3,3,3],wins:0,head:null,prosthetics:[],investments:{},patron:null}));}
+export function newGarage(){return Array.from({length:4},()=>({stats:[3,3,3],wins:0,generation:0,head:null,prosthetics:[],investments:{},patron:null}));}
 // Interpolate fractional effective points; earned points and existing caps stay intact.
 function interpolateEffect(points,values){
  const offset=Math.max(0,Math.min(values.length-1,points-4));
