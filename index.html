@@ -4,21 +4,33 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org/js/telegram-web-app.js; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' ws://localhost:* ws://127.0.0.1:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' ws://localhost:* ws://127.0.0.1:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
 <!-- telegram-sdk:start -->
 <script>
-// Only a Telegram launch fetches the SDK. Browser and offline startup never wait
-// for a third-party script. A late load is attached to the current game view.
+// Fetch the pinned official SDK from the same origin as the game. Telegram's
+// CDN may be unreachable in the WebView even when GitHub Pages works.
 (function () {
   var launch = location.hash + '&' + location.search.slice(1);
   if (!/(?:^|[#&?])tgWebApp(?:Platform|Version)=/.test(launch)) return;
   document.documentElement.classList.add('telegram-launch');
-  var script = document.createElement('script');
-  script.src = 'https://telegram.org/js/telegram-web-app.js?65';
-  script.async = true;
-  script.onload = function () { window.dispatchEvent(new Event('telegram-sdk-ready')); };
-  script.onerror = function () { /* The browser game remains usable. */ };
-  document.head.appendChild(script);
+  window.__loadTelegramSDK = function () {
+    var previous = window.__telegramSDK;
+    if (previous && (previous.state === 'loading' || previous.state === 'loaded')) return;
+    var script = document.createElement('script');
+    script.src = './vendor/telegram-web-app-65.js';
+    script.async = true;
+    var status = window.__telegramSDK = { state: 'loading', source: script.src, error: null };
+    script.onload = function () {
+      status.state = window.Telegram && window.Telegram.WebApp ? 'loaded' : 'unavailable';
+      window.dispatchEvent(new Event('telegram-sdk-ready'));
+    };
+    script.onerror = function () {
+      status.state = 'error';status.error = 'SDK script failed to load';
+      window.dispatchEvent(new Event('telegram-sdk-error'));
+    };
+    document.head.appendChild(script);
+  };
+  window.__loadTelegramSDK();
 })();
 </script>
 <!-- telegram-sdk:end -->

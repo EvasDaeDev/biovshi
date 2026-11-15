@@ -117,10 +117,11 @@ export function initializeTelegram(onLayoutChange){
       readyRequested=true;invoke('ready','6.0');fullscreenRequested=false;fullscreen();
       win.clearTimeout(readyRetry);readyRetry=win.setTimeout(()=>{if(!disposed&&fullscreenConfirmed!==true){fullscreenRequested=false;fullscreen();}},700);
     },
-    enterFullscreen(){fullscreenConfirmed=null;fullscreenRequested=false;lastGesture=-Infinity;fullscreen(true);},
+    enterFullscreen(){if(!app)win.__loadTelegramSDK?.();fullscreenConfirmed=null;fullscreenRequested=false;lastGesture=-Infinity;fullscreen(true);},
     diagnostics(){
       const style=win.getComputedStyle(doc.body),rect=root.getBoundingClientRect();
       return {build:typeof __BUILD_VERSION__==='string'?__BUILD_VERSION__:'dev',source:typeof __BUILD_SOURCE__==='string'?__BUILD_SOURCE__:'dev',platform:app?.platform??'SDK unavailable',api:app?.version??null,
+        sdk:{...win.__telegramSDK,available:Boolean(win.Telegram?.WebApp),rawPlatform:win.Telegram?.WebApp?.platform??null,rawApi:win.Telegram?.WebApp?.version??null},
         fullscreen:{reported:app?.isFullscreen??null,confirmed:fullscreenConfirmed,error:fullscreenError,attempts:fullscreenAttempts},
         window:{width:win.innerWidth,height:win.innerHeight},visual:win.visualViewport?{width:win.visualViewport.width,height:win.visualViewport.height,top:win.visualViewport.offsetTop,left:win.visualViewport.offsetLeft}:null,
         telegramViewport:{current:app?.viewportHeight??null,stable:app?.viewportStableHeight??null},safe:app?.safeAreaInset??null,contentSafe:app?.contentSafeAreaInset??null,effective:edges(),

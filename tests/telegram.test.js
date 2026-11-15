@@ -56,7 +56,7 @@ test('SDK loads only for launch parameters; no SDK network request in a browser'
  const bootstrap=html.match(/<!-- telegram-sdk:start -->[\s\S]*?<script>([\s\S]*?)<\/script>/)[1];
  for(const telegram of [false,true]){
   const dom=new JSDOM(html,{url:'https://example.test/'+(telegram?'#tgWebAppPlatform=ios&tgWebAppVersion=8.0':''),runScripts:'outside-only'});
-  try{dom.window.eval(bootstrap);assert.equal(dom.window.document.querySelectorAll('script[src^="https://telegram.org/js/telegram-web-app.js"]').length,telegram?1:0);}finally{dom.window.close();}
+  try{dom.window.eval(bootstrap);assert.equal(dom.window.document.querySelectorAll('script[src$="/vendor/telegram-web-app-65.js"]').length,telegram?1:0);}finally{dom.window.close();}
  }
 });
 

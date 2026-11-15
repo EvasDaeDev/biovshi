@@ -41,6 +41,7 @@ export function initializeSettings() {
   telegram.ontoggle=refreshTelegram;
   doc.defaultView.addEventListener('telegram-viewport-change',refreshTelegram);
   doc.defaultView.addEventListener('telegram-sdk-ready',refreshTelegram);
+  doc.defaultView.addEventListener('telegram-sdk-error',refreshTelegram);
   refreshTelegram();
   const settingsMain=[...panel.querySelector('.settings-panel').children].filter(node=>node!==settingsHeader&&node!==creditsView&&node!==copyright);
   const showCredits=visible=>{
@@ -89,7 +90,7 @@ export function initializeSettings() {
   };
   doc.addEventListener('keydown',onKey);
   const dispose=root.__disposeTag;
-  root.__disposeTag=()=>{close(false);telegram.ontoggle=fullButton.onclick=copyButton.onclick=null;telegram.remove();doc.defaultView.removeEventListener('telegram-viewport-change',refreshTelegram);doc.defaultView.removeEventListener('telegram-sdk-ready',refreshTelegram);controlMode.onchange=null;panel.hidden=true;tutorialButton.onclick=menuButton.onclick=null;button.onclick=launchButton.onclick=closeButton.onclick=panel.onclick=creditsOpen.onclick=creditsBack.onclick=null;doc.removeEventListener('keydown',onKey);dispose();};
+  root.__disposeTag=()=>{close(false);telegram.ontoggle=fullButton.onclick=copyButton.onclick=null;telegram.remove();doc.defaultView.removeEventListener('telegram-viewport-change',refreshTelegram);doc.defaultView.removeEventListener('telegram-sdk-ready',refreshTelegram);doc.defaultView.removeEventListener('telegram-sdk-error',refreshTelegram);controlMode.onchange=null;panel.hidden=true;tutorialButton.onclick=menuButton.onclick=null;button.onclick=launchButton.onclick=closeButton.onclick=panel.onclick=creditsOpen.onclick=creditsBack.onclick=null;doc.removeEventListener('keydown',onKey);dispose();};
 }
 
 function winStorage(doc){try{return doc.defaultView.localStorage;}catch{return null;}}
