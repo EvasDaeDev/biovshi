@@ -68,13 +68,13 @@ test('procedure preserves stakes and arena; hat selection never spends until exp
  try{
   const row=document.querySelector('[data-bet-player="0"]');row.querySelector('input').value='23';row.querySelector('select').value='3';
   document.querySelector('[data-arena="ring"]').click();document.querySelector('#bet-procedure').click();
+  const player=document.querySelector('#procedure-editor');player.value='1';player.dispatchEvent(new Event('change'));
   let section=document.querySelector('[data-patient="0"]');
-  const buyer=section.querySelector('[data-buyer]');buyer.value='1';buyer.dispatchEvent(new Event('change'));
   section.querySelector('[data-price]').value='25';section.querySelector('[data-hat="2"]').click();
   assert.equal(ctx.betting.players[1].balance,100);assert.equal(ctx.betting.garage[0].head,null);
   const speed=section.querySelector('[data-stat="0"]');speed.value='4';speed.dispatchEvent(new Event('change'));
   section=document.querySelector('[data-patient="0"]');
-  assert.equal(section.querySelector('[data-buyer]').value,'1');assert.equal(section.querySelector('[data-price]').value,'25');
+  assert.equal(document.querySelector('#procedure-editor').value,'1');assert.equal(section.querySelector('[data-price]').value,'25');
   assert.equal(section.querySelector('[data-hat="2"]').getAttribute('aria-pressed'),'true');
   assert.match(section.querySelector('[data-error]').textContent,/Скорость \+1/);
   section.querySelector('[data-buy]').click();assert.equal(ctx.betting.players[1].balance,75);assert.equal(ctx.betting.garage[0].head.hat,2);
