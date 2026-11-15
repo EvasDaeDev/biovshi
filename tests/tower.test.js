@@ -254,7 +254,9 @@ test('floor result distinguishes a cleared floor from a reached floor and marks 
  assert.match(document.querySelector('#bet-result-summary').textContent,/10/);assert.equal(towerFor(s,0).record,1);assert.equal(towerFor(s,0).runCoins,10);
  openMenu();assert.match(document.querySelector('#menu-tower-progress').textContent,/ПРОЙДЕНО: 1 · РЕКОРД: 1/);close(dom);
  const lossDom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.robots[0].damage('head',1,100);ctx.combat.finished=true;ctx.combat.winner=null;settleTower(null);showResults();
- assert.equal(ctx.resultsTitle.textContent,'ПРОЙДЕНО ЭТАЖЕЙ: 1');assert.match(ctx.resultsSummary.textContent,/на этаже 2/);assert.equal(towerFor(s,0).level,1);assert.equal(towerFor(s,0).record,1);assert.equal(s.players[0].balance,110);close(lossDom);
+ assert.equal(ctx.resultsTitle.textContent,'ПРОЙДЕНО ЭТАЖЕЙ: 1');assert.match(ctx.resultsSummary.textContent,/на этаже 2/);
+ const floorCoins=document.querySelector('.tower-result-numbers').children[2];
+ assert.equal(floorCoins.querySelector('strong').textContent.trim(),'0');assert.equal(floorCoins.querySelector('span').textContent,'МОНЕТ ЗА ЭТАЖ');assert.equal(towerFor(s,0).level,1);assert.equal(towerFor(s,0).record,1);assert.equal(s.players[0].balance,110);close(lossDom);
 });
 test('a five-floor milestone is celebrated without awarding extra money',()=>{
  const s=betNewSession(['Первый'],100);for(let i=0;i<4;i++)completeTower(s,0,true);
