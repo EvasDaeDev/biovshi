@@ -238,6 +238,11 @@ export function robotDamage(robotState, key, by, damage=1) {
       pieces: wreckPieces
     });
     if(ctx.mode!=='tower'&&wreckKeys.includes('head')&&ctx.betting?.garage?.[robotState.id]){patientDeath(ctx.betting.garage[robotState.id]);bettingSave();}
+    if(ctx.mode==='tower'&&robotState.id!==0&&!robotState.body.isBoss&&wreckKeys.includes('head')&&ctx.betting){
+      const generations=ctx.betting.towerEnemyGenerations??={};
+      generations[robotState.id]=(Number.isSafeInteger(generations[robotState.id])?generations[robotState.id]:0)+1;
+      bettingSave();
+    }
     for (const part of [key, ...attached]) {
       robotState.broken.add(part);
       robotState.hp.set(part, 0);

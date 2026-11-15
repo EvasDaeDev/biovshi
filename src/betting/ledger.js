@@ -15,6 +15,7 @@ export function betNewSession(names, capital) {
     shopSpent: 0,
     topUps: 0,
     towerEarned: 0,
+    towerEnemyGenerations: {},
     towers: {},
     floorId: globalThis.crypto?.randomUUID?.()??String(Date.now())+Math.random(),
     round: 1,

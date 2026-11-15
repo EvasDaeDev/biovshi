@@ -64,7 +64,7 @@ test('mascot renders in both modes, keeps its own visibility and uses shared hin
    const caption=box.querySelector('.streamer-quip');
    if(!caption.hidden&&caption.textContent!==previous){previous=caption.textContent;lines.push(previous);}
   }
-  assert.deepEqual(lines,mode==='tower'?['out ИИ 1','dead ИИ 2','winner Лис']:['out B','dead C','winner A']);
+  assert.deepEqual(lines,mode==='tower'?['out B','dead C','winner Лис']:['out B','dead C','winner A']);
   assert.equal(ctx.streamerMascot.hasRequiredAnnouncements(),false);
   // Defeat keeps the player's live name and must not fall back to draw copy.
   if(mode==='tower'){

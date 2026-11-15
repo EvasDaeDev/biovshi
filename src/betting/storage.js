@@ -40,6 +40,9 @@ export function bettingLoad() {
     if (!Number.isInteger(s.jackpotRounds) || s.jackpotRounds < 0 || s.jackpotRounds >= JACKPOT_INTERVAL) throw Error();
     s.towerEarned??=0;
     if(!Number.isSafeInteger(s.towerEarned)||s.towerEarned<0||s.towerEarned>16000000)throw Error();
+    s.towerEnemyGenerations??={};
+    if(typeof s.towerEnemyGenerations!=='object'||s.towerEnemyGenerations===null||Array.isArray(s.towerEnemyGenerations)
+      ||!Object.entries(s.towerEnemyGenerations).every(([id,n])=>/^[1-9]\d*$/.test(id)&&Number.isSafeInteger(n)&&n>=0))throw Error();
     s.towers??={};
     const migrateArtifacts=Object.values(s.towers).some(t=>t&&(t.artifacts===undefined||t.artifacts?.version===1||t.artifacts?.version===2&&t.artifacts.bossEvery!==5));
     if(typeof s.towers!=='object'||Array.isArray(s.towers)||s.towers===null||!Object.entries(s.towers).every(([id,t])=>/^(0|[1-9]\d*)$/.test(id)&&s.players[Number(id)]&&validTower(normalizeTower(t))))throw Error();
