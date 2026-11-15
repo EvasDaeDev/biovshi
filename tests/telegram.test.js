@@ -140,7 +140,7 @@ test('mode recreation replaces subscriptions, preserves inactive state and leave
   const count=f.mock.count();assert.ok(count>0);f.mock.app.isActive=false;f.mock.emit('deactivated');
   for(let i=0;i<4;i++){f.initialize();assert.equal(f.mock.count(),count);assert.equal(ctx.appInactive,true);}
   assert.equal(localStorage.getItem('biovshi.local-totalizator.v1'),saved);
-  ctx.platform.ready();assert.equal(f.mock.calls.at(-1),'ready');
+  ctx.platform.ready();assert.ok(f.mock.calls.includes('ready'));
   ctx.root.__disposeTag();assert.equal(f.mock.count(),0);assert.equal(ctx.platform,null);
   assert.equal(f.doc.documentElement.classList.contains('telegram-app'),false);
   f.mock.emit('deactivated');assert.equal(ctx.appInactive,false);
@@ -175,5 +175,55 @@ test('partial SDK with no event cleanup cannot accumulate subscriptions',()=>{
   delete f.mock.app.offEvent;f.win.Telegram={WebApp:f.mock.app};f.win.dispatchEvent(new f.win.Event('telegram-sdk-ready'));
   assert.equal(ctx.platform.isTelegram,true);assert.equal(f.mock.count(),0);
   f.initialize();assert.equal(f.mock.count(),0);
+ }finally{f.close();}
+});
+
+test('an ignored initial fullscreen request is retried after ready and on a gesture until acknowledged',()=>{
+ const f=setup();try{
+  let now=0;f.win.performance.now=()=>now;
+  const count=()=>f.mock.calls.filter(call=>call==='requestFullscreen').length;
+  const initial=count();assert.equal(initial,1);
+  ctx.platform.ready();assert.equal(count(),initial+1);
+  ctx.root.dispatchEvent(new f.win.Event('pointerdown'));assert.equal(count(),initial+2);
+  ctx.root.dispatchEvent(new f.win.Event('keydown'));assert.equal(count(),initial+2,'coalesce rapid inputs');
+  now=1500;ctx.root.dispatchEvent(new f.win.Event('pointerdown'));assert.equal(count(),initial+3);
+  f.mock.app.isFullscreen=true;f.mock.emit('fullscreenChanged');
+  now=3000;ctx.root.dispatchEvent(new f.win.Event('pointerdown'));assert.equal(count(),initial+3,'acknowledged fullscreen stops requests');
+ }finally{f.close();}
+});
+
+test('native header and background receive the game color, including after theme changes',()=>{
+ const f=setup({sdk:false});try{
+  const colors=[];
+  for(const method of ['setHeaderColor','setBackgroundColor','setBottomBarColor'])f.mock.app[method]=color=>colors.push([method,color]);
+  f.win.Telegram={WebApp:f.mock.app};f.win.dispatchEvent(new f.win.Event('telegram-sdk-ready'));
+  assert.deepEqual(colors,[['setHeaderColor','#02050d'],['setBackgroundColor','#02050d'],['setBottomBarColor','#02050d']]);
+  f.mock.emit('themeChanged');assert.equal(colors.length,6);
+ }finally{f.close();}
+});
+
+test('iOS env safe area covers a zero SDK inset, follows either landscape side and is not added twice',()=>{
+ const f=setup();try{
+  const nativeGet=f.win.getComputedStyle.bind(f.win),system={top:0,right:0,bottom:21,left:44};
+  f.win.getComputedStyle=node=>node.style.cssText.includes('safe-area-inset-')?{getPropertyValue:name=>system[name.replace('padding-','')]+'px'}:nativeGet(node);
+  f.mock.app.safeAreaInset={top:0,right:0,bottom:0,left:0};f.mock.app.contentSafeAreaInset={top:0,right:0,bottom:0,left:0};
+  f.mock.emit('safeAreaChanged');assert.equal(ctx.layoutViewport.left,44);assert.equal(ctx.layoutViewport.right,0);
+  assert.equal(ctx.layoutViewport.width,800);assert.equal(ctx.layoutViewport.height,369);
+  f.mock.app.safeAreaInset.left=44;f.mock.emit('safeAreaChanged');assert.equal(ctx.layoutViewport.left,44,'env and SDK describe the same physical inset');
+  system.left=0;system.right=44;f.mock.app.safeAreaInset.left=0;f.mock.app.safeAreaInset.right=44;
+  f.orientation.type='landscape-secondary';f.orientation.dispatchEvent(new f.win.Event('change'));
+  assert.equal(ctx.layoutViewport.left,0);assert.equal(ctx.layoutViewport.right,44);
+  assert.equal(f.doc.documentElement.style.getPropertyValue('--telegram-inset-left'),'0px');
+  assert.equal(f.doc.documentElement.style.getPropertyValue('--telegram-inset-right'),'44px');
+ }finally{f.close();}
+});
+
+test('Telegram launch retains iOS safe areas even if the SDK cannot load',()=>{
+ const f=setup({sdk:false});try{
+  f.doc.documentElement.classList.add('telegram-launch');
+  const nativeGet=f.win.getComputedStyle.bind(f.win);
+  f.win.getComputedStyle=node=>node.style.cssText.includes('safe-area-inset-')?{getPropertyValue:name=>name==='padding-left'?'44px':'0px'}:nativeGet(node);
+  f.win.dispatchEvent(new f.win.Event('resize'));
+  assert.equal(ctx.platform.isTelegram,true);assert.equal(ctx.layoutViewport.left,44);assert.equal(ctx.layoutViewport.width,800);
  }finally{f.close();}
 });

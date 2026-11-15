@@ -12,6 +12,7 @@
 (function () {
   var launch = location.hash + '&' + location.search.slice(1);
   if (!/(?:^|[#&?])tgWebApp(?:Platform|Version)=/.test(launch)) return;
+  document.documentElement.classList.add('telegram-launch');
   var script = document.createElement('script');
   script.src = 'https://telegram.org/js/telegram-web-app.js?65';
   script.async = true;
