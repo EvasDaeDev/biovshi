@@ -1,4 +1,5 @@
-export const TUTORIAL_STORAGE='biovshi.tutorial.v1';
+import {storageKey} from '../build-channel.js';
+export const TUTORIAL_STORAGE=storageKey('biovshi.tutorial.v1');
 export const freshTutorial=()=>({version:1,enabled:true,completed:[],steps:{}});
 export function readTutorial(storage){
  try{

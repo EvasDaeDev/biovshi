@@ -1,3 +1,4 @@
+import {storageKey} from '../build-channel.js';
 // Safari can leave IDB open/transactions pending. Every operation has a deadline.
 export function accessFloorStore(key,value,{indexedDB=globalThis.indexedDB,timeoutMs=1500}={}){
   return new Promise((resolve,reject)=>{
@@ -10,7 +11,7 @@ export function accessFloorStore(key,value,{indexedDB=globalThis.indexedDB,timeo
     };
     const timer=setTimeout(()=>finish(Error('Floor storage timed out')),timeoutMs);
     let request;
-    try{request=indexedDB.open('biovshi.floor-history',1);}catch(error){finish(error);return;}
+    try{request=indexedDB.open(storageKey('biovshi.floor-history'),1);}catch(error){finish(error);return;}
     request.onblocked=()=>finish(Error('Floor storage blocked'));
     request.onerror=()=>finish(request.error??Error('Floor storage unavailable'));
     request.onupgradeneeded=()=>{

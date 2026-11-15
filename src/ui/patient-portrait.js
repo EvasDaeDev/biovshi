@@ -23,9 +23,6 @@ export function portraitBones() {
   return bones.map(bone=>({...bone,part:ROBOT_PARTS[bone.key],matrix:skinMatrix(bone.a,bone.b,ROBOT_PARTS[bone.key])}));
 }
 export const PORTRAIT_BONES=portraitBones();
-const corners=PORTRAIT_BONES.flatMap(bone=>[[0,0],[64,0],[64,64],[0,64]].map(([x,y])=>transformPoint(bone.matrix,{x,y})));
-const minX=Math.min(...corners.map(p=>p.x)),maxX=Math.max(...corners.map(p=>p.x));
-const minY=Math.min(...corners.map(p=>p.y)),maxY=Math.max(...corners.map(p=>p.y));
 const palettes=new Map();
 const hatImages=new Map();
 let androidAtlas=null;
@@ -65,29 +62,32 @@ export async function preparePatientPortraits() {
   try{androidAtlas=ctx.textureAssets?.robotAndroid?.loaded===false?null:await atlasPalette(assetUrl(ASSETS.textures.robotAndroid));}catch{androidAtlas=null;}
   await Promise.all([1,2,3,4].map(async id=>{try{hatImages.set(id,await loadTextureImage(assetUrl(ASSETS.textures['hat'+id])));}catch{}}));
   await Promise.all(cards.map(async(card,id)=>{
-    const key=['robotA','robotB','robotC','robotD'][patientSkin(id)];
+    const key=ctx.robots[id]?.body?.skinKey??['robotA','robotB','robotC','robotD'][patientSkin(id)];
     try{card.portraitAtlas=ctx.textureAssets?.[key]?.loaded===false?null:await atlasPalette(assetUrl(ASSETS.textures[key]));}
     catch(error){card.portraitAtlas=null;console.warn('Patient portrait:',error);}
   }));
   if(cards!==ctx.cardNodes||ctx.disposed)return;
   ctx.telemetryPortraitsReady=true;ctx.telemetryDirty=true;
 }
-export function paintPatientPortrait(card,id,states) {
+export function paintPatientPortrait(card,id,states,bones=PORTRAIT_BONES) {
   const prosthetics=ctx.robots[id]?.prosthetics??patientGarage()?.[id]?.prosthetics??[];
   const hat=patientGarage()?.[id]?.head?.hat;
-  const key=states.map(s=>s.state+':'+s.opacity).join('|')+'|'+prosthetics.join(',')+'|'+hat+'|'+card.portrait.width+'x'+card.portrait.height;
+  const key=states.map(s=>s.key+':'+s.state+':'+s.opacity).join('|')+'|'+prosthetics.join(',')+'|'+hat+'|'+card.portrait.width+'x'+card.portrait.height;
   if(card.portraitStateKey!==key){
     card.portraitStateKey=key;card.portraitStates=Object.fromEntries(states.map(s=>[s.key,s.state]));
     const counts=states.reduce((counts,s)=>(counts[s.state]=(counts[s.state]??0)+1,counts),{});
-    card.portrait.setAttribute('aria-label',`Пациент ${String.fromCharCode(65+id)}: целых ${counts.good??0}, повреждено ${(counts.warn??0)+(counts.bad??0)}, потеряно ${counts.off??0}`);
+    card.portrait.setAttribute('aria-label',`${ctx.robots[id]?.isBoss?'Босс':'Пациент '+String.fromCharCode(65+id)}: целых ${counts.good??0}, повреждено ${(counts.warn??0)+(counts.bad??0)}, потеряно ${counts.off??0}`);
   }
   if(!ctx.telemetryPortraitsReady||card.portraitPaintKey===key)return;
   const draw=card.portrait.getContext('2d');if(!draw)return;
   draw.setTransform(1,0,0,1,0,0);draw.clearRect(0,0,card.portrait.width,card.portrait.height);
+  const corners=bones.flatMap(bone=>[[0,0],[64,0],[64,64],[0,64]].map(([x,y])=>transformPoint(bone.matrix,{x,y})));
+  const minX=Math.min(...corners.map(p=>p.x)),maxX=Math.max(...corners.map(p=>p.x));
+  const minY=Math.min(...corners.map(p=>p.y)),maxY=Math.max(...corners.map(p=>p.y));
   const portraitScale=Math.min((card.portrait.width-12)/(maxX-minX),(card.portrait.height-8)/(maxY-minY));
   draw.setTransform(portraitScale,0,0,portraitScale,card.portrait.width/2-(minX+maxX)*portraitScale/2,card.portrait.height/2-(minY+maxY)*portraitScale/2);draw.imageSmoothingEnabled=false;
-  for(let i=0;i<PORTRAIT_BONES.length;i++){
-    const bone=PORTRAIT_BONES[i],state=states[i];draw.save();draw.globalAlpha=Number(state.opacity);
+  for(let i=0;i<bones.length;i++){
+    const bone=bones[i],state=states[i];draw.save();draw.globalAlpha=Number(state.opacity);
     const atlas=prosthetics.includes(bone.key)&&androidAtlas?androidAtlas:card.portraitAtlas;
     if(atlas){
       draw.transform(...bone.matrix);
@@ -100,6 +100,6 @@ export function paintPatientPortrait(card,id,states) {
     }
     draw.restore();
   }
-  if(hatImages.has(hat)&&states.find(s=>s.key==='head')?.state!=='off'){draw.save();draw.transform(...PORTRAIT_BONES.find(b=>b.key==='head').matrix);draw.drawImage(hatImages.get(hat),0,0,64,64);draw.restore();}
+  if(hatImages.has(hat)&&states.find(s=>s.key==='head')?.state!=='off'){draw.save();draw.transform(...bones.find(b=>b.key==='head').matrix);draw.drawImage(hatImages.get(hat),0,0,64,64);draw.restore();}
   card.portraitPaintKey=key;
 }

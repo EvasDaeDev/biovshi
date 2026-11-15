@@ -1,0 +1,155 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {startBossScenario} from '../scripts/boss-harness.mjs';
+import {ctx} from '../src/game/state.js';
+import {createRobot} from '../src/robot/robot.js';
+import {createBoss} from '../src/boss/boss.js';
+import {BOSS_CONFIG} from '../src/boss/config.js';
+import {bossDamage,chargePlan,sweepContact,sweepPathClear} from '../src/boss/attacks.js';
+import {updateBossPhase} from '../src/boss/behavior.js';
+import {pendingStrikes} from '../src/systems/strikes.js';
+import {onGameEvent} from '../src/game/event-bus.js';
+import {obstacleVertices} from '../src/game/arena.js';
+import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
+import {headingForIntent} from '../src/robot/locomotion.js';
+import {critChance} from '../src/garage/model.js';
+function duel({variant='arms',bossX=330,playerX=385}={}){
+ const f=startBossScenario({variant,arena:'ring'});ctx.actorsG.replaceChildren();ctx.robots=[];
+ const player=createRobot(0,{x:playerX,y:350,angle:Math.PI});ctx.robots.push(player);
+ const boss=createBoss(1,{x:bossX,y:350,angle:0},f.tower.bossEncounter);ctx.robots.push(boss);
+ ctx.combat.nextStrike.fill(0);ctx.combat.pending.fill(null);
+ return {...f,player,boss,state:boss.body.behavior.state};
+}
+const advanceTo=(f,time)=>{ctx.game.time=time;f.boss.body.resolveCombat(f.boss);};
+const prepareWide=f=>{f.state.cycles=2;f.boss.body.planCombat(f.boss);const p=pendingStrikes(1)[0];assert.equal(p?.style,'sweep');return p;};
+const obstacle=()=>{const b={left:370,right:378,top:280,bottom:420};b.points=obstacleVertices(b);ctx.obstacles=[b];};
+
+test('boss keeps its slow locomotion, ignores ordinary retreat, and persistently closes reachable distance',()=>{
+ const f=duel({bossX:280,playerX:410});try{
+  ctx.combat.retreatUntil[1]=100;ctx.combat.retreatFrom[1]=0;
+  const intent=f.boss.body.intent(f.boss);assert.equal(intent.mode,'преследует');assert.equal(intent.speed,55);
+  assert.equal(f.boss.locomotion,.85);assert.equal(f.boss.turnAbility,.75);assert.equal(f.player.locomotion,1);
+ }finally{f.close();}
+});
+
+test('phase changes once after anatomical losses, changes follow-up patterns and never restores HP or speed',()=>{
+ const f=duel({variant:'brute'}),events=[];const off=onGameEvent(e=>{if(e.type==='boss-phase')events.push(e);});
+ try{
+  assert.equal(f.state.phase,1);f.boss.damage('leg--1-upper',0,100);const hp=[...f.boss.hp];
+  assert.equal(updateBossPhase(f.boss,f.state),2);assert.equal(updateBossPhase(f.boss,f.state),2);assert.equal(events.length,1);
+  assert.deepEqual([...f.boss.hp],hp);assert.equal(f.boss.trauma,0);assert.equal(f.boss.body.speedFactor,.85);assert.equal(f.boss.body.turnFactor,.75);
+  assert.equal(f.boss.unconscious,false);
+ }finally{off();f.close();}
+});
+
+test('two-hit combo uses separate limbs sequentially and leaves a recovery window',()=>{
+ const f=duel(),attempts=[];f.player.damage=(segment,by,damage)=>{attempts.push({p:pendingStrikes(1)[0],segment,by,damage});return false;};
+ try{
+  f.boss.body.planCombat(f.boss);const first=pendingStrikes(1)[0];assert.equal(first.comboIndex,1);assert.equal(pendingStrikes(1).length,1);
+  advanceTo(f,first.impactAt);advanceTo(f,first.impactAt+.01);assert.ok(attempts.length<=1);
+  advanceTo(f,first.endsAt+.001);assert.ok(f.state.followup);assert.equal(pendingStrikes(1).length,0);
+  ctx.game.time=f.state.followup.at-.001;f.boss.body.planCombat(f.boss);assert.equal(pendingStrikes(1).length,0);
+  ctx.game.time=f.state.followup.at+.001;f.boss.body.planCombat(f.boss);const second=pendingStrikes(1)[0];assert.equal(second.comboIndex,2);
+  assert.notEqual(first.source.replace(/-(upper|lower)$/,''),second.source.replace(/-(upper|lower)$/,''));assert.ok(second.started>first.endsAt);
+  advanceTo(f,second.impactAt);advanceTo(f,second.endsAt+.001);assert.equal(f.state.followup,null);assert.equal(pendingStrikes(1).length,0);
+  assert.ok(ctx.combat.nextStrike[1]>=ctx.game.time+BOSS_CONFIG.tactics.seriesRest-.01);assert.ok(attempts.every(x=>x.by===1&&[1,2].includes(x.damage)));
+  assert.equal(new Set(attempts.map(a=>a.p)).size,attempts.length,'one attempt per swing, even over repeated resolve ticks');
+ }finally{f.close();}
+});
+
+test('second phase follows the first strike with a wide strike when the other arm can reach',()=>{
+ const f=duel();try{
+  f.state.phase=2;f.boss.body.planCombat(f.boss);const first=pendingStrikes(1)[0];assert.equal(first.comboIndex,1);
+  advanceTo(f,first.endsAt+.001);ctx.game.time=f.state.followup.at+.001;f.boss.body.planCombat(f.boss);
+  const next=pendingStrikes(1)[0];assert.equal(next.comboIndex,2);assert.equal(next.style,'sweep');assert.equal(next.timing.windupSec,BOSS_CONFIG.combat.windupSec);
+ }finally{f.close();}
+});
+
+test('severing the attacking limb cancels the swing and queued combo instead of replacing it instantly',()=>{
+ const f=duel();try{
+  f.boss.body.planCombat(f.boss);const p=pendingStrikes(1)[0],key=p.source.replace(/-(upper|lower)$/,'-upper');
+  f.boss.damage(key,0,100);f.boss.body.resolveCombat(f.boss);assert.equal(pendingStrikes(1).length,0);assert.equal(f.state.followup,null);assert.ok(ctx.combat.nextStrike[1]>ctx.game.time);
+ }finally{f.close();}
+});
+
+test('wide strike has real arc contact, no windup/return damage and only one hit per attack',()=>{
+ const f=duel(),attempts=[];f.player.damage=(...args)=>{attempts.push(args);return false;};
+ try{
+  const p=prepareWide(f),t=p.timing;
+  assert.equal(sweepContact(f.boss,f.player,p,0,t.windupSec-.001),null);
+  assert.ok(sweepContact(f.boss,f.player,p,t.windupSec,t.windupSec+t.thrustSec));
+  assert.equal(sweepContact(f.boss,f.player,p,t.windupSec+t.thrustSec+.001,p.endsAt),null);
+  for(let n=0;n<=Math.ceil(p.endsAt*60)+1;n++)advanceTo(f,n/60);
+  assert.equal(attempts.length,1);assert.equal(attempts[0][1],1);assert.ok([1,2].includes(attempts[0][2]));
+ }finally{f.close();}
+});
+
+test('wide strike cannot cross an obstacle, and a player who leaves its arc is missed',()=>{
+ const f=duel();try{
+  const p=prepareWide(f);obstacle();assert.equal(sweepPathClear(f.boss,p),false);assert.equal(sweepContact(f.boss,f.player,p,.7,1.08),null);
+  ctx.obstacles=[];const far=createRobot(0,{x:470,y:430,angle:Math.PI});ctx.robots[0]=far;
+  assert.equal(sweepContact(f.boss,far,p,.7,1.08),null);
+ }finally{f.close();}
+});
+
+test('charge telegraphs, commits to a fixed point, uses physical steps and recovers on cooldown',()=>{
+ const f=duel({bossX:280,playerX:430});try{
+  const original=chargePlan(f.boss,f.player.center);assert.ok(original);assert.ok(original.distance<=48);
+  f.state.nextChargeAt=0;const ready=f.boss.body.intent(f.boss);assert.equal(ready.speed,0);assert.ok(f.state.charge);
+  const goal={...f.state.charge.goal},direction=f.state.charge.direction;
+  const movedPlayer=createRobot(0,{x:430,y:395,angle:Math.PI});ctx.robots[0]=movedPlayer;
+  ctx.game.time=.81;const run=f.boss.body.intent(f.boss);assert.equal(run.mode,'boss-charge');assert.deepEqual(run.goal,goal);assert.equal(run.heading,direction);
+  let old={x:f.boss.x,y:f.boss.y};
+  for(let n=0;n<30;n++){
+   ctx.game.time=.81+n/60;const intent=f.boss.body.intent(f.boss);f.boss.tick(1/60,intent);
+   assert.ok(Math.hypot(f.boss.x-old.x,f.boss.y-old.y)<4,'movement cannot teleport');old={x:f.boss.x,y:f.boss.y};
+   assert.ok(f.boss.capsules.every(c=>staticContacts(c).every(h=>h.depth<=(isLimb(c)?5:0)+1e-6)));
+  }
+  assert.ok(f.boss.x>281);assert.ok(f.boss.x-280<=52);
+  ctx.game.time=1.4;assert.equal(f.boss.body.intent(f.boss).speed,0);
+  ctx.game.time=2.2;f.boss.body.intent(f.boss);assert.equal(f.state.charge,null);assert.ok(f.state.nextChargeAt>ctx.game.time);
+ }finally{f.close();}
+});
+
+test('charge rejects routes that fit the head but intersect a body or limb capsule',()=>{
+ const f=duel({bossX:280,playerX:430});try{
+  assert.ok(chargePlan(f.boss,f.player.center));const b={left:315,right:325,top:250,bottom:450};b.points=obstacleVertices(b);ctx.obstacles=[b];
+  assert.equal(chargePlan(f.boss,f.player.center),null);
+ }finally{f.close();}
+});
+
+test('boss critical chance is 30 percent with the same 1/2HP limit; ordinary patient crits remain unchanged',()=>{
+ assert.equal(BOSS_CONFIG.criticalChance,.30);assert.equal(bossDamage(0),2);assert.equal(bossDamage(.299999),2);assert.equal(bossDamage(.30),1);assert.equal(bossDamage(.999999),1);assert.equal(critChance(3),.15);
+});
+
+test('telegraph follows actual strike geometry, displays phase, disappears on death and consumes no RNG',()=>{
+ const f=duel();try{
+  prepareWide(f);const seed=ctx.seed;f.boss.paint(0);
+  const cue=f.boss.actor.querySelector('[data-boss-cue]');assert.ok(cue);assert.match(cue.textContent,/РАЗМАХ/);assert.ok(cue.querySelector('path').getAttribute('d').length>20);assert.equal(ctx.seed,seed);
+  assert.equal(f.boss.actor.getAttribute('data-boss-phase'),'1');f.state.phase=2;f.boss.paint(0);assert.equal(f.boss.actor.getAttribute('data-boss-phase'),'2');
+  f.boss.damage('head',0,100);f.boss.paint(0);assert.equal(cue.getAttribute('display'),'none');assert.doesNotMatch(f.boss.actor.outerHTML,/NaN|undefined/);
+ }finally{f.close();}
+});
+
+
+test('recovery permits a short spacing step while the boss keeps facing the player',()=>{
+ const f=duel();try{
+  ctx.combat.nextStrike[1]=1;const intent=f.boss.body.intent(f.boss);
+  assert.equal(intent.mode,'атакует');assert.ok(intent.retreat.x<0);assert.equal(intent.speed,55);
+  assert.equal(headingForIntent(f.boss.angle,f.boss,intent.goal,intent),0);
+ }finally{f.close();}
+});
+
+test('a follow-up is cancelled when the player leaves reach, leaving the promised recovery window',()=>{
+ const f=duel();try{
+  f.boss.body.planCombat(f.boss);const first=pendingStrikes(1)[0];advanceTo(f,first.endsAt+.001);
+  ctx.robots[0]=createRobot(0,{x:470,y:430,angle:Math.PI});ctx.game.time=f.state.followup.at+.001;
+  f.boss.body.planCombat(f.boss);assert.equal(pendingStrikes(1).length,0);assert.equal(f.state.followup,null);assert.ok(ctx.combat.nextStrike[1]>ctx.game.time);
+ }finally{f.close();}
+});
+
+test('a sweep interrupted by newly blocked geometry cancels without inflicting damage',()=>{
+ const f=duel();let attempts=0;f.player.damage=()=>{attempts++;return false;};
+ try{const p=prepareWide(f);obstacle();advanceTo(f,p.timing.windupSec+p.timing.thrustSec/2);assert.equal(attempts,0);assert.equal(pendingStrikes(1).length,0);}
+ finally{f.close();}
+});

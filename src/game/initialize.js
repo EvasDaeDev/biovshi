@@ -1,3 +1,4 @@
+import {SESSION_STORAGE} from '../build-channel.js';
 import {initializeStreamerMascot} from '../ui/streamer-mascot.js';
 import {towerEnemyCount} from '../tower/model.js';
 import {arenaDefinition} from './arenas.js';
@@ -17,7 +18,7 @@ import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
 import { random } from '../utils/random.js';
 import { ctx } from "./state.js";
-import { fitField, togglePause, toggleSpeed, setTimeScale } from "../ui/controls.js";
+import { fitField, togglePause, toggleSpeed, setTimeScale, setPaused } from "../ui/controls.js";
 import { CONFIG } from "../config.js";
 import { obstacleVertices, polygonPlanes, rebuildRobots } from "./arena.js";
 import { attr, el } from "../render/svg.js";
@@ -85,7 +86,6 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   };
   ctx.intro.hidden = false;
   ctx.disposed = false;
-  ctx.paused = false;
   ctx.settingsOpen = false;
   ctx.telemetryPortraitsReady = false;
   ctx.frameId = 0;
@@ -108,6 +108,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     globalThis.visualViewport?.removeEventListener('resize', fitField);
   };
   ctx.cache = new WeakMap();
+  setPaused(false);
   setTimeScale(1);
   ctx.liquidAtlasSources=null;
   ctx.coolantAtlasSources=null;
@@ -442,7 +443,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   initializeOrientation();
   ctx.frameId = requestAnimationFrame(frame);
   // Local pari-mutuel ledger. All values are whole virtual chips.
-  ctx.BET_STORAGE = 'biovshi.local-totalizator.v1';
+  ctx.BET_STORAGE = SESSION_STORAGE;
   ctx.betOverlay = ctx.root.querySelector('#bet-overlay');
   ctx.betContent = ctx.root.querySelector('#bet-content');
   ctx.betTitle = ctx.root.querySelector('#bet-title');

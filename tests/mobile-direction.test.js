@@ -56,7 +56,7 @@ test('camera unprojection accounts for zoom, letterboxing and scaled DOM bounds'
 test('one marker is replaced or cancelled without clearing the combat focus or pending attack',()=>{
  const f=setup(),robot=f.robot;
  ctx.combat.focus[0]=1;const strike={victim:1,source:'arm-1-lower'};ctx.combat.pending[0]=strike;
- click(f.dom,400,350);assert.equal(ctx.towerDestination.x,400);assert.equal(document.querySelector('#tower-direction-marker').hidden,false);
+ click(f.dom,400,350);assert.equal(controlledIntent(robot).navigationPadding,70*ctx.scale);assert.equal(ctx.towerDestination.x,400);assert.equal(document.querySelector('#tower-direction-marker').hidden,false);
  click(f.dom,400,420);assert.equal(ctx.towerDestination.y,420);assert.equal(document.querySelectorAll('#tower-direction-marker').length,1);
  click(f.dom,400,420);assert.equal(ctx.towerDestination,null);assert.equal(controlledIntent(robot).speed,0);
  assert.equal(ctx.combat.focus[0],1);assert.equal(ctx.combat.pending[0],strike);assert.equal(document.querySelector('#tower-direction-marker').hidden,true);f.close();

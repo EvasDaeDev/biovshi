@@ -2,11 +2,9 @@ import {garageOpen} from '../garage/ui.js';
 import {bettingOpen} from '../betting/ui.js';
 import {resetCombatLog} from '../ui/combat-log.js';
 import {bakeRoundFloor} from '../render/floor-history.js';
-import { setTimeScale } from "../ui/controls.js";
-import { resetFrameClock } from "./clock.js";
+import { setTimeScale, setPaused } from "../ui/controls.js";
 import { ctx } from "./state.js";
 import { resetCombatAccents } from "../render/effects.js";
-import { attr } from "../render/svg.js";
 import { rebuildRobots } from "./arena.js";
 import { cameraReset } from "../render/camera.js";
 import { bettingInit } from "../betting/ui.js";
@@ -109,11 +107,8 @@ export async function resetRound(destination='betting') {
   ctx.brainDebt = 0;
   ctx.pulses.length = 0;
   ctx.sparks.length = 0;
-  ctx.paused = false;
+  setPaused(false);
   setTimeScale(1);
-  ctx.button.textContent = 'Пауза';
-  attr(ctx.button, 'aria-pressed', 'false');
-  resetFrameClock();
   ctx.paintAt = -Infinity;
   rebuildRobots();
   cameraReset();
@@ -140,6 +135,7 @@ export function advanceStartup(dt) {
 export function startSpawnSequence() {
   ctx.intro.hidden = true;
   ctx.startup.phase = 'spawning';
+  setPaused(false);
   ctx.startup.order = ctx.robots.map(r => r.id).sort(() => random() - .5);
   ctx.startup.elapsed = 0;
   ctx.startup.nextIndex = 0;

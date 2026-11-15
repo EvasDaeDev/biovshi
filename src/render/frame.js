@@ -1,3 +1,5 @@
+import {hasBoss} from '../boss/config.js';
+import {bossName} from '../boss/names.js';
 import {fighterLabel} from '../game/patients.js';
 import {paintCrit} from './crit.js';
 import { timed } from './diagnostics.js';
@@ -22,7 +24,9 @@ export function paint() {
   if(rewardToast&&!rewardToast.hidden&&(ctx.mode!=='tower'||ctx.game.time>=(ctx.towerFeedbackUntil??0)))rewardToast.hidden=true;
   let text = ctx.startup.phase === 'intro' ? 'Нажмите «начать»' : ctx.startup.phase === 'spawning' ? `Выход на арену · ${ctx.startup.nextIndex} / ${ctx.ROBOT_COUNT}` : 'Все против всех · осталось подвижных: ' + ctx.robots.filter(r => r.mobile).length;
   if (ctx.combat.finished) text = ctx.combat.winner === null ? 'НИЧЬЯ · все обездвижены' : `ПОБЕДИТЕЛЬ — ${fighterLabel(ctx.combat.winner)}!`;
-  if(ctx.mode==='tower')text=`БАШНЯ · ЭТАЖ ${ctx.towerRun.level} · ${ctx.combat.finished?(ctx.combat.winner===0?'ПОБЕДА':'ПОРАЖЕНИЕ'):'ПРОТИВНИКОВ: '+ctx.robots.filter(r=>r.id!==0&&r.mobile).length}`;
+  const bossFloor=ctx.mode==='tower'&&hasBoss(ctx.towerRun);
+  ctx.status.classList.toggle('boss-floor-badge',bossFloor);
+  if(ctx.mode==='tower')text=`${bossFloor?bossName(ctx.towerRun.level)+' · ЭТАЖ №':'БАШНЯ · ЭТАЖ '}${ctx.towerRun.level} · ${ctx.combat.finished?(ctx.combat.winner===0?'ПОБЕДА':'ПОРАЖЕНИЕ'):'ПРОТИВНИКОВ: '+ctx.robots.filter(r=>r.id!==0&&r.mobile).length}`;
   if(ctx.status.title!==text)ctx.status.title = text;
   const headerText = ctx.root.dataset.betRound ? 'Раунд ' + ctx.root.dataset.betRound : text;
   if (ctx.status.textContent !== headerText) ctx.status.textContent = headerText;

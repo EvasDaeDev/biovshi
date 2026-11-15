@@ -1,3 +1,4 @@
+import {limbKey} from './body.js';
 import {pendingStrikes} from '../systems/strikes.js';
 import { clamp, wrap, smooth } from '../utils/math.js';
 import { CONFIG } from "../config.js";
@@ -104,7 +105,7 @@ export function updateIdleHops(robotState, dt) {
     p.y += dy;
   }
   robotState.pelvis = {
-    ...robotState.spine[4]
+    ...robotState.spine[robotState.spineSegmentTotal??4]
   };
   robotState.updateTail();
   robotState.headFrame.x += dx;
@@ -163,7 +164,7 @@ export function settleHands(robotState) {
   }
 }
 export function lifted(robotState, l) {
-  if(pendingStrikes(robotState.id).some(p=>p.source===`${l.kind}-${l.side}-lower`||p.source===`${l.kind}-${l.side}-upper`))return true;
+  if(pendingStrikes(robotState.id).some(p=>p.source===`${limbKey(l)}-lower`||p.source===`${limbKey(l)}-upper`))return true;
   return robotState.mode === 'cover' || robotState.mode === 'hops' && robotState.hopHeight() > .001 || robotState.mode === 'scratch' && l.kind === 'arm' && l.side === 1 || (robotState.mode === 'eat' || robotState.mode === 'startle') && l.kind === 'arm' || !!robotState.leap?.launched || robotState.leap?.kind === 'rebound';
 }
 export
@@ -312,7 +313,7 @@ export function reboundPlan(robotState, victim) {
         // Оставляем запас для поворота головы жертвы во время полёта.
         if (landing && other.id === victim.id) {
           const pivot = robotState.local(other.actualPose.chest, 14, 0);
-          if (pointSegment(pivot, a, b) < c.r + 28 * ctx.scale + .2) return false;
+          if (pointSegment(pivot, a, b) < c.r + 28 * (robotState.scale??ctx.scale) + .2) return false;
         }
         for (const d of other.capsules) if (segmentDistance(a, b, d.a, d.b) < c.r + d.r + (landing && other.id === victim.id ? 12 : .2)) return false;
       }
@@ -374,17 +375,17 @@ export function reboundTick(robotState, dt, intent) {
   robotState.spine[0] = {
     ...robotState.chest
   };
-  for (let i = 1; i < 5; i++) {
+  for (let i = 1; i < (robotState.spineSegmentTotal??4)+1; i++) {
     const p = robotState.spine[i - 1],
       a = base.angles[i] + turn;
     robotState.spine[i] = {
-      x: p.x - Math.cos(a) * CONFIG.robot.vertebraBaseCm * ctx.scale,
-      y: p.y - Math.sin(a) * CONFIG.robot.vertebraBaseCm * ctx.scale,
+      x: p.x - Math.cos(a) * CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale),
+      y: p.y - Math.sin(a) * CONFIG.robot.vertebraBaseCm * (robotState.scale??ctx.scale),
       angle: a
     };
   }
   robotState.pelvis = {
-    ...robotState.spine[4]
+    ...robotState.spine[robotState.spineSegmentTotal??4]
   };
   robotState.turnRate = 0;
   robotState.updateTail();
@@ -507,7 +508,7 @@ export function jumpTick(robotState, dt, intent) {
         (robotState.x-robotState.leap.origin.x)*robotState.leap.direction.x
         +(robotState.y-robotState.leap.origin.y)*robotState.leap.direction.y) : 0,
       retreatProgress = combatRetreat ? smooth(clamp((age+dt)/CONFIG.attack.combatPounceRetreatSec,0,1)) : 0,
-      preparation = -6 * ctx.scale * smooth(age / .24),
+      preparation = -6 * (robotState.scale??ctx.scale) * smooth(age / .24),
       preparationTravel = (robotState.x-jump.preparationOrigin.x)*jump.direction.x
         +(robotState.y-jump.preparationOrigin.y)*jump.direction.y,
       move = preparing ? preparation-preparationTravel : combatRetreat
@@ -526,7 +527,7 @@ export function jumpTick(robotState, dt, intent) {
         p.y += my * q;
       }
       robotState.pelvis = {
-        ...robotState.spine[4]
+        ...robotState.spine[robotState.spineSegmentTotal??4]
       };
       robotState.updateTail();
       robotState.headFrame.x += mx * q;

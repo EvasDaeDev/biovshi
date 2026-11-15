@@ -64,7 +64,7 @@ jobs:
         working-directory: preview
         run: npm test -- --test-timeout=30000
         timeout-minutes: 5
-      - name: Build experimental game with bosses every second floor
+      - name: Build experimental game with bosses every fifth floor
         working-directory: preview
         run: npm run build -- --mode test
       - name: Assemble both versions

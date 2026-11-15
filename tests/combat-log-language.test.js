@@ -7,6 +7,7 @@ test('every stock combat-log variation masks coarse words while retaining the ev
  const mode=ctx.mode,seed=ctx.seed;ctx.mode='spectator';ctx.seed=12345;
  try{
   const events=[
+   {type:'boss-phase',robot:1,phase:2},
    {type:'hit',to:1,from:0,segment:'arm--1-upper',damage:1},
    {type:'hit',to:1,from:0,segment:'head',damage:2},
    {type:'segment-broken',robot:1,by:0,segment:'leg-1-lower',damage:1},

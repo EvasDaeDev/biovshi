@@ -27,23 +27,23 @@ export function createTorsoShadow(robot) {
 
 export function paintTorsoShadow(robot) {
   const points=[];
-  for(let i=0;i<4;i++) {
+  for(let i=0;i<(robot.spineSegmentTotal??4);i++) {
     if(!robot.healthy('spine-'+i))continue;
     const a=robot.spine[i],b=robot.spine[i+1];
     if(robot.skin?.ready) {
-      const [A,B,C,D,E,F]=skinMatrix(a,b,ROBOT_PARTS['spine-'+i]);
+      const [A,B,C,D,E,F]=skinMatrix(a,b,robot.skin?.pieces.get('spine-'+i)?.part??ROBOT_PARTS['spine-'+i]);
       for(const [x,y] of [[0,0],[64,0],[64,64],[0,64]])points.push(robot.visiblePoint({x:A*x+C*y+E,y:B*x+D*y+F}));
     } else {
-      const r=CONFIG.robot.vertebraBaseCm*ctx.scale/2;
+      const r=CONFIG.robot.vertebraBaseCm*(robot.scale??ctx.scale)/2;
       for(const p of [a,b])for(const x of [-r,r])for(const y of [-r,r])
         points.push(robot.visiblePoint({x:p.x+x,y:p.y+y}));
     }
   }
   if(!robot.skin?.ready)for(const [key,frame,x,y] of [
-    ['spine-0',robot.chest,3,15],['spine-3',robot.pelvis,-5,12],
+    ['spine-0',robot.chest,3,15],[robot.pelvisKey??'spine-3',robot.pelvis,-5,12],
   ])if(robot.healthy(key))for(const side of [-1,1])points.push(robot.visiblePoint(robot.local(frame,x,y*side)));
   if(!points.length){attr(robot.torsoShadow,'opacity',0);return;}
-  const first=robot.spine[0],last=robot.spine[4];
+  const first=robot.spine[0],last=robot.spine[robot.spineSegmentTotal??4];
   const angle=Math.atan2(first.y-last.y,first.x-last.x)+robot.visualRotation();
   const ellipse=paddedEllipse(points,angle,CONFIG.robot.shadowPadding);
   for(const [key,value] of Object.entries({cx:ellipse.x,cy:ellipse.y,rx:ellipse.rx,ry:ellipse.ry}))

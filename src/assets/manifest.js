@@ -1,6 +1,8 @@
+import {bossAssets} from '../boss/assets.js';
 // Paths are relative to public/. Use null to keep the current appearance and silence.
 export const ASSETS = {
   textures: {
+    ...bossAssets(),
     uiBone:'assets/textures/UI/icons/bone_01.png',
     uiCoin:'assets/textures/UI/icons/coin_01.png',
     uiMobility:'assets/textures/UI/icons/mobi_01.png',

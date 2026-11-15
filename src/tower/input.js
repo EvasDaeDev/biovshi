@@ -5,7 +5,7 @@ import {coreClearCircle} from '../systems/collision.js';
 import {ctx} from '../game/state.js';
 import {CONFIG} from '../config.js';
 // Extra clearance lets the rig turn at path corners without clipping its limbs.
-const navigationPadding=()=>140*ctx.scale;
+const navigationPadding=()=>70*ctx.scale;
 export function controlledIntent(robot){
   if(ctx.towerControlMode==='direction'){
     const goal=ctx.towerDestination;

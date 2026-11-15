@@ -1,9 +1,10 @@
+import {storageKey} from '../build-channel.js';
 import { bakeStaticLighting } from './atmosphere.js';
 import { enforceOilLimits } from '../systems/oil-limits.js';
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 
-const STORAGE_KEY = 'biovshi.graphics.v1';
+const STORAGE_KEY = storageKey('biovshi.graphics.v1');
 const FULL = Object.freeze({ name:'full' });
 const LIGHT = Object.freeze({ name:'light' });
 

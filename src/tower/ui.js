@@ -1,3 +1,8 @@
+import {artifactDropChance,ARTIFACT_COMPLETION_REWARD,ARTIFACT_PIECE_COUNT} from './artifacts.js';
+import {bossName} from '../boss/names.js';
+import {setPaused} from '../ui/controls.js';
+import {hasBoss} from '../boss/config.js';
+import {bossFloorReward} from '../boss/encounter.js';
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {ctx} from '../game/state.js';
 import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount} from './model.js';
@@ -34,7 +39,7 @@ export function openMenu(){
     ctx.betDraft={session:ctx.betting,round:ctx.betting.round,bets:bettingReadDraft(),arenaId:ctx.selectedArenaId};
   }
   ctx.startup.phase='menu';
-  ctx.clearTowerInput?.();ctx.clearTowerDestination?.();ctx.paused=true;ctx.audio?.sync();
+  ctx.clearTowerInput?.();ctx.clearTowerDestination?.();setPaused(true);
   ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;
   ctx.root.querySelector('#tower-preparation').hidden=true;
   ctx.root.querySelector('#tower-controls').hidden=true;
@@ -45,9 +50,11 @@ export function openMenu(){
 export function towerPreparation(){
   const t=towerFor(ctx.betting,ctx.towerPlayer),panel=ctx.root.querySelector('#tower-preparation');
   ctx.startup.phase='tower-ready';ctx.resultsPanel.hidden=true;ctx.root.querySelector('#tower-controls').hidden=true;
-  panel.hidden=false;ctx.root.querySelector('#tower-prep-title').textContent=`БАШНЯ · ЭТАЖ ${t.level}`;
+  panel.hidden=false;const title=ctx.root.querySelector('#tower-prep-title');
+  title.classList.toggle('boss-floor-title',hasBoss(t));
+  title.textContent=hasBoss(t)?`${bossName(t.level)}\nЭТАЖ №${t.level}`:`БАШНЯ · ЭТАЖ ${t.level}`;
   ctx.root.querySelector('#tower-prep-name').textContent=ctx.betting.players[ctx.towerPlayer].name;
-  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':`<span>${formatChips(10)} ЗА ЛИЧНОЕ ВЫБИВАНИЕ</span>`}</div>`;
+  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(bossFloorReward(t))} ЗА ЛИЧНОЕ ВЫБИВАНИЕ</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div>`;
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   function renderSkills(){
     const snapshot=prostheticStatSnapshot(t),stats=snapshot.effective;
@@ -63,19 +70,20 @@ export function towerPreparation(){
     fields.querySelector('[data-tower-base]').onclick=()=>{t.stats=earnedStats(t.wins);ctx.towerGarage[0].stats=[...t.stats];bettingSave();renderSkills();};
   }
   renderSkills();
-  ctx.root.querySelector('#tower-prep-artifacts').innerHTML=artifactCollectionMarkup(t.artifacts);
+  ctx.root.querySelector('#tower-prep-artifacts').innerHTML=artifactCollectionMarkup(t.artifacts)+`<p class="artifact-bonus-note">ПОЛНЫЙ АРТЕФАКТ: +${formatChips(ARTIFACT_COMPLETION_REWARD)}</p>`;
   ctx.root.querySelector('#tower-prep-error').textContent='';
   ctx.root.querySelector('#tower-fight').onclick=()=>{
     const stats=[...fields.querySelectorAll('select')].map(n=>Number(n.value));
     if(!validStats(stats,t.wins)){ctx.root.querySelector('#tower-prep-error').textContent='Можно перенести одно очко между навыками, сохранив их сумму.';return;}
-    t.stats=stats;t.preparing=false;ctx.towerGarage[0].stats=[...stats];bettingSave();panel.hidden=true;ctx.paused=false;
+    t.stats=stats;t.preparing=false;ctx.towerGarage[0].stats=[...stats];bettingSave();panel.hidden=true;
     ctx.root.querySelector('#tower-controls').hidden=false;startSpawnSequence();
   };
   ctx.root.querySelector('#tower-fight').focus();
 }
 export function updateTowerHud(){
   const count=ctx.ROBOT_COUNT-1,remaining=ctx.startup.phase==='running'?ctx.robots.filter(r=>r.id!==0&&r.mobile&&r.visible).length:count;
-  ctx.root.querySelector('#tower-wallet').innerHTML=`ЭТАЖ ${ctx.towerRun.level} · ПРОТИВНИКОВ ${remaining}/${count} · БАНК ${formatChips(ctx.betting.players[ctx.towerPlayer].balance)}`;
+  const floor=ctx.towerRun.level;
+  ctx.root.querySelector('#tower-wallet').innerHTML=`${hasBoss(ctx.towerRun)?'':`ЭТАЖ ${floor} · ПРОТИВНИКОВ ${remaining}/${count} · `}БАНК ${formatChips(ctx.betting.players[ctx.towerPlayer].balance)}`;
 }
 export function settleTower(winner){
   if(ctx.towerSettled)return;ctx.towerSettled=true;
@@ -85,7 +93,11 @@ export function settleTower(winner){
     reason:ctx.robots[0].hasHead?'Потерял сознание':'Погиб'};
   if(won)patientRecovery(t,ctx.robots[0]);
   const priorPieces=[...t.artifacts.pieces];
+  const balanceBefore=ctx.betting.players[ctx.towerPlayer].balance;
   const next=completeTower(ctx.betting,ctx.towerPlayer,won);
+  const bonus=ctx.betting.players[ctx.towerPlayer].balance-balanceBefore;
+  ctx.towerOutcome.artifactBonus=bonus;
+  if(bonus){ctx.towerFloorCoins=(ctx.towerFloorCoins??0)+bonus;ctx.towerOutcome.floorCoins=ctx.towerFloorCoins;ctx.towerOutcome.runCoins=t.runCoins;}
   ctx.towerOutcome.artifact=won?next.artifacts.pieces.find(id=>!priorPieces.includes(id))??null:null;
   bettingSave();ctx.clearTowerInput?.();ctx.clearTowerDestination?.();
 }
@@ -98,7 +110,7 @@ export function towerResults(){
     ${o.newRecord?'<strong class="tower-record-banner">НОВЫЙ ЛИЧНЫЙ РЕКОРД!</strong>':''}
     ${won&&o.cleared%5===0?`<strong class="tower-milestone">РУБЕЖ: ${o.cleared} ЭТАЖЕЙ</strong>`:''}
     <div class="tower-result-numbers"><div><strong>${o.cleared}</strong><span>ЭТАЖЕЙ ПРОЙДЕНО</span></div><div><strong>${o.record}</strong><span>ЛИЧНЫЙ РЕКОРД</span></div><div><strong>${formatChips(coins)}</strong><span>${coinLabel}</span></div></div>
-    ${artifactCollectionMarkup(t.artifacts,o.artifact)}
+    ${artifactCollectionMarkup(t.artifacts,o.artifact,o.artifactBonus)}
     <p>БАНК: ${formatChips(ctx.betting.players[ctx.towerPlayer].balance)}${o.runKills==null?'':` · ЛИЧНЫХ ПОБЕД: ${o.runKills}`}</p>
   </div>`;
   ctx.resultsAgain.textContent=won?`НА ЭТАЖ ${t.level}`:'НОВАЯ ПОПЫТКА · ЭТАЖ 1';
@@ -128,8 +140,8 @@ export function installTowerUI(){
   ctx.towerSettled=false;ctx.towerFloorCoins=0;ctx.towerOutcome=null;ctx.towerFeedbackUntil=0;
   const off=onGameEvent(event=>{
     if(event.type==='robot-immobilized'&&!ctx.towerSettled&&rewardTower(ctx.betting,ctx.towerPlayer,event.robot,event.lastAttacker)){
-      ctx.towerFloorCoins+=10;bettingSave();
-      const toast=ctx.root.querySelector('#tower-reward-toast');toast.innerHTML='+'+formatChips(10);toast.hidden=false;ctx.towerFeedbackUntil=ctx.game.time+1.2;
+      const reward=bossFloorReward(ctx.towerRun);ctx.towerFloorCoins+=reward;bettingSave();
+      const toast=ctx.root.querySelector('#tower-reward-toast');toast.innerHTML='+'+formatChips(reward);toast.hidden=false;ctx.towerFeedbackUntil=ctx.game.time+1.2;
     }
     if(event.type==='robot-immobilized')updateTowerHud();
   });

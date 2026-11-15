@@ -1,3 +1,5 @@
+import {SESSION_STORAGE} from './build-channel.js';
+import {setPaused} from './ui/controls.js';
 import {randomArenaId} from './game/arenas.js';
 import {installTowerUI,openMenu} from './tower/ui.js';
 import {towerFor} from './tower/model.js';
@@ -43,7 +45,7 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null}
    audio.unlock();
    launchAccepted=true;
    gate.hidden=true;
-   if(ctx.startup.phase==='demo')startSpawnSequence();else if(ctx.startup.phase==='running'){ctx.paused=false;}
+   if(ctx.startup.phase==='demo')startSpawnSequence();else if(ctx.startup.phase==='running'){setPaused(false);}
  };
  ctx.root.querySelector('#launch-setup').onclick=()=>{audio.unlock();launchAccepted=true;ctx.startSetup();};
  if(launchAccepted&&ctx.startup.phase==='demo')startSpawnSequence();
@@ -53,7 +55,7 @@ async function boot(){
  let loading=document.getElementById('texture-loading');
  if(!loading){loading=document.createElement('div');loading.id='texture-loading';loading.textContent='Подготовка арены…';loading.setAttribute('role','status');document.body.prepend(loading);}
  root.inert=true;const textures=await preloadTextures();if(cancelled)return;
- ctx.BET_STORAGE='biovshi.local-totalizator.v1';const session=bettingLoad();
+ ctx.BET_STORAGE=SESSION_STORAGE;const session=bettingLoad();
  ctx.switchArena=async arenaId=>{
    if(arenaId===ctx.arenaId)return;
    const session=ctx.betting,expanded=ctx.arenaExpanded;
@@ -74,7 +76,7 @@ async function boot(){
    await transition({session:current,entry:'tower',tower,arenaId:randomArenaId()});
  };
  ctx.startTotalizator=()=>{bettingCancel();return transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId});};
- ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});ctx.paused=true;ctx.afterSetup='menu';bettingSetup();};
+ ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});setPaused(true);ctx.afterSetup='menu';bettingSetup();};
  ctx.startDemo=()=>transition({session:ctx.betting,entry:'auto',arenaId:ctx.betting?.arenaId??'ward'});
  await prepare({textures,session,arenaId:session?.arenaId??'ward'});
  if(cancelled||ctx.disposed)return;root.inert=false;loading.remove();

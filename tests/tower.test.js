@@ -244,7 +244,7 @@ test('legacy runs keep the current fight, skill points and paid enemies, then ad
  const old={level:4,patient:2,stats:[4,4,4],wins:3,rewarded:[1,4],preparing:false};
  const s=betNewSession(['Первый'],100);s.towers[0]=old;normalizeTower(old);assert.ok(validTower(old));assert.equal(towerEnemyCount(old),4);assert.equal(old.record,3);assert.equal(old.runCoins,null);
  assert.equal(rewardTower(s,0,4,0),false);assert.equal(rewardTower(s,0,2,0),true);completeTower(s,0,true);
- assert.equal(towerFor(s,0).record,4);assert.equal(towerEnemyCount(towerFor(s,0)),3);assert.equal(towerFor(s,0).legacyEnemyCount,undefined);
+ assert.equal(towerFor(s,0).record,4);assert.equal(towerEnemyCount(towerFor(s,0)),1);assert.equal(towerFor(s,0).legacyEnemyCount,undefined);
  const dom=setup(s,towerFor(s,0));bettingSave();assert.equal(bettingLoad().towers[0].record,4);close(dom);
 });
 test('floor result distinguishes a cleared floor from a reached floor and marks a new personal record',()=>{

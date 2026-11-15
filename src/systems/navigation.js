@@ -34,9 +34,14 @@ function planPath(start, end, padding = 70) {
     dist = nodes.map(() => Infinity),
     prev = nodes.map(() => -1),
     used = new Set();
-  const clear = (a, b) => boxes.every(box => {
+  const clear = (a, b) => boxes.every((box,index) => {
     // Из уже занятого запаса можно выйти; сам куб пересекать нельзя.
-    if (a === start && contains(box, start)) return rectHit(a, b, null, 3) === null;
+    if (a === start && contains(box, start)) {
+      const edge=nearestObstaclePoint(a,ctx.obstacles[index]).point;
+      // Exit an occupied clearance zone away from the actual surface.
+      // A direct shortcut toward it can fit the centre but trap the full rig.
+      return (b.x-a.x)*(a.x-edge.x)+(b.y-a.y)*(a.y-edge.y)>=-1e-6&&rectHit(a,b,null,3)===null;
+    }
     return rectHit(a, b, box) === null;
   });
   dist[0] = 0;

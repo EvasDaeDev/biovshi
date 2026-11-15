@@ -1,3 +1,5 @@
+import {createBoss} from '../boss/boss.js';
+import {ensureBossEncounter} from '../boss/encounter.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "./state.js";
 import { random } from "../utils/random.js";
@@ -143,7 +145,8 @@ export function rebuildRobots() {
   const layout = chooseSpawnLayout();
   for (const group of [ctx.conesG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG]) group.replaceChildren();
   ctx.robots.length = 0;
-  layout.forEach((p, id) => ctx.robots.push(createRobot(id, p)));
+  const encounter=ctx.mode==='tower'?ensureBossEncounter(ctx.towerRun):null;
+  layout.forEach((p,id)=>ctx.robots.push(encounter&&id===1?createBoss(id,p,encounter):createRobot(id,p)));
   ctx.robots.forEach(r => r.setVisible(false));
 }
 // Один робот: скелет, опоры, хвост, анимации и отрисовка.

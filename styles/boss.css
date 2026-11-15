@@ -1,0 +1,18 @@
+/* Keep the longer boss name and destruction status inside the standard card. */
+#robot-tag-hops-v22 .robot-card[data-boss="true"] .robot-card-header {
+ display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;
+}
+#robot-tag-hops-v22 .robot-card[data-boss="true"] .robot-card-name {
+ grid-column:1;grid-row:1;min-width:0;overflow:hidden;
+}
+#robot-tag-hops-v22 .robot-card[data-boss="true"] .robot-card-name strong {
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+#robot-tag-hops-v22 .robot-card[data-boss="true"] .robot-card-score {grid-column:2;grid-row:1}
+#robot-tag-hops-v22 .robot-card[data-boss="true"] .robot-card-action {grid-column:1 / -1;grid-row:2}
+
+/* Announce the named boss before the fight and keep it visible in the HUD. */
+#robot-tag-hops-v22 .boss-floor-title,
+#robot-tag-hops-v22 .boss-floor-badge {background:#843d29;color:#f5e6c5;padding:5px 9px;border:1px solid #5b2d21;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+#robot-tag-hops-v22 #tower-prep-title.boss-floor-title {color:#fff0d2;white-space:pre-line;line-height:1.2;padding:10px 9px}
+#robot-tag-hops-v22 .boss-floor-badge {display:inline-block;vertical-align:middle;white-space:normal}
