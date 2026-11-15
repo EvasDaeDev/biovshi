@@ -20,8 +20,15 @@ export function supportsTelegram(app,version){
 }
 const inset=value=>Number.isFinite(value)&&value>0?value:0;
 export function telegramInsets(app,system={}){
-  return Object.fromEntries(['top','right','bottom','left'].map(side=>[side,
+  const area=Object.fromEntries(['top','right','bottom','left'].map(side=>[side,
     Math.max(inset(app?.safeAreaInset?.[side]),inset(system[side]))+inset(app?.contentSafeAreaInset?.[side])]));
+  // Some mobile clients report zero content insets even though the fullscreen
+  // Close/menu capsules are drawn over the web view. Reserve one control row
+  // until a nonzero native content inset arrives; never do this on Desktop.
+  if(app?.isFullscreen&&['ios','android'].includes(app.platform)&&!inset(app.contentSafeAreaInset?.top)){
+    area.top=Math.max(area.top,Math.max(inset(app.safeAreaInset?.top),inset(system.top))+56);
+  }
+  return area;
 }
 
 export function initializeTelegram(onLayoutChange){
@@ -47,6 +54,7 @@ export function initializeTelegram(onLayoutChange){
     const inactive=Boolean(doc.hidden||pageHidden||(supportsTelegram(app,'8.0')&&app.isActive===false));
     resetFrameClock();
     ctx.appInactive=inactive;
+    if(!inactive)invoke('disableVerticalSwipes','7.7');
     ctx.clearTowerInput?.();
     ctx.audio?.sync();
   };
@@ -68,7 +76,7 @@ export function initializeTelegram(onLayoutChange){
     }else if(fullscreenRequested)return;
     fullscreenRequested=invoke('requestFullscreen','8.0');
   };
-  const gesture=()=>fullscreen(true);
+  const gesture=()=>{invoke('disableVerticalSwipes','7.7');fullscreen(true);};
   const colors=()=>{
     invoke('setHeaderColor','6.1','#02050d');
     invoke('setBackgroundColor','6.1','#02050d');
@@ -85,7 +93,7 @@ export function initializeTelegram(onLayoutChange){
     subscribe('activated',activity);subscribe('deactivated',activity);
     subscribe('viewportChanged',layout,'6.0');
     for(const event of ['safeAreaChanged','contentSafeAreaChanged'])subscribe(event,layout);
-    subscribe('fullscreenChanged',()=>{fullscreenRequested=Boolean(app.isFullscreen);layout();});
+    subscribe('fullscreenChanged',()=>{fullscreenRequested=Boolean(app.isFullscreen);invoke('disableVerticalSwipes','7.7');layout();});
     subscribe('fullscreenFailed',()=>{fullscreenRequested=false;lastGesture=-Infinity;layout();});
     subscribe('themeChanged',colors,'6.0');
     colors();

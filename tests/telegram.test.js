@@ -227,3 +227,44 @@ test('Telegram launch retains iOS safe areas even if the SDK cannot load',()=>{
   assert.equal(ctx.platform.isTelegram,true);assert.equal(ctx.layoutViewport.left,44);assert.equal(ctx.layoutViewport.width,800);
  }finally{f.close();}
 });
+
+test('mobile fullscreen reserves the native control row when Telegram reports zero content insets',()=>{
+ const f=setup();try{
+  f.mock.app.platform='ios';f.mock.app.isFullscreen=true;f.mock.app.safeAreaInset={top:0,right:44,bottom:21,left:44};
+  f.mock.app.contentSafeAreaInset={top:0,right:0,bottom:0,left:0};f.mock.emit('fullscreenChanged');
+  assert.equal(ctx.layoutViewport.top,56);assert.equal(ctx.layoutViewport.height,313);
+  assert.equal(f.doc.documentElement.style.getPropertyValue('--telegram-inset-top'),'56px');
+  assert.deepEqual(contentViewport(f.win),{x:44,y:56,width:756,height:313});
+  ctx.setArenaExpanded(true);assert.equal(ctx.layoutViewport.top,56);
+  assert.ok(Math.abs(parseFloat(ctx.root.style.getPropertyValue('--telegram-layout-top'))*ctx.layoutScale-56)<.01);
+  // A later native measurement takes over. The fallback does not become a second header.
+  f.mock.app.contentSafeAreaInset.top=64;f.mock.emit('contentSafeAreaChanged');assert.equal(ctx.layoutViewport.top,64);
+  f.mock.app.contentSafeAreaInset.top=0;f.mock.app.isFullscreen=false;f.mock.emit('fullscreenChanged');assert.equal(ctx.layoutViewport.top,0);
+  f.mock.app.platform='tdesktop';f.mock.app.isFullscreen=true;f.mock.emit('fullscreenChanged');assert.equal(ctx.layoutViewport.top,0);
+ }finally{f.close();}
+});
+
+test('Telegram joystick cancels native touch panning while pointer input and other scrollable content work',()=>{
+ const f=setup();try{
+  f.fight();const stick=f.doc.querySelector('#tower-stick'),captured=new Set();
+  stick.setPointerCapture=id=>captured.add(id);stick.hasPointerCapture=id=>captured.has(id);stick.releasePointerCapture=id=>captured.delete(id);
+  stick.getBoundingClientRect=()=>({left:0,top:0,width:168,height:168});
+  const pointer=(type,x,y)=>{const e=new f.win.MouseEvent(type,{bubbles:true,cancelable:true,clientX:x,clientY:y,button:0});Object.defineProperty(e,'pointerId',{value:1});stick.dispatchEvent(e);return e;};
+  assert.ok(pointer('pointerdown',145,84).defaultPrevented);assert.equal(ctx.towerInput.x,1);
+  for(const type of ['touchstart','touchmove']){
+   const touch=new f.win.Event(type,{bubbles:true,cancelable:true});stick.dispatchEvent(touch);assert.equal(touch.defaultPrevented,true);
+  }
+  assert.ok(pointer('pointermove',84,145).defaultPrevented);assert.equal(ctx.towerInput.y,1);
+  const panel=f.doc.querySelector('.settings-panel'),scroll=new f.win.Event('touchmove',{bubbles:true,cancelable:true});panel.dispatchEvent(scroll);assert.equal(scroll.defaultPrevented,false);
+  pointer('pointerup',84,145);assert.deepEqual(ctx.towerInput,{x:0,y:0});
+  const detached=stick;ctx.root.__disposeTag();const after=new f.win.Event('touchmove',{bubbles:true,cancelable:true});detached.dispatchEvent(after);assert.equal(after.defaultPrevented,false);
+ }finally{f.dom.window.close();}
+});
+
+test('Telegram native swipes stay disabled after fullscreen and reactivation',()=>{
+ const f=setup();try{
+  const count=()=>f.mock.calls.filter(call=>call==='disableVerticalSwipes').length;
+  const before=count();f.mock.emit('fullscreenChanged');assert.ok(count()>before);
+  const full=count();f.mock.emit('activated');assert.ok(count()>full);
+ }finally{f.close();}
+});
