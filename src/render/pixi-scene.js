@@ -228,7 +228,7 @@ export class PixiArena {
     }
     if(tag==='text'){
       const label=node.classList.contains('robot-label'),timer=node===ctx.timerOutput;
-      const size=timer?Math.min(12*716/(ctx.fieldSide||700),24)*1.5:label?12*716/(ctx.fieldSide||700):node.classList.contains('crit-label')?10*716/(ctx.fieldSide||700):12;
+      const size=timer?Math.min(12*716/(ctx.fieldSide||700),24)*3:label?12*716/(ctx.fieldSide||700):node.classList.contains('crit-label')?10*716/(ctx.fieldSide||700):12;
       const colour=node.style.fill||node.getAttribute('fill')||(timer?'#ffffff':label?'#d3cead':'#d2d5bf');
       const key=[node.textContent,size,colour,node.getAttribute('textLength')].join('|');
       if(record.textKey!==key){

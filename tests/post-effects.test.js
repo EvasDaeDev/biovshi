@@ -6,7 +6,7 @@ import {Container,UniformGroup,Rectangle,Filter,DOMAdapter} from 'pixi.js';
 import {CONFIG} from '../src/config.js';
 import {ctx} from '../src/game/state.js';
 import {ArenaPostEffects,POST_EFFECTS_STORAGE,POST_VERTEX,POST_FRAGMENT,postEffectUniforms,
-  readPostEffectsPreference,savePostEffectsPreference,validatePostShader} from '../src/render/post-effects.js';
+  readPostEffectsPreference,savePostEffectsPreference,validatePostShader,filmExposure} from '../src/render/post-effects.js';
 import {initializeDiagnostics} from '../src/render/diagnostics.js';
 import {PixiArena} from '../src/render/pixi-scene.js';
 
@@ -30,10 +30,10 @@ function engine(){
   return {p,app,filters};
 }
 
-test('Photoshop reference is calibrated into one bounded pass with no extra colour grading',()=>{
+test('film look preserves the calibrated optics and one-pass texture budget',()=>{
   const u=postEffectUniforms();
   assert.equal(CONFIG.postEffects.unsharpAmount,.8);assert.equal(CONFIG.postEffects.unsharpRadiusPx,1);
-  assert.equal(CONFIG.postEffects.filmGrain,1);assert.equal(CONFIG.postEffects.distortion,-7);
+  assert.equal(CONFIG.postEffects.filmGrain,1.4);assert.equal(CONFIG.postEffects.distortion,-7);
   assert.equal(CONFIG.postEffects.redCyan,-35);assert.equal(CONFIG.postEffects.blueYellow,29);
   assert.equal(CONFIG.postEffects.vignetteAmount,-76);assert.equal(CONFIG.postEffects.vignetteMidpoint,50);
   assert.ok(Math.abs(u.uOptics[0]-.0175)<1e-7);
@@ -53,10 +53,14 @@ test('one filter covers the entire arena viewport, keeps Retina resolution and i
   assert.deepEqual([app.stage.filterArea.x,app.stage.filterArea.y,app.stage.filterArea.width,app.stage.filterArea.height],[0,0,700,700]);
   post.resize(375,375);assert.equal(app.stage.filterArea.width,375);
   post.update(8.5);assert.equal(post.uniforms.uniforms.uGrainTime,102);
+  const exposure=post.uniforms.uniforms.uExposure;
+  assert.equal(exposure,filmExposure(8.5));post.update(8.5);
+  assert.equal(post.uniforms.uniforms.uExposure,exposure,'paused time freezes exposure');
   const uniforms=post.uniforms,filter=post.filter;
   post.setEnabled(false);post.update(9);
   assert.equal(app.stage.filters,null);assert.equal(app.stage.filterArea,null);
   assert.equal(post.uniforms.uniforms.uGrainTime,102,'disabled effects perform no uniform animation');
+  assert.equal(post.uniforms.uniforms.uExposure,exposure);
   for(let i=0;i<100;i++){post.setEnabled(true);post.setEnabled(false);}
   post.setEnabled(true);assert.equal(filters.length,1);assert.equal(post.filter,filter);assert.equal(post.uniforms,uniforms);
   assert.deepEqual(app.stage.children,[scene]);assert.equal(ctx.seed,seed);
@@ -99,7 +103,7 @@ test('a failed post pass is bypassed without discarding the WebGL arena; reduced
   const dom=setup(),{p,app}=engine();globalThis.matchMedia=()=>({matches:true});
   const arena=new PixiArena(p,app);arena.ambient=new Container();arena.nightComposition=new Container();
   arena.postEffects=new ArenaPostEffects(p,app,ctx.root);
-  arena.postEffects.update(100);assert.equal(arena.postEffects.uniforms.uniforms.uGrainTime,0);
+  arena.postEffects.update(100);assert.equal(arena.postEffects.uniforms.uniforms.uGrainTime,0);assert.equal(arena.postEffects.uniforms.uniforms.uExposure,1);
   let renders=0,refreshes=0;
   app.render=()=>{renders++;if(app.stage.filters)throw new Error('shader failure');};
   ctx.refreshPostEffectsControl=()=>{refreshes++;};const warning=console.warn;console.warn=()=>{};
@@ -151,4 +155,17 @@ test('real Pixi filter preparation keeps shared uniform precision identical acro
   } finally {
     post?.destroy();app.stage.destroy({children:true});DOMAdapter.set(adapter);dom.window.close();
   }
+});
+
+test('exposure wanders smoothly inside its bound and is deterministic without combat randomness',()=>{
+ const seed=ctx.seed;
+ let previous=filmExposure(0),low=previous,high=previous;
+ for(let i=1;i<6000;i++){
+  const time=i/60,value=filmExposure(time);
+  assert.ok(Math.abs(value-1)<=CONFIG.postEffects.exposureDrift);
+  assert.ok(Math.abs(value-previous)<.0005,'no abrupt frame-to-frame flicker');
+  assert.equal(value,filmExposure(time));
+  low=Math.min(low,value);high=Math.max(high,value);previous=value;
+ }
+ assert.ok(high-low>.004);assert.equal(ctx.seed,seed);assert.equal(filmExposure(10,0),1);
 });

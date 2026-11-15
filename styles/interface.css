@@ -303,7 +303,7 @@ html body #robot-tag-hops-v22 { color:#d5e9f3; }
   fill: #fff;
   stroke: none;
   mix-blend-mode: difference;
-  font-size: calc(var(--score-label-size) * 1.5);
+  font-size: calc(var(--score-label-size) * 3);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
