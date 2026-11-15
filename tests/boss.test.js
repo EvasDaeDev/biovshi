@@ -40,7 +40,7 @@ for(const variant of BOSS_VARIANTS)for(const arena of ['ward','ring','annulus'])
   assert.equal(pounceContactSegment(head[0].a,head[0].a,head,()=>true,0),'head');
   assert.equal(r.spineCount,variant.spineSegments);assert.equal(r.movementLimbs,variant.extra?6:4);assert.equal(r.limbIntegrity,1);
   assert.equal(r.hp.get('head'),12);assert.equal(r.hp.get('spine-'+(variant.spineSegments-1)),8);
-  assert.equal(r.maxHp('arm--1-upper'),6);assert.equal(r.body.skinKey,'robotBoss0');
+  assert.equal(r.maxHp('arm--1-upper'),5);assert.equal(r.body.skinKey,'robotBoss0');
   assert.ok(r.capsules.every(c=>staticContacts(c).every(hit=>hit.depth<=(isLimb(c)?5:0)+1e-6)),'full boss rig starts inside arena');
   assert.equal(new Set(r.attackSources.map(s=>s.key)).size,r.attackSources.length);
   assert.equal(pounceOpportunity(r,f.player),false);
@@ -97,7 +97,7 @@ test('extra limbs sever independently and retain boss atlas mapping in detached 
  const f=startBossScenario({variant:'arms'});
  try{
   const r=f.boss,key='arm--1-pair2-upper';assert.ok(r.damage(key,0,100));
-  assert.equal(r.movementLimbs,5);assert.equal(r.hp.get('arm--1-upper'),6);
+  assert.equal(r.movementLimbs,5);assert.equal(r.hp.get('arm--1-upper'),5);
   const piece=ctx.combat.detached.at(-1).pieces.find(p=>p.key===key);assert.ok(piece.geometry);assert.ok(piece.skin.url.endsWith('boss/b_01.png'));assert.ok(piece.skin.part);
   const g=document.createElementNS('http://www.w3.org/2000/svg','g');assert.ok(drawDetachedSkin(piece.skin,g));assert.equal(g.querySelector('svg').getAttribute('viewBox'),'0 128 64 64');
   // Severing the anchor also takes the secondary arm with it.

@@ -2,7 +2,7 @@ import {CONFIG} from '../config.js';
 import {BOSS_FLOOR_INTERVAL} from '../build-channel.js';
 const timing=()=>({windupSec:CONFIG.combat.windupSec,thrustSec:CONFIG.combat.thrustSec,recoverSec:CONFIG.combat.recoverSec});
 const rest=Math.max(0,CONFIG.combat.attackCooldownSec-Object.values(timing()).reduce((a,b)=>a+b,0));
-export const BOSS_CONFIG={scale:1.5,headScale:1,headOffset:18,healthMultiplier:2,reward:100,behaviorEnabled:true,criticalChance:.30,speedFactor:.85,turnFactor:.75,
+export const BOSS_CONFIG={scale:1.5,headScale:1,headOffset:18,healthMultiplier:2,segmentHp:5,reward:100,behaviorEnabled:true,criticalChance:.30,speedFactor:.85,turnFactor:.75,
  combat:{...timing(),attackCooldownSec:CONFIG.combat.attackCooldownSec},
  tactics:{phaseHealth:.60,phaseLimbLoss:.25,followupDelay:rest,seriesRest:rest,spacingDistance:68,
   first:timing(),
