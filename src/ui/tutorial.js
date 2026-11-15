@@ -8,7 +8,9 @@ export function initializeTutorial(){
  const root=ctx.root,doc=root.ownerDocument,win=doc.defaultView;
  let storage;try{storage=win.localStorage;}catch{/* Memory-only mode. */}
  let state=root.__tutorialProgress??readTutorial(storage),chapter=null,index=0,wasPaused=false,previous=null,expanded=false,disposed=false,confirming=false,layoutFrame=0;
+ state.seen??={};
  root.__tutorialProgress=state;
+ let suspended=null;
  const dialog=doc.createElement('dialog');dialog.id='game-tutorial';dialog.hidden=true;
  dialog.setAttribute('aria-labelledby','tutorial-title');dialog.setAttribute('aria-describedby','tutorial-text');
  dialog.innerHTML=`<div class="tutorial-spotlight" aria-hidden="true"></div>
@@ -84,10 +86,24 @@ export function initializeTutorial(){
    if(panel)scrollPanelToTarget(panel,target);
    resize.observe(target);
   }
-  state.steps[chapter]=index;save();layout();next.focus({preventScroll:true});
+  state.steps[chapter]=index;state.seen[chapter]=Math.max(state.seen[chapter]??0,index+1);
+  save();layout();next.focus({preventScroll:true});
  }
- function hide(){
+ function completeChapter(){
+  if(!state.completed.includes(chapter))state.completed.push(chapter);
+  delete state.steps[chapter];delete state.seen[chapter];
+ }
+ function hide({leaving=false,suspend=false}={}){
   if(!api.active)return;
+  suspended=suspend?{chapter,wasPaused}:null;
+  if(leaving){
+   // Route changes acknowledge what was already shown. Returning to this
+   // window must not replay it or discard the remaining, unseen chapters.
+   const unseen=state.seen[chapter]??index+1;
+   if(unseen>=TUTORIAL_CHAPTERS[chapter].steps.length)completeChapter();
+   else state.steps[chapter]=unseen;
+   save();
+  }
   api.active=false;confirming=false;
   if(target)resize.unobserve?.(target);target=null;
   if(dialog.open){if(typeof dialog.close==='function')dialog.close();else dialog.removeAttribute('open');}
@@ -101,7 +117,8 @@ export function initializeTutorial(){
  }
  function show(id){
   chapter=id;index=Math.min(state.steps[id]??0,TUTORIAL_CHAPTERS[id].steps.length-1);
-  wasPaused=ctx.paused;previous=doc.activeElement;api.active=true;
+  wasPaused=suspended?.chapter===id?suspended.wasPaused:ctx.paused;suspended=null;
+  previous=doc.activeElement;api.active=true;
   expanded=Boolean(TUTORIAL_CHAPTERS[id].arena&&ctx.arenaExpanded);
   if(expanded)ctx.setArenaExpanded?.(false);
   setPaused(true);root.classList.add('tutorial-active');
@@ -121,7 +138,7 @@ export function initializeTutorial(){
  next.onclick=()=>{
   if(confirming){state.enabled=false;save();hide();return;}
   if(index+1<TUTORIAL_CHAPTERS[chapter].steps.length){index++;renderStep();}
-  else{if(!state.completed.includes(chapter))state.completed.push(chapter);delete state.steps[chapter];save();hide();}
+  else{completeChapter();save();hide();}
  };
  skip.onclick=askSkip;dialog.addEventListener('cancel',event=>{event.preventDefault();if(confirming)renderStep();else askSkip();});
  // Let the native dialog own focus. Escape always offers a reversible skip.
@@ -131,11 +148,23 @@ export function initializeTutorial(){
   sync(){
    if(disposed)return;
    const id=tutorialChapter(ctx);
-   if(api.active&&id!==chapter)hide();
+   if(api.active&&id!==chapter){
+    const leaving=tutorialChapter(ctx,{ignoreBlocked:true})!==chapter;
+    hide({leaving,suspend:!leaving});
+   }
+   if(suspended&&id&&id!==suspended.chapter)suspended=null;
    if(!api.active&&id&&state.enabled&&!state.completed.includes(id))show(id);
   },
   restart({newGame=false}={}){
-   hide();state=freshTutorial();if(newGame)state.completed.push('setup');save();
+   // First account creation is part of the current tour, not a request to
+   // replay the menu the player has just read. Explicit replay always resets.
+   const finished=Object.keys(TUTORIAL_CHAPTERS).every(id=>state.completed.includes(id));
+   const continuing=newGame&&state.enabled&&!finished;
+   hide({leaving:continuing});
+   if(!continuing)state=freshTutorial();
+   if(newGame&&!state.completed.includes('setup'))state.completed.push('setup');
+   if(newGame){delete state.steps.setup;delete state.seen.setup;}
+   save();
    // New-game callers still have the setup form mounted until they navigate.
    if(!newGame)api.sync();
   }
@@ -145,7 +174,7 @@ export function initializeTutorial(){
  win.visualViewport?.addEventListener('resize',scheduleLayout);win.visualViewport?.addEventListener('scroll',scheduleLayout);
  const dispose=root.__disposeTag;
  root.__disposeTag=()=>{
-  hide();disposed=true;resize.disconnect();if(layoutFrame)win.cancelAnimationFrame(layoutFrame);
+  hide({leaving:true});disposed=true;resize.disconnect();if(layoutFrame)win.cancelAnimationFrame(layoutFrame);
   doc.removeEventListener('keydown',key,true);win.removeEventListener('resize',scheduleLayout);win.removeEventListener('scroll',scheduleLayout,true);
   win.visualViewport?.removeEventListener('resize',scheduleLayout);win.visualViewport?.removeEventListener('scroll',scheduleLayout);
   dialog.remove();if(ctx.tutorial===api)ctx.tutorial=null;dispose();

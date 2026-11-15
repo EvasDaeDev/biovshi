@@ -1,11 +1,13 @@
 import {storageKey} from '../build-channel.js';
+import {hasBoss} from '../boss/config.js';
 export const TUTORIAL_STORAGE=storageKey('biovshi.tutorial.v1');
-export const freshTutorial=()=>({version:1,enabled:true,completed:[],steps:{}});
+export const freshTutorial=()=>({version:1,enabled:true,completed:[],steps:{},seen:{}});
+const validSteps=value=>Object.fromEntries(Object.entries(value&&typeof value==='object'?value:{}).filter(([,n])=>Number.isInteger(n)&&n>=0));
 export function readTutorial(storage){
  try{
   const value=JSON.parse(storage?.getItem(TUTORIAL_STORAGE));
   if(value?.version!==1||typeof value.enabled!=='boolean'||!Array.isArray(value.completed)||!value.steps||typeof value.steps!=='object')return freshTutorial();
-  return {version:1,enabled:value.enabled,completed:value.completed.filter(v=>typeof v==='string'),steps:Object.fromEntries(Object.entries(value.steps).filter(([,n])=>Number.isInteger(n)&&n>=0))};
+  return {version:1,enabled:value.enabled,completed:value.completed.filter(v=>typeof v==='string'),steps:validSteps(value.steps),seen:validSteps(value.seen)};
  }catch{return freshTutorial();}
 }
 export function writeTutorial(storage,state){try{storage?.setItem(TUTORIAL_STORAGE,JSON.stringify(state));}catch{/* Optional local persistence. */}}
@@ -20,7 +22,10 @@ export function tutorialChapter(c,{ignoreBlocked=false}={}){
   return c.betOverlay.dataset.view==='garage'?'garage':'betting';
  }
  if(visible('#gladiator-results'))return c.mode==='tower'?'tower-results':'betting-results';
- if(c.startup.phase==='running'&&!c.combat.finished)return c.mode==='tower'?'tower':'spectator';
+ if(c.startup.phase==='running'&&!c.combat.finished){
+  if(c.mode!=='tower')return 'spectator';
+  return c.towerRun&&hasBoss(c.towerRun)?'tower-boss':'tower';
+ }
  return null;
 }
 

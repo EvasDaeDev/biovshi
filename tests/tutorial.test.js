@@ -14,10 +14,12 @@ import {togglePause,toggleSpeed} from '../src/ui/controls.js';
 import {betNewSession} from '../src/betting/ledger.js';
 import {bettingOpen,bettingSetup} from '../src/betting/ui.js';
 import {garageOpen} from '../src/garage/ui.js';
-import {installTowerUI} from '../src/tower/ui.js';
+import {installTowerUI,openMenu} from '../src/tower/ui.js';
 import {towerFor} from '../src/tower/model.js';
+import {earnedStats} from '../src/garage/model.js';
+import {BOSS_FLOOR_INTERVAL} from '../src/build-channel.js';
 
-function setup({saved=null,tower=false,legacyRects=false}={}){
+function setup({saved=null,tower=false,legacyRects=false,floor=1}={}){
  const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://tutorial.test/',pretendToBeVisual:true});
  if(legacyRects){
   const original=dom.window.HTMLElement.prototype.getBoundingClientRect;
@@ -35,6 +37,7 @@ function setup({saved=null,tower=false,legacyRects=false}={}){
  if(saved)writeTutorial(localStorage,saved);
  const session=tower?betNewSession(['Игрок'],100):null;
  ctx.towerPlayer=0;
+ if(tower){const run=towerFor(session,0);run.level=floor;run.wins=floor-1;run.record=floor-1;run.stats=earnedStats(run.wins);}
  initializeGame({entry:tower?'tower':'auto',session,tower:tower?structuredClone(towerFor(session,0)):null});
  installTowerUI();initializeModalFocus();
  const api=initializeTutorial(),doc=dom.window.document;
@@ -44,16 +47,129 @@ function setup({saved=null,tower=false,legacyRects=false}={}){
  return {dom,doc,api,next,finish,cleanup};
 }
 
-test('tutorial starts at first menu, advances without game clicks, and resumes a saved step after reinitialization',()=>{
+test('tutorial starts at first menu and UI recreation advances past already shown steps',()=>{
  const s=setup();s.api.sync();assert.equal(s.api.active,true);assert.equal(ctx.paused,true);
  s.next();assert.equal(readTutorial(localStorage).steps.menu,1);
  const text=s.doc.querySelector('#tutorial-text').textContent;
  ctx.root.__disposeTag();initializeGame({entry:'auto'});installTowerUI();initializeModalFocus();
- const api=initializeTutorial();api.sync();assert.equal(api.active,true);assert.equal(s.doc.querySelector('#tutorial-text').textContent,text);
+ const api=initializeTutorial();api.sync();assert.equal(api.active,true);assert.notEqual(s.doc.querySelector('#tutorial-text').textContent,text);
+ assert.equal(readTutorial(localStorage).steps.menu,2);
  for(let i=0;i<5&&api.active;i++)s.next();
  assert.equal(api.active,false);assert.ok(readTutorial(localStorage).completed.includes('menu'));
  api.sync();assert.equal(api.active,false);assert.equal(ctx.paused,false);
  s.cleanup();
+});
+
+test('a first boss encounter has its own chapter even after normal tower training, then stays completed',()=>{
+ const saved=freshTutorial();saved.completed=['menu','tower-ready','tower'];
+ const s=setup({tower:true,floor:BOSS_FLOOR_INTERVAL,saved});
+ try{
+  s.doc.querySelector('#launch-overlay').hidden=true;
+  s.doc.querySelector('#tower-fight').click();advanceStartup(10);
+  assert.equal(tutorialChapter(ctx),'tower-boss');assert.equal(ctx.robots.length,4);
+  for(const step of TUTORIAL_CHAPTERS['tower-boss'].steps)assert.ok(ctx.root.querySelector(step.target));
+  s.api.sync();assert.equal(s.api.active,true);s.finish();
+  assert.ok(readTutorial(localStorage).completed.includes('tower-boss'));
+  ctx.towerRun.level=BOSS_FLOOR_INTERVAL*2;s.api.sync();assert.equal(s.api.active,false);
+ }finally{s.cleanup();}
+});
+
+test('skipping training also suppresses the new boss chapter without resetting earlier progress',()=>{
+ const saved=freshTutorial();saved.enabled=false;saved.completed=['tower'];
+ const s=setup({tower:true,floor:BOSS_FLOOR_INTERVAL,saved});
+ try{
+  s.doc.querySelector('#launch-overlay').hidden=true;s.doc.querySelector('#tower-fight').click();advanceStartup(10);
+  assert.equal(tutorialChapter(ctx),'tower-boss');s.api.sync();assert.equal(s.api.active,false);
+  assert.deepEqual(readTutorial(localStorage).completed,['tower']);
+ }finally{s.cleanup();}
+});
+
+test('insurance gets a dedicated preparation target and reads the live policy rather than the arena snapshot',()=>{
+ const s=setup({tower:true});
+ try{
+  s.doc.querySelector('#launch-overlay').hidden=true;
+  const step=TUTORIAL_CHAPTERS['tower-ready'].steps.find(step=>step.target==='#tower-insurance');
+  assert.ok(step);assert.ok(ctx.root.querySelector(step.target));
+  const before=step.text(ctx);ctx.root.querySelector('#tower-insurance').click();
+  assert.equal(ctx.towerRun.insurance.checkpoint,null,'arena snapshot is intentionally unchanged');
+  assert.notEqual(step.text(ctx),before,'tutorial follows the policy purchased in the current window');
+  assert.equal(ctx.betting.towers[0].insurance.checkpoint.level,1);
+ }finally{s.cleanup();}
+});
+
+test('results copy follows current outcome states without fixed text assertions',()=>{
+ const s=setup({tower:true});
+ try{
+  const step=TUTORIAL_CHAPTERS['tower-results'].steps.find(step=>step.target==='.results-actions');
+  const render=winner=>{ctx.combat.winner=winner;return step.text(ctx);};
+  ctx.towerOutcome={insuranceFloor:null};const defeat=render(null),win=render(0);
+  ctx.towerOutcome.insuranceFloor=7;const insured=render(null);
+  assert.notEqual(defeat,win);assert.notEqual(insured,defeat);assert.notEqual(insured,win);
+ }finally{s.cleanup();}
+});
+
+test('creating a game during training keeps completed menu and setup chapters, while future chapters remain enabled',()=>{
+ const s=setup(),previousMenu=ctx.openMainMenu;
+ try{
+  s.api.sync();s.finish();assert.ok(readTutorial(localStorage).completed.includes('menu'));
+  s.doc.querySelector('#launch-overlay').hidden=true;bettingSetup();s.api.sync();s.finish();
+  ctx.afterSetup='menu';ctx.openMainMenu=openMenu;
+  s.doc.querySelector('#bet-setup-form').dispatchEvent(new Event('submit',{cancelable:true}));
+  s.api.sync();assert.equal(tutorialChapter(ctx),'menu');assert.equal(s.api.active,false);
+  const saved=readTutorial(localStorage);assert.ok(saved.completed.includes('menu'));assert.ok(saved.completed.includes('setup'));assert.equal(saved.enabled,true);
+  s.doc.querySelector('#launch-overlay').hidden=true;bettingOpen();s.api.sync();
+  assert.equal(s.api.active,true);assert.equal(tutorialChapter(ctx),'betting');
+ }finally{ctx.openMainMenu=previousMenu;s.cleanup();}
+});
+
+test('leaving a partially viewed window resumes at its first unseen step; revisiting fully shown windows stays quiet',()=>{
+ const s=setup();
+ try{
+  s.api.sync();assert.equal(readTutorial(localStorage).steps.menu,0);
+  s.doc.querySelector('#launch-overlay').hidden=true;bettingSetup();s.api.sync();assert.equal(tutorialChapter(ctx),'setup');
+  s.doc.querySelector('#launch-overlay').hidden=false;s.api.sync();assert.equal(readTutorial(localStorage).steps.menu,1);
+  s.next();assert.equal(readTutorial(localStorage).steps.menu,2);
+  s.doc.querySelector('#launch-overlay').hidden=true;ctx.betOverlay.hidden=true;s.api.sync();
+  s.doc.querySelector('#launch-overlay').hidden=false;s.api.sync();assert.equal(s.api.active,false);
+  assert.ok(readTutorial(localStorage).completed.includes('menu'));assert.equal(readTutorial(localStorage).enabled,true);
+  s.doc.querySelector('#launch-overlay').hidden=true;ctx.betOverlay.hidden=false;s.api.sync();
+  assert.equal(s.api.active,true,'the remaining setup step is still available');assert.equal(readTutorial(localStorage).steps.setup,1);
+ }finally{s.cleanup();}
+});
+
+test('going back within a chapter does not make already shown later steps repeat after a route change',()=>{
+ const s=setup();
+ try{
+  s.api.sync();s.next();s.next();s.doc.querySelector('[data-tutorial-back]').click();
+  assert.equal(readTutorial(localStorage).steps.menu,1);assert.equal(readTutorial(localStorage).seen.menu,3);
+  s.doc.querySelector('#launch-overlay').hidden=true;bettingSetup();s.api.sync();
+  s.doc.querySelector('#launch-overlay').hidden=false;s.api.sync();assert.equal(s.api.active,false);
+ }finally{s.cleanup();}
+});
+
+test('a new game can start a fresh tour after every chapter was completed',()=>{
+ const saved=freshTutorial();saved.completed=Object.keys(TUTORIAL_CHAPTERS);
+ const s=setup({saved});
+ try{
+  s.api.sync();assert.equal(s.api.active,false);
+  s.api.restart({newGame:true});s.api.sync();
+  assert.equal(s.api.active,true);assert.deepEqual(readTutorial(localStorage).completed,['setup']);
+ }finally{s.cleanup();}
+});
+
+test('temporary settings, orientation and loading interruptions preserve the current step, unlike route changes',()=>{
+ const s=setup();
+ try{
+  s.api.sync();s.next();
+  for(const property of ['settingsOpen','orientationBlocked']){
+   ctx[property]=true;s.api.sync();assert.equal(s.api.active,false);
+   ctx[property]=false;s.api.sync();assert.equal(s.api.active,true);assert.equal(readTutorial(localStorage).steps.menu,1);
+  }
+  ctx.root.inert=true;s.api.sync();assert.equal(s.api.active,false);
+  ctx.root.inert=false;s.api.sync();assert.equal(readTutorial(localStorage).steps.menu,1);
+  s.api.restart();assert.equal(readTutorial(localStorage).steps.menu,0,'explicit replay from Settings starts over');
+  s.finish();assert.equal(ctx.paused,false,'temporary settings must not leak the tutorial pause into gameplay');
+ }finally{s.cleanup();}
 });
 
 test('skip is reversible, disables all remaining chapters, survives reload and can be restarted in Settings',()=>{
