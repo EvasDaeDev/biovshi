@@ -23,6 +23,18 @@ function setup(){
 }
 const live=(sources,key)=>sources.filter(s=>s.started&&!s.stopped&&(key==='music'?s.buffer?.duration===120:s.buffer===ASSETS.sounds[key]));
 
+test('app deactivation stops music and pending effects; activation resumes music at its saved offset',async()=>{
+ const f=setup();try{
+  await f.unlock();const music=live(f.sources,'music')[0];f.context.currentTime=12;
+  emitGameEvent('hit',{by:0,robot:1,damage:1});
+  f.state.appInactive=true;f.audio.sync();await flush();
+  assert.ok(music.stopped);assert.equal(live(f.sources,'music').length,0);assert.equal(live(f.sources,'hit').length,0);
+  emitGameEvent('hit',{by:0,robot:1,damage:1});await flush();assert.equal(live(f.sources,'hit').length,0);
+  f.state.appInactive=false;f.audio.sync();await flush();
+  assert.equal(live(f.sources,'music')[0].startArgs[1],12);assert.equal(f.state.paused,false);
+ }finally{f.finish();}
+});
+
 test('effects unlock on gesture, use per-patient pitch, and a critical replaces a normal hit',async()=>{
  const f=setup();
  emitGameEvent('hit',{by:0,robot:1,damage:1});await flush();assert.equal(f.sources.length,0);

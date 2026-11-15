@@ -1,0 +1,22 @@
+/* Telegram insets are screen CSS pixels, outside the game's zoom. The SDK's
+   system and content insets are applied once; browser env() is not added again. */
+html.telegram-app body {
+ padding:calc(12px + var(--telegram-inset-top,0px)) calc(12px + var(--telegram-inset-right,0px)) calc(12px + var(--telegram-inset-bottom,0px)) calc(12px + var(--telegram-inset-left,0px));
+}
+html.telegram-app body #robot-tag-hops-v22.arena-expanded {
+ top:var(--telegram-layout-top,0px);left:var(--telegram-layout-left,0px);
+ right:var(--telegram-layout-right,0px);bottom:auto;
+}
+html.telegram-app #robot-tag-hops-v22 #tower-stick {
+ left:calc(18px + var(--telegram-inset-left,0px));
+ bottom:calc(18px + var(--telegram-inset-bottom,0px));
+}
+/* Fixed sheets use logical pixels inside the scaled root. Native tutorial and
+   orientation dialogs use screen pixels and are handled independently. */
+html.telegram-app #robot-tag-hops-v22 :is(.settings-overlay,.bet-overlay,.launch-overlay) {
+ top:var(--telegram-layout-top,0px);right:var(--telegram-layout-right,0px);
+ bottom:var(--telegram-layout-bottom,0px);left:var(--telegram-layout-left,0px);
+}
+html.telegram-app #robot-tag-hops-v22 #landscape-required:not([hidden]) {
+ padding:calc(24px + var(--telegram-inset-top,0px)) calc(24px + var(--telegram-inset-right,0px)) calc(24px + var(--telegram-inset-bottom,0px)) calc(24px + var(--telegram-inset-left,0px));
+}

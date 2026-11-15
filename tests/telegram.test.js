@@ -1,0 +1,179 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {JSDOM} from 'jsdom';
+import {ctx} from '../src/game/state.js';
+import {telegramWebApp,telegramInsets,supportsTelegram} from '../src/platform/telegram.js';
+import {initializeGame} from '../src/game/initialize.js';
+import {betNewSession} from '../src/betting/ledger.js';
+import {towerFor} from '../src/tower/model.js';
+import {installTowerUI} from '../src/tower/ui.js';
+import {frame,step} from '../src/game/loop.js';
+import {advanceStartup} from '../src/game/session.js';
+import {setPaused,fitField} from '../src/ui/controls.js';
+import {contentViewport} from '../src/ui/geometry.js';
+import {bettingLoad,bettingSave} from '../src/betting/storage.js';
+
+const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+function mockApp(version='8.0'){
+ const listeners=new Map(),calls=[];
+ const app={version,platform:'android',isActive:true,isFullscreen:false,isOrientationLocked:false,viewportStableHeight:390,
+  safeAreaInset:{top:10,right:20,bottom:5,left:15},contentSafeAreaInset:{top:32,right:0,bottom:0,left:0},
+  onEvent(name,fn){const set=listeners.get(name)??new Set();set.add(fn);listeners.set(name,set);},
+  offEvent(name,fn){listeners.get(name)?.delete(fn);},
+ };
+ for(const name of ['ready','expand','requestFullscreen','lockOrientation','disableVerticalSwipes'])app[name]=()=>calls.push(name);
+ return {app,calls,listeners,emit(name){for(const fn of [...listeners.get(name)??[]])fn();},count(){return [...listeners.values()].reduce((sum,set)=>sum+set.size,0);}};
+}
+function setup({version='8.0',sdk=true,touch=true}={}){
+ const dom=new JSDOM(html,{url:'https://telegram.test/biovshi/test/',pretendToBeVisual:true});
+ const win=dom.window,doc=win.document,mock=mockApp(version);
+ Object.defineProperties(win,{innerWidth:{value:844,writable:true},innerHeight:{value:390,writable:true}});
+ const orientation=new win.EventTarget();orientation.type='landscape-primary';
+ Object.defineProperty(win.screen,'orientation',{value:orientation,configurable:true});
+ if(sdk)win.Telegram={WebApp:mock.app};
+ for(const key of ['document','localStorage','Event'])globalThis[key]=win[key];
+ globalThis.matchMedia=()=>({matches:touch});globalThis.ResizeObserver=class{observe(){}disconnect(){}};
+ globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
+ ctx.arenaRenderer=null;ctx.towerPlayer=0;
+ const session=betNewSession(['Игрок'],100);
+ const initialize=()=>{initializeGame({session,entry:'tower',tower:structuredClone(towerFor(session,0))});installTowerUI();};
+ initialize();
+ return {dom,win,doc,mock,orientation,session,initialize,close(){ctx.root.__disposeTag();dom.window.close();},
+  fight(){doc.querySelector('#tower-fight').click();advanceStartup(20);assert.equal(ctx.startup.phase,'running');}};
+}
+
+test('platform detection ignores SDK defaults, missing SDK and unrelated Telegram globals',()=>{
+ for(const win of [{},{Telegram:{}},{Telegram:{WebApp:{platform:'unknown',onEvent(){}}}},{Telegram:{WebApp:{platform:'android'}}}])assert.equal(telegramWebApp(win),null);
+ const {app}=mockApp();assert.equal(telegramWebApp({Telegram:{WebApp:app}}),app);
+ assert.equal(supportsTelegram(app,'8.0'),true);assert.equal(supportsTelegram(app,'8.1'),false);
+ app.version='10.1';assert.equal(supportsTelegram(app,'8.0'),true);
+ app.isVersionAtLeast=()=>{throw Error('unsupported');};assert.equal(supportsTelegram(app,'8.0'),false);
+ assert.deepEqual(telegramInsets({safeAreaInset:{top:NaN,left:-1},contentSafeAreaInset:{top:4}}),{top:4,right:0,bottom:0,left:0});
+});
+
+test('SDK loads only for launch parameters; no SDK network request in a browser',()=>{
+ const bootstrap=html.match(/<!-- telegram-sdk:start -->[\s\S]*?<script>([\s\S]*?)<\/script>/)[1];
+ for(const telegram of [false,true]){
+  const dom=new JSDOM(html,{url:'https://example.test/'+(telegram?'#tgWebAppPlatform=ios&tgWebAppVersion=8.0':''),runScripts:'outside-only'});
+  try{dom.window.eval(bootstrap);assert.equal(dom.window.document.querySelectorAll('script[src^="https://telegram.org/js/telegram-web-app.js"]').length,telegram?1:0);}finally{dom.window.close();}
+ }
+});
+
+test('deactivation stops physics and input without touching manual pause; resume has no time debt',()=>{
+ const f=setup();try{
+  f.fight();frame(1000);frame(1100);assert.ok(ctx.game.time>0);
+  f.doc.dispatchEvent(new f.win.KeyboardEvent('keydown',{code:'KeyD'}));assert.equal(ctx.towerInput.x,1);
+  const time=ctx.game.time,round=ctx.round.elapsedSec;
+  f.mock.app.isActive=false;f.mock.emit('deactivated');
+  assert.equal(ctx.appInactive,true);assert.equal(ctx.paused,false);assert.deepEqual(ctx.towerInput,{x:0,y:0});
+  f.doc.dispatchEvent(new f.win.KeyboardEvent('keydown',{code:'KeyD'}));assert.equal(ctx.towerInput.x,0);
+  step(1);frame(10000);frame(20000);assert.equal(ctx.game.time,time);assert.equal(ctx.round.elapsedSec,round);
+  f.mock.app.isActive=true;f.mock.emit('activated');frame(30000);assert.equal(ctx.game.time,time);
+  frame(30100);assert.ok(ctx.game.time>time);
+  setPaused(true);f.mock.app.isActive=false;f.mock.emit('deactivated');f.mock.app.isActive=true;f.mock.emit('activated');
+  const paused=ctx.game.time;frame(40000);frame(40100);assert.equal(ctx.paused,true);assert.equal(ctx.game.time,paused);
+ }finally{f.close();}
+});
+
+test('page visibility and Telegram activity both have to permit resumption; BFCache resets clocks',()=>{
+ const f=setup();try{
+  f.fight();Object.defineProperty(f.doc,'hidden',{value:true,configurable:true});f.doc.dispatchEvent(new f.win.Event('visibilitychange'));
+  f.mock.emit('activated');assert.equal(ctx.appInactive,true);
+  Object.defineProperty(f.doc,'hidden',{value:false,configurable:true});f.doc.dispatchEvent(new f.win.Event('visibilitychange'));assert.equal(ctx.appInactive,false);
+  f.win.dispatchEvent(new f.win.Event('pagehide'));assert.equal(ctx.appInactive,true);
+  f.win.dispatchEvent(new f.win.Event('pageshow'));assert.equal(ctx.appInactive,false);assert.equal(ctx.last,null);
+ }finally{f.close();}
+});
+
+test('inactive launch and spawning freeze until activation',()=>{
+ const f=setup();try{
+  f.mock.app.isActive=false;f.mock.emit('deactivated');f.doc.querySelector('#tower-fight').click();
+  const elapsed=ctx.startup.elapsed;advanceStartup(50);frame(1000);frame(5000);assert.equal(ctx.startup.elapsed,elapsed);
+  f.mock.app.isActive=true;f.mock.emit('activated');frame(10000);assert.equal(ctx.startup.elapsed,elapsed);
+  frame(10100);assert.ok(ctx.startup.elapsed>elapsed);
+ }finally{f.close();}
+});
+
+test('safe area and stable height resize both arena layouts; keyboard keeps the game scale',()=>{
+ const f=setup();try{
+  assert.equal(ctx.platform.isTelegram,true);assert.equal(ctx.layoutViewport.width,809);assert.equal(ctx.layoutViewport.height,343);
+  assert.ok(f.doc.documentElement.classList.contains('telegram-app'));
+  const before=ctx.layoutScale;
+  ctx.setArenaExpanded(true);assert.equal(ctx.arenaExpanded,true);
+  f.mock.app.contentSafeAreaInset.top=52;f.mock.emit('contentSafeAreaChanged');assert.ok(ctx.layoutScale<before);
+  assert.equal(ctx.layoutViewport.height,323);assert.equal(f.doc.documentElement.style.getPropertyValue('--telegram-inset-top'),'62px');
+  assert.ok(Math.abs(parseFloat(ctx.root.style.getPropertyValue('--telegram-layout-top'))*ctx.layoutScale-62)<.01);
+  assert.deepEqual(contentViewport(f.win),{x:15,y:62,width:809,height:323});
+  f.mock.app.viewportStableHeight=350;f.mock.emit('viewportChanged');assert.equal(ctx.layoutViewport.height,283);
+  // An editor reducing the WebView height must not shrink the underlying game.
+  ctx.setArenaExpanded(false);
+  f.initialize();
+  // Open a real editable field through the setup form instead of a synthetic viewport flag.
+  const field=f.doc.createElement('input');field.type='text';ctx.root.append(field);field.focus();
+  const scale=ctx.layoutScale;f.win.innerHeight=150;f.mock.app.viewportStableHeight=150;f.win.dispatchEvent(new f.win.Event('resize'));f.mock.emit('viewportChanged');fitField();
+  assert.equal(ctx.keyboardViewport.active,true);assert.equal(ctx.layoutScale,scale);
+  field.remove();
+ }finally{f.close();}
+});
+
+test('portrait stays blocked until a real landscape rotation; unsupported methods and failures are harmless',()=>{
+ const f=setup();try{
+  f.mock.calls.length=0;f.mock.app.isOrientationLocked=false;
+  f.orientation.type='portrait-primary';f.win.innerWidth=390;f.win.innerHeight=844;f.mock.app.viewportStableHeight=844;
+  f.initialize();assert.equal(ctx.orientationBlocked,true);assert.ok(!f.mock.calls.includes('lockOrientation'));
+  f.orientation.type='landscape-primary';f.win.innerWidth=844;f.win.innerHeight=390;f.mock.app.viewportStableHeight=390;
+  f.orientation.dispatchEvent(new f.win.Event('change'));assert.equal(ctx.orientationBlocked,false);assert.ok(f.mock.calls.includes('lockOrientation'));
+  f.mock.calls.length=0;f.mock.emit('fullscreenFailed');ctx.root.dispatchEvent(new f.win.Event('pointerdown'));assert.ok(f.mock.calls.includes('requestFullscreen'));
+ }finally{f.close();}
+ const old=setup({version:'6.0'});try{assert.equal(ctx.platform.isTelegram,true);assert.deepEqual(old.mock.calls,['expand']);ctx.platform.ready();assert.equal(old.mock.calls.at(-1),'ready');}finally{old.close();}
+ const broken=setup({sdk:false});try{
+  for(const name of ['ready','expand','requestFullscreen','lockOrientation','disableVerticalSwipes'])broken.mock.app[name]=()=>{throw Error('unsupported');};
+  broken.win.Telegram={WebApp:broken.mock.app};assert.doesNotThrow(()=>broken.win.dispatchEvent(new broken.win.Event('telegram-sdk-ready')));
+  assert.doesNotThrow(()=>ctx.platform.ready());assert.equal(ctx.platform.isTelegram,true);
+ }finally{broken.close();}
+});
+
+test('mode recreation replaces subscriptions, preserves inactive state and leaves local saves untouched',()=>{
+ const f=setup();try{
+  localStorage.setItem('biovshi.local-totalizator.v1',JSON.stringify(f.session));const saved=localStorage.getItem('biovshi.local-totalizator.v1');
+  const count=f.mock.count();assert.ok(count>0);f.mock.app.isActive=false;f.mock.emit('deactivated');
+  for(let i=0;i<4;i++){f.initialize();assert.equal(f.mock.count(),count);assert.equal(ctx.appInactive,true);}
+  assert.equal(localStorage.getItem('biovshi.local-totalizator.v1'),saved);
+  ctx.platform.ready();assert.equal(f.mock.calls.at(-1),'ready');
+  ctx.root.__disposeTag();assert.equal(f.mock.count(),0);assert.equal(ctx.platform,null);
+  assert.equal(f.doc.documentElement.classList.contains('telegram-app'),false);
+  f.mock.emit('deactivated');assert.equal(ctx.appInactive,false);
+ }finally{f.dom.window.close();}
+});
+
+test('a late SDK connects once; browser fallback retains the original layout',()=>{
+ const f=setup({sdk:false});try{
+  assert.equal(ctx.platform.isTelegram,false);assert.equal(ctx.layoutViewport.width,844);assert.equal(ctx.layoutViewport.height,390);
+  ctx.platform.ready();f.win.Telegram={WebApp:f.mock.app};f.win.dispatchEvent(new f.win.Event('telegram-sdk-ready'));
+  const count=f.mock.count();f.win.dispatchEvent(new f.win.Event('telegram-sdk-ready'));assert.equal(f.mock.count(),count);
+  assert.equal(ctx.platform.isTelegram,true);assert.ok(f.mock.calls.includes('ready'));
+ }finally{f.close();}
+});
+
+test('saved player and tower progress load after a fresh Mini App document',()=>{
+ const first=setup();let saved,key;
+ try{
+  first.session.players[0].name='Тест ТГ';
+  const tower=towerFor(first.session,0);tower.record=7;
+  bettingSave();key=ctx.BET_STORAGE;saved=first.win.localStorage.getItem(key);assert.ok(saved);
+ }finally{first.close();}
+ const reopened=setup();try{
+  reopened.win.localStorage.setItem(key,saved);ctx.BET_STORAGE=key;
+  const loaded=bettingLoad();assert.ok(loaded);assert.equal(loaded.players[0].name,'Тест ТГ');
+  assert.equal(towerFor(loaded,0).record,7);
+ }finally{reopened.close();}
+});
+
+test('partial SDK with no event cleanup cannot accumulate subscriptions',()=>{
+ const f=setup({sdk:false});try{
+  delete f.mock.app.offEvent;f.win.Telegram={WebApp:f.mock.app};f.win.dispatchEvent(new f.win.Event('telegram-sdk-ready'));
+  assert.equal(ctx.platform.isTelegram,true);assert.equal(f.mock.count(),0);
+  f.initialize();assert.equal(f.mock.count(),0);
+ }finally{f.close();}
+});

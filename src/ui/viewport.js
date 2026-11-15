@@ -9,10 +9,12 @@ export function viewportLayout(width,height) {
 }
 export function fitInterface(){
   const win=ctx.root.ownerDocument.defaultView;
-  const viewport=ctx.keyboardViewport?.size()??{width:win.visualViewport?.width||win.innerWidth,height:win.visualViewport?.height||win.innerHeight};
+  const raw=ctx.keyboardViewport?.size()??{width:win.visualViewport?.width||win.innerWidth,height:win.visualViewport?.height||win.innerHeight};
+  const viewport=ctx.platform?.viewport(raw)??raw;
   ctx.layoutViewport=viewport;
   const layout=viewportLayout(viewport.width,viewport.height);
   ctx.layoutScale=layout.scale;
+  for(const side of ['top','right','bottom','left'])ctx.root.style.setProperty('--telegram-layout-'+side,((viewport[side]||0)/layout.scale)+'px');
   ctx.root.style.setProperty('--interface-scale',String(layout.scale));
   ctx.root.style.zoom=String(layout.scale);
   ctx.root.style.width=(ctx.arenaExpanded?viewport.width/layout.scale:layout.width)+'px';

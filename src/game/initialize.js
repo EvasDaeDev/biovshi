@@ -1,3 +1,4 @@
+import {initializeTelegram} from '../platform/telegram.js';
 import {SESSION_STORAGE} from '../build-channel.js';
 import {initializeKeyboardViewport} from '../ui/keyboard-viewport.js';
 import {initializeStreamerMascot} from '../ui/streamer-mascot.js';
@@ -434,15 +435,9 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.svg.style.setProperty('touch-action', ctx.mode==='tower'?'none':'manipulation');
   ctx.svg.style.setProperty('cursor', ctx.mode==='tower'?'default':'pointer');
   resetFrameClock();
-  const gameDocument = ctx.root.ownerDocument;
-  gameDocument.addEventListener('visibilitychange', resetFrameClock);
-  const disposeWithVisibility = ctx.root.__disposeTag;
-  ctx.root.__disposeTag = () => {
-    gameDocument.removeEventListener('visibilitychange', resetFrameClock);
-    disposeWithVisibility();
-  };
   ctx.paintAt = -Infinity;
   initializeOrientation();
+  initializeTelegram(fitField);
   ctx.frameId = requestAnimationFrame(frame);
   // Local pari-mutuel ledger. All values are whole virtual chips.
   ctx.BET_STORAGE = SESSION_STORAGE;

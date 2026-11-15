@@ -124,7 +124,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     return 1;
   }
   function play(key,{patient,slot,priority=2,delaySec=0}={}){
-    if(disposed||!unlocked||!context||context.state!=='running'||!ASSETS.sounds[key]||warnings.has(key))return;
+    if(disposed||state.appInactive||!unlocked||!context||context.state!=='running'||!ASSETS.sounds[key]||warnings.has(key))return;
     if(slot&&loops.has(slot))return;
     if((key!=='music'&&settings.sounds===0)||(key==='music'&&settings.music===0))return;
     const effects=[...voices].filter(v=>v.key!=='music');
@@ -156,6 +156,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
   }
   function sync(){
     if(disposed)return;
+    if(state.appInactive){stopAll();musicFadeEnd=null;return;}
     const active=state.startup?.phase==='running'&&!state.combat?.finished;
     const paused=Boolean(state.paused||state.settingsOpen||state.orientationBlocked);
     if(lastPhase==='running'&&state.startup?.phase!=='running')for(const voice of [...voices])if(voice.key!=='music')stop(voice);
@@ -229,7 +230,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     }catch(error){warn('device',error);}
   }
   function playClickTone(){
-    if(disposed||!context||context.state!=='running'||settings.sounds===0)return;
+    if(disposed||state.appInactive||!context||context.state!=='running'||settings.sounds===0)return;
     try{
       const time=context.currentTime,osc=context.createOscillator(),gain=context.createGain();
       osc.type='sine';osc.frequency.setValueAtTime(850,time);

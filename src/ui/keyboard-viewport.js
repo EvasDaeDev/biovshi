@@ -1,5 +1,5 @@
 import {ctx} from '../game/state.js';
-import {visibleViewport,screenRect,effectiveZoom,scrollPanelToTarget} from './geometry.js';
+import {contentViewport,visibleViewport,screenRect,effectiveZoom,scrollPanelToTarget} from './geometry.js';
 
 // Keep game geometry separate from the smaller area available to an editor.
 // A native keyboard changes visualViewport, and some WebViews change innerHeight
@@ -7,7 +7,7 @@ import {visibleViewport,screenRect,effectiveZoom,scrollPanelToTarget} from './ge
 export function initializeKeyboardViewport(onLayoutChange){
  const root=ctx.root,doc=root.ownerDocument,win=doc.defaultView;
  const measure=()=>{
-  const view=visibleViewport(win),scale=win.visualViewport?.scale||1;
+  const raw=visibleViewport(win),view=ctx.platform?.rawViewport(raw)??raw,scale=win.visualViewport?.scale||1;
   return {width:view.width*scale,height:view.height*scale,
    orientation:win.screen?.orientation?.type??win.orientation??null};
  };
@@ -40,7 +40,7 @@ export function initializeKeyboardViewport(onLayoutChange){
    panelState={node:panel,width:screenRect(panel).width,scrollTop:panel.scrollTop,
     styles:properties.map(property=>[property,panel.style.getPropertyValue(property),panel.style.getPropertyPriority(property)])};
   }
-  const view=visibleViewport(win),zoom=effectiveZoom(panel),pad=8;
+  const view=contentViewport(win),zoom=effectiveZoom(panel),pad=8;
   const width=Math.max(1,Math.min(panelState.width||view.width-pad*2,view.width-pad*2));
   const values={position:'fixed',top:(view.y+pad)/zoom+'px',left:(view.x+(view.width-width)/2)/zoom+'px',
    right:'auto',bottom:'auto',width:width/zoom+'px',height:'auto','min-height':'0px',
@@ -73,13 +73,13 @@ export function initializeKeyboardViewport(onLayoutChange){
  const api={size(){update(false);return {width:stable.width,height:stable.height};},get active(){return active;}};
  ctx.keyboardViewport=api;
  doc.addEventListener('focusin',change);doc.addEventListener('focusout',focusOut);
- win.addEventListener('resize',change);win.screen?.orientation?.addEventListener?.('change',change);
+ win.addEventListener('telegram-viewport-change',change);win.addEventListener('resize',change);win.screen?.orientation?.addEventListener?.('change',change);
  win.visualViewport?.addEventListener('resize',change);win.visualViewport?.addEventListener('scroll',change);
  const dispose=root.__disposeTag;
  root.__disposeTag=()=>{
   disposed=true;restorePanel();root.classList.remove('keyboard-open');
   doc.removeEventListener('focusin',change);doc.removeEventListener('focusout',focusOut);
-  win.removeEventListener('resize',change);win.screen?.orientation?.removeEventListener?.('change',change);
+  win.removeEventListener('telegram-viewport-change',change);win.removeEventListener('resize',change);win.screen?.orientation?.removeEventListener?.('change',change);
   win.visualViewport?.removeEventListener('resize',change);win.visualViewport?.removeEventListener('scroll',change);
   if(ctx.keyboardViewport===api)ctx.keyboardViewport=null;
   dispose();

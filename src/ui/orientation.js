@@ -14,7 +14,8 @@ export function initializeOrientation(){
     // Window dimensions also cover tablet split view. Screen orientation alone
     // can stay landscape while the browser's actual viewport is portrait.
     const size=ctx.keyboardViewport?.size()??{width:win.innerWidth,height:win.innerHeight};
-    const blocked=Boolean(ctx.touchDevice&&size.height>size.width);
+    const blocked=Boolean((ctx.touchDevice||ctx.platform?.isTelegram)&&size.height>size.width);
+    ctx.platform?.lockLandscape(size);
     if(ctx.orientationBlocked!==blocked){resetFrameClock();ctx.clearTowerInput?.();}
     ctx.orientationBlocked=blocked;
     if(blocked){
@@ -54,9 +55,11 @@ export function initializeOrientation(){
   });
   observer.observe(root,{subtree:true,attributes:true,attributeFilter:['open']});
   win.addEventListener('resize',update);win.screen?.orientation?.addEventListener?.('change',update);
+  ctx.updateOrientation=update;
   update();
   const dispose=root.__disposeTag;
   root.__disposeTag=()=>{
+    if(ctx.updateOrientation===update)ctx.updateOrientation=null;
     observer.disconnect();win.removeEventListener('resize',update);win.screen?.orientation?.removeEventListener?.('change',update);
     for(const type of events)doc.removeEventListener(type,guard,true);
     if(overlay.open&&typeof overlay.close==='function')overlay.close();
