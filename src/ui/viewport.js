@@ -9,11 +9,13 @@ export function viewportLayout(width,height) {
 }
 export function fitInterface(){
   const win=ctx.root.ownerDocument.defaultView;
-  const layout=viewportLayout(win.visualViewport?.width||win.innerWidth,win.visualViewport?.height||win.innerHeight);
+  const viewport=ctx.keyboardViewport?.size()??{width:win.visualViewport?.width||win.innerWidth,height:win.visualViewport?.height||win.innerHeight};
+  ctx.layoutViewport=viewport;
+  const layout=viewportLayout(viewport.width,viewport.height);
   ctx.layoutScale=layout.scale;
   ctx.root.style.setProperty('--interface-scale',String(layout.scale));
   ctx.root.style.zoom=String(layout.scale);
-  ctx.root.style.width=(ctx.arenaExpanded?(win.visualViewport?.width||win.innerWidth)/layout.scale:layout.width)+'px';
+  ctx.root.style.width=(ctx.arenaExpanded?viewport.width/layout.scale:layout.width)+'px';
   ctx.root.style.setProperty('--game-height',layout.height+'px');
   ctx.root.classList.toggle('compact-layout',layout.width<1120);
   // A wide iPad still needs the touch toolbar; width alone cannot identify it.

@@ -49,3 +49,11 @@ html body #robot-tag-hops-v22.mobile-layout #tag7hop-status {position:static;lef
 #robot-tag-hops-v22 .settings-panel .settings-copyright {margin-top:16px;color:var(--paper-ink);opacity:.75;text-align:center;line-height:1.5}
 #robot-tag-hops-v22 .settings-panel .settings-copyright small {font-size:11px}
 #robot-tag-hops-v22 .launch-paper .launch-settings-button {position:absolute;top:12px;right:12px;margin:0;width:42px;height:42px;padding:8px}
+
+/* Only the focused editor grows for comfortable typing. In particular, Safari
+   must not zoom the whole page to magnify text below 16 screen CSS pixels. */
+html body #robot-tag-hops-v22.mobile-layout :is(input[type="text"],input[type="number"],input[type="search"],input[type="email"],input[type="tel"],input[type="url"],input[type="password"],input:not([type]),textarea):focus {
+ font-size:max(16px,calc(16px / var(--interface-scale,1)));
+ min-height:calc(36px / var(--interface-scale,1));height:auto;
+}
+#robot-tag-hops-v22 .keyboard-input-panel {overscroll-behavior:contain;scroll-behavior:auto}

@@ -1,4 +1,5 @@
 import {SESSION_STORAGE} from '../build-channel.js';
+import {initializeKeyboardViewport} from '../ui/keyboard-viewport.js';
 import {initializeStreamerMascot} from '../ui/streamer-mascot.js';
 import {towerEnemyCount} from '../tower/model.js';
 import {arenaDefinition} from './arenas.js';
@@ -393,6 +394,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   attr(ctx.root.querySelector('#tag7hop-darkness'), 'opacity', CONFIG.light.darknessOpacity);
   ctx.stage = ctx.root.querySelector('.tag7hop-stage');
   ctx.fieldSide = ctx.fieldWidth = ctx.fieldHeight = 0;
+  initializeKeyboardViewport(fitField);
   ctx.observer = new ResizeObserver(fitField);
   for (const node of [ctx.root, ctx.root.querySelector('.tag7hop-main'), ctx.root.querySelector('.atmosphere-controls')]) ctx.observer.observe(node);
   globalThis.addEventListener?.('resize', fitField);
