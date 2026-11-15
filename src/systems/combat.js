@@ -64,7 +64,6 @@ export function kickPathClear(attacker, pending) {
 export function strikeCandidates(attacker, victim, source) {
   if (!attacker.attackSources.some(s => s.key === source.key)) return [];
   const facing = attacker.angle;
-  if (!inStrikeSector(attacker,source,source.kind==='leg'?victim.center:victim)) return [];
   if (!sightClear(attacker.center, victim.center)) return [];
   return victim.capsules.filter(c => c.segment && victim.isDamageable(c.segment)).map(c => {
     const dx = c.b.x - c.a.x,
@@ -74,7 +73,9 @@ export function strikeCandidates(attacker, victim, source) {
       x: c.a.x + dx * q,
       y: c.a.y + dy * q
     };
-    if (source.kind==='leg' && !inStrikeSector(attacker,source,aim)) return null;
+    // Test the reachable body part, not the owner's position: an outstretched
+    // limb may be in front while its owner's torso remains behind us.
+    if (!inStrikeSector(attacker,source,aim)) return null;
     const dist = pointSegment(source.point, c.a, c.b) - c.r;
     if(dist>(CONFIG.combat.strikeReachCm+(source.kind==='head'?9:17.25))*(source.reachFactor||1)*(attacker.body?.scaleMultiplier??1))return null;
     // An unseen rear opponent is sensed only near the attacking foot/stump.
