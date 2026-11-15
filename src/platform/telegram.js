@@ -34,6 +34,7 @@ export function telegramInsets(app,system={}){
 export function initializeTelegram(onLayoutChange){
   const root=ctx.root,doc=root.ownerDocument,win=doc.defaultView;
   let app=null,disposed=false,pageHidden=false,readyRequested=false,fullscreenRequested=false,orientationRequested=false,lastGesture=-Infinity;
+  let fullscreenConfirmed=null,fullscreenError=null,fullscreenAttempts=0,readyRetry=0;
   const subscriptions=[];
   const launched=()=>Boolean(app||doc.documentElement.classList.contains('telegram-launch'));
   // WKWebView can report zero Telegram insets while opening or rotating. Read
@@ -44,7 +45,7 @@ export function initializeTelegram(onLayoutChange){
   const edges=()=>{
     const style=win.getComputedStyle(safeProbe);
     const system=Object.fromEntries(['top','right','bottom','left'].map(side=>[side,parseFloat(style.getPropertyValue('padding-'+side))||0]));
-    return telegramInsets(app,system);
+    return telegramInsets({platform:app?.platform,isFullscreen:fullscreenConfirmed??app?.isFullscreen,safeAreaInset:app?.safeAreaInset,contentSafeAreaInset:app?.contentSafeAreaInset},system);
   };
   const invoke=(method,version,...args)=>{
     if(!supportsTelegram(app,version)||typeof app?.[method]!=='function')return false;
@@ -66,7 +67,9 @@ export function initializeTelegram(onLayoutChange){
     win.dispatchEvent(new win.Event('telegram-viewport-change'));
   };
   const fullscreen=(gesture=false)=>{
-    if(app?.isFullscreen)return;
+    // SDK isFullscreen can be restored from sessionStorage before the native
+    // window has entered fullscreen. Only a fresh native response is proof.
+    if(fullscreenConfirmed===true)return;
     // A sent request is not an acknowledgement. In particular, iOS can ignore
     // the initial request without sending fullscreenFailed. Retry on a real
     // gesture, synchronously, and throttle to avoid pointerdown + keydown bursts.
@@ -75,6 +78,7 @@ export function initializeTelegram(onLayoutChange){
       lastGesture=now;
     }else if(fullscreenRequested)return;
     fullscreenRequested=invoke('requestFullscreen','8.0');
+    if(fullscreenRequested)fullscreenAttempts++;
   };
   const gesture=()=>{invoke('disableVerticalSwipes','7.7');fullscreen(true);};
   const colors=()=>{
@@ -93,8 +97,13 @@ export function initializeTelegram(onLayoutChange){
     subscribe('activated',activity);subscribe('deactivated',activity);
     subscribe('viewportChanged',layout,'6.0');
     for(const event of ['safeAreaChanged','contentSafeAreaChanged'])subscribe(event,layout);
-    subscribe('fullscreenChanged',()=>{fullscreenRequested=Boolean(app.isFullscreen);invoke('disableVerticalSwipes','7.7');layout();});
-    subscribe('fullscreenFailed',()=>{fullscreenRequested=false;lastGesture=-Infinity;layout();});
+    subscribe('fullscreenChanged',()=>{fullscreenConfirmed=Boolean(app.isFullscreen);fullscreenError=null;fullscreenRequested=fullscreenConfirmed;invoke('disableVerticalSwipes','7.7');layout();});
+    subscribe('fullscreenFailed',event=>{
+      fullscreenError=event?.error??'UNKNOWN';
+      if(fullscreenError==='ALREADY_FULLSCREEN'){fullscreenConfirmed=true;fullscreenRequested=true;}
+      else{fullscreenConfirmed=false;fullscreenRequested=false;lastGesture=-Infinity;}
+      layout();
+    });
     subscribe('themeChanged',colors,'6.0');
     colors();
     invoke('expand','6.0');invoke('disableVerticalSwipes','7.7');
@@ -104,7 +113,19 @@ export function initializeTelegram(onLayoutChange){
   };
   const api={
     get isTelegram(){return launched();},
-    ready(){readyRequested=true;invoke('ready','6.0');fullscreenRequested=false;fullscreen();},
+    ready(){
+      readyRequested=true;invoke('ready','6.0');fullscreenRequested=false;fullscreen();
+      win.clearTimeout(readyRetry);readyRetry=win.setTimeout(()=>{if(!disposed&&fullscreenConfirmed!==true){fullscreenRequested=false;fullscreen();}},700);
+    },
+    enterFullscreen(){fullscreenConfirmed=null;fullscreenRequested=false;lastGesture=-Infinity;fullscreen(true);},
+    diagnostics(){
+      const style=win.getComputedStyle(doc.body),rect=root.getBoundingClientRect();
+      return {build:typeof __BUILD_VERSION__==='string'?__BUILD_VERSION__:'dev',source:typeof __BUILD_SOURCE__==='string'?__BUILD_SOURCE__:'dev',platform:app?.platform??'SDK unavailable',api:app?.version??null,
+        fullscreen:{reported:app?.isFullscreen??null,confirmed:fullscreenConfirmed,error:fullscreenError,attempts:fullscreenAttempts},
+        window:{width:win.innerWidth,height:win.innerHeight},visual:win.visualViewport?{width:win.visualViewport.width,height:win.visualViewport.height,top:win.visualViewport.offsetTop,left:win.visualViewport.offsetLeft}:null,
+        telegramViewport:{current:app?.viewportHeight??null,stable:app?.viewportStableHeight??null},safe:app?.safeAreaInset??null,contentSafe:app?.contentSafeAreaInset??null,effective:edges(),
+        padding:{top:style.paddingTop,right:style.paddingRight,bottom:style.paddingBottom,left:style.paddingLeft},game:{left:rect.left,top:rect.top,width:rect.width,height:rect.height,scale:ctx.layoutScale}};
+    },
     lockLandscape(size){
       // Telegram locks the CURRENT orientation; it cannot turn a portrait screen.
       if(!app||size.width<=size.height||win.screen?.orientation?.type?.startsWith('portrait'))return;
@@ -112,6 +133,9 @@ export function initializeTelegram(onLayoutChange){
       orientationRequested=invoke('lockOrientation','8.0');
     },
     rawViewport(size){
+      // After native fullscreen acknowledgement the real WebView dimensions
+      // are authoritative; stableHeight can still contain the old sheet height.
+      if(fullscreenConfirmed===true)return size;
       return app?.viewportStableHeight>0?{...size,height:Math.min(size.height,app.viewportStableHeight)}:size;
     },
     viewport(size){
@@ -122,7 +146,7 @@ export function initializeTelegram(onLayoutChange){
     contentViewport(view){
       if(!launched())return view;
       const area=edges(),right=Math.min(view.x+view.width,win.innerWidth-area.right);
-      const visibleHeight=app?.viewportHeight>0?Math.min(win.innerHeight,app.viewportHeight):app?.viewportStableHeight>0?Math.min(win.innerHeight,app.viewportStableHeight):win.innerHeight;
+      const visibleHeight=fullscreenConfirmed===true?win.innerHeight:app?.viewportHeight>0?Math.min(win.innerHeight,app.viewportHeight):app?.viewportStableHeight>0?Math.min(win.innerHeight,app.viewportStableHeight):win.innerHeight;
       const bottom=Math.min(view.y+view.height,visibleHeight-area.bottom);
       const x=Math.max(view.x,area.left),y=Math.max(view.y,area.top);
       return {x,y,width:Math.max(1,right-x),height:Math.max(1,bottom-y)};
@@ -136,6 +160,7 @@ export function initializeTelegram(onLayoutChange){
   const dispose=root.__disposeTag;
   root.__disposeTag=()=>{
     disposed=true;
+    win.clearTimeout(readyRetry);
     for(const [owner,event,handler] of subscriptions){try{owner.offEvent?.(event,handler);}catch{}}
     doc.removeEventListener('visibilitychange',activity);win.removeEventListener('pagehide',hide);win.removeEventListener('pageshow',show);
     win.removeEventListener('telegram-sdk-ready',connect);root.removeEventListener('pointerdown',gesture);root.removeEventListener('keydown',gesture);

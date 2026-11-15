@@ -23,7 +23,7 @@ function mockApp(version='8.0'){
   offEvent(name,fn){listeners.get(name)?.delete(fn);},
  };
  for(const name of ['ready','expand','requestFullscreen','lockOrientation','disableVerticalSwipes'])app[name]=()=>calls.push(name);
- return {app,calls,listeners,emit(name){for(const fn of [...listeners.get(name)??[]])fn();},count(){return [...listeners.values()].reduce((sum,set)=>sum+set.size,0);}};
+ return {app,calls,listeners,emit(name,data){for(const fn of [...listeners.get(name)??[]])fn(data);},count(){return [...listeners.values()].reduce((sum,set)=>sum+set.size,0);}};
 }
 function setup({version='8.0',sdk=true,touch=true}={}){
  const dom=new JSDOM(html,{url:'https://telegram.test/biovshi/test/',pretendToBeVisual:true});
@@ -284,13 +284,66 @@ for(const marker of ['telegram-app','telegram-launch'])test(`full stylesheet cas
    const computed=f.win.getComputedStyle(f.doc.body);
    return Object.fromEntries(['top','right','bottom','left'].map(side=>[side,parseFloat(computed.getPropertyValue('padding-'+side))]));
   };
-  assert.deepEqual(padding(),{top:68,right:56,bottom:33,left:56});
-  for(const side of ['top','right','bottom','left'])assert.equal(padding()[side]-12,ctx.layoutViewport[side],'page offset and available geometry must use the same physical inset');
+  assert.deepEqual(padding(),{top:56,right:44,bottom:21,left:44});
+  for(const side of ['top','right','bottom','left'])assert.equal(padding()[side],ctx.layoutViewport[side],'page offset and available geometry must use the same physical inset');
   // Expanded arena has its own positioning; the page padding must not displace it again.
-  ctx.setArenaExpanded(true);assert.deepEqual(padding(),{top:68,right:56,bottom:33,left:56});
+  ctx.setArenaExpanded(true);assert.deepEqual(padding(),{top:56,right:44,bottom:21,left:44});
   const rootStyle=f.win.getComputedStyle(ctx.root);
   assert.ok(Math.abs(parseFloat(rootStyle.top)*ctx.layoutScale-56)<.01);
   f.doc.documentElement.classList.remove('telegram-app','telegram-launch');
   assert.deepEqual(padding(),{top:12,right:12,bottom:12,left:12});
+ }finally{f.close();}
+});
+
+
+test('cached SDK fullscreen never suppresses a new native request and ALREADY_FULLSCREEN acknowledges it',()=>{
+ const f=setup({sdk:false});try{
+  f.mock.app.isFullscreen=true;f.win.Telegram={WebApp:f.mock.app};f.win.dispatchEvent(new f.win.Event('telegram-sdk-ready'));
+  const count=()=>f.mock.calls.filter(call=>call==='requestFullscreen').length;
+  assert.equal(count(),1,'cached true must still send a request');assert.equal(ctx.platform.diagnostics().fullscreen.confirmed,null);
+  ctx.platform.ready();assert.equal(count(),2);
+  f.mock.emit('fullscreenFailed',{error:'ALREADY_FULLSCREEN'});assert.equal(ctx.platform.diagnostics().fullscreen.confirmed,true);
+  ctx.root.dispatchEvent(new f.win.Event('pointerdown'));assert.equal(count(),2,'native acknowledgement stops retries');
+  ctx.platform.enterFullscreen();assert.equal(count(),3,'manual action can re-request even when the cached flag remains true');
+ }finally{f.close();}
+});
+
+test('ready retries an unacknowledged fullscreen transition without requiring another tap',()=>{
+ const f=setup();try{
+  let retry;f.win.setTimeout=fn=>{retry=fn;return 1;};f.win.clearTimeout=()=>{};
+  const count=()=>f.mock.calls.filter(call=>call==='requestFullscreen').length;
+  ctx.platform.ready();const sent=count();assert.equal(typeof retry,'function');retry();assert.equal(count(),sent+1);
+  f.mock.app.isFullscreen=true;f.mock.emit('fullscreenChanged');retry();assert.equal(count(),sent+1);
+ }finally{f.close();}
+});
+
+test('Telegram removes the general page gutter while browser geometry retains it',()=>{
+ for(const sdk of [true,false]){
+  const f=setup({sdk});try{
+   const physicalWidth=parseFloat(ctx.root.style.width)*ctx.layoutScale;
+   assert.ok(Math.abs(physicalWidth-(ctx.layoutViewport.width-(sdk?0:24)))<.01);
+  }finally{f.close();}
+ }
+});
+
+test('Telegram settings expose native fullscreen and safe-area diagnostics without authentication data',async()=>{
+ const f=setup();try{
+  const details=f.doc.querySelector('.telegram-diagnostics');assert.equal(details.hidden,false);details.open=true;details.ontoggle();
+  const data=JSON.parse(details.querySelector('pre').textContent);assert.equal(data.platform,'android');assert.equal(data.api,'8.0');assert.deepEqual(data.safe,f.mock.app.safeAreaInset);assert.ok(!('initData' in data));
+  let copied;Object.defineProperty(f.win.navigator,'clipboard',{value:{writeText:async text=>{copied=text;}}});
+  details.querySelector('[data-telegram-copy]').click();await Promise.resolve();assert.equal(JSON.parse(copied).platform,'android');
+  const before=f.mock.calls.filter(call=>call==='requestFullscreen').length;details.querySelector('[data-telegram-fullscreen]').click();assert.equal(f.mock.calls.filter(call=>call==='requestFullscreen').length,before+1);
+ }finally{f.close();}
+ const browser=setup({sdk:false});try{
+  assert.equal(browser.doc.querySelector('.telegram-diagnostics').hidden,true);
+  browser.doc.querySelector('#arena-credits-open').click();browser.doc.querySelector('#arena-credits-back').click();assert.equal(browser.doc.querySelector('.telegram-diagnostics').hidden,true);
+ }finally{browser.close();}
+});
+
+test('acknowledged fullscreen uses the real WebView height instead of stale sheet metrics',()=>{
+ const f=setup();try{
+  f.mock.app.viewportHeight=280;f.mock.app.viewportStableHeight=280;f.mock.emit('viewportChanged');assert.equal(ctx.layoutViewport.height,233);
+  f.mock.app.isFullscreen=true;f.mock.emit('fullscreenChanged');
+  assert.equal(ctx.layoutViewport.height,343);assert.equal(contentViewport(f.win).height,343);
  }finally{f.close();}
 });
