@@ -10,4 +10,4 @@ export function ensureBossEncounter(t,random=Math.random){
 export function validBossEncounter(e,level){
  return e===undefined||e&&e.floor===level&&isBossFloor(level)&&BOSS_VARIANTS.some(v=>v.id===e.variant)&&typeof e.texture==='string'&&/^assets\/textures\/robots\/boss\/b_\d+\.png$/.test(e.texture);
 }
-export const bossFloorReward=t=>hasBoss(t)?BOSS_CONFIG.reward:10;
+export const bossFloorReward=(t,victim=1)=>hasBoss(t)&&victim===1?BOSS_CONFIG.reward:10;

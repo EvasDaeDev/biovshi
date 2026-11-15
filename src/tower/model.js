@@ -1,3 +1,4 @@
+import {newInsurance,validInsurance,purchaseInsurance} from './insurance.js';
 import {TEST_BUILD} from '../build-channel.js';
 import {isBossFloor,hasBoss} from '../boss/config.js';
 import {ensureBossEncounter,validBossEncounter,bossFloorReward} from '../boss/encounter.js';
@@ -5,12 +6,13 @@ import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,aw
 import {BASE_STATS,patientVictory,validStats,normalizeProsthetics} from '../garage/model.js';
 export const TOWER_REWARD=10;
 export const floorEnemyCount=floor=>1+Math.floor(floor/2);
-export const towerEnemyCount=t=>t.legacyEnemyCount??(hasBoss(t)?1:floorEnemyCount(t.level));
-export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts};}
+export const towerEnemyCount=t=>t.legacyEnemyCount??(hasBoss(t)?3:floorEnemyCount(t.level));
+export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
 export function normalizeTower(t){
  if(!t||typeof t!=='object'||Array.isArray(t))return t;
  const previousBossInterval=t.artifacts?.bossEvery??(TEST_BUILD?2:5);
  t.prosthetics=normalizeProsthetics(t.prosthetics);
+ t.insurance??=newInsurance();
  if(isBossFloor(t.level)&&!t.bossEncounter&&t.rewarded?.length&&t.legacyEnemyCount===undefined)t.legacyBossFloor=true;
  if(t.version===undefined||t.version===1){
   t.version=2;t.record=Math.max(0,t.wins??0);t.legacyEnemyCount=t.level;
@@ -36,7 +38,7 @@ export function validTower(t){
  const count=towerEnemyCount(t),optionalCount=n=>n===null||Number.isSafeInteger(n)&&n>=0;
  return validBossEncounter(t.bossEncounter,t.level)&&t&&t.version===2&&Number.isSafeInteger(t.level)&&t.level>=1&&Number.isSafeInteger(t.wins)&&t.wins===t.level-1
   &&Number.isInteger(t.patient)&&t.patient>=0&&t.patient<4&&validStats(t.stats,t.wins)
-  &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&validArtifactCollection(t.artifacts,t.record)&&optionalCount(t.runKills)&&optionalCount(t.runCoins)
+  &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&validArtifactCollection(t.artifacts,t.record)&&optionalCount(t.runKills)&&optionalCount(t.runCoins)&&validInsurance(t.insurance,t.record)
   &&(t.legacyEnemyCount===undefined||(t.legacyEnemyCount===t.level||t.legacyEnemyCount===1))
   &&(t.legacyBossFloor===undefined||t.legacyBossFloor===true&&isBossFloor(t.level)&&t.bossEncounter===undefined)
   &&typeof t.preparing==='boolean'&&Array.isArray(t.rewarded)&&t.rewarded.length<=count
@@ -45,7 +47,7 @@ export function validTower(t){
 export function rewardTower(session,player,victim,by){
  const t=towerFor(session,player);
  if(by!==0||!Number.isInteger(victim)||victim<1||victim>towerEnemyCount(t)||t.preparing||t.rewarded.includes(victim))return false;
- const reward=bossFloorReward(t);
+ const reward=bossFloorReward(t,victim);
  const issued=session.players.length*session.capital+(session.topUps??0)+(session.towerEarned??0);
  if(issued+reward>16000000)return false;
  t.rewarded.push(victim);session.players[player].balance+=reward;session.towerEarned=(session.towerEarned??0)+reward;
@@ -65,7 +67,16 @@ function creditArtifactRewards(session,player,t){
 export function completeTower(session,player,won,random=Math.random){
  const t=towerFor(session,player);
  if(won){if(hasBoss(t))awardBossArtifact(t.artifacts,t.level,random);creditArtifactRewards(session,player,t);t.record=Math.max(t.record,t.level);patientVictory(t);t.level++;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;}
- else session.towers[player]=newTower(undefined,t.record,t.artifacts);
+ else {
+  const c=t.insurance.checkpoint,next=newTower(undefined,t.record,t.artifacts,t.insurance);
+  if(c){
+   Object.assign(next,structuredClone(c),{runKills:t.runKills,runCoins:t.runCoins});
+   next.insurance.checkpoint=null;
+  }
+  session.towers[player]=next;
+ }
  return session.towers[player];
 }
-export function resetTower(session,player){const t=towerFor(session,player);return session.towers[player]=newTower(undefined,t.record,t.artifacts);}
+export function resetTower(session,player){const t=towerFor(session,player);return session.towers[player]=newTower(undefined,t.record,t.artifacts,t.insurance);}
+
+export function buyTowerInsurance(session,player){const t=towerFor(session,player);return purchaseInsurance(session,player,t);}

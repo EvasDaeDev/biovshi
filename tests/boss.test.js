@@ -1,3 +1,5 @@
+import {activeOpponents} from '../src/systems/ai.js';
+import {segmentDistance} from '../src/utils/math.js';
 import {BOSS_NAMES,bossName} from '../src/boss/names.js';
 import {BOSS_FLOOR_INTERVAL} from '../src/build-channel.js';
 import {fighterLabel} from '../src/game/patients.js';
@@ -29,7 +31,7 @@ import {limbKey} from '../src/robot/body.js';
 for(const variant of BOSS_VARIANTS)for(const arena of ['ward','ring','annulus'])test(`${variant.id} boss has independent geometry, atlas, supports and unique attack sources in ${arena}`,()=>{
  const f=startBossScenario({variant:variant.id,arena});
  try{
-  const r=f.boss;assert.equal(ctx.robots.length,2);assert.ok(r.isBoss);assert.equal(r.scale,f.player.scale*1.5);assert.equal(ctx.scale,CONFIG.robot.scale);
+  const r=f.boss;assert.equal(ctx.robots.length,4);assert.ok(r.isBoss);assert.equal(r.scale,f.player.scale*1.5);assert.equal(ctx.scale,CONFIG.robot.scale);
   const head=r.capsules.filter(c=>c.segment==='head'),normalHead=f.player.capsules.filter(c=>c.segment==='head');
   head.forEach((c,i)=>assert.ok(Math.abs(c.r-normalHead[i].r)<1e-9));
   assert.ok(Math.abs(Math.hypot(head[1].a.x-head[0].a.x,head[1].a.y-head[0].a.y)-14*f.player.scale)<1e-9);
@@ -42,10 +44,15 @@ for(const variant of BOSS_VARIANTS)for(const arena of ['ward','ring','annulus'])
   assert.equal(r.hp.get('head'),12);assert.equal(r.hp.get('spine-'+(variant.spineSegments-1)),8);
   assert.equal(r.maxHp('arm--1-upper'),5);assert.equal(r.body.skinKey,'robotBoss0');
   assert.ok(r.capsules.every(c=>staticContacts(c).every(hit=>hit.depth<=(isLimb(c)?5:0)+1e-6)),'full boss rig starts inside arena');
+  for(const robot of ctx.robots)assert.ok(robot.capsules.every(c=>staticContacts(c).every(hit=>hit.depth<=(isLimb(c)?5:0)+1e-6)),'every participant starts clear of static surfaces');
+  const solid=c=>c.segment==='head'||c.segment?.startsWith('spine-');
+  for(let i=0;i<ctx.robots.length;i++)for(let j=i+1;j<ctx.robots.length;j++)
+   for(const a of ctx.robots[i].capsules.filter(solid))for(const b of ctx.robots[j].capsules.filter(solid))assert.ok(segmentDistance(a.a,a.b,b.a,b.b)>=a.r+b.r+.15-1e-6,'initial bodies do not overlap');
+
   assert.equal(new Set(r.attackSources.map(s=>s.key)).size,r.attackSources.length);
   assert.equal(pounceOpportunity(r,f.player),false);
   const bones=bossPortraitBones(r.body);assert.equal(bones.length,r.segmentTotal);assert.ok(bones.every(b=>b.matrix.every(Number.isFinite)));
-  assert.equal(ctx.svg.querySelectorAll('[data-skin-segment]').length,f.player.segmentTotal+r.segmentTotal);
+  assert.equal(ctx.svg.querySelectorAll('[data-skin-segment]').length,ctx.robots.reduce((sum,robot)=>sum+robot.segmentTotal,0));
   for(let n=0;n<120;n++)step(1/60);
   assert.ok(r.capsules.every(c=>[c.a.x,c.a.y,c.b.x,c.b.y,c.r].every(Number.isFinite)));
   for(const l of r.limbs){
@@ -80,6 +87,7 @@ test('boss ignores cumulative trauma, but head destruction still kills and pays 
 test('all six movement limbs must be lost before blood-loss countdown destroys a boss',()=>{
  const f=startBossScenario({variant:'legs'}),events=[];const off=onGameEvent(e=>{if(e.type==='robot-immobilized')events.push(e);});
  try{
+  for(const extra of ctx.robots.slice(2))extra.damage('head',1,100);
   const r=f.boss,keys=r.limbs.map(l=>limbKey(l)+'-upper');
   for(const key of keys.slice(0,4))r.damage(key,0,100);
   assert.equal(r.movementLimbs,2);step(1/60);assert.equal(ctx.combat.unarmedDeadline[1],null);assert.equal(r.failFromOilLoss(),false);
@@ -121,7 +129,7 @@ test('boss fallback handles every anatomy when texture loading fails',()=>{
 
 test('boss encounter survives serialization, rerolls only on the next boss floor and preserves old paid floors',()=>{
  const s=betNewSession(['Test'],100),t=towerFor(s,0);Object.assign(t,{level:5,wins:4,record:4,stats:[4,5,4]});
- const e=ensureBossEncounter(t,()=>.6),copy=JSON.parse(JSON.stringify(t));assert.deepEqual(ensureBossEncounter(copy,()=>0),e);assert.equal(towerEnemyCount(copy),1);
+ const e=ensureBossEncounter(t,()=>.6),copy=JSON.parse(JSON.stringify(t));assert.deepEqual(ensureBossEncounter(copy,()=>0),e);assert.equal(towerEnemyCount(copy),3);
  completeTower(s,0,true);assert.equal(t.bossEncounter,undefined);
  Object.assign(t,{level:10,wins:9,stats:[6,6,6],record:9});assert.equal(ensureBossEncounter(t,()=>0).variant,'brute');
  const old=JSON.parse(JSON.stringify(t));delete old.bossEncounter;old.rewarded=[1,2];s.towers[0]=old;
@@ -188,5 +196,20 @@ test('named boss announcement, card, arena label and combat identity survive sav
  }
  const f=startBossScenario({floor:3,ordinary:true});try{
   towerPreparation();paint();assert.equal(document.querySelector('#tower-prep-title').classList.contains('boss-floor-title'),false);assert.equal(ctx.status.classList.contains('boss-floor-badge'),false);
+ }finally{f.close();}
+});
+
+
+test('boss floor is a four-way free-for-all and pays 100 for boss, 10 for a patient, nothing for other killers',()=>{
+ const f=startBossScenario({variant:'arms',arena:'ring'});
+ try{
+  assert.equal(ctx.robots.length,4);assert.equal(ctx.robots.filter(r=>r.isBoss).length,1);
+  for(const robot of ctx.robots)assert.deepEqual(activeOpponents(robot.id).map(r=>r.id),[0,1,2,3].filter(id=>id!==robot.id));
+  ctx.robots[1].damage('head',0,100);step(1/60);
+  assert.equal(f.session.players[0].balance,1100);assert.equal(ctx.combat.finished,false,'the two ordinary patients keep the floor running');
+  ctx.robots[2].damage('head',3,100);assert.equal(f.session.players[0].balance,1100);
+  ctx.robots[3].damage('head',0,100);step(1/60);
+  assert.equal(f.session.players[0].balance,1110);assert.equal(ctx.combat.finished,true);assert.equal(ctx.combat.winner,0);
+  assert.equal(f.tower.artifacts.pieces.length,1);assert.equal(ctx.towerOutcome.floorCoins,110);
  }finally{f.close();}
 });

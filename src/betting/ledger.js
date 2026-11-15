@@ -13,6 +13,7 @@ export function betNewSession(names, capital) {
     version: 1,
     garage: newGarage(),
     shopSpent: 0,
+    insuranceSpent: 0,
     topUps: 0,
     towerEarned: 0,
     towerEnemyGenerations: {},

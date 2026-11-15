@@ -4,8 +4,8 @@ import {BOSS_CONFIG} from './config.js';
 import {ik,segmentDistance} from '../utils/math.js';
 import {staticContacts,isLimb} from '../systems/surface-contact.js';
 // Validate the full neutral rig before creating any live DOM or physics state.
-function neutralCapsules(start,body){
- const scale=CONFIG.robot.scale*BOSS_CONFIG.scale,c=Math.cos(start.angle),s=Math.sin(start.angle);
+function neutralCapsules(start,body,scaleMultiplier){
+ const scale=CONFIG.robot.scale*scaleMultiplier,c=Math.cos(start.angle),s=Math.sin(start.angle);
  const world=(x,y)=>({x:start.x+(x*c-y*s)*scale,y:start.y+(x*s+y*c)*scale});
  const capsules=[],push=(a,b,r,segment)=>capsules.push({a,b,r:r*scale,segment});
  const stride=CONFIG.robot.vertebraBaseCm,end=body.spineSegments*stride;
@@ -22,10 +22,10 @@ function neutralCapsules(start,body){
  }
  return capsules;
 }
-export function bossSpawn(start,body){
+export function bossSpawn(start,body,scaleMultiplier=BOSS_CONFIG.scale){
  const boundary=ctx.arenaBoundary,cx=(boundary.left+boundary.right)/2,cy=(boundary.top+boundary.bottom)/2;
  const valid=p=>{
-  const capsules=neutralCapsules(p,body);
+  const capsules=neutralCapsules(p,body,scaleMultiplier);
   if(capsules.some(c=>staticContacts(c).some(hit=>hit.depth>(isLimb(c)?5:0)+1e-6)))return false;
   const solid=c=>c.segment==='head'||c.segment.startsWith('spine-');
   return !capsules.filter(solid).some(c=>ctx.robots.some(r=>r.capsules.filter(solid).some(other=>segmentDistance(c.a,c.b,other.a,other.b)<c.r+other.r+.15)));

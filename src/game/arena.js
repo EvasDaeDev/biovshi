@@ -1,3 +1,5 @@
+import {bossSpawn} from '../boss/spawn.js';
+import {standardLimbs} from '../robot/body.js';
 import {createBoss} from '../boss/boss.js';
 import {ensureBossEncounter} from '../boss/encounter.js';
 import { clamp } from '../utils/math.js';
@@ -146,7 +148,10 @@ export function rebuildRobots() {
   for (const group of [ctx.conesG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG]) group.replaceChildren();
   ctx.robots.length = 0;
   const encounter=ctx.mode==='tower'?ensureBossEncounter(ctx.towerRun):null;
-  layout.forEach((p,id)=>ctx.robots.push(encounter&&id===1?createBoss(id,p,encounter):createRobot(id,p)));
+  layout.forEach((p,id)=>{
+    const start=encounter&&id>1?bossSpawn(p,{spineSegments:4,pelvisKey:'spine-3',limbs:standardLimbs()},1):p;
+    ctx.robots.push(encounter&&id===1?createBoss(id,start,encounter):createRobot(id,start));
+  });
   ctx.robots.forEach(r => r.setVisible(false));
 }
 // Один робот: скелет, опоры, хвост, анимации и отрисовка.

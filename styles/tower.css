@@ -70,3 +70,8 @@
 #robot-tag-hops-v22 #bet-result-summary .tower-run-summary :is(.artifact-award-note,.artifact-completed){color:#f3d884}
 
 #robot-tag-hops-v22 .artifact-bonus-note{color:#f3d884;font-size:12px;text-align:center;margin:10px 0}
+
+/* Keep the live menu above preparation/results dimming, below Settings itself. */
+#robot-tag-hops-v22[data-game-mode="tower"] #arena-settings-button{position:relative;z-index:1150}
+#robot-tag-hops-v22 #tower-insurance{background:#4b4b43;color:#eee2bf;white-space:nowrap}
+#robot-tag-hops-v22 #tower-insurance.is-active{background:#405d35;border-color:#2d4326;color:#f3efd9;opacity:1;cursor:default}

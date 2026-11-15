@@ -44,13 +44,13 @@ export function bettingLoad() {
     if(typeof s.towerEnemyGenerations!=='object'||s.towerEnemyGenerations===null||Array.isArray(s.towerEnemyGenerations)
       ||!Object.entries(s.towerEnemyGenerations).every(([id,n])=>/^[1-9]\d*$/.test(id)&&Number.isSafeInteger(n)&&n>=0))throw Error();
     s.towers??={};
-    const migrateArtifacts=Object.values(s.towers).some(t=>t&&(t.artifacts===undefined||t.artifacts?.version===1||t.artifacts?.version===2&&t.artifacts.bossEvery!==5));
+    const migrateArtifacts=Object.values(s.towers).some(t=>t&&(t.insurance===undefined||t.artifacts===undefined||t.artifacts?.version===1||t.artifacts?.version===2&&t.artifacts.bossEvery!==5));
     if(typeof s.towers!=='object'||Array.isArray(s.towers)||s.towers===null||!Object.entries(s.towers).every(([id,t])=>/^(0|[1-9]\d*)$/.test(id)&&s.players[Number(id)]&&validTower(normalizeTower(t))))throw Error();
     s.garage??=newGarage();
     if(!Array.isArray(s.garage)||s.garage.length!==4||!s.garage.every(g=>g&&typeof g==='object'))throw Error();
-    s.garage.forEach(normalizePatient);s.shopSpent??=0;s.topUps??=0;
+    s.garage.forEach(normalizePatient);s.shopSpent??=0;s.topUps??=0;s.insuranceSpent??=0;
     if(!Number.isSafeInteger(s.topUps)||s.topUps<0||s.players.length*s.capital+s.topUps+s.towerEarned>16000000)throw Error();
-    if(!Number.isSafeInteger(s.shopSpent)||s.shopSpent<0)throw Error();
+    if(!Number.isSafeInteger(s.shopSpent)||s.shopSpent<0||!Number.isSafeInteger(s.insuranceSpent)||s.insuranceSpent<0||s.insuranceSpent>16000000)throw Error();
     if(!Object.hasOwn(ARENAS,s.arenaId))s.arenaId='ward';
     normalizePatronage(s);
     validateGarage(s, s.garage);
@@ -61,7 +61,7 @@ export function bettingLoad() {
     }
     // Accept both legacy locked jackpots and separately carried jackpots.
     const total = s.players.reduce((n, p) => n + p.balance, 0) + s.jackpot + (s.phase === 'running' ? s.lockedJackpot + s.bets.reduce((n, b) => n + b.amount, 0) : 0);
-    if (total + s.shopSpent !== s.players.length * s.capital + s.topUps + s.towerEarned) throw Error();
+    if (total + s.shopSpent + s.insuranceSpent !== s.players.length * s.capital + s.topUps + s.towerEarned) throw Error();
     if (betRefund(s)) ctx.betNotice = 'Предыдущий бой был прерван: ставки возвращены, пациенты восстановлены по сохранённым данным, джекпот сохранён.';
     if(migrateArtifacts){try{localStorage.setItem(ctx.BET_STORAGE,JSON.stringify(s));}catch{ctx.betStorageAvailable=false;}}
     return s;

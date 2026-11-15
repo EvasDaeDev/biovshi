@@ -5,7 +5,7 @@ import {hasBoss} from '../boss/config.js';
 import {bossFloorReward} from '../boss/encounter.js';
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {ctx} from '../game/state.js';
-import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount} from './model.js';
+import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount,buyTowerInsurance} from './model.js';
 import {bettingSave} from '../betting/storage.js';
 import {bettingSetup,bettingCancel,bettingReadDraft} from '../betting/ui.js';
 import {patientRecovery,validStats,earnedStats,redistributeStat,statMultiplier,critChance} from '../garage/model.js';
@@ -54,7 +54,7 @@ export function towerPreparation(){
   title.classList.toggle('boss-floor-title',hasBoss(t));
   title.textContent=hasBoss(t)?`${bossName(t.level)}\nЭТАЖ №${t.level}`:`БАШНЯ · ЭТАЖ ${t.level}`;
   ctx.root.querySelector('#tower-prep-name').textContent=ctx.betting.players[ctx.towerPlayer].name;
-  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(bossFloorReward(t))} ЗА ЛИЧНОЕ ВЫБИВАНИЕ</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div>`;
+  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(bossFloorReward(t))} ${hasBoss(t)?'ЗА БОССА · '+formatChips(10)+' ЗА ПАЦИЕНТА · ВСЕ ПРОТИВ ВСЕХ':'ЗА ЛИЧНОЕ ВЫБИВАНИЕ'}</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div>`;
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   function renderSkills(){
     const snapshot=prostheticStatSnapshot(t),stats=snapshot.effective;
@@ -72,6 +72,20 @@ export function towerPreparation(){
   renderSkills();
   ctx.root.querySelector('#tower-prep-artifacts').innerHTML=artifactCollectionMarkup(t.artifacts)+`<p class="artifact-bonus-note">ПОЛНЫЙ АРТЕФАКТ: +${formatChips(ARTIFACT_COMPLETION_REWARD)}</p>`;
   ctx.root.querySelector('#tower-prep-error').textContent='';
+  const insuranceButton=ctx.root.querySelector('#tower-insurance');
+  const renderInsurance=()=>{
+    const c=t.insurance.checkpoint;
+    insuranceButton.classList.toggle('is-active',Boolean(c));
+    insuranceButton.innerHTML=c?`ДМС · ЭТАЖ ${c.level}`:`ДМС · ${formatChips(t.insurance.price)}`;
+    insuranceButton.disabled=Boolean(c)||ctx.betting.players[ctx.towerPlayer].balance<t.insurance.price;
+    insuranceButton.title=c?`При поражении вернёт на этаж ${c.level} с сохранёнными навыками. Страховка одноразовая.`:'Одноразовая страховка этажа и выбранных навыков. Следующая покупка дороже на 10%.';
+  };
+  renderInsurance();
+  insuranceButton.onclick=()=>{
+    if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
+    try{buyTowerInsurance(ctx.betting,ctx.towerPlayer);bettingSave();renderInsurance();updateTowerHud();ctx.root.querySelector('#tower-prep-error').textContent='ДМС оформлена: этаж и навыки застрахованы.';}
+    catch(error){ctx.root.querySelector('#tower-prep-error').textContent=error.message;}
+  };
   ctx.root.querySelector('#tower-fight').onclick=()=>{
     const stats=[...fields.querySelectorAll('select')].map(n=>Number(n.value));
     if(!validStats(stats,t.wins)){ctx.root.querySelector('#tower-prep-error').textContent='Можно перенести одно очко между навыками, сохранив их сумму.';return;}
@@ -92,6 +106,8 @@ export function settleTower(winner){
     runKills:t.runKills,runCoins:t.runCoins,floorCoins:ctx.towerFloorCoins??0,time:ctx.round.elapsedSec,
     reason:ctx.robots[0].hasHead?'Потерял сознание':'Погиб'};
   if(won)patientRecovery(t,ctx.robots[0]);
+  const insuredFloor=!won?t.insurance.checkpoint?.level:null;
+  ctx.towerOutcome.insuranceFloor=insuredFloor;
   const priorPieces=[...t.artifacts.pieces];
   const balanceBefore=ctx.betting.players[ctx.towerPlayer].balance;
   const next=completeTower(ctx.betting,ctx.towerPlayer,won);
@@ -104,7 +120,7 @@ export function settleTower(winner){
 export function towerResults(){
   const won=ctx.combat.winner===0,t=towerFor(ctx.betting,ctx.towerPlayer),o=ctx.towerOutcome??{floor:ctx.towerRun.level,cleared:won?ctx.towerRun.level:ctx.towerRun.level-1,record:t.record};
   ctx.resultsTitle.textContent=won?`ЭТАЖ ${o.floor} ПРОЙДЕН`:`ПРОЙДЕНО ЭТАЖЕЙ: ${o.cleared}`;
-  ctx.resultsSummary.textContent=won?`Получено +1 очко навыков. Далее — этаж ${t.level}, противников: ${towerEnemyCount(t)}.`:`${o.reason??'Поражение'} на этаже ${o.floor}. Заработанные монеты сохранены.`;
+  ctx.resultsSummary.textContent=won?`Получено +1 очко навыков. Далее — этаж ${t.level}, противников: ${towerEnemyCount(t)}.`:`${o.reason??'Поражение'} на этаже ${o.floor}. ${o.insuranceFloor?`ДМС сработала: возврат на этаж ${o.insuranceFloor} с застрахованными навыками. Страховка использована.`:'Заработанные монеты сохранены.'}`;
   const coins=o.floorCoins??0;
   ctx.root.querySelector('#bet-result-summary').innerHTML=`<div class="tower-run-summary${o.newRecord?' is-record':''}">
     ${o.newRecord?'<strong class="tower-record-banner">НОВЫЙ ЛИЧНЫЙ РЕКОРД!</strong>':''}
@@ -113,7 +129,7 @@ export function towerResults(){
     ${artifactCollectionMarkup(t.artifacts,o.artifact,o.artifactBonus)}
     <p>БАНК: ${formatChips(ctx.betting.players[ctx.towerPlayer].balance)}${o.runKills==null?'':` · ЛИЧНЫХ ПОБЕД: ${o.runKills}`}</p>
   </div>`;
-  ctx.resultsAgain.textContent=won?`НА ЭТАЖ ${t.level}`:'НОВАЯ ПОПЫТКА · ЭТАЖ 1';
+  ctx.resultsAgain.textContent=won?`НА ЭТАЖ ${t.level}`:o.insuranceFloor?`ДМС · НА ЭТАЖ ${t.level}`:'НОВАЯ ПОПЫТКА · ЭТАЖ 1';
   ctx.resultsAgain.onclick=()=>ctx.startTower(ctx.towerPlayer);
   ctx.resultsProcedure.hidden=false;ctx.resultsProcedure.textContent='В МЕНЮ';ctx.resultsProcedure.onclick=openMenu;
   ctx.root.querySelector('#tower-controls').hidden=true;ctx.resultsPanel.hidden=false;ctx.resultsAgain.focus();
@@ -131,7 +147,6 @@ export function installTowerUI(){
     ctx.startTower(ctx.menuPlayer);
   };
   ctx.root.querySelector('#launch-totalizator').onclick=async()=>{ctx.audio?.unlock();await ctx.startTotalizator();};
-  ctx.root.querySelector('#tower-prep-menu').onclick=openMenu;
   if(ctx.mode!=='tower'){
     ctx.root.querySelector('#tower-controls').hidden=true;ctx.root.querySelector('#tower-preparation').hidden=true;
     ctx.resultsProcedure.textContent='ПРОЦЕДУРНАЯ';ctx.resultsAgain.textContent='К СТАВКАМ СЛЕДУЮЩЕГО РАУНДА';ctx.resultsProcedure.hidden=false;
@@ -140,7 +155,7 @@ export function installTowerUI(){
   ctx.towerSettled=false;ctx.towerFloorCoins=0;ctx.towerOutcome=null;ctx.towerFeedbackUntil=0;
   const off=onGameEvent(event=>{
     if(event.type==='robot-immobilized'&&!ctx.towerSettled&&rewardTower(ctx.betting,ctx.towerPlayer,event.robot,event.lastAttacker)){
-      const reward=bossFloorReward(ctx.towerRun);ctx.towerFloorCoins+=reward;bettingSave();
+      const reward=bossFloorReward(ctx.towerRun,event.robot);ctx.towerFloorCoins+=reward;bettingSave();
       const toast=ctx.root.querySelector('#tower-reward-toast');toast.innerHTML='+'+formatChips(reward);toast.hidden=false;ctx.towerFeedbackUntil=ctx.game.time+1.2;
     }
     if(event.type==='robot-immobilized')updateTowerHud();

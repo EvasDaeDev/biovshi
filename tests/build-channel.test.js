@@ -33,7 +33,7 @@ test('compiled test channel creates a floor-five boss and isolates sessions, set
  const {accessFloorStore}=await import('./src/render/floor-storage.js');
  const f=startBossScenario({floor:5,variant:'arms'});
  try{
-  assert.equal(ctx.robots.length,2);assert.ok(f.boss.isBoss);assert.equal(f.boss.movementLimbs,6);
+  assert.equal(ctx.robots.length,4);assert.ok(f.boss.isBoss);assert.equal(f.boss.movementLimbs,6);
   assert.equal(ctx.BET_STORAGE,'biovshi.test.local-totalizator.v1');
   localStorage.setItem('biovshi.local-totalizator.v1','untouched main save');
   localStorage.setItem('biovshi.tutorial.v1','untouched main tutorial');
