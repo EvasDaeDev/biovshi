@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {newTower,towerFor,rewardTower,completeTower,resetTower,validTower,floorEnemyCount,towerEnemyCount,normalizeTower} from '../src/tower/model.js';
-import {betNewSession,betCommit,betResolve,betTopUp,betAddPlayer} from '../src/betting/ledger.js';
+import {betNewSession,betCommit,betResolve,betAddPlayer} from '../src/betting/ledger.js';
 import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 import {initializeGame} from '../src/game/initialize.js';
 import {ctx} from '../src/game/state.js';
@@ -59,9 +59,9 @@ test('rewards survive restart and defeat, are once per enemy per floor and isola
  assert.deepEqual(towerFor(s,1),newTower(towerFor(s,1).patient));assert.equal(s.players[1].balance,100);
  resetTower(s,0);assert.equal(s.players[0].balance,130);
 });
-test('tower rewards remain valid in shared betting storage after spending, settlement, joining and topups',()=>{
+test('tower rewards remain valid in shared betting storage after spending, settlement, joining and historical topups',()=>{
  const s=betNewSession(['Первый','Второй'],100);const dom=setup(s,towerFor(s,0));
- rewardTower(s,0,1,0);betTopUp(s,0,20);betAddPlayer(s,'Третий');
+ rewardTower(s,0,1,0);s.players[0].balance+=20;s.topUps=20;betAddPlayer(s,'Третий');
  betCommit(s,[{player:0,robot:0,amount:50},{player:1,robot:1,amount:20},{player:2,robot:2,amount:0}]);betResolve(s,0);
  bettingSave();const loaded=bettingLoad();assert.ok(loaded);assert.equal(loaded.towerEarned,10);assert.deepEqual(loaded.towers,s.towers);assert.deepEqual(loaded.players,s.players);
  close(dom);

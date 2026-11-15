@@ -111,7 +111,7 @@ test('viewport offsets move only the form and browser zoom does not become anoth
 test('nested input dialogs are adjusted independently and original inline styles survive restoration',()=>{
  const f=setup();
  try{
-  f.doc.querySelector('[data-top-up]').click();
+  f.doc.querySelector('#bet-add-player').click();
   const dialog=f.doc.querySelector('.betting-input-dialog'),input=dialog.querySelector('input');
   dialog.style.maxHeight='321px';dialog.style.margin='7px';input.focus();
   const before=f.geometry();f.resize(844,150);
