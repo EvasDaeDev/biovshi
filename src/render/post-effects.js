@@ -21,8 +21,20 @@ export function postEffectUniforms(settings=CONFIG.postEffects) {
       settings.blueYellow*.075/settings.referenceSize,settings.referenceSize]),
     uLook:new Float32Array([settings.unsharpAmount,settings.unsharpRadiusPx,settings.unsharpThreshold/255,settings.filmGrain*.018]),
     uVignette:new Float32Array([Math.max(0,-settings.vignetteAmount/100),settings.vignetteMidpoint/100]),
+    uFilm:new Float32Array([settings.grainSize??2.4,settings.grainColour??.14,settings.filmTone??.65]),
+    uExposure:1,
     uGrainTime:0,
   };
+}
+
+// Smooth deterministic exposure changes; never consume combat randomness.
+export function filmExposure(time,amount=CONFIG.postEffects.exposureDrift){
+  const noise=t=>{
+    const cell=Math.floor(t),f=t-cell,w=f*f*(3-2*f);
+    const hash=n=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return (v-Math.floor(v))*2-1;};
+    return hash(cell)*(1-w)+hash(cell+1)*w;
+  };
+  return 1+amount*(.65*noise(time*.43)+.35*noise(time*1.13+17));
 }
 
 // Shared uniforms explicitly match precision in both stages. Pixi defaults to
@@ -57,6 +69,8 @@ uniform vec4 uOptics;
 uniform vec4 uLook;
 uniform vec2 uVignette;
 uniform float uGrainTime;
+uniform vec3 uFilm;
+uniform float uExposure;
 
 vec3 sampleArena(vec2 screenUV) {
     vec2 uv = screenUV * (uOutputFrame.zw * uInputSize.zw);
@@ -66,6 +80,23 @@ float grainHash(vec2 pixel) {
     vec3 p = fract(vec3(pixel.xyx) * .1031 + uGrainTime * vec3(.11369, .13787, .09987));
     p += dot(p, p.yzx + 33.33);
     return fract((p.x + p.y) * p.z);
+}
+float grainField(vec2 pixel) {
+    vec2 cell = floor(pixel), f = fract(pixel);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(grainHash(cell), grainHash(cell + vec2(1.0, 0.0)), f.x),
+               mix(grainHash(cell + vec2(0.0, 1.0)), grainHash(cell + vec2(1.0)), f.x), f.y) - .5;
+}
+vec3 filmGrade(vec3 colour) {
+    float luma = dot(max(colour, vec3(0.0)), vec3(.2126, .7152, .0722));
+    float shadows = 1.0 - smoothstep(.06, .32, luma);
+    float lights = smoothstep(.18, .7, luma);
+    // Relative red dominance protects even dark blood, without tinting black pixels.
+    float redDominance = (colour.r - max(colour.g, colour.b)) / max(colour.r, .001);
+    float protectRed = smoothstep(.12, .45, redDominance);
+    vec3 tint = vec3(1.0) + shadows * vec3(-.05, .035, .03)
+                          + lights * vec3(.04, .01, -.035);
+    return mix(colour, colour * tint, uFilm.z * (1.0 - protectRed));
 }
 void main() {
     vec2 p = vScreenCoord * 2.0 - 1.0;
@@ -90,13 +121,23 @@ void main() {
                        sampleArena(warped + p * uOptics.z).b);
     vec3 detail = center - soft;
     colour += uLook.x * detail * step(vec3(uLook.z), abs(detail));
+    colour = filmGrade(colour) * uExposure;
     float radius = length(p) * .70710678;
     float vignette = 1.0 - uVignette.x * smoothstep(uVignette.y, 1.0, radius);
     colour *= vignette;
-    // Fine monochrome grain; no exposure or colour grading is added.
-    float noise = grainHash(floor(vScreenCoord * uOptics.w)) - .5;
+    // Blend broad soft clumps with fine grain, then add a small chromatic component.
+    vec2 pixel = vScreenCoord * uOptics.w;
+    float coarse = grainField(pixel / uFilm.x);
+    float fine = grainHash(floor(pixel)) - .5;
+    float density = .75 + .5 * grainHash(floor(pixel / 27.0));
+    float noise = (coarse * 1.7 + fine * .3) * density;
+    vec3 chroma = vec3(grainHash(floor(pixel / uFilm.x) + vec2(19.0, 3.0)),
+                       grainHash(floor(pixel / uFilm.x) + vec2(5.0, 47.0)),
+                       grainHash(floor(pixel / uFilm.x) + vec2(73.0, 11.0))) - .5;
+    chroma -= vec3(dot(chroma, vec3(.2126, .7152, .0722)));
     float luma = dot(max(colour, vec3(0.0)), vec3(.2126, .7152, .0722));
-    colour += noise * uLook.w * mix(1.0, .35, clamp(luma, 0.0, 1.0));
+    float grainMask = smoothstep(0.0, .035, luma) * mix(1.0, .4, clamp(luma, 0.0, 1.0));
+    colour += (vec3(noise) + chroma * uFilm.y) * uLook.w * grainMask;
     finalColor = vec4(clamp(colour, 0.0, 1.0), 1.0);
 }`;
 
@@ -130,6 +171,8 @@ export class ArenaPostEffects {
       uLook:{value:initial.uLook,type:'vec4<f32>'},
       uVignette:{value:initial.uVignette,type:'vec2<f32>'},
       uGrainTime:{value:0,type:'f32'},
+      uFilm:{value:initial.uFilm,type:'vec3<f32>'},
+      uExposure:{value:1,type:'f32'},
     });
     this.filter=pixi.Filter.from({
       gl:{vertex:POST_VERTEX,fragment:POST_FRAGMENT,name:'arena-film-lens',preferredFragmentPrecision:'highp'},
@@ -149,7 +192,9 @@ export class ArenaPostEffects {
   }
   resize(width,height) {this.rectangle.width=width;this.rectangle.height=height;}
   update(time) {
-    if(this.enabled)this.uniforms.uniforms.uGrainTime=this.reduced?0:Math.floor(time*12)%4096;
+    if(!this.enabled)return;
+    this.uniforms.uniforms.uGrainTime=this.reduced?0:Math.floor(time*12)%4096;
+    this.uniforms.uniforms.uExposure=this.reduced?1:filmExposure(time);
   }
   fail(error) {
     this.available=false;this.error=error.message;this.setEnabled(false);
