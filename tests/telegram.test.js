@@ -268,3 +268,29 @@ test('Telegram native swipes stay disabled after fullscreen and reactivation',()
   const full=count();f.mock.emit('activated');assert.ok(count()>full);
  }finally{f.close();}
 });
+
+for(const marker of ['telegram-app','telegram-launch'])test(`full stylesheet cascade applies physical safe-area padding to the ${marker} page`,()=>{
+ const f=setup();try{
+  // Load every real stylesheet in index order. API/geometry mocks alone cannot
+  // detect base.css overriding Telegram padding with a more specific selector.
+  for(const link of f.doc.querySelectorAll('link[rel="stylesheet"]')){
+   const style=f.doc.createElement('style');style.textContent=fs.readFileSync(new URL('../'+link.getAttribute('href'),import.meta.url),'utf8');link.replaceWith(style);
+  }
+  f.mock.app.platform='ios';f.mock.app.isFullscreen=true;
+  f.mock.app.safeAreaInset={top:0,left:44,right:44,bottom:21};
+  f.mock.app.contentSafeAreaInset={top:0,left:0,right:0,bottom:0};f.mock.emit('fullscreenChanged');
+  f.doc.documentElement.classList.remove('telegram-app','telegram-launch');f.doc.documentElement.classList.add(marker);
+  const padding=()=>{
+   const computed=f.win.getComputedStyle(f.doc.body);
+   return Object.fromEntries(['top','right','bottom','left'].map(side=>[side,parseFloat(computed.getPropertyValue('padding-'+side))]));
+  };
+  assert.deepEqual(padding(),{top:68,right:56,bottom:33,left:56});
+  for(const side of ['top','right','bottom','left'])assert.equal(padding()[side]-12,ctx.layoutViewport[side],'page offset and available geometry must use the same physical inset');
+  // Expanded arena has its own positioning; the page padding must not displace it again.
+  ctx.setArenaExpanded(true);assert.deepEqual(padding(),{top:68,right:56,bottom:33,left:56});
+  const rootStyle=f.win.getComputedStyle(ctx.root);
+  assert.ok(Math.abs(parseFloat(rootStyle.top)*ctx.layoutScale-56)<.01);
+  f.doc.documentElement.classList.remove('telegram-app','telegram-launch');
+  assert.deepEqual(padding(),{top:12,right:12,bottom:12,left:12});
+ }finally{f.close();}
+});
