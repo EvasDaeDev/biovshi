@@ -94,6 +94,7 @@ export class PixiArena {
     this.owned.add(this.nightTexture);
     this.content.addChild(new this.p.Sprite(this.nightTexture));
     this.ambient=ambient;ambient.blendMode='screen';this.content.addChild(ambient);
+    this.attachRoot(ctx.flashlightsG,this.content);
     for(const root of [ctx.scoreG,ctx.severFlashG,ctx.hitEffects.group])this.attachRoot(root,this.content);
     this.attachRoot(ctx.timerOutput,this.world);
     const clip=new this.p.Graphics().poly(ctx.arenaBoundary.points.flatMap(p=>[p.x,p.y])).fill('#ffffff');

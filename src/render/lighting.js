@@ -56,7 +56,7 @@ export function paintLighting(robot) {
       paintFlashlightTexture(node,heading,angle);
       attr(node,'d',beam);
       attr(node,'transform',`translate(${eye.x} ${eye.y})`);
-      const strength=node===robot.lightBeam&&node.flashlightTexture ? .17 : 1;
+      const strength=node===robot.lightBeam&&node.flashlightTexture ? .24 : 1;
       attr(node,'opacity',enabled?(opacity*strength*flashlightBrightness(ctx.game.time)).toFixed(3):'0');
     }
   }

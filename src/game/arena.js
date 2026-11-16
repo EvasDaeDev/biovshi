@@ -145,7 +145,7 @@ export function chooseSpawnLayout() {
 }
 export function rebuildRobots() {
   const layout = chooseSpawnLayout();
-  for (const group of [ctx.conesG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG]) group.replaceChildren();
+  for (const group of [ctx.conesG, ctx.flashlightsG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG]) group.replaceChildren();
   ctx.robots.length = 0;
   const encounter=ctx.mode==='tower'?ensureBossEncounter(ctx.towerRun):null;
   layout.forEach((p,id)=>{

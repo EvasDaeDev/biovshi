@@ -73,7 +73,7 @@ function bridge(){
   // Liquid assets use assetUrl(); take it from the first actual description.
   createOilDrop(0,200,200,3);
   arena.sources.set(ctx.combat.oilDrops[0].sprite.image.getAttribute('href'),source);
-  for(const root of [ctx.conesG,ctx.groundG,ctx.trailsG,ctx.oilG,ctx.detachedG,ctx.actorsG,ctx.lightHoles,ctx.scoreG])arena.attachRoot(root,arena.content);
+  for(const root of [ctx.conesG,ctx.groundG,ctx.trailsG,ctx.oilG,ctx.detachedG,ctx.actorsG,ctx.lightHoles,ctx.flashlightsG,ctx.scoreG])arena.attachRoot(root,arena.content);
   arena.observer=new document.defaultView.MutationObserver(mutations=>arena.consume(mutations));
   arena.observer.observe(ctx.svg,{attributes:true,childList:true,characterData:true,subtree:true});
   arena.flush=()=>{
@@ -101,6 +101,13 @@ test('Pixi clips tower flashlight texture and nearby light, follows gaze and wid
   }
   assert.equal(arena.records.get(player.vision).visual.blendMode,'erase');
   const light=arena.records.get(player.lightBeam),originalAngle=CONFIG.vision.runnerAngleDeg;
+  assert.equal(player.lightBeam.parentNode,ctx.flashlightsG);
+  assert.ok(ctx.darkness.compareDocumentPosition(ctx.flashlightsG)&document.defaultView.Node.DOCUMENT_POSITION_FOLLOWING,
+    'visible texture is above darkness, not extinguished by it');
+  assert.ok(ctx.flashlightsG.compareDocumentPosition(ctx.scoreG)&document.defaultView.Node.DOCUMENT_POSITION_FOLLOWING,
+    'announcements remain above the light');
+  assert.equal(light.visual.blendMode,'normal');
+  assert.equal(player.vision.parentNode,ctx.lightHoles,'reveal still uses the original darkness mask');
   assert.equal(light.visual.texture,arena.sources.get(assetUrl(ASSETS.textures.flashlight)));
   assert.equal(light.visual.anchor.x,0);assert.equal(light.visual.anchor.y,.5);
   assert.equal(light.visual.width,CONFIG.vision.rangeCm);
@@ -126,13 +133,13 @@ test('Pixi clips tower flashlight texture and nearby light, follows gaze and wid
  }finally{arena.finish();ctx.mode='spectator';ctx.towerRun=null;ctx.root.__disposeTag();dom.window.close();}
 });
 
-test('flashlight brightness stays within 2.7 percent without consuming randomness',()=>{
+test('flashlight brightness stays within 5 percent without consuming randomness',()=>{
  const seed=ctx.seed;
  let lo=Infinity,hi=-Infinity;
  for(let i=0;i<6000;i++){
   const t=i/60,value=flashlightBrightness(t);lo=Math.min(lo,value);hi=Math.max(hi,value);
-  assert.ok(value>=.973&&value<=1.027);
-  assert.ok(Math.abs(value-flashlightBrightness(t+1/60))<.004,'no abrupt frame-to-frame flashes');
+  assert.ok(value>=.95&&value<=1.05);
+  assert.ok(Math.abs(value-flashlightBrightness(t+1/60))<.007,'no abrupt frame-to-frame flashes');
  }
  assert.ok(hi-lo>.025);assert.equal(ctx.seed,seed);
 });

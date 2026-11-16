@@ -131,7 +131,10 @@ function createRobot(id, start, body = {}) {
     fill:'url(#'+robotState.glowId+')'
   },ctx.lightHoles);
   if(towerLight){
-    for(const [key,parent,source] of [['vision',ctx.lightHoles,robotState.gradient],['lightBeam',ctx.conesG,robotState.poolGradient]]){
+    // Reveal the arena through darkness, then draw the coloured texture above
+    // darkness so its own transparency is not attenuated a second time.
+    const beamLayer=ctx.textureAssets?.flashlight?.loaded?ctx.flashlightsG:ctx.conesG;
+    for(const [key,parent,source] of [['vision',ctx.lightHoles,robotState.gradient],['lightBeam',beamLayer,robotState.poolGradient]]){
       const gradient=source.cloneNode(true),id=`tag7hop-tower-${key}-${robotState.id}`;
       attr(gradient,'id',id);attr(gradient,'r',CONFIG.vision.rangeCm);ctx.lightGradients.appendChild(gradient);
       robotState[key]=el('path',{cx:0,cy:0,r:CONFIG.vision.rangeCm,fill:`url(#${id})`},parent);

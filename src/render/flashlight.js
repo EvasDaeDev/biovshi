@@ -5,7 +5,7 @@ import { attr, el } from './svg.js';
 
 // Cosmetic, deterministic variation: never consumes combat RNG or wall time.
 export function flashlightBrightness(time) {
-  return 1+.015*Math.sin(time*7.3)+.008*Math.sin(time*11.1+.8)+.004*Math.sin(time*2.7+2);
+  return 1+.025*Math.sin(time*7.3)+.015*Math.sin(time*11.1+.8)+.01*Math.sin(time*2.7+2);
 }
 
 export function createFlashlightTexture(node,key) {

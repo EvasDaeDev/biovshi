@@ -51,6 +51,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.svg = ctx.root.querySelector('#tag7hop-field');
   ctx.grid = ctx.root.querySelector('#tag7hop-grid');
   ctx.conesG = ctx.root.querySelector('#tag7hop-cones');
+  ctx.flashlightsG = ctx.root.querySelector('#tag7hop-flashlights');
   ctx.groundG = ctx.root.querySelector('#tag7hop-ground');
   ctx.actorsG = ctx.root.querySelector('#tag7hop-actors');
   ctx.button = ctx.root.querySelector('#tag7hop-pause');
@@ -69,7 +70,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.NS = 'http://www.w3.org/2000/svg';
   ctx.floorImage?.remove();ctx.floorImage=null;ctx.floorCanvas=null;
   ctx.arenaId=arenaDefinition(arenaId).id;ctx.arenaDefinition=arenaDefinition(arenaId);
-  for (const g of [ctx.grid, ctx.conesG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG, ctx.pulsesG, ctx.sparksG, ctx.scoreG]) g.replaceChildren();
+  for (const g of [ctx.grid, ctx.conesG, ctx.flashlightsG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG, ctx.pulsesG, ctx.sparksG, ctx.scoreG]) g.replaceChildren();
   ctx.roles.replaceChildren();
   ctx.intro = ctx.root.querySelector('#tag7hop-intro');
   ctx.startButton = ctx.root.querySelector('#tag7hop-start');
