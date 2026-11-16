@@ -71,27 +71,19 @@
 
 #robot-tag-hops-v22 .arena-picker .arena-obstacle{fill:#d78937;stroke:#d78937;stroke-width:1}
 
-/* Shared fast player-currency counter in all game modes. */
+/* Shared fast player-currency counter: animate numbers and color only, no glow or scaling. */
 #robot-tag-hops-v22 .currency-counter{
  display:inline-flex;align-items:center;gap:.2em;white-space:nowrap;
  font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
- font-weight:800;transition:color .14s ease,text-shadow .14s ease;
+ font-weight:800;transition:color .14s ease;
 }
 #robot-tag-hops-v22 .currency-counter .currency-counter-value{display:inline-block;min-width:1ch}
 #robot-tag-hops-v22 .currency-counter.is-credit{
- color:#53ff66!important;text-shadow:0 0 7px #42ff67aa,0 0 15px #2cff5270!important;
- animation:currency-counter-credit .65s ease-out both;
+ color:#53ff66!important;text-shadow:none!important;
 }
 #robot-tag-hops-v22 .currency-counter.is-debit{
- color:#ff4147!important;text-shadow:0 0 7px #ff343faa,0 0 15px #ff222270!important;
- animation:currency-counter-debit .65s ease-out both;
+ color:#ff4147!important;text-shadow:none!important;
 }
-#robot-tag-hops-v22 .currency-counter:is(.is-credit,.is-debit) .chip-icon{
- box-shadow:0 0 9px currentColor,inset 0 0 0 1px #ffe18a;
-}
-@keyframes currency-counter-credit{0%{transform:scale(.98)}35%{transform:scale(1.14)}100%{transform:scale(1)}}
-@keyframes currency-counter-debit{0%{transform:scale(.98)}35%{transform:scale(1.09)}100%{transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){
  #robot-tag-hops-v22 .currency-counter{transition:none}
- #robot-tag-hops-v22 .currency-counter:is(.is-credit,.is-debit){animation:none}
 }
