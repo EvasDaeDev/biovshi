@@ -7,7 +7,7 @@ import { clearBone, clearCircle, clearanceAt, edgeClearance, freeBlockedJoint, l
 import { contacts, currentTargetVisible, hasGoal, retreatFromBoundary, robotTick, steerTo, updateHead, watchProgress } from "./locomotion.js";
 import { coverOffset, hopHeight, jumpTick, lifted, planIdleHops, reboundPlan, reboundTick, robotBeginApproach, robotBeginCover, robotBeginScene, robotCanCover, robotCancelCover, robotCoverGap, robotCelebrateVictory, robotEndScene, robotPerformIdle, robotPounce, robotReboundFrom, robotSetVisible, robotStartle, sceneEnvelope, scheduleIdle, settleHands, updateIdleHops, updateIdleScene, updateScene } from "./scenes.js";
 import { bodyTransform, draw, robotPaint, visiblePoint, visionAngle, visualOffset, visualRotation } from "../render/robot.js";
-import { el } from "../render/svg.js";
+import { attr, el } from "../render/svg.js";
 import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
 import { limbColor } from "../utils/colors.js";
@@ -15,6 +15,7 @@ import { ik } from "../utils/math.js";
 import { robotCanSee } from "./perception.js";
 import { createRobotSkin } from '../render/robot-skin.js';
 import { createTorsoShadow } from '../render/ground-spots.js';
+import { createFlashlightTexture } from '../render/flashlight.js';
 export
 // Один робот: скелет, опоры, хвост, анимации и отрисовка.
 function createRobot(id, start, body = {}) {
@@ -99,6 +100,12 @@ function createRobot(id, start, body = {}) {
   }, robotState.gradient);
   robotState.vision = null;
   robotState.lightBeam = null;
+  const towerLight=ctx.mode==='tower'&&robotState.id===0;
+  if(towerLight){
+    attr(robotState.gradient,'gradientUnits','userSpaceOnUse');
+    attr(robotState.gradient,'cx',0);attr(robotState.gradient,'cy',0);
+    attr(robotState.gradient,'r',CONFIG.light.nearbyRadiusCm);
+  }
   robotState.poolGradient = el('radialGradient', {
     id: 'tag7hop-pool-' + robotState.id,
     gradientUnits: 'objectBoundingBox',
@@ -109,15 +116,31 @@ function createRobot(id, start, body = {}) {
     'stop-color': 'var(--night-light)',
     'stop-opacity': opacity
   }, robotState.poolGradient);
-  robotState.pool = el('circle', {
+  if(towerLight){
+    attr(robotState.poolGradient,'gradientUnits','userSpaceOnUse');
+    attr(robotState.poolGradient,'cx',0);attr(robotState.poolGradient,'cy',0);
+    attr(robotState.poolGradient,'r',CONFIG.light.nearbyRadiusCm);
+  }
+  robotState.pool = el(towerLight?'path':'circle', {
     cx:0,cy:0,r:CONFIG.light.nearbyRadiusCm,
     class: 'neon-pool',
     fill: 'url(#tag7hop-pool-' + robotState.id + ')'
   }, ctx.conesG);
-  robotState.nearLight = el('circle', {
+  robotState.nearLight = el(towerLight?'path':'circle', {
     cx:0,cy:0,r:CONFIG.light.nearbyRadiusCm,
     fill:'url(#'+robotState.glowId+')'
   },ctx.lightHoles);
+  if(towerLight){
+    // Reveal the arena through darkness, then draw the coloured texture above
+    // darkness so its own transparency is not attenuated a second time.
+    const beamLayer=ctx.textureAssets?.flashlight?.loaded?ctx.flashlightsG:ctx.conesG;
+    for(const [key,parent,source] of [['vision',ctx.lightHoles,robotState.gradient],['lightBeam',beamLayer,robotState.poolGradient]]){
+      const gradient=source.cloneNode(true),id=`tag7hop-tower-${key}-${robotState.id}`;
+      attr(gradient,'id',id);attr(gradient,'r',CONFIG.vision.rangeCm);ctx.lightGradients.appendChild(gradient);
+      robotState[key]=el('path',{cx:0,cy:0,r:CONFIG.vision.rangeCm,fill:`url(#${id})`},parent);
+      createFlashlightTexture(robotState[key],key);
+    }
+  }
   robotState.actor = el('g', {
     class: 'robot'
   }, ctx.actorsG);
@@ -128,6 +151,7 @@ function createRobot(id, start, body = {}) {
   robotState.bodyG = el('g', {}, robotState.figure);
   robotState.label = el('text', {
     class: 'robot-label',
+    display:ctx.mode==='tower'?'none':'',
     'text-anchor': 'middle'
   }, robotState.actor);
   robotState.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;

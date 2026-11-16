@@ -1,5 +1,6 @@
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {COIN_ICON,formatChipsText} from '../ui/currency.js';
+import {playerBalanceMarkup} from '../ui/currency-animation.js';
 import {patientName,SKILLS,skillHintAttributes} from '../ui/patient.js';
 import {ctx} from '../game/state.js';
 import {bettingModal,bettingOpen,bettingHud} from '../betting/ui.js';
@@ -25,7 +26,7 @@ export function garageOpen(){
  const player=ctx.betting.players[ctx.procedureEditor];
  bettingSave();bettingModal('Процедурная · раунд '+ctx.betting.round);ctx.startup.phase='garage';ctx.betOverlay.dataset.view='garage';bettingHud();
  ctx.betContent.innerHTML=`<p class="bet-muted garage-intro-note">ПЕРЕРАСПРЕДЕЛЕНИЕ: одно очко между навыками. Изменения доступны покровителю пациента.</p>
- <div class="procedure-player"><label class="procedure-editor"><span>ИГРОК</span> <select id="procedure-editor" aria-describedby="procedure-player-hint">${ctx.betting.players.map(p=>`<option value="${p.id}" ${p.id===ctx.procedureEditor?'selected':''}>${ctx.betEscape(p.name)}</option>`).join('')}</select></label><output id="procedure-balance" aria-label="Баланс выбранного игрока">БАЛАНС: ${ctx.betFormat(player.balance)}</output></div>
+ <div class="procedure-player"><label class="procedure-editor"><span>ИГРОК</span> <select id="procedure-editor" aria-describedby="procedure-player-hint">${ctx.betting.players.map(p=>`<option value="${p.id}" ${p.id===ctx.procedureEditor?'selected':''}>${ctx.betEscape(p.name)}</option>`).join('')}</select></label><output id="procedure-balance" aria-label="Баланс выбранного игрока">БАЛАНС: ${playerBalanceMarkup(player.id,player.balance)}</output></div>
  <p id="procedure-player-hint" class="garage-intro-note">Навыки и покупки — от имени выбранного игрока.</p>
  ${ctx.lastFloorBakeError?`<p class="bet-muted" role="status">${ctx.betEscape(ctx.lastFloorBakeError)}</p>`:''}
  <div class="garage-grid">${ctx.betting.garage.map((g,id)=>{

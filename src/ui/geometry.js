@@ -1,3 +1,4 @@
+import {ctx} from '../game/state.js';
 // Older WebKit returns CSS-zoom-local rectangles. Modern browsers return
 // viewport rectangles. Detect the behavior rather than guessing from a UA.
 const legacyRects=new WeakMap();
@@ -44,4 +45,9 @@ export function scrollPanelToTarget(panel,target){
   const top=box.top+panel.clientTop*zoom,bottom=top+panel.clientHeight*zoom;
   if(item.height>bottom-top||item.top<top)panel.scrollTop+=(item.top-top)/zoom;
   else if(item.bottom>bottom)panel.scrollTop+=(item.bottom-bottom)/zoom;
+}
+
+export function contentViewport(win){
+  const view=visibleViewport(win);
+  return ctx.root?.ownerDocument.defaultView===win?(ctx.platform?.contentViewport(view)??view):view;
 }

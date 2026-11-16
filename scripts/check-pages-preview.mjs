@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 export function checkPagesPreview(directory){
  const root=path.resolve(directory),preview=path.join(root,'test');
  assert.ok(fs.statSync(path.join(root,'index.html')).isFile(),'Stable entry is present');
@@ -9,6 +10,11 @@ export function checkPagesPreview(directory){
  assert.match(html,/ТЕСТОВАЯ СБОРКА/);assert.match(html,/БОСС КАЖДЫЙ 5-Й ЭТАЖ/);
  const info=JSON.parse(fs.readFileSync(path.join(preview,'build-info.json'),'utf8'));
  assert.equal(info.channel,'test');assert.equal(info.bossEvery,5);
+ if(html.includes('./vendor/telegram-web-app-65.js')){
+  const sdk=fs.readFileSync(path.join(preview,'vendor/telegram-web-app-65.js'));
+  const metadata=JSON.parse(fs.readFileSync(path.join(preview,'vendor/telegram-web-app-65.json'),'utf8'));
+  assert.equal(createHash('sha256').update(sdk).digest('hex'),metadata.sha256,'Published Telegram SDK matches its pinned official source');
+ }
  const base=new URL('https://example.github.io/biovshi/test/');
  for(const match of html.matchAll(/<(?:link|script)\b[^>]*\b(?:href|src)="([^"]+)"/g)){
   const url=new URL(match[1],base);assert.ok(url.href.startsWith(base.href),'Test resource escapes /test/: '+url.href);

@@ -22,7 +22,7 @@ const CONFIG = {
     unsharpAmount: 0.8, // Unsharp Mask: 80%.
     unsharpRadiusPx: 1,
     unsharpThreshold: 0,
-    filmGrain: 1.4,
+    filmGrain: 0.7, // Halved grain intensity; size, colour and other film effects unchanged.
     grainSize: 2.4, // Pixels at the reference viewport; mixed with finer grain.
     grainColour: 0.14,
     filmTone: 0.65, // Cool green shadows / warm lights, with red protection.

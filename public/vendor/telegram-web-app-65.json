@@ -1,0 +1,6 @@
+{
+  "source": "https://telegram.org/js/telegram-web-app.js?65",
+  "retrieved": "2026-11-15",
+  "sha256": "baa788a6f686f4238db1b82ce8e76470930af7411b18b521ebb95a2c1480a267",
+  "note": "Unmodified official SDK snapshot. 65 is the upstream script URL cache tag, not an API version."
+}

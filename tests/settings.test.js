@@ -75,13 +75,13 @@ test('Settings menu exit confirms cancellation, refunds bets and restores patien
  let prompts=0;globalThis.confirm=()=>{prompts++;return false;};
  document.getElementById('settings-main-menu').click();
  assert.equal(prompts,1);assert.equal(ctx.settingsOpen,true);assert.equal(ctx.paused,true);
- assert.equal(ctx.startup.phase,'running');assert.equal(session.players[0].balance,80);
+ assert.equal(ctx.startup.phase,'running');assert.equal(session.players[0].balance,180);
  assert.equal(document.getElementById('launch-overlay').hidden,true);
  globalThis.confirm=()=>{prompts++;return true;};
  document.getElementById('settings-main-menu').click();await Promise.resolve();
  assert.equal(prompts,2);assert.equal(ctx.settingsOpen,false);assert.equal(ctx.paused,true);
  assert.equal(ctx.startup.phase,'menu');assert.equal(session.phase,'betting');
- assert.deepEqual(session.players.map(p=>p.balance),[100,100]);assert.deepEqual(session.garage,before);
+ assert.deepEqual(session.players.map(p=>p.balance),[200,200]);assert.deepEqual(session.garage,before);
  assert.equal(document.getElementById('launch-overlay').hidden,false);
  assert.equal(document.getElementById('launch-overlay').inert,false);
  assert.equal(document.activeElement.id,'launch-tower');
@@ -248,3 +248,12 @@ test('phone field uses logical layout sizes even if Safari reports unscaled clie
  ctx.root.__disposeTag();dom.window.close();
 });
 
+
+test('the arena Settings button has a clear layer above betting dimming and below Settings',()=>{
+ const tower=fs.readFileSync(new URL('../styles/tower.css',import.meta.url),'utf8');
+ assert.match(tower,/#robot-tag-hops-v22 #arena-settings-button\s*\{position:relative;z-index:1150\}/);
+ const waste=fs.readFileSync(new URL('../styles/wasteland.css',import.meta.url),'utf8');
+ assert.match(waste,/\.bet-overlay\s*\{position:fixed;inset:0;z-index:1100/);
+ const ui=fs.readFileSync(new URL('../styles/interface.css',import.meta.url),'utf8');
+ assert.match(ui,/\.settings-overlay\s*\{position:fixed;inset:0;z-index:1200/);
+});

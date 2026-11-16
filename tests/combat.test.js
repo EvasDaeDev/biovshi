@@ -256,7 +256,7 @@ test('operating-room lighting, dark footprints and inward textured obstacle wall
     assert.match(pattern.querySelector('image').getAttribute('href'),/wall_02\.webp$/);
     assert.equal(pattern.querySelector('image').getAttribute('transform'),'rotate(180 50 15)');
     assert.equal(ctx.outlineG.getAttribute('stroke'),'none');
-    assert.ok([...ctx.ambientGlowG.querySelectorAll('polygon')].every(n=>n.getAttribute('stroke')==='#8b9e91'));
+    assert.ok([...ctx.ambientGlowG.querySelectorAll('polygon')].every(n=>n.getAttribute('stroke')===ctx.ambientColor));
     assert.equal(ctx.ambientLights.length,6);
     assert.equal(ctx.svg.querySelector('#texture-arenaWall image').getAttribute('opacity'),'0');
     assert.ok([...ctx.trailsG.children].every(n=>n.getAttribute('fill')==='var(--night-trail)'));

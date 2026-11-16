@@ -29,6 +29,8 @@ for (const match of [...html.matchAll(/<link rel="(?:icon|apple-touch-icon)"[^>]
   const dataUrl = 'data:image/png;base64,' + (await fs.readFile(path.join(root, 'public', relative))).toString('base64');
   html = html.replace(match[0], match[0].replace(match[1], dataUrl));
 }
+// The downloadable HTML must remain entirely offline, even with launch-like URLs.
+html = html.replace(/<!-- telegram-sdk:start -->[\s\S]*?<!-- telegram-sdk:end -->\s*/g, '');
 html = html.replace(/<link rel="manifest"[^>]*>\s*/g, '');
 html = html.replace(/<script type="module" src="[^"]+"><\/script>/, () => '<script>'+code.replace(/<\/script/gi,'<\\/script')+'</script>');
 await fs.mkdir(path.join(root,'dist'),{recursive:true});

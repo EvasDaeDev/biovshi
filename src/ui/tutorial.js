@@ -1,4 +1,4 @@
-import {screenRect,visibleViewport,localPoint,scrollPanelToTarget} from './geometry.js';
+import {screenRect,contentViewport,localPoint,scrollPanelToTarget} from './geometry.js';
 import {ctx} from '../game/state.js';
 import {setPaused} from './controls.js';
 import {TUTORIAL_CHAPTERS} from './tutorial-content.js';
@@ -32,7 +32,7 @@ export function initializeTutorial(){
   const r=screenRect(node);
   return r.width>0&&r.height>0?r:null;
  };
- const viewport=()=>visibleViewport(win);
+ const viewport=()=>contentViewport(win);
  function layout(){
   layoutFrame=0;if(!api.active||disposed)return;
   const view=viewport(),arena=TUTORIAL_CHAPTERS[chapter].arena;
@@ -170,12 +170,12 @@ export function initializeTutorial(){
   }
  };
  ctx.tutorial=api;
- win.addEventListener('resize',scheduleLayout);win.addEventListener('scroll',scheduleLayout,true);
+ win.addEventListener('telegram-viewport-change',scheduleLayout);win.addEventListener('resize',scheduleLayout);win.addEventListener('scroll',scheduleLayout,true);
  win.visualViewport?.addEventListener('resize',scheduleLayout);win.visualViewport?.addEventListener('scroll',scheduleLayout);
  const dispose=root.__disposeTag;
  root.__disposeTag=()=>{
   hide({leaving:true});disposed=true;resize.disconnect();if(layoutFrame)win.cancelAnimationFrame(layoutFrame);
-  doc.removeEventListener('keydown',key,true);win.removeEventListener('resize',scheduleLayout);win.removeEventListener('scroll',scheduleLayout,true);
+  doc.removeEventListener('keydown',key,true);win.removeEventListener('telegram-viewport-change',scheduleLayout);win.removeEventListener('resize',scheduleLayout);win.removeEventListener('scroll',scheduleLayout,true);
   win.visualViewport?.removeEventListener('resize',scheduleLayout);win.visualViewport?.removeEventListener('scroll',scheduleLayout);
   dialog.remove();if(ctx.tutorial===api)ctx.tutorial=null;dispose();
  };

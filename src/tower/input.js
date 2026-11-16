@@ -27,7 +27,7 @@ export function installTowerInput(){
   const marker=doc.createElement('div');marker.id='tower-direction-marker';marker.hidden=true;marker.setAttribute('aria-hidden','true');ctx.stage.append(marker);
   const clearDestination=()=>{ctx.towerDestination=null;marker.hidden=true;const robot=ctx.robots[0];robot?.cancelNavigation();};
   ctx.clearTowerDestination=clearDestination;
-  const active=()=>ctx.mode==='tower'&&ctx.startup.phase==='running'&&!ctx.paused&&!ctx.settingsOpen&&!ctx.orientationBlocked&&!ctx.tutorial?.active&&!ctx.combat.finished;
+  const active=()=>!ctx.appInactive&&ctx.mode==='tower'&&ctx.startup.phase==='running'&&!ctx.paused&&!ctx.settingsOpen&&!ctx.orientationBlocked&&!ctx.tutorial?.active&&!ctx.combat.finished;
   const reset=()=>{
     const captured=pointer;pointer=null;keys.clear();ctx.towerInput={x:0,y:0};knob.style.transform='translate(0px,0px)';
     if(captured!==null&&stick.hasPointerCapture?.(captured))stick.releasePointerCapture(captured);
@@ -39,7 +39,13 @@ export function installTowerInput(){
     if(e.type==='keyup'){keys.delete(e.code);update();return;}
     if(!active()||ctx.towerControlMode==='direction')return;e.preventDefault();keys.add(e.code);update();
   };
-  const move=e=>{if(e.pointerId!==pointer||!active()||ctx.towerControlMode==='direction')return;const b=screenRect(stick),dx=(e.clientX-b.left-b.width/2)/(b.width*.35),dy=(e.clientY-b.top-b.height/2)/(b.height*.35),n=Math.max(1,Math.hypot(dx,dy));ctx.towerInput={x:dx/n,y:dy/n};knob.style.transform=`translate(${dx/n*45}px,${dy/n*45}px)`;};
+  const move=e=>{if(e.pointerId!==pointer||!active()||ctx.towerControlMode==='direction')return;if(e.cancelable)e.preventDefault();const b=screenRect(stick),dx=(e.clientX-b.left-b.width/2)/(b.width*.35),dy=(e.clientY-b.top-b.height/2)/(b.height*.35),n=Math.max(1,Math.hypot(dx,dy));ctx.towerInput={x:dx/n,y:dy/n};knob.style.transform=`translate(${dx/n*45}px,${dy/n*45}px)`;};
+  // WKWebView may still start native panning despite touch-action:none and
+  // pointer capture. Cancel only touches originating on the stick; forms and
+  // scrollable cards must retain their own touch scrolling.
+  const preventPan=event=>{if(ctx.platform?.isTelegram&&!stick.hidden&&ctx.towerControlMode!=='direction'&&event.cancelable)event.preventDefault();};
+  stick.addEventListener('touchstart',preventPan,{passive:false});
+  stick.addEventListener('touchmove',preventPan,{passive:false});
   // The first finger owns the stick until release. Other fingers remain free
   // to operate UI controls; their release/cancel events must not stop movement.
   stick.onpointerdown=e=>{
@@ -78,7 +84,7 @@ export function installTowerInput(){
   };
   ctx.paintTowerMarker=paintMarker;ctx.stage.addEventListener('click',click);
   doc.addEventListener('keydown',key);doc.addEventListener('keyup',key);win.addEventListener('blur',reset);doc.addEventListener('visibilitychange',reset);
-  const dispose=ctx.root.__disposeTag;ctx.root.__disposeTag=()=>{reset();clearDestination();marker.remove();ctx.stage.removeEventListener('click',click);ctx.paintTowerMarker=null;ctx.clearTowerDestination=null;ctx.clearTowerInput=null;doc.removeEventListener('keydown',key);doc.removeEventListener('keyup',key);win.removeEventListener('blur',reset);doc.removeEventListener('visibilitychange',reset);stick.onpointerdown=stick.onpointermove=stick.onpointerup=stick.onpointercancel=stick.onlostpointercapture=null;dispose();};
+  const dispose=ctx.root.__disposeTag;ctx.root.__disposeTag=()=>{reset();clearDestination();marker.remove();ctx.stage.removeEventListener('click',click);ctx.paintTowerMarker=null;ctx.clearTowerDestination=null;ctx.clearTowerInput=null;stick.removeEventListener('touchstart',preventPan);stick.removeEventListener('touchmove',preventPan);doc.removeEventListener('keydown',key);doc.removeEventListener('keyup',key);win.removeEventListener('blur',reset);doc.removeEventListener('visibilitychange',reset);stick.onpointerdown=stick.onpointermove=stick.onpointerup=stick.onpointercancel=stick.onlostpointercapture=null;dispose();};
   ctx.clearTowerInput=reset;
 }
 

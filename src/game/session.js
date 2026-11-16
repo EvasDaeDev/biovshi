@@ -7,6 +7,7 @@ import { ctx } from "./state.js";
 import { resetCombatAccents } from "../render/effects.js";
 import { rebuildRobots } from "./arena.js";
 import { cameraReset } from "../render/camera.js";
+import { rerollArenaAmbient } from '../render/ambient-hue.js';
 import { bettingInit } from "../betting/ui.js";
 import { CONFIG } from "../config.js";
 import {note} from "./events.js";
@@ -112,12 +113,14 @@ export async function resetRound(destination='betting') {
   ctx.paintAt = -Infinity;
   rebuildRobots();
   cameraReset();
+  // The totalizator may reuse the same arena for several fights.
+  rerollArenaAmbient();
   if(destination==='procedure')garageOpen();else bettingOpen();
   ctx.arenaRenderer?.render();
 }
 // Новая случайная последовательность при каждой загрузке, без фиксированного seed.
 export function advanceStartup(dt) {
-  if (ctx.startup.phase !== 'spawning' || ctx.settingsOpen || ctx.tutorial?.active) return;
+  if (ctx.appInactive || ctx.startup.phase !== 'spawning' || ctx.settingsOpen || ctx.tutorial?.active) return;
   ctx.startup.elapsed += dt;
   while (ctx.startup.nextIndex < ctx.startup.order.length && ctx.startup.elapsed + 1e-9 >= ctx.startup.nextIndex * CONFIG.startup.spawnIntervalSec) {
     const index = ctx.startup.nextIndex++;

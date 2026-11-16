@@ -13,7 +13,7 @@ import { advanceStartup } from "./session.js";
 import { paint } from "../render/frame.js";
 import { cameraUpdate } from "../render/camera.js";
 export function step(dt) {
-  if(ctx.tutorial?.active)return;
+  if(ctx.appInactive||ctx.tutorial?.active)return;
   if (ctx.startup.phase !== 'running' || ctx.orientationBlocked || ctx.settingsOpen) return;
   if (ctx.combat.finished) {
     // Отдельный таймер не нужен: продолжаем время анимации, не меняя итоговую длительность боя.
@@ -102,17 +102,17 @@ export function frame(now) {
     ctx.root.__disposeTag?.();
     return;
   }
-  ctx.tutorial?.sync();
+  if(!ctx.appInactive)ctx.tutorial?.sync();
   const elapsed = ctx.last === null ? 0 : Math.max(0, (now - ctx.last) / 1000);
   ctx.last = now;
   let painted = false;
   const resultsOpen=ctx.combat.finished&&!ctx.resultsPanel.hidden;
   ctx.cameraDebt = (ctx.cameraDebt || 0) + elapsed;
   if (ctx.startup.phase !== 'running') {
-    if (!document.hidden && !ctx.orientationBlocked && !ctx.settingsOpen && ctx.startup.phase === 'spawning') { advanceStartup(elapsed); painted = true; }
+    if (!ctx.appInactive && !document.hidden && !ctx.orientationBlocked && !ctx.settingsOpen && ctx.startup.phase === 'spawning') { advanceStartup(elapsed); painted = true; }
     ctx.debt = 0;
     ctx.paintAt = now;
-  } else if (!ctx.paused && !ctx.settingsOpen && !ctx.orientationBlocked && !document.hidden && !resultsOpen) {
+  } else if (!ctx.paused && !ctx.settingsOpen && !ctx.orientationBlocked && !ctx.appInactive && !document.hidden && !resultsOpen) {
     // Physics always advances in 1/60 s steps, independently of the paint cap.
     // Keep excess debt after a long active-frame stall instead of losing time.
     ctx.debt += elapsed * ctx.timeScale;
@@ -142,7 +142,7 @@ export function frame(now) {
     ctx.paintTowerMarker?.();
     timed('webgl',()=>ctx.arenaRenderer?.render());
     ctx.cameraDebt = 0;
-  } else if (ctx.paused || ctx.settingsOpen || ctx.orientationBlocked || document.hidden || resultsOpen) ctx.cameraDebt = 0;
+  } else if (ctx.paused || ctx.settingsOpen || ctx.orientationBlocked || ctx.appInactive || document.hidden || resultsOpen) ctx.cameraDebt = 0;
   ctx.streamerMascot?.sync(elapsed,now);
   ctx.audio?.sync();
   recordFrame(now, painted);

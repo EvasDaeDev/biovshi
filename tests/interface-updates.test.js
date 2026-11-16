@@ -21,46 +21,28 @@ test('patient card shows the three permanent skills and a bone count without mob
  const card=ctx.cardNodes[0];assert.equal(card.strength.textContent,'4 · 30%');assert.equal(card.speed.textContent,'2 · 80%');assert.equal(card.maneuver.textContent,'3 · 100%');
  assert.equal(card.card.querySelector('.js-mobility'),null);assert.match(card.card.querySelector('.robot-card-score').textContent,/13\/13/);assert.match(card.card.querySelector('.robot-card-score img').src,/bone_01\.png$/);assert.equal(card.card.querySelectorAll('.patient-skills>div').length,3);close(dom);
 });
-test('top-up preserves draft bets, persists the new chip supply and safely rejects invalid input',async()=>{
+test('manual top-up is absent and rejected without changing balances or draft bets',()=>{
  const dom=setup(),rows=[...document.querySelectorAll('[data-bet-player]')];
  try{
- rows[0].querySelector('input').value='20';rows[1].querySelector('input').value='30';rows[0].querySelector('select').value='2';
- rows[0].querySelector('[data-top-up]').click();
- const dialog=document.querySelector('.betting-input-dialog');
- assert.ok(dialog);dialog.querySelector('input').value='50';
- dialog.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
- await Promise.resolve();assert.equal(dialog.isConnected,false);
- assert.equal(ctx.betting.players[0].balance,150);assert.equal(ctx.betting.topUps,50);assert.equal(rows[0].querySelector('input').value,'20');assert.equal(rows[1].querySelector('input').value,'30');assert.equal(rows[0].querySelector('select').value,'2');assert.equal(rows[0].querySelector('input').max,'150');assert.match(rows[0].querySelector('[data-balance]').textContent,/150/);
- assert.equal(bettingLoad().players[0].balance,150);
- const before=JSON.stringify(ctx.betting);
- for(const value of ['-10','2.5','',null]){
-  rows[0].querySelector('[data-top-up]').click();
-  const invalidDialog=document.querySelector('.betting-input-dialog');assert.ok(invalidDialog);
-  if(value!==null){
-   const input=invalidDialog.querySelector('input');input.value=value;
-   assert.equal(input.checkValidity(),false);
-   invalidDialog.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
-   await Promise.resolve();assert.equal(invalidDialog.isConnected,true);
-   assert.equal(JSON.stringify(ctx.betting),before);
-  }
-  invalidDialog.querySelector('[data-cancel]').click();await Promise.resolve();
-  assert.equal(invalidDialog.isConnected,false);assert.equal(JSON.stringify(ctx.betting),before);
-  assert.equal(bettingLoad().players[0].balance,150);
- }
- betCommit(ctx.betting,[{player:0,robot:0,amount:20},{player:1,robot:1,amount:30}]);assert.throws(()=>betTopUp(ctx.betting,0,10));bettingSave();const reloaded=bettingLoad();assert.equal(reloaded.players[0].balance,150);assert.equal(reloaded.players[1].balance,100);
+  rows[0].querySelector('input').value='20';rows[1].querySelector('input').value='30';rows[0].querySelector('select').value='2';
+  assert.equal(document.querySelector('[data-top-up]'),null);
+  const before=JSON.stringify(ctx.betting);
+  for(const amount of [50,-10,2.5,0])assert.throws(()=>betTopUp(ctx.betting,0,amount),/отключено/);
+  assert.equal(JSON.stringify(ctx.betting),before);assert.equal(rows[0].querySelector('input').value,'20');assert.equal(rows[1].querySelector('input').value,'30');assert.equal(rows[0].querySelector('select').value,'2');
+  assert.equal(bettingLoad().players[0].balance,200);
  }finally{close(dom);}
 });
 test('results colour income and losses, show profit and reconcile the actual balance',()=>{
  const dom=setup();betCommit(ctx.betting,[{player:0,robot:0,amount:10},{player:1,robot:1,amount:20}]);betResolve(ctx.betting,0);bettingResults();
  const root=document.querySelector('#bet-result-summary'),rows=root.querySelectorAll('tbody tr');assert.match(root.querySelector('thead').textContent,/Прибыль/);
- assert.equal(rows[0].children[2].textContent,'27 ');assert.ok(rows[0].children[2].querySelector('.chip-icon'));assert.ok([...root.querySelectorAll('img')].every(image=>image.classList.contains('chip-icon')));assert.ok(rows[0].children[2].classList.contains('bet-net-win'));assert.equal(rows[0].children[3].textContent,'+17 ');assert.equal(rows[0].children[4].querySelector('summary').textContent,'117 ');assert.match(rows[0].children[4].textContent,/100  −10  \+27  = 117 /);
- assert.equal(rows[1].children[3].textContent,'-20 ');assert.ok(rows[1].children[3].firstElementChild.classList.contains('bet-net-loss'));assert.equal(rows[1].children[4].querySelector('summary').textContent,'80 ');assert.match(rows[1].children[4].textContent,/100  −20  = 80 /);close(dom);
+ assert.equal(rows[0].children[2].textContent,'27 ');assert.ok(rows[0].children[2].querySelector('.chip-icon'));assert.ok([...root.querySelectorAll('img')].every(image=>image.classList.contains('chip-icon')));assert.ok(rows[0].children[2].classList.contains('bet-net-win'));assert.equal(rows[0].children[3].textContent,'+17 ');assert.equal(rows[0].children[4].querySelector('summary').textContent,'217 ');assert.match(rows[0].children[4].textContent,/200  −10  \+27  = 217 /);
+ assert.equal(rows[1].children[3].textContent,'-20 ');assert.ok(rows[1].children[3].firstElementChild.classList.contains('bet-net-loss'));assert.equal(rows[1].children[4].querySelector('summary').textContent,'180 ');assert.match(rows[1].children[4].textContent,/200  −20  = 180 /);close(dom);
 });
 test('shared hints replace native titles, support keyboard focus and clean up on dispose',()=>{
- const dom=setup(),button=document.querySelector('[data-top-up]'),hint=document.querySelector('.biovshi-hint');
- button.dispatchEvent(new Event('pointerover',{bubbles:true}));assert.equal(hint.hidden,false);assert.equal(hint.textContent,'Пополнить баланс');assert.equal(button.hasAttribute('title'),false);assert.equal(button.getAttribute('aria-describedby'),'biovshi-hint');
+ const dom=setup(),button=document.querySelector('#bet-add-player'),hint=document.querySelector('.biovshi-hint');
+ button.dispatchEvent(new Event('pointerover',{bubbles:true}));assert.equal(hint.hidden,false);assert.equal(hint.textContent,'Добавить игрока');assert.equal(button.hasAttribute('title'),false);assert.equal(button.getAttribute('aria-describedby'),'biovshi-hint');
  document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal(hint.hidden,true);assert.equal(button.hasAttribute('aria-describedby'),false);
- button.dispatchEvent(new Event('focusin',{bubbles:true}));assert.equal(hint.hidden,false);ctx.root.__disposeTag();assert.equal(document.querySelector('.biovshi-hint'),null);assert.equal(button.title,'Пополнить баланс');dom.window.close();
+ button.dispatchEvent(new Event('focusin',{bubbles:true}));assert.equal(hint.hidden,false);ctx.root.__disposeTag();assert.equal(document.querySelector('.biovshi-hint'),null);assert.equal(button.title,'Добавить игрока');dom.window.close();
 });
 
 test('procedure preserves stakes and arena; hat selection never spends until explicit purchase',()=>{
@@ -71,17 +53,17 @@ test('procedure preserves stakes and arena; hat selection never spends until exp
   const player=document.querySelector('#procedure-editor');player.value='1';player.dispatchEvent(new Event('change'));
   let section=document.querySelector('[data-patient="0"]');
   section.querySelector('[data-price]').value='25';section.querySelector('[data-hat="2"]').click();
-  assert.equal(ctx.betting.players[1].balance,100);assert.equal(ctx.betting.garage[0].head,null);
+  assert.equal(ctx.betting.players[1].balance,200);assert.equal(ctx.betting.garage[0].head,null);
   const speed=section.querySelector('[data-stat="0"]');speed.value='4';speed.dispatchEvent(new Event('change'));
   section=document.querySelector('[data-patient="0"]');
   assert.equal(document.querySelector('#procedure-editor').value,'1');assert.equal(section.querySelector('[data-price]').value,'25');
   assert.equal(section.querySelector('[data-hat="2"]').getAttribute('aria-pressed'),'true');
   assert.match(section.querySelector('[data-error]').textContent,/Скорость \+1/);
-  section.querySelector('[data-buy]').click();assert.equal(ctx.betting.players[1].balance,75);assert.equal(ctx.betting.garage[0].head.hat,2);
+  section.querySelector('[data-buy]').click();assert.equal(ctx.betting.players[1].balance,175);assert.equal(ctx.betting.garage[0].head.hat,2);
   assert.match(document.querySelector('[data-patient="0"] [data-error]').textContent,/Покровитель/);
   document.querySelector('#garage-next').click();
   assert.equal(document.querySelector('[data-bet-player="0"] input').value,'23');assert.equal(document.querySelector('[data-bet-player="0"] select').value,'3');assert.equal(ctx.selectedArenaId,'ring');
-  document.querySelector('[data-bet-player="1"] [data-share="0.5"]').click();assert.equal(document.querySelector('[data-bet-player="1"] input').value,'37');
+  document.querySelector('[data-bet-player="1"] [data-share="0.5"]').click();assert.equal(document.querySelector('[data-bet-player="1"] input').value,'87');
   assert.equal(ctx.cardNodes[0].card.querySelector('.robot-card-metrics'),null);
  }finally{close(dom);}
 });

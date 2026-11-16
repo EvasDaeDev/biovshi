@@ -33,9 +33,9 @@ export class PixiArena {
     this.owned.add(texture);return texture;
   }
   async prepareSources() {
-    const urls=[...Object.entries(ASSETS.textures).filter(([key])=>/^robot|liquids|hat/.test(key)).map(([,file])=>assetUrl(file)),...(ctx.liquidAtlasSources??[]),...(ctx.coolantAtlasSources??[])];
+    const urls=[...Object.entries(ASSETS.textures).filter(([key])=>/^robot|liquids|hat|flashlight/.test(key)).map(([,file])=>assetUrl(file)),...(ctx.liquidAtlasSources??[]),...(ctx.coolantAtlasSources??[])];
     await Promise.all([...new Set(urls.filter(Boolean))].map(async url=>{
-      try{this.sources.set(url,this.texture(await loadTextureImage(url)));}catch{/* Vector fallback is already prepared by the game. */}
+      try{this.sources.set(url,this.texture(await loadTextureImage(url),url!==assetUrl(ASSETS.textures.flashlight)));}catch{/* Vector fallback is already prepared by the game. */}
     }));
   }
   async staticLayer(nodes,options={}) {
@@ -44,6 +44,16 @@ export class PixiArena {
     sprite.position.set(x,y);sprite.width=sprite.height=size;return sprite;
   }
   floorSprite(canvas){const sprite=new this.p.Sprite(this.texture(canvas,false));sprite.width=sprite.height=700;return sprite;}
+  setAmbientHue(shift){
+    if(!this.ambient||!this.obstacleGlow||this.disposed)return;
+    if(!this.ambientHueFilters){
+      this.ambientHueFilters=[new this.p.ColorMatrixFilter(),new this.p.ColorMatrixFilter()];
+      this.ambient.filters=[this.ambientHueFilters[0]];
+      this.obstacleGlow.filters=[this.ambientHueFilters[1]];
+    }
+    for(const filter of this.ambientHueFilters)filter.hue(shift,false);
+    this.render();
+  }
   replaceFloor(canvas){
     if(!this.floor||this.disposed)return;
     const old=this.floor.texture;this.floor.texture=this.texture(canvas,false);this.floor.width=this.floor.height=700;
@@ -75,16 +85,19 @@ export class PixiArena {
     await this.prepareSources();
     // Order agrees with the original scene: lights behind walls, oil below actors,
     // darkness above actors, announcements and impact accents above darkness.
-    const [walls,floor,obstacles,night,ambient]=await Promise.all([
+    const [walls,floor,obstacleGlow,obstacles,night,ambient]=await Promise.all([
       this.staticLayer(staticWallNodes(ctx.svg,ctx.outlineG),{outset:ctx.CAMERA_OUTSET}),
       ctx.floorCanvas?Promise.resolve(this.floorSprite(ctx.floorCanvas)):this.staticLayer([ctx.arenaContent.querySelector(':scope > rect'),ctx.svg.querySelector('#tag7hop-floor-decals'),ctx.grid],{pixels:1024}),
-      this.staticLayer([ctx.svg.querySelector('#tag7hop-obstacle-lights'),ctx.blockG]),
+      this.staticLayer([ctx.svg.querySelector('#tag7hop-obstacle-lights')]),
+      this.staticLayer([ctx.blockG]),
       this.staticLayer([ctx.darkness],{night:true}),
       this.staticLayer([ctx.ambientGlowG],{forceVisible:true}),
     ]);
     this.world.addChildAt(walls,0);
     this.floor=floor;this.content.addChild(floor);
     this.attachRoot(ctx.conesG,this.content);
+    // Separate glow from obstacle geometry so hue only affects illumination.
+    this.obstacleGlow=obstacleGlow;this.content.addChild(obstacleGlow);
     this.content.addChild(obstacles);
     for(const root of [ctx.trailsG,ctx.groundG,ctx.oilG,ctx.detachedG,ctx.actorsG,ctx.sparksG,ctx.pulsesG])this.attachRoot(root,this.content);
     this.nightComposition=new this.p.Container();this.nightComposition.addChild(night);
@@ -94,6 +107,7 @@ export class PixiArena {
     this.owned.add(this.nightTexture);
     this.content.addChild(new this.p.Sprite(this.nightTexture));
     this.ambient=ambient;ambient.blendMode='screen';this.content.addChild(ambient);
+    this.attachRoot(ctx.flashlightsG,this.content);
     for(const root of [ctx.scoreG,ctx.severFlashG,ctx.hitEffects.group])this.attachRoot(root,this.content);
     this.attachRoot(ctx.timerOutput,this.world);
     const clip=new this.p.Graphics().poly(ctx.arenaBoundary.points.flatMap(p=>[p.x,p.y])).fill('#ffffff');
@@ -220,11 +234,29 @@ export class PixiArena {
     }
     const fill=node.style.fill||node.getAttribute('fill')||s.fill;
     if(visual instanceof this.p.Sprite){
-      visual.texture=this.radial(fill);visual.anchor.set(.5);
-      visual.position.set(number('cx'),number('cy'));
-      visual.width=number('rx',number('r'))*2;visual.height=number('ry',number('r'))*2;
+      const flashlight=this.sources.get(node.getAttribute('data-light-texture'));
+      if(flashlight){
+        visual.texture=flashlight;visual.anchor.set(0,.5);visual.position.set(0,0);
+        visual.rotation=number('data-light-heading')*Math.PI/180;
+        visual.width=number('data-light-width');visual.height=number('data-light-height');
+      }else{
+        visual.texture=this.radial(node.getAttribute('data-light-fallback')||fill);visual.anchor.set(.5);
+        visual.position.set(number('cx'),number('cy'));visual.rotation=0;
+        visual.width=number('rx',number('r'))*2;visual.height=number('ry',number('r'))*2;
+      }
+      // Radial light paths use the same gradient sprite as circles, clipped to
+      // their ray-cast silhouette. Keep the mask local to the translated light.
+      if(tag==='path'){
+        if(!record.lightMask){record.lightMask=new this.p.Graphics();object.addChild(record.lightMask);visual.mask=record.lightMask;}
+        const d=node.getAttribute('d')||'';
+        if(record.lightPath!==d){
+          record.lightPath=d;record.lightMask.clear();
+          if(d)record.lightMask.path(new this.p.GraphicsPath(d)).fill('#ffffff');
+        }
+        visual.visible=Boolean(d);
+      }
       // Erase light holes in a GPU render target instead of an SVG luminance mask.
-      visual.blendMode=node.closest('#tag7hop-light-holes')?'erase':'normal';return;
+      visual.blendMode=node.closest('#tag7hop-light-holes')?'erase':node.getAttribute('data-light-blend')==='screen'?'screen':'normal';return;
     }
     if(tag==='text'){
       const label=node.classList.contains('robot-label'),timer=node===ctx.timerOutput;
@@ -316,6 +348,8 @@ export class PixiArena {
     this.svg.style.removeProperty('display');this.svg.removeAttribute('aria-hidden');
   }
   clearScene() {
+    for(const filter of this.ambientHueFilters??[])filter.destroy?.();
+    this.ambientHueFilters=null;this.obstacleGlow=null;
     if(this.halo){this.halo.texture.destroy(true);this.halo.filter.destroy();this.halo.gold.destroy();}
     this.postEffects?.destroy();
     this.nightComposition?.destroy({children:true});

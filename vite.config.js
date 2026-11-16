@@ -7,7 +7,7 @@ export default defineConfig(({mode})=>{
   let sourceCommit=null;try{sourceCommit=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();}catch{/* Source archives may not contain Git metadata. */}
   return {
   base: './',
-  define: { __TEST_BUILD__: JSON.stringify(testBuild), __INLINE_ASSETS__: '{}', __BUILD_VERSION__: JSON.stringify(buildVersion+(testBuild?'-test':'')) },
+  define: { __TEST_BUILD__: JSON.stringify(testBuild), __INLINE_ASSETS__: '{}', __BUILD_SOURCE__: JSON.stringify(sourceCommit), __BUILD_VERSION__: JSON.stringify(buildVersion+(testBuild?'-test':'')) },
   plugins:[{
     name:'build-channel',
     transformIndexHtml(html){

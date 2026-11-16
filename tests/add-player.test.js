@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {ctx} from '../src/game/state.js';
 import {initializeGame} from '../src/game/initialize.js';
-import {betNewSession,betAddPlayer,betTopUp,betCommit,betResolve} from '../src/betting/ledger.js';
+import {betNewSession,betAddPlayer,betCommit,betResolve} from '../src/betting/ledger.js';
 import {bettingOpen} from '../src/betting/ui.js';
 import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 
@@ -33,7 +33,8 @@ const total=s=>s.players.reduce((sum,p)=>sum+p.balance,0)+s.jackpot+s.shopSpent+
 test('joining a later round preserves existing money and history, survives reload and pays proportional winnings',()=>{
  const dom=setup();try{
   const s=ctx.betting;
-  betTopUp(s,0,20);betCommit(s,[{player:0,robot:0,amount:20},{player:1,robot:1,amount:30}]);
+  // Legacy session with a historical free top-up.
+  s.players[0].balance+=20;s.topUps=20;betCommit(s,[{player:0,robot:0,amount:20},{player:1,robot:1,amount:30}]);
   betResolve(s,2);assert.equal(s.jackpot,50);
   const previous=structuredClone(s);bettingOpen();
   const player=betAddPlayer(s,'  Третий  ');
@@ -64,8 +65,9 @@ test('adding a player preserves actual draft fields and arena choice, escapes th
   const row=ctx.betContent.querySelector('[data-bet-player="2"]');
   assert.equal(row.querySelector('td').textContent,'<img src=x onerror=alert(1)>');assert.equal(row.firstElementChild.querySelector('img'),null);
   assert.equal(row.querySelector('input').value,'0');assert.equal(row.querySelector('input').max,'100');
-  row.querySelector('[data-top-up]').click();await answerDialog('25');
-  assert.equal(ctx.betting.players[2].balance,125);assert.equal(row.querySelector('input').max,'125');
+  assert.equal(row.querySelector('[data-top-up]'),null);
+  row.querySelector('[data-share="0.5"]').click();assert.equal(row.querySelector('input').value,'50');
+  assert.equal(ctx.betting.players[2].balance,100);
   assert.ok(bettingLoad());
  }finally{dom.window.close();}
 });

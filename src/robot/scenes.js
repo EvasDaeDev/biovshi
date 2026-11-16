@@ -627,7 +627,7 @@ export function jumpTick(robotState, dt, intent) {
 export function robotSetVisible(robotState, value, spawnAt = null) {
   robotState.visible = value;
   robotState.spawnAt = value ? spawnAt : null;
-  for (const node of [robotState.actor, robotState.floor, robotState.pool, robotState.nearLight, ...robotState.trailNodes]) attr(node, 'display', value ? '' : 'none');
+  for (const node of [robotState.actor, robotState.floor, robotState.pool, robotState.nearLight, robotState.vision, robotState.lightBeam, ...robotState.trailNodes].filter(Boolean)) attr(node, 'display', value ? '' : 'none');
 }
 // Repeat a single randomly selected victory gesture for two or three
 // complete cycles. Keep this cosmetic choice independent of combat RNG.

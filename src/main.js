@@ -49,6 +49,7 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null}
  };
  ctx.root.querySelector('#launch-setup').onclick=()=>{audio.unlock();launchAccepted=true;ctx.startSetup();};
  if(launchAccepted&&ctx.startup.phase==='demo')startSpawnSequence();
+ ctx.platform?.ready();
 }
 async function boot(){
  const root=document.getElementById('robot-tag-hops-v22');

@@ -1,3 +1,4 @@
+import {initializeTelegram} from '../platform/telegram.js';
 import {SESSION_STORAGE} from '../build-channel.js';
 import {initializeKeyboardViewport} from '../ui/keyboard-viewport.js';
 import {initializeStreamerMascot} from '../ui/streamer-mascot.js';
@@ -8,12 +9,14 @@ import {bettingLoad,bettingSave} from '../betting/storage.js';
 import {betCommit,betRefund} from '../betting/ledger.js';
 import {bettingOpen,bettingHud} from '../betting/ui.js';
 import {formatChips} from '../ui/currency.js';
+import {trackPlayerBalances} from '../ui/currency-animation.js';
 import {initializeHints} from '../ui/hints.js';
 import { initializeArenaExpand } from '../ui/arena-expand.js';
 import { initializeSettings } from '../ui/settings.js';
 import { initializeOrientation } from '../ui/orientation.js';
 import { createWalls } from '../render/walls.js';
 import { createObstacleLights } from '../render/ground-spots.js';
+import { selectArenaAmbient } from '../render/ambient-hue.js';
 import { initializeHitEffects } from '../render/hit-effects.js';
 import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
@@ -50,6 +53,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.svg = ctx.root.querySelector('#tag7hop-field');
   ctx.grid = ctx.root.querySelector('#tag7hop-grid');
   ctx.conesG = ctx.root.querySelector('#tag7hop-cones');
+  ctx.flashlightsG = ctx.root.querySelector('#tag7hop-flashlights');
   ctx.groundG = ctx.root.querySelector('#tag7hop-ground');
   ctx.actorsG = ctx.root.querySelector('#tag7hop-actors');
   ctx.button = ctx.root.querySelector('#tag7hop-pause');
@@ -68,7 +72,9 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.NS = 'http://www.w3.org/2000/svg';
   ctx.floorImage?.remove();ctx.floorImage=null;ctx.floorCanvas=null;
   ctx.arenaId=arenaDefinition(arenaId).id;ctx.arenaDefinition=arenaDefinition(arenaId);
-  for (const g of [ctx.grid, ctx.conesG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG, ctx.pulsesG, ctx.sparksG, ctx.scoreG]) g.replaceChildren();
+  // New lighting for every arena entrance, including successive tower floors.
+  selectArenaAmbient();ctx.ambientBakedHue=ctx.ambientHue;
+  for (const g of [ctx.grid, ctx.conesG, ctx.flashlightsG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG, ctx.pulsesG, ctx.sparksG, ctx.scoreG]) g.replaceChildren();
   ctx.roles.replaceChildren();
   ctx.intro = ctx.root.querySelector('#tag7hop-intro');
   ctx.startButton = ctx.root.querySelector('#tag7hop-start');
@@ -240,7 +246,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     for (const band of ctx.ambientBands) el('polygon', {
       points,
       fill: 'none',
-      stroke: CONFIG.light.ambientColor,
+      stroke: ctx.ambientColor,
       'stroke-opacity': band.opacity,
       'stroke-width': band.width,
       'stroke-linejoin': 'round'
@@ -434,15 +440,9 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.svg.style.setProperty('touch-action', ctx.mode==='tower'?'none':'manipulation');
   ctx.svg.style.setProperty('cursor', ctx.mode==='tower'?'default':'pointer');
   resetFrameClock();
-  const gameDocument = ctx.root.ownerDocument;
-  gameDocument.addEventListener('visibilitychange', resetFrameClock);
-  const disposeWithVisibility = ctx.root.__disposeTag;
-  ctx.root.__disposeTag = () => {
-    gameDocument.removeEventListener('visibilitychange', resetFrameClock);
-    disposeWithVisibility();
-  };
   ctx.paintAt = -Infinity;
   initializeOrientation();
+  initializeTelegram(fitField);
   ctx.frameId = requestAnimationFrame(frame);
   // Local pari-mutuel ledger. All values are whole virtual chips.
   ctx.BET_STORAGE = SESSION_STORAGE;
@@ -477,6 +477,8 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     ctx.intro.hidden=true;ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;ctx.startup.phase='demo';
   }else if(session){ctx.betting=session;bettingOpen();}
   else bettingInit();
+  // Establish the opening balance before the first purchase or arena reward.
+  trackPlayerBalances(ctx.betting,ctx.root);
   initializeCombatLog();
   initializeStreamerMascot();
   const logToggle=ctx.root.querySelector('#combat-log-toggle');

@@ -146,7 +146,7 @@ export function initializeStreamerMascot({lines,random}={}){
   // A tutorial cameo may temporarily reveal the ordinary mascot, without
   // changing the player's saved visibility preference.
   box.hidden=hidden&&!(teaching&&root.classList.contains('tutorial-echo'));
-  if(disposed||hidden&&!teaching||doc.hidden||ctx.orientationBlocked||!loaded)return;
+  if(disposed||ctx.appInactive||hidden&&!teaching||doc.hidden||ctx.orientationBlocked||!loaded)return;
   if(now-lastPaint<1000/30-1)return;
   const delta=Number.isFinite(lastPaint)?Math.min((now-lastPaint)/1000,.1):Math.min(dt,.1);lastPaint=now;elapsed+=delta;
   if(wasTeaching&&!teaching)spoken=null;wasTeaching=teaching;

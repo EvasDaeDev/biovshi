@@ -18,6 +18,7 @@ export const ASSETS = {
     arenaOuterWall: 'assets/textures/arena/wall_outer.png',
     obstacle: 'assets/textures/arena/wall_02.webp',
     liquids: 'assets/textures/arena/liquids.png',
+    flashlight: 'assets/textures/robots/flashlight.png',
     hat1: 'assets/textures/robots/decor/head/1.png',
     hat2: 'assets/textures/robots/decor/head/2.png',
     hat3: 'assets/textures/robots/decor/head/3.png',

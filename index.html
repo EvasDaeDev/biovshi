@@ -2,9 +2,38 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' ws://localhost:* ws://127.0.0.1:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<!-- telegram-sdk:start -->
+<script>
+// Fetch the pinned official SDK from the same origin as the game. Telegram's
+// CDN may be unreachable in the WebView even when GitHub Pages works.
+(function () {
+  var launch = location.hash + '&' + location.search.slice(1);
+  if (!/(?:^|[#&?])tgWebApp(?:Platform|Version)=/.test(launch)) return;
+  document.documentElement.classList.add('telegram-launch');
+  window.__loadTelegramSDK = function () {
+    var previous = window.__telegramSDK;
+    if (previous && (previous.state === 'loading' || previous.state === 'loaded')) return;
+    var script = document.createElement('script');
+    script.src = './vendor/telegram-web-app-65.js';
+    script.async = true;
+    var status = window.__telegramSDK = { state: 'loading', source: script.src, error: null };
+    script.onload = function () {
+      status.state = window.Telegram && window.Telegram.WebApp ? 'loaded' : 'unavailable';
+      window.dispatchEvent(new Event('telegram-sdk-ready'));
+    };
+    script.onerror = function () {
+      status.state = 'error';status.error = 'SDK script failed to load';
+      window.dispatchEvent(new Event('telegram-sdk-error'));
+    };
+    document.head.appendChild(script);
+  };
+  window.__loadTelegramSDK();
+})();
+</script>
+<!-- telegram-sdk:end -->
 <!-- Настройки игры: src/config.js. -->
 <title>БИОВШИ — Гладиаторские бои</title>
 <link rel="icon" type="image/png" sizes="64x64" href="./assets/textures/UI/icons/app_ico_64.png">
@@ -25,6 +54,7 @@
 <link rel="stylesheet" href="./styles/boss.css">
 <link rel="stylesheet" href="./styles/responsive.css">
 <link rel="stylesheet" href="./styles/tutorial.css">
+<link rel="stylesheet" href="./styles/telegram.css">
 </head>
 <body>
 <div id="texture-loading" role="status">Подготовка арены…</div>
@@ -41,8 +71,12 @@
       <p class="launch-instruction">Выберите режим. Игроки и банк общие.</p>
       <button id="launch-game" type="button" autofocus>ПОСМОТРЕТЬ БОЙ!</button>
       <div class="tower-menu-block">
-        <label for="menu-player">ИГРОК</label><select id="menu-player" aria-label="Игрок"></select>
-        <p id="menu-bank"></p><p id="menu-tower-progress"></p>
+        <div class="tower-menu-player">
+          <label for="menu-player">ИГРОК</label>
+          <select id="menu-player" aria-label="Игрок"></select>
+          <span id="menu-bank" aria-label="Баланс выбранного игрока"></span>
+        </div>
+        <p id="menu-tower-progress"></p>
         <button id="launch-tower" type="button">РЕЖИМ БАШНЯ · ЭТАЖ 1</button>
         <button id="tower-reset" type="button">СБРОС БАШНИ</button>
       </div>
@@ -52,7 +86,7 @@
     </div>
   </div>
   <div id="tower-preparation" class="bet-overlay" role="dialog" aria-modal="true" aria-labelledby="tower-prep-title" hidden><div class="bet-panel">
-    <h2 id="tower-prep-title">БАШНЯ</h2><p id="tower-prep-name"></p><div id="tower-floor-preview"></div>
+    <h2 id="tower-prep-title">БАШНЯ</h2><p id="tower-prep-name" class="tower-player-wallet"></p><div id="tower-floor-preview"></div>
     <p>Все конечности восстановлены. Распределите навыки перед боем.</p><div id="tower-stats" class="bet-fields"></div>
     <details id="tower-artifact-view"><summary>КОЛЛЕКЦИЯ АРТЕФАКТОВ</summary><div id="tower-prep-artifacts"></div></details>
     <p id="tower-prep-error" role="status"></p><div class="bet-actions"><button id="tower-insurance" type="button" aria-live="polite">ДМС · 50</button><button id="tower-fight" class="bet-primary" type="button">НА АРЕНУ</button></div>
@@ -106,7 +140,7 @@
  </div>
 </div>
 
-<div id="bet-overlay" class="bet-overlay" role="dialog" aria-modal="true" aria-labelledby="bet-title" hidden>
+  <div id="bet-overlay" class="bet-overlay" role="dialog" aria-modal="true" aria-labelledby="bet-title" hidden>
  <div class="bet-panel">
   <h2 id="bet-title"></h2>
   <div id="bet-content"></div>
@@ -130,6 +164,7 @@
   <div id="gladiator-results" class="gladiator-results" role="dialog" aria-modal="true" aria-labelledby="gladiator-results-title" hidden>
     <div class="gladiator-results-card">
       <h2 id="gladiator-results-title">ПОБЕДИТЕЛЬ — A</h2>
+      <p id="tower-results-player" class="tower-player-wallet" hidden></p>
       <p id="gladiator-results-summary" class="gladiator-results-summary"></p>
       <div id="bet-result-summary"></div>
       <div class="results-actions"><button id="gladiator-results-again" type="button">К СТАВКАМ СЛЕДУЮЩЕГО РАУНДА</button><button id="gladiator-results-procedure" type="button">ПРОЦЕДУРНАЯ</button></div>
@@ -180,6 +215,8 @@
 </defs>
     <rect id="tag7hop-darkness" width="700" height="700" fill="var(--night-bg)" opacity="0.9" mask="url(#tag7hop-darkness-mask)" pointer-events="none">
 </rect>
+<g id="tag7hop-flashlights" pointer-events="none">
+</g>
     <g id="tag7hop-score" role="img" aria-label="Оставшиеся сегменты: A — 0, B — 0, C — 0, D — 0">
 <title>Съедено соперников</title>
 </g>

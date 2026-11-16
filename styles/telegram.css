@@ -1,0 +1,33 @@
+/* System env() and Telegram safe insets are merged in screen CSS pixels
+   outside the game's zoom. The same device inset is never counted twice. */
+html:is(.telegram-app,.telegram-launch) {
+ height:100%;overflow:hidden;overscroll-behavior:none;
+}
+/* Outrank base.css :root:not([data-app-block-surface],
+   [data-visualize-standalone]) > body, otherwise its 12px padding wins while
+   viewport.js has already subtracted the Telegram insets from game geometry. */
+html:root:is(.telegram-app,.telegram-launch) > body {
+ position:fixed;inset:0;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none;
+ padding:var(--telegram-inset-top,0px) var(--telegram-inset-right,0px) var(--telegram-inset-bottom,0px) var(--telegram-inset-left,0px);
+}
+#robot-tag-hops-v22 .telegram-diagnostics {margin-top:12px;font-size:12px}
+#robot-tag-hops-v22 .telegram-diagnostics pre {max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.4 monospace;user-select:text}
+#robot-tag-hops-v22 .telegram-diagnostics button {margin:6px 6px 0 0}
+html:is(.telegram-app,.telegram-launch) body #robot-tag-hops-v22.arena-expanded {
+ top:var(--telegram-layout-top,0px);left:var(--telegram-layout-left,0px);
+ right:var(--telegram-layout-right,0px);bottom:auto;overflow:hidden;
+}
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22 :is(.bet-panel,.settings-panel,.launch-paper,.tag7hop-sidebar-wrap,#bet-hud) {overscroll-behavior:contain}
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22 #tower-stick {
+ left:calc(18px + var(--telegram-inset-left,0px));
+ bottom:calc(18px + var(--telegram-inset-bottom,0px));
+}
+/* Fixed sheets use logical pixels inside the scaled root. Native tutorial and
+   orientation dialogs use screen pixels and are handled independently. */
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22 :is(.settings-overlay,.bet-overlay,.launch-overlay) {
+ top:var(--telegram-layout-top,0px);right:var(--telegram-layout-right,0px);
+ bottom:var(--telegram-layout-bottom,0px);left:var(--telegram-layout-left,0px);
+}
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22 #landscape-required:not([hidden]) {
+ padding:calc(24px + var(--telegram-inset-top,0px)) calc(24px + var(--telegram-inset-right,0px)) calc(24px + var(--telegram-inset-bottom,0px)) calc(24px + var(--telegram-inset-left,0px));
+}

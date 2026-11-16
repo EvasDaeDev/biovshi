@@ -2,13 +2,14 @@ import {newGarage} from '../garage/model.js';
 export const BET_WIN_PERCENT = 85;
 export const JACKPOT_INTERVAL = 5;
 export const JACKPOT_PERCENT = 25;
+export const STARTING_CAPITAL = 200;
 export function jackpotStatus(s) {
   return `Розыгрыш 25% джекпота через ${JACKPOT_INTERVAL - (s.jackpotRounds ?? 0)} боёв с выигравшими и проигравшими ставками; не менее 75% остаётся в резерве.`;
 }
 export function betOdds(stakes, winningTotal) {
   return winningTotal ? 1 + (stakes - winningTotal) * BET_WIN_PERCENT / (100 * winningTotal) : null;
 }
-export function betNewSession(names, capital) {
+export function betNewSession(names, capital = STARTING_CAPITAL) {
   return {
     version: 1,
     garage: newGarage(),
@@ -152,9 +153,8 @@ export function betRefund(s) {
   return true;
 }
 
-// Temporary free top-up; counted separately from the original capital.
-export function betTopUp(s,player,amount){
-  const target=s.players[player],issued=s.players.length*s.capital+(s.topUps??0)+(s.towerEarned??0);
-  if(s.phase!=='betting'||!Number.isInteger(player)||!target||!Number.isSafeInteger(amount)||amount<=0||!Number.isSafeInteger(issued+amount)||issued+amount>16000000)throw Error('Введите целое положительное число. Общий выпуск фишек не может превышать 16 000 000.');
-  target.balance+=amount;s.topUps=(s.topUps??0)+amount;
+// Keep the export for older callers, but never mint coins through manual top-up.
+// Historical topUps remain part of save validation and must not be erased.
+export function betTopUp(){
+  throw Error('Ручное пополнение баланса отключено. Монеты можно заработать в башне.');
 }

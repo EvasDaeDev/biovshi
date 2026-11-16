@@ -70,3 +70,20 @@
 #robot-tag-hops-v22 .patron-popup>strong{display:block;text-align:center}
 
 #robot-tag-hops-v22 .arena-picker .arena-obstacle{fill:#d78937;stroke:#d78937;stroke-width:1}
+
+/* Shared fast player-currency counter: animate numbers and color only, no glow or scaling. */
+#robot-tag-hops-v22 .currency-counter{
+ display:inline-flex;align-items:center;gap:.2em;white-space:nowrap;
+ font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+ font-weight:800;transition:color .14s ease;
+}
+#robot-tag-hops-v22 .currency-counter .currency-counter-value{display:inline-block;min-width:1ch}
+#robot-tag-hops-v22 .currency-counter.is-credit{
+ color:#53ff66!important;text-shadow:none!important;
+}
+#robot-tag-hops-v22 .currency-counter.is-debit{
+ color:#ff4147!important;text-shadow:none!important;
+}
+@media(prefers-reduced-motion:reduce){
+ #robot-tag-hops-v22 .currency-counter{transition:none}
+}
