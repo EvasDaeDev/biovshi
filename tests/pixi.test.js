@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import sharp from 'sharp';
 import {JSDOM} from 'jsdom';
 import * as PIXI from 'pixi.js';
 import {PixiArena} from '../src/render/pixi-scene.js';
@@ -11,7 +12,7 @@ import {initializeGame} from '../src/game/initialize.js';
 import {ctx} from '../src/game/state.js';
 import {ASSETS,assetUrl} from '../src/assets/manifest.js';
 import {CONFIG} from '../src/config.js';
-import {flashlightBrightness} from '../src/render/flashlight.js';
+import {flashlightBrightness,flashlightFootprint} from '../src/render/flashlight.js';
 import {paint} from '../src/render/frame.js';
 import {createOilDrop} from '../src/render/effects.js';
 import {resetRound} from '../src/game/session.js';
@@ -106,7 +107,11 @@ test('Pixi clips tower flashlight texture and nearby light, follows gaze and wid
     'visible texture is above darkness, not extinguished by it');
   assert.ok(ctx.flashlightsG.compareDocumentPosition(ctx.scoreG)&document.defaultView.Node.DOCUMENT_POSITION_FOLLOWING,
     'announcements remain above the light');
-  assert.equal(light.visual.blendMode,'normal');
+  assert.equal(light.visual.blendMode,'screen');
+  assert.equal(player.lightBeam.style.mixBlendMode,'screen');
+  assert.ok(!player.vision.getAttribute('d').startsWith('M0 0L'),
+    'textured light uses surrounding obstacle shadows, not hard sides of AI vision');
+  assert.equal(player.vision.getAttribute('d'),player.lightBeam.getAttribute('d'));
   assert.equal(player.vision.parentNode,ctx.lightHoles,'reveal still uses the original darkness mask');
   assert.equal(light.visual.texture,arena.sources.get(assetUrl(ASSETS.textures.flashlight)));
   assert.equal(light.visual.anchor.x,0);assert.equal(light.visual.anchor.y,.5);
@@ -121,6 +126,11 @@ test('Pixi clips tower flashlight texture and nearby light, follows gaze and wid
    assert.equal(light.visual.rotation,Number(player.lightBeam.getAttribute('data-light-heading'))*Math.PI/180);
    const pattern=player.lightBeam.flashlightTexture.pattern;
    assert.equal(Number(pattern.getAttribute('height')),light.visual.height);
+   const bounds=player.lightBeam.flashlightTexture.bounds;
+   assert.equal(Number(bounds.getAttribute('width')),light.visual.width);
+   assert.equal(Number(bounds.getAttribute('height')),light.visual.height);
+   assert.equal(bounds.getAttribute('transform'),pattern.getAttribute('patternTransform'),
+     'a single rotated SVG tile prevents repeated light behind the patient');
    assert.equal(player.vision.flashlightTexture.image.style.filter,'brightness(0)');
   }finally{CONFIG.vision.runnerAngleDeg=originalAngle;}
   arena.sources.delete(assetUrl(ASSETS.textures.flashlight));arena.sync(light);
@@ -131,6 +141,37 @@ test('Pixi clips tower flashlight texture and nearby light, follows gaze and wid
   player.setVisible(true);player.paint();arena.flush();
   assert.equal(arena.records.get(player.vision).object.visible,true);
  }finally{arena.finish();ctx.mode='spectator';ctx.towerRun=null;ctx.root.__disposeTag();dom.window.close();}
+});
+
+test('flashlight shadow radius covers every soft edge and keeps square artwork at the original angle',()=>{
+ assert.equal(flashlightFootprint(100*Math.PI/180).height,300);
+ for(const angle of [20,40,100,140]){
+  const {width,height,radius}=flashlightFootprint(angle*Math.PI/180);
+  assert.equal(width,300);
+  assert.ok(radius>Math.hypot(width,height/2),'shadow mask cannot crop the artwork corners');
+ }
+});
+
+test('rasterized flashlight retains its soft pixels outside AI cone and never tiles behind the source',async()=>{
+ const dom=setup();ctx.mode='tower';ctx.towerRun={patient:0};
+ ctx.betting={players:[{name:'Игрок'}]};ctx.towerPlayer=0;
+ try{
+  ctx.obstacles=[];ctx.arenaPlanes=[];
+  const player=createRobot(0,{x:250,y:350,angle:0});ctx.robots=[player];
+  player.setVisible(true);player.paint();
+  const node=player.lightBeam.cloneNode(true),{pattern,bounds}=player.lightBeam.flashlightTexture;
+  const tile=pattern.cloneNode(true),clip=bounds.parentNode.cloneNode(true);
+  tile.querySelector('image').setAttribute('href','data:image/png;base64,'+fs.readFileSync(new URL('../public/assets/textures/robots/flashlight.png',import.meta.url)).toString('base64'));
+  // Rebase the production artwork and shadow mask into a transparent test image.
+  node.setAttribute('transform','translate(350 350)');node.setAttribute('opacity','1');node.removeAttribute('style');
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="700" height="700"><defs>${tile.outerHTML}${clip.outerHTML}</defs>${node.outerHTML}</svg>`;
+  const {data,info}=await sharp(Buffer.from(svg)).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+  const alpha=(x,y)=>data[(y*info.width+x)*4+3];
+  assert.ok(Math.atan2(76,59)>CONFIG.vision.runnerAngleDeg*Math.PI/360);
+  assert.ok(alpha(409,426)>5,'soft PNG edge outside the mathematical cone stays visible');
+  assert.equal(alpha(340,350),0,'SVG pattern cannot repeat the beam behind the source');
+  assert.ok(alpha(467,350)>alpha(409,426),'edge remains softer than the beam core');
+ }finally{ctx.mode='spectator';ctx.towerRun=null;ctx.root.__disposeTag();dom.window.close();}
 });
 
 test('flashlight brightness stays within 5 percent without consuming randomness',()=>{

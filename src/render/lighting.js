@@ -4,7 +4,7 @@ import { CONFIG } from '../config.js';
 import { attr } from './svg.js';
 import { rectHit } from '../systems/collision.js';
 import { wrap } from '../utils/math.js';
-import { flashlightBrightness, paintFlashlightTexture } from './flashlight.js';
+import { flashlightBrightness, flashlightFootprint, paintFlashlightTexture } from './flashlight.js';
 
 // Render-only rays. AI visibility remains in robot/perception.js.
 // Uniform samples keep arcs smooth; rays beside each vertex preserve sharp
@@ -52,12 +52,18 @@ export function paintLighting(robot) {
     const eye=robot.visiblePoint(robot.local(robot.headFrame,25,0));
     const heading=robot.headFrame.angle+robot.visualRotation(),angle=robot.visionAngle();
     const beam=enabled?lightPolygon(eye,heading,angle,CONFIG.vision.rangeCm):'';
+    // For textured light, cast all around the complete image rectangle. The PNG
+    // supplies the soft sides and tip; only obstacles/perimeter cut hard shadows.
+    const texturedBeam=enabled&&robot.vision.flashlightTexture
+      ?lightPolygon(eye,0,Math.PI*2,flashlightFootprint(angle).radius):'';
     for(const node of [robot.vision,robot.lightBeam]){
       paintFlashlightTexture(node,heading,angle);
-      attr(node,'d',beam);
+      attr(node,'d',node.flashlightTexture?texturedBeam:beam);
       attr(node,'transform',`translate(${eye.x} ${eye.y})`);
-      const strength=node===robot.lightBeam&&node.flashlightTexture ? .24 : 1;
-      attr(node,'opacity',enabled?(opacity*strength*flashlightBrightness(ctx.game.time)).toFixed(3):'0');
+      // Most illumination comes from revealing the real floor, rather than
+      // painting a pale veil over it. Screen adds only a restrained warm tint.
+      const strength=node.flashlightTexture ? (node===robot.lightBeam ? .12 : 1.6) : 1;
+      attr(node,'opacity',enabled?clamp(opacity*strength*flashlightBrightness(ctx.game.time),0,1).toFixed(3):'0');
     }
   }
 }

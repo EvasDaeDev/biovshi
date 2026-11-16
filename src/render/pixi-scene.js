@@ -243,7 +243,7 @@ export class PixiArena {
         visual.visible=Boolean(d);
       }
       // Erase light holes in a GPU render target instead of an SVG luminance mask.
-      visual.blendMode=node.closest('#tag7hop-light-holes')?'erase':'normal';return;
+      visual.blendMode=node.closest('#tag7hop-light-holes')?'erase':node.getAttribute('data-light-blend')==='screen'?'screen':'normal';return;
     }
     if(tag==='text'){
       const label=node.classList.contains('robot-label'),timer=node===ctx.timerOutput;
