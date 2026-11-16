@@ -78,7 +78,7 @@ export function towerPreparation(){
     insuranceButton.classList.toggle('is-active',Boolean(c));
     insuranceButton.innerHTML=renewal?`ПРОДЛИТЬ ДМС · ${formatChips(t.insurance.price)}`:c?`ДМС · ЭТАЖ ${c.level}`:`ДМС · ${formatChips(t.insurance.price)}`;
     insuranceButton.disabled=Boolean(c&&!renewal)||ctx.betting.players[ctx.towerPlayer].balance<t.insurance.price;
-    insuranceButton.title=renewal?`Перенести ДМС с этажа ${c.level} на этаж ${t.level} за ${t.insurance.price} монет и сохранить текущие навыки и протезы. Старый полис заменяется. Следующий тариф дороже на 3%, с округлением вверх.`:c?`При поражении вернёт на этаж ${c.level} с сохранёнными навыками. Страховка одноразовая. На более высоком этаже её можно продлить.`:'Одноразовая страховка этажа и выбранных навыков. Следующая покупка дороже на 3%, с округлением вверх.';
+    insuranceButton.title=renewal?`Перенести ДМС с этажа ${c.level} на этаж ${t.level} за ${t.insurance.price} монет и сохранить текущие навыки и протезы. Старый полис заменяется. Следующий тариф дороже на 3%, с округлением вверх.`:c?`При поражении вернёт на этаж ${c.level} с сохранёнными навыками. Страховка одноразовая. На более высоком этаже её можно продлить.`:'Одноразовая страховка этажа и выбранных навыков. Следующая покупка дороже на 10%, с округлением вверх.';
   };
   renderInsurance();
   insuranceButton.onclick=()=>{

@@ -11,12 +11,13 @@ export function validInsurance(policy,record){
 }
 export function purchaseInsurance(session,player,tower){
  const policy=tower.insurance,buyer=session.players[player];
- if(policy.checkpoint&&tower.level<=policy.checkpoint.level)throw Error('ДМС уже действует на этом или более высоком этаже.');
+ const renewal=Boolean(policy.checkpoint);
+ if(renewal&&tower.level<=policy.checkpoint.level)throw Error('ДМС уже действует на этом или более высоком этаже.');
  if(!buyer||buyer.balance<policy.price)throw Error('Недостаточно монет для ДМС.');
  const price=policy.price;
  policy.checkpoint={level:tower.level,wins:tower.wins,patient:tower.patient,stats:[...tower.stats],prosthetics:[...tower.prosthetics],
   ...(tower.bossEncounter?{bossEncounter:structuredClone(tower.bossEncounter)}:{})};
  buyer.balance-=price;session.insuranceSpent=(session.insuranceSpent??0)+price;
- policy.price=price+Math.ceil(price*3/100);
+ policy.price=price+Math.ceil(price*(renewal?3:10)/100);
  return price;
 }
