@@ -74,16 +74,20 @@ export function towerPreparation(){
   ctx.root.querySelector('#tower-prep-error').textContent='';
   const insuranceButton=ctx.root.querySelector('#tower-insurance');
   const renderInsurance=()=>{
-    const c=t.insurance.checkpoint;
+    const c=t.insurance.checkpoint,renewal=Boolean(c&&t.level>c.level);
     insuranceButton.classList.toggle('is-active',Boolean(c));
-    insuranceButton.innerHTML=c?`ДМС · ЭТАЖ ${c.level}`:`ДМС · ${formatChips(t.insurance.price)}`;
-    insuranceButton.disabled=Boolean(c)||ctx.betting.players[ctx.towerPlayer].balance<t.insurance.price;
-    insuranceButton.title=c?`При поражении вернёт на этаж ${c.level} с сохранёнными навыками. Страховка одноразовая.`:'Одноразовая страховка этажа и выбранных навыков. Следующая покупка дороже на 10%.';
+    insuranceButton.innerHTML=renewal?`ПРОДЛИТЬ ДМС · ${formatChips(t.insurance.price)}`:c?`ДМС · ЭТАЖ ${c.level}`:`ДМС · ${formatChips(t.insurance.price)}`;
+    insuranceButton.disabled=Boolean(c&&!renewal)||ctx.betting.players[ctx.towerPlayer].balance<t.insurance.price;
+    insuranceButton.title=renewal?`Перенести ДМС с этажа ${c.level} на этаж ${t.level} за ${t.insurance.price} монет и сохранить текущие навыки и протезы. Старый полис заменяется. Следующий тариф дороже на 3%, с округлением вверх.`:c?`При поражении вернёт на этаж ${c.level} с сохранёнными навыками. Страховка одноразовая. На более высоком этаже её можно продлить.`:'Одноразовая страховка этажа и выбранных навыков. Следующая покупка дороже на 3%, с округлением вверх.';
   };
   renderInsurance();
   insuranceButton.onclick=()=>{
     if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
-    try{buyTowerInsurance(ctx.betting,ctx.towerPlayer);bettingSave();renderInsurance();updateTowerHud();ctx.root.querySelector('#tower-prep-error').textContent='ДМС оформлена: этаж и навыки застрахованы.';}
+    try{
+      const renewal=Boolean(t.insurance.checkpoint);
+      buyTowerInsurance(ctx.betting,ctx.towerPlayer);bettingSave();renderInsurance();updateTowerHud();
+      ctx.root.querySelector('#tower-prep-error').textContent=renewal?`ДМС продлена: этаж ${t.level} и текущие навыки застрахованы.`:'ДМС оформлена: этаж и навыки застрахованы.';
+    }
     catch(error){ctx.root.querySelector('#tower-prep-error').textContent=error.message;}
   };
   ctx.root.querySelector('#tower-fight').onclick=()=>{
