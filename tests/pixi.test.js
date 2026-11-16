@@ -9,7 +9,9 @@ import {transformMatrix,transformPoint} from '../src/render/pixi-math.js';
 import {skinMatrix,ROBOT_PARTS} from '../src/render/robot-skin.js';
 import {initializeGame} from '../src/game/initialize.js';
 import {ctx} from '../src/game/state.js';
-import {ASSETS} from '../src/assets/manifest.js';
+import {ASSETS,assetUrl} from '../src/assets/manifest.js';
+import {CONFIG} from '../src/config.js';
+import {flashlightBrightness} from '../src/render/flashlight.js';
 import {paint} from '../src/render/frame.js';
 import {createOilDrop} from '../src/render/effects.js';
 import {resetRound} from '../src/game/session.js';
@@ -67,6 +69,7 @@ function bridge(){
   const source=new PIXI.Texture({source:new PIXI.ImageSource({resource:{width:256,height:256}})});
   for(const robot of ctx.robots)arena.sources.set(robot.actor.querySelector('[data-skin-segment] image').getAttribute('href'),source);
   arena.radial=()=>PIXI.Texture.WHITE;
+  arena.sources.set(assetUrl(ASSETS.textures.flashlight),source);
   // Liquid assets use assetUrl(); take it from the first actual description.
   createOilDrop(0,200,200,3);
   arena.sources.set(ctx.combat.oilDrops[0].sprite.image.getAttribute('href'),source);
@@ -82,7 +85,7 @@ function bridge(){
   return arena;
 }
 
-test('Pixi clips tower gradient sprites to ray-cast paths and follows visibility changes',()=>{
+test('Pixi clips tower flashlight texture and nearby light, follows gaze and width, and preserves fallback',()=>{
  const dom=setup();ctx.mode='tower';ctx.towerRun={patient:0};
  ctx.betting={players:[{name:'Игрок'}]};ctx.towerPlayer=0;
  const player=createRobot(0,{x:250,y:350,angle:0});ctx.robots=[player];
@@ -97,11 +100,41 @@ test('Pixi clips tower gradient sprites to ray-cast paths and follows visibility
    assert.equal(record.visual.visible,true);
   }
   assert.equal(arena.records.get(player.vision).visual.blendMode,'erase');
+  const light=arena.records.get(player.lightBeam),originalAngle=CONFIG.vision.runnerAngleDeg;
+  assert.equal(light.visual.texture,arena.sources.get(assetUrl(ASSETS.textures.flashlight)));
+  assert.equal(light.visual.anchor.x,0);assert.equal(light.visual.anchor.y,.5);
+  assert.equal(light.visual.width,CONFIG.vision.rangeCm);
+  const height=light.visual.height,seed=ctx.seed,markup=player.lightBeam.outerHTML;
+  player.paint();arena.flush();assert.equal(player.lightBeam.outerHTML,markup,'same game time freezes flicker');
+  assert.equal(ctx.seed,seed);
+  try{
+   CONFIG.vision.runnerAngleDeg=40;player.paint();arena.flush();
+   assert.ok(light.visual.height<height);
+   assert.equal(light.visual.width,CONFIG.vision.rangeCm);
+   assert.equal(light.visual.rotation,Number(player.lightBeam.getAttribute('data-light-heading'))*Math.PI/180);
+   const pattern=player.lightBeam.flashlightTexture.pattern;
+   assert.equal(Number(pattern.getAttribute('height')),light.visual.height);
+   assert.equal(player.vision.flashlightTexture.image.style.filter,'brightness(0)');
+  }finally{CONFIG.vision.runnerAngleDeg=originalAngle;}
+  arena.sources.delete(assetUrl(ASSETS.textures.flashlight));arena.sync(light);
+  assert.equal(light.visual.texture,PIXI.Texture.WHITE,'missing GPU texture retains radial fallback and ray mask');
+  assert.equal(light.visual.anchor.x,.5);assert.ok(light.visual.mask);
   player.setVisible(false);arena.flush();
   assert.equal(arena.records.get(player.vision).object.visible,false);
   player.setVisible(true);player.paint();arena.flush();
   assert.equal(arena.records.get(player.vision).object.visible,true);
  }finally{arena.finish();ctx.mode='spectator';ctx.towerRun=null;ctx.root.__disposeTag();dom.window.close();}
+});
+
+test('flashlight brightness stays within 2.7 percent without consuming randomness',()=>{
+ const seed=ctx.seed;
+ let lo=Infinity,hi=-Infinity;
+ for(let i=0;i<6000;i++){
+  const t=i/60,value=flashlightBrightness(t);lo=Math.min(lo,value);hi=Math.max(hi,value);
+  assert.ok(value>=.973&&value<=1.027);
+  assert.ok(Math.abs(value-flashlightBrightness(t+1/60))<.004,'no abrupt frame-to-frame flashes');
+ }
+ assert.ok(hi-lo>.025);assert.equal(ctx.seed,seed);
 });
 
 test('native Pixi sprites share cropped atlas sources; changed poses preserve lengths and removed parts disappear',()=>{

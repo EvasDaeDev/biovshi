@@ -4,6 +4,7 @@ import { CONFIG } from '../config.js';
 import { attr } from './svg.js';
 import { rectHit } from '../systems/collision.js';
 import { wrap } from '../utils/math.js';
+import { flashlightBrightness, paintFlashlightTexture } from './flashlight.js';
 
 // Render-only rays. AI visibility remains in robot/perception.js.
 // Uniform samples keep arcs smooth; rays beside each vertex preserve sharp
@@ -49,11 +50,14 @@ export function paintLighting(robot) {
     const nearby=lightPolygon(center,0,Math.PI*2,CONFIG.light.nearbyRadiusCm);
     attr(robot.pool,'d',nearby);attr(robot.nearLight,'d',nearby);
     const eye=robot.visiblePoint(robot.local(robot.headFrame,25,0));
-    const beam=enabled?lightPolygon(eye,robot.headFrame.angle+robot.visualRotation(),robot.visionAngle(),CONFIG.vision.rangeCm):'';
+    const heading=robot.headFrame.angle+robot.visualRotation(),angle=robot.visionAngle();
+    const beam=enabled?lightPolygon(eye,heading,angle,CONFIG.vision.rangeCm):'';
     for(const node of [robot.vision,robot.lightBeam]){
+      paintFlashlightTexture(node,heading,angle);
       attr(node,'d',beam);
       attr(node,'transform',`translate(${eye.x} ${eye.y})`);
-      attr(node,'opacity',enabled?opacity.toFixed(3):'0');
+      const strength=node===robot.lightBeam&&node.flashlightTexture ? .17 : 1;
+      attr(node,'opacity',enabled?(opacity*strength*flashlightBrightness(ctx.game.time)).toFixed(3):'0');
     }
   }
 }

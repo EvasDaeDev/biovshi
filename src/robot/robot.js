@@ -15,6 +15,7 @@ import { ik } from "../utils/math.js";
 import { robotCanSee } from "./perception.js";
 import { createRobotSkin } from '../render/robot-skin.js';
 import { createTorsoShadow } from '../render/ground-spots.js';
+import { createFlashlightTexture } from '../render/flashlight.js';
 export
 // Один робот: скелет, опоры, хвост, анимации и отрисовка.
 function createRobot(id, start, body = {}) {
@@ -134,6 +135,7 @@ function createRobot(id, start, body = {}) {
       const gradient=source.cloneNode(true),id=`tag7hop-tower-${key}-${robotState.id}`;
       attr(gradient,'id',id);attr(gradient,'r',CONFIG.vision.rangeCm);ctx.lightGradients.appendChild(gradient);
       robotState[key]=el('path',{cx:0,cy:0,r:CONFIG.vision.rangeCm,fill:`url(#${id})`},parent);
+      createFlashlightTexture(robotState[key],key);
     }
   }
   robotState.actor = el('g', {

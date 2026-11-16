@@ -33,9 +33,9 @@ export class PixiArena {
     this.owned.add(texture);return texture;
   }
   async prepareSources() {
-    const urls=[...Object.entries(ASSETS.textures).filter(([key])=>/^robot|liquids|hat/.test(key)).map(([,file])=>assetUrl(file)),...(ctx.liquidAtlasSources??[]),...(ctx.coolantAtlasSources??[])];
+    const urls=[...Object.entries(ASSETS.textures).filter(([key])=>/^robot|liquids|hat|flashlight/.test(key)).map(([,file])=>assetUrl(file)),...(ctx.liquidAtlasSources??[]),...(ctx.coolantAtlasSources??[])];
     await Promise.all([...new Set(urls.filter(Boolean))].map(async url=>{
-      try{this.sources.set(url,this.texture(await loadTextureImage(url)));}catch{/* Vector fallback is already prepared by the game. */}
+      try{this.sources.set(url,this.texture(await loadTextureImage(url),url!==assetUrl(ASSETS.textures.flashlight)));}catch{/* Vector fallback is already prepared by the game. */}
     }));
   }
   async staticLayer(nodes,options={}) {
@@ -220,9 +220,16 @@ export class PixiArena {
     }
     const fill=node.style.fill||node.getAttribute('fill')||s.fill;
     if(visual instanceof this.p.Sprite){
-      visual.texture=this.radial(fill);visual.anchor.set(.5);
-      visual.position.set(number('cx'),number('cy'));
-      visual.width=number('rx',number('r'))*2;visual.height=number('ry',number('r'))*2;
+      const flashlight=this.sources.get(node.getAttribute('data-light-texture'));
+      if(flashlight){
+        visual.texture=flashlight;visual.anchor.set(0,.5);visual.position.set(0,0);
+        visual.rotation=number('data-light-heading')*Math.PI/180;
+        visual.width=number('data-light-width');visual.height=number('data-light-height');
+      }else{
+        visual.texture=this.radial(node.getAttribute('data-light-fallback')||fill);visual.anchor.set(.5);
+        visual.position.set(number('cx'),number('cy'));visual.rotation=0;
+        visual.width=number('rx',number('r'))*2;visual.height=number('ry',number('r'))*2;
+      }
       // Radial light paths use the same gradient sprite as circles, clipped to
       // their ray-cast silhouette. Keep the mask local to the translated light.
       if(tag==='path'){
