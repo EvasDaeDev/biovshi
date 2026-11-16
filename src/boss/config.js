@@ -18,6 +18,8 @@ export const BOSS_CONFIG={scale:1.5,headScale:1,headOffset:18,healthMultiplier:2
   positionPredictionSec:.18,positionCommitSec:1.8,positionTargetReplanCm:42,
   positionStopGap:18,positionAlignTolerance:.25,positionPivotGap:94,
   retreatVelocityThreshold:12,retreatPressureTrigger:2.2,
+  sideKickBearing:1.28,sideArmBearing:.92,sideApproachStep:38,
+  sideStanceRange:72,sideStanceLateral:39,sideBodyMargin:32,
  }};
 export const BOSS_VARIANTS=[
  {id:'brute',name:'Громила',spineSegments:4},

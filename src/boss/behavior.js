@@ -64,7 +64,7 @@ export function createBossBehavior(){
   updateChargeMemory(robot,now);
   if(!target)return hold(robot,null);
   const memory=bossOpponentMemory(state,target.id);
-  observeBossOpponent(robot,target,memory,now);
+  if(robot.canSee(target.center)&&sightClear(robot.center,target.center))observeBossOpponent(robot,target,memory,now);
   if(robot.movementLimbs===0){state.charge=null;return hold(robot,target.center);}
   if(state.charge&&robot.movementLimbs<2){
    state.charge=null;state.chargeOutcome=null;
@@ -126,13 +126,22 @@ export function createBossBehavior(){
    if(plan){state.charge={...plan,started:now,victim:target.id};state.nextChargeAt=now+cfg.chargeCooldown*(state.phase===2?.8:1);state.status='Готовит рывок';note('boss-charge',{robot:robot.id,goal:plan.goal});return {...hold(robot,plan.goal),heading:plan.direction};}
    state.nextChargeAt=now+1;
   }
-  const candidates=seen?ordinaryCandidates(robot,target):
-   ordinaryCandidates(robot,target).filter(c=>c.source.kind==='leg');
-  if(candidates.length){
+  const armSources=robot.attackSources.filter(s=>s.kind==='arm');
+  const noFrontArms=!armSources.some(s=>!s.key.includes('pair2'));
+  const candidates=ordinaryCandidates(robot,target).filter(c=>seen||c.source.kind==='leg');
+  // A headbutt is not a substitute for the missing front arms: it exposes
+  // the exact critical segment a kiting player is aiming at.
+  const usable=noFrontArms?candidates.filter(c=>c.source.kind!=='head'):candidates;
+  if(usable.length){
    state.status='Выбирает удар';return hold(robot,target.center);
   }
-  if(seen){
-   const position=bossPositionIntent(robot,target,memory,now);
+  // For a rear kick, use only a recently SEEN position (or actual foot-range
+  // sensing). Do not grant the boss knowledge of a hidden player's position.
+  const recent=!seen&&state.lastSeen&&now-state.lastSeenAt<=3;
+  const lastKnown=recent?{...target,x:state.lastSeen.x,y:state.lastSeen.y,
+   center:{...state.lastSeen},velocity:{x:0,y:0}}:target;
+  if(seen||recent){
+   const position=bossPositionIntent(robot,lastKnown,memory,now);
    if(position){state.status=position.mode;return position;}
   }
   state.status='Теснит противника';return {goal:seen?{...target.center}:state.lastSeen,speed:CONFIG.movement.chaseSpeedCm,mode:'преследует',lookPoint:seen?target.center:state.lastSeen};
@@ -202,7 +211,8 @@ export function createBossBehavior(){
   const wantsWide=state.cycles%(state.phase===2?2:3)===(state.phase===2?1:2);
   const wide=wantsWide?wideCandidate(robot,target,cfg.sweep):null;
   if(wide){state.cycles++;begin(robot,wide,cfg.sweep,{style:'sweep'});return;}
-  const candidate=ordinaryCandidates(robot,target).find(c=>seen||c.source.kind==='leg');if(!candidate)return;
+  const noFrontArms=!robot.attackSources.some(s=>s.kind==='arm'&&!s.key.includes('pair2'));
+  const candidate=ordinaryCandidates(robot,target).find(c=>(seen||c.source.kind==='leg')&&(!noFrontArms||c.source.kind!=='head'));if(!candidate)return;
   state.cycles++;begin(robot,candidate,candidate.source.kind==='head'?BOSS_CONFIG.combat:cfg.first,{comboIndex:candidate.source.kind==='head'?undefined:1});
  }
  return {state,intent,resolveCombat,planCombat};

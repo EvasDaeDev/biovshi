@@ -100,8 +100,67 @@ export function chooseBossStance(robot,target,memory){
  return options[0]??null;
 }
 
+// Missing frontal weapons is a persistent combat role, not a short-lived
+// waypoint within 118 cm. Stay side-on while approaching; never turn the head
+// straight into an opponent merely because the opponent steps outside a range
+// threshold. A normal IK hit is still required for every actual kick/punch.
+export function bossSideWeaponIntent(robot,target,memory){
+ const cfg=BOSS_CONFIG.tactics;
+ const weapons=robot.attackSources.filter(s=>s.kind==='arm'||s.kind==='leg');
+ const frontArms=weapons.filter(s=>s.kind==='arm'&&!s.key.includes('pair2'));
+ if(frontArms.length)return null;
+ const rearArms=weapons.filter(s=>s.kind==='arm');
+ const legs=weapons.filter(s=>s.kind==='leg');
+ const kind=rearArms.length?'arm':'leg';
+ const options=kind==='arm'?rearArms:legs;
+ if(!options.length)return null;
+ const preferred=options.find(s=>s.side===memory.side)??options[0];
+ const side=preferred.side||1;
+ const bearing=direction(robot,target.center);
+ const relative=kind==='leg'?cfg.sideKickBearing:cfg.sideArmBearing;
+ // Opponent lies on the active side of the selected foot/rear arm.
+ const heading=wrap(bearing-side*relative);
+ const align=Math.abs(wrap(heading-robot.angle));
+ const dist=distance(robot,target.center);
+ const mode=kind==='leg'?'сближается для удара ногой':'заходит к задней руке';
+ if(align>cfg.positionAlignTolerance){
+  return {goal:{x:robot.x,y:robot.y},speed:0,brake:true,heading,
+   lookPoint:target.center,mode:kind==='leg'?'разворачивает ноги':'разворачивает задние руки'};
+ }
+ // Approach in short steps while maintaining the committed SIDE heading.
+ // Manual retreat accepts a world-space direction and still uses the usual
+ // damaged-limb speed, turn limits and physical collision solver.
+ const targetVelocity=target.velocity??{x:0,y:0};
+ const lead={x:target.center.x+clamp(targetVelocity.x*cfg.positionPredictionSec,-10,10),
+  y:target.center.y+clamp(targetVelocity.y*cfg.positionPredictionSec,-10,10)};
+ const offset=turn({x:kind==='leg'?-13:8,y:side*cfg.sideStanceLateral},heading);
+ const stance={x:lead.x-offset.x,y:lead.y-offset.y};
+ const dx=stance.x-robot.x,dy=stance.y-robot.y,gap=Math.hypot(dx,dy);
+ if(gap<cfg.positionStopGap){
+  return {goal:{x:robot.x,y:robot.y},speed:0,brake:true,heading,
+   lookPoint:target.center,mode:'готовит удар'};
+ }
+ const step=Math.min(gap,cfg.sideApproachStep);
+ let goal={x:robot.x+dx/gap*step,y:robot.y+dy/gap*step};
+ if(!coreClearCircle(goal,cfg.positionClearance)){
+  // Try a short lateral adjustment; if none is clear, hold position instead
+  // of falling through to the old head-first chase instruction.
+  const lateral={x:-Math.sin(heading)*side,y:Math.cos(heading)*side};
+  const alt={x:robot.x+lateral.x*step,y:robot.y+lateral.y*step};
+  if(!coreClearCircle(alt,cfg.positionClearance))
+   return {goal:{x:robot.x,y:robot.y},speed:0,brake:true,heading,
+    lookPoint:target.center,mode:'ищет сектор для удара ногой'};
+  goal=alt;
+ }
+ const mx=goal.x-robot.x,my=goal.y-robot.y,mag=Math.hypot(mx,my)||1;
+ return {goal,heading,speed:CONFIG.movement.chaseSpeedCm,
+  manual:true,retreat:{x:mx/mag,y:my/mag},lookPoint:target.center,mode};
+}
+
 export function bossPositionIntent(robot,target,memory,now){
  const cfg=BOSS_CONFIG.tactics,dist=distance(robot,target);
+ const sideWeapon=bossSideWeaponIntent(robot,target,memory);
+ if(sideWeapon)return sideWeapon;
  if(dist>cfg.positionMaxGap)return null;
  const available=robot.attackSources.filter(s=>s.kind==='arm'||s.kind==='leg');
  if(!available.length)return null;

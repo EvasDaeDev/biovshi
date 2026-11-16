@@ -4,7 +4,7 @@ import {startBossScenario} from '../scripts/boss-harness.mjs';
 import {ctx} from '../src/game/state.js';
 import {step} from '../src/game/loop.js';
 import {BOSS_VARIANTS} from '../src/boss/config.js';
-import {bossOpponentMemory,observeBossOpponent,chooseBossStance} from '../src/boss/positioning.js';
+import {bossOpponentMemory,observeBossOpponent,chooseBossStance,bossPositionIntent} from '../src/boss/positioning.js';
 
 test('retreat observations persist for a fight and update without reading controller input',()=>{
  const f=startBossScenario({variant:'brute',floor:10,arena:'ring'});try{
@@ -41,3 +41,38 @@ for(const floor of [5,10,20])for(const variant of BOSS_VARIANTS){
   }finally{f.close();}
  });
 }
+
+test('armless boss keeps its leg facing while opponent retreats beyond old 118cm limit',()=>{
+ const f=startBossScenario({variant:'brute',floor:20,arena:'ring'});try{
+  const b=f.boss;
+  for(const s of b.attackSources.filter(s=>s.kind==='arm'))b.damage(s.key.replace(/-(lower|upper)$/,'-upper'),0,100);
+  b.body.behavior.state.nextChargeAt=1e6;
+  const memory=bossOpponentMemory(b.body.behavior.state,0);
+  for(const d of [100,130,160,210]){
+   const enemy={id:0,x:b.x+d,y:b.y,center:{x:b.x+d,y:b.y},
+    velocity:{x:50,y:0}};
+   const intent=bossPositionIntent(b,enemy,memory,d);
+   assert.ok(intent, 'no direct-chase fallback at '+d+' cm');
+   assert.ok(['разворачивает ноги','сближается для удара ногой','готовит удар','ищет сектор для удара ногой'].includes(intent.mode),intent.mode);
+   assert.ok(Math.abs(Math.atan2(Math.sin(intent.heading),Math.cos(intent.heading)))>.7,
+    'side posture is not a head-first dash');
+  }
+ }finally{f.close();}
+});
+
+test('armless boss physically starts turning away from head-first pursuit',()=>{
+ const f=startBossScenario({variant:'brute',floor:10,arena:'ring'});try{
+  const b=f.boss;for(const s of b.attackSources.filter(s=>s.kind==='arm'))b.damage(s.key.replace(/-(lower|upper)$/,'-upper'),0,100);
+  b.body.behavior.state.nextChargeAt=1e6;
+  // Face a known, visible opponent for a deliberately simple regression.
+  const enemy=f.player,desired={x:b.x+100,y:b.y};
+  const oldAngle=b.angle;
+  const memory=bossOpponentMemory(b.body.behavior.state,0);
+  const i=bossPositionIntent(b,{id:0,x:desired.x,y:desired.y,center:desired,velocity:{x:0,y:0}},memory,0);
+  assert.ok(i);
+  assert.notEqual(i.mode,'преследует');
+  for(let n=0;n<30;n++)b.tick(1/60,i);
+  assert.ok(Math.abs(Math.atan2(Math.sin(b.angle-oldAngle),Math.cos(b.angle-oldAngle)))>.05,
+   'a turning instruction must actually rotate the robot body');
+ }finally{f.close();}
+});
