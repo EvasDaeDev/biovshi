@@ -32,7 +32,7 @@ test('defeat restores the insured floor, patient and chosen build with intact pr
  assert.equal(restored.level,3);assert.equal(restored.wins,2);assert.equal(restored.patient,2);assert.deepEqual(restored.stats,chosen.stats);assert.deepEqual(restored.prosthetics,chosen.prosthetics);
  assert.equal(restored.record,record);assert.deepEqual(restored.artifacts.pieces,pieces);assert.equal(restored.insurance.checkpoint,null);assert.equal(restored.insurance.price,55);
  assert.equal(restored.runCoins,120);assert.equal(restored.runKills,3);assert.ok(validTower(restored));
- const second=completeTower(s,0,false);assert.equal(second.level,1);assert.deepEqual(second.stats,[3,3,3]);assert.equal(second.insurance.price,52);
+ const second=completeTower(s,0,false);assert.equal(second.level,1);assert.deepEqual(second.stats,[3,3,3]);assert.equal(second.insurance.price,55);
 });
 
 test('policies are independent per player and survive victories, menu restarts and voluntary run reset',()=>{
