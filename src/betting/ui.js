@@ -83,23 +83,6 @@ export function bettingSetup() {
   count.focus();
 }
 
-function showStakeCurrencyFeedback(debits){
- const receipt=ctx.root.querySelector('#bet-currency-fx');
- if(!receipt)return;
- if(receipt._hideTimer){clearTimeout(receipt._hideTimer);receipt._hideTimer=null;}
- if(!debits.length){receipt.hidden=true;receipt.replaceChildren();return;}
- // The betting sheet is closed for combat. Retain the same counters in a
- // temporary, noninteractive receipt above the arena.
- replayPlayerBalanceChanges(ctx.betting,debits,ctx.root);
- receipt.innerHTML='<div class="bet-currency-fx-sheet">'+debits.map(({id,to})=>
-  '<div class="bet-currency-fx-row"><span>'+ctx.betEscape(ctx.betting.players[id].name)+'</span>'+
-  '<strong>СТАВКА · '+playerBalanceMarkup(id,to)+'</strong></div>').join('')+'</div>';
- receipt.hidden=false;
- receipt._hideTimer=setTimeout(()=>{
-  receipt.hidden=true;receipt.replaceChildren();receipt._hideTimer=null;
- },1150);
-}
-
 export function bettingHud() {
   if (!ctx.betting) {
     ctx.betHud.hidden = true;
@@ -233,12 +216,15 @@ export function bettingOpen() {
       ctx.betContent.querySelector('#bet-fight').disabled=false;
       return;
     }
-    bettingSave();
+    bettingSave({animateBalances:false});
     bettingHud();
     ctx.betOverlay.hidden = true;
     ctx.betNotice = '';
-    showStakeCurrencyFeedback(ctx.betting.players.flatMap((p,i)=>
-      p.balance<balancesBefore[i]?[{id:p.id,from:balancesBefore[i],to:p.balance}]:[]));
+    // The arena HUD is actually visible now; no floating delay-based receipt.
+    // If another dialog is still covering it, the shared animator queues the
+    // debit until this specific balance view opens.
+    replayPlayerBalanceChanges(ctx.betting,ctx.betting.players.flatMap((p,i)=>
+      p.balance<balancesBefore[i]?[{id:p.id,from:balancesBefore[i],to:p.balance}]:[]),ctx.root,'#bet-hud');
     startSpawnSequence();
   };
   if(ctx.betDraft?.session===ctx.betting&&ctx.betDraft.round===ctx.betting.round){
@@ -253,7 +239,8 @@ export function bettingSettle(winner) {
   if (!ctx.betting || ctx.betting.phase !== 'running') return;
   ctx.betting.garage?.forEach((g,id)=>{patientRecovery(g,ctx.robots[id]);if(id===winner && ctx.robots[id]?.hasHead)patientVictory(g);});
   betResolve(ctx.betting, winner);
-  bettingSave();
+  // The payout will be presented when the results sheet is opened.
+  bettingSave({animateBalances:false});
   bettingHud();
 }
 export function bettingCancel() {

@@ -91,6 +91,7 @@ test('committing bets shows debits above arena and delayed results replay winnin
  const dom=setup();
  const previousNow=Date.now;let now=1000;Date.now=()=>now;
  try{
+  ctx.root.querySelector('#launch-overlay').hidden=true;
   bettingOpen();
   for(const b of draft){
    const row=ctx.betContent.querySelector('[data-bet-player="'+b.player+'"]');
@@ -100,10 +101,11 @@ test('committing bets shows debits above arena and delayed results replay winnin
   ctx.betContent.querySelector('#bet-fight').click();
   assert.equal(ctx.betting.phase,'running');
   assert.equal(ctx.betOverlay.hidden,true);
-  const receipt=ctx.root.querySelector('#bet-currency-fx');
-  assert.equal(receipt.hidden,false);
-  assert.equal(receipt.querySelectorAll('.is-debit').length,2);
-  assert.deepEqual([...receipt.querySelectorAll('[data-player-balance]')]
+  const hud=ctx.root.querySelector('#bet-hud');
+  assert.equal(hud.hidden,false);
+  assert.equal(ctx.root.querySelector('#bet-currency-fx'),null,'timed receipt is removed');
+  assert.equal(hud.querySelectorAll('.is-debit').length,2);
+  assert.deepEqual([...hud.querySelectorAll('[data-player-balance]')]
    .map(n=>Number(n.dataset.balanceTarget)),[60,60]);
   assert.deepEqual(ctx.betting.players.map(p=>p.balance),[60,60]);
 

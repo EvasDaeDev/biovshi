@@ -68,3 +68,41 @@ test('late results can replay credits without changing session balances',()=>{
   globalThis.cancelAnimationFrame=priorCancel;dom.window.close();
  }
 });
+
+test('queued result credit waits for target window visibility despite elapsed time',async()=>{
+ const dom=new JSDOM('<main id="root"><section id="arena" hidden><span class="currency-counter" data-player-balance="0"><span class="currency-counter-value">50</span></span></section><section id="results" hidden><span class="currency-counter" data-player-balance="0"><span class="currency-counter-value">50</span></span></section></main>',{url:'https://screen-gated.test/',pretendToBeVisual:true});
+ const prevRAF=globalThis.requestAnimationFrame,prevCancel=globalThis.cancelAnimationFrame,prevNow=Date.now;
+ let now=1000;
+ globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};Date.now=()=>now;
+ try{
+  const root=dom.window.document.querySelector('#root'),s={players:[{id:0,name:'Игрок',balance:50}]};
+  trackPlayerBalances(s,root);
+  s.players[0].balance=70;
+  replayPlayerBalanceChanges(s,[{id:0,from:50,to:70}],root,'#results');
+  assert.equal(root.querySelector('.is-credit'),null);
+  now+=5000;
+  root.querySelector('#arena').hidden=false;await Promise.resolve();
+  assert.equal(root.querySelector('.is-credit'),null,'opening another window cannot consume queued credit');
+  root.querySelector('#results').hidden=false;await Promise.resolve();
+  const result=root.querySelector('#results [data-player-balance]');
+  assert.equal(result.classList.contains('is-credit'),true);
+  assert.equal(result.querySelector('.currency-counter-value').textContent,'50');
+  assert.equal(root.querySelector('#arena .is-credit'),null);
+  assert.equal(s.players[0].balance,70);
+ }finally{
+  Date.now=prevNow;globalThis.requestAnimationFrame=prevRAF;
+  globalThis.cancelAnimationFrame=prevCancel;dom.window.close();
+ }
+});
+test('automatically tracked balance changes do not animate concealed widgets',()=>{
+ const dom=new JSDOM('<main id="root"><section id="visible"><span class="currency-counter" data-player-balance="0"><span class="currency-counter-value">100</span></span></section><section id="hidden" hidden><span class="currency-counter" data-player-balance="0"><span class="currency-counter-value">100</span></span></section></main>',{url:'https://screen-gated.test/',pretendToBeVisual:true});
+ const prevRAF=globalThis.requestAnimationFrame,prevCancel=globalThis.cancelAnimationFrame;
+ globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
+ try{
+  const root=dom.window.document.querySelector('#root'),s={players:[{id:0,balance:100}]};
+  trackPlayerBalances(s,root);s.players[0].balance=80;trackPlayerBalances(s,root);
+  assert.equal(root.querySelector('#visible .currency-counter').classList.contains('is-debit'),true);
+  assert.equal(root.querySelector('#hidden .currency-counter').classList.contains('is-debit'),false);
+  assert.equal(root.querySelector('#hidden [data-player-balance]').dataset.balanceTarget,'80');
+ }finally{globalThis.requestAnimationFrame=prevRAF;globalThis.cancelAnimationFrame=prevCancel;dom.window.close();}
+});

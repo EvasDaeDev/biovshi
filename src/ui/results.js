@@ -25,7 +25,7 @@ export function showResults() {
   ctx.resultsPanel.hidden = false;
   // Combat pays out immediately but the results sheet opens seconds later.
   replayPlayerBalanceChanges(ctx.betting,ctx.betting?.lastResult?.rows.flatMap((p,id)=>
-    p.payout>0?[{id,from:p.balance-p.payout,to:p.balance}]:[])??[],ctx.root);
+    p.payout>0?[{id,from:p.balance-p.payout,to:p.balance}]:[])??[],ctx.root,'#gladiator-results');
   ctx.resultsAgain.focus?.();
 }
 // Both modes expose the same completed battle totals and per-patient rows.

@@ -132,7 +132,7 @@ test('manual patient stays still with no input and responds to keyboard with aut
  note('robot-immobilized',{robot:1,lastAttacker:0});note('robot-immobilized',{robot:1,lastAttacker:0});assert.equal(s.players[0].balance,110);
  openMenu();assert.equal(document.querySelector('#launch-overlay').hidden,false);
  assert.equal(document.querySelector('#menu-bank [data-player-balance]').dataset.balanceTarget,'110');
- assert.ok(document.querySelector('#menu-bank .currency-counter').classList.contains('is-credit'),'reward keeps green animation across screens');close(dom);
+ close(dom);
 });
 test('player elimination ends attempt immediately even while several AI remain and banks are preserved',()=>{
  const s=betNewSession(['Первый'],100);const t=towerFor(s,0);for(let i=0;i<3;i++)completeTower(s,0,true);
