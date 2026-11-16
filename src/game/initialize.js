@@ -9,6 +9,7 @@ import {bettingLoad,bettingSave} from '../betting/storage.js';
 import {betCommit,betRefund} from '../betting/ledger.js';
 import {bettingOpen,bettingHud} from '../betting/ui.js';
 import {formatChips} from '../ui/currency.js';
+import {trackPlayerBalances} from '../ui/currency-animation.js';
 import {initializeHints} from '../ui/hints.js';
 import { initializeArenaExpand } from '../ui/arena-expand.js';
 import { initializeSettings } from '../ui/settings.js';
@@ -473,6 +474,8 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     ctx.intro.hidden=true;ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;ctx.startup.phase='demo';
   }else if(session){ctx.betting=session;bettingOpen();}
   else bettingInit();
+  // Establish the opening balance before the first purchase or arena reward.
+  trackPlayerBalances(ctx.betting,ctx.root);
   initializeCombatLog();
   initializeStreamerMascot();
   const logToggle=ctx.root.querySelector('#combat-log-toggle');
