@@ -32,12 +32,14 @@ export function refreshMenu(){
   for(const p of s?.players??[]){const option=document.createElement('option');option.value=p.id;option.textContent=p.name;option.selected=p.id===ctx.menuPlayer;select.append(option);}
   select.disabled=!s;
   const t=s?towerFor(s,ctx.menuPlayer):null;
-  ctx.root.querySelector('#menu-bank').innerHTML=s?`БАНК: ${playerBalanceMarkup(ctx.menuPlayer,s.players[ctx.menuPlayer].balance)}`:'Создайте игроков для обоих режимов';
+  ctx.root.querySelector('#menu-bank').innerHTML=s?playerBalanceMarkup(ctx.menuPlayer,s.players[ctx.menuPlayer].balance):'';
   ctx.root.querySelector('#launch-tower').textContent=`РЕЖИМ БАШНЯ · ЭТАЖ ${t?.level??1}`;
-  ctx.root.querySelector('#menu-tower-progress').textContent=`ПРОЙДЕНО: ${t?.wins??0} · РЕКОРД: ${t?.record??0}`;
+  ctx.root.querySelector('#menu-tower-progress').textContent=`ПРОЙДЕНО ЭТАЖЕЙ: ${t?.wins??0} · РЕКОРД: ${t?.record??0}`;
   ctx.root.querySelector('#tower-reset').disabled=!s;
   ctx.root.querySelector('#launch-totalizator').hidden=!s;
-  ctx.root.querySelector('#launch-setup').textContent=s?'НОВАЯ ИГРА':'СОЗДАТЬ ИГРУ';
+  const newGame=ctx.root.querySelector('#launch-setup');
+  newGame.textContent=s?'НОВАЯ ИГРА':'СОЗДАТЬ ИГРУ';
+  newGame.classList.toggle('is-new-game',Boolean(s));
 }
 export function openMenu(){
   const active=['spawning','running'].includes(ctx.startup.phase)&&!ctx.combat.finished;

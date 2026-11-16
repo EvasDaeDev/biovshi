@@ -71,8 +71,12 @@
       <p class="launch-instruction">Выберите режим. Игроки и банк общие.</p>
       <button id="launch-game" type="button" autofocus>ПОСМОТРЕТЬ БОЙ!</button>
       <div class="tower-menu-block">
-        <label for="menu-player">ИГРОК</label><select id="menu-player" aria-label="Игрок"></select>
-        <p id="menu-bank"></p><p id="menu-tower-progress"></p>
+        <div class="tower-menu-player">
+          <label for="menu-player">ИГРОК</label>
+          <select id="menu-player" aria-label="Игрок"></select>
+          <span id="menu-bank" aria-label="Баланс выбранного игрока"></span>
+        </div>
+        <p id="menu-tower-progress"></p>
         <button id="launch-tower" type="button">РЕЖИМ БАШНЯ · ЭТАЖ 1</button>
         <button id="tower-reset" type="button">СБРОС БАШНИ</button>
       </div>

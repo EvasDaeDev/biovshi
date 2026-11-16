@@ -158,7 +158,15 @@ test('real final strikes pay once and victory unlocks next floor with one skill 
 test('switching menu player updates floor and balance without changing the active run owner',()=>{
  const s=betNewSession(['Первый','Второй'],100);completeTower(s,1,true);const dom=setup(s,towerFor(s,0));openMenu();
  const select=document.querySelector('#menu-player');select.value='1';select.dispatchEvent(new Event('change'));
- assert.match(document.querySelector('#launch-tower').textContent,/ЭТАЖ 2/);assert.equal(ctx.menuPlayer,1);assert.equal(ctx.towerPlayer,0);assert.equal(s.towerPlayerId,1);close(dom);
+ assert.match(document.querySelector('#launch-tower').textContent,/ЭТАЖ 2/);
+ const bank=document.querySelector('#menu-bank');
+ assert.equal(bank.parentElement,select.parentElement,'player and coins share one row');
+ assert.equal(bank.closest('.tower-menu-player')!==null,true);
+ assert.equal(bank.querySelector('[data-player-balance]').dataset.balanceTarget,String(s.players[1].balance));
+ assert.doesNotMatch(bank.textContent,/БАНК/);
+ assert.equal(document.querySelector('#launch-setup').classList.contains('is-new-game'),true);
+ assert.match(document.querySelector('#menu-tower-progress').textContent,/ПРОЙДЕНО ЭТАЖЕЙ/);
+ assert.equal(ctx.menuPlayer,1);assert.equal(ctx.towerPlayer,0);assert.equal(s.towerPlayerId,1);close(dom);
 });
 function manualFixture(arenaId='ring'){
  const s=betNewSession(['Первый'],100),dom=setup(s,towerFor(s,0),arenaId);
@@ -302,7 +310,7 @@ test('floor result distinguishes a cleared floor from a reached floor and marks 
  ctx.robots[1].damage('head',0,100);ctx.combat.finished=true;ctx.combat.winner=0;settleTower(0);showResults();
  assert.equal(ctx.resultsTitle.textContent,'ЭТАЖ 1 ПРОЙДЕН');assert.match(document.querySelector('#bet-result-summary').textContent,/НОВЫЙ ЛИЧНЫЙ РЕКОРД/);assert.equal(ctx.resultsAgain.textContent,'НА ЭТАЖ 2');
  assert.match(document.querySelector('#bet-result-summary').textContent,/10/);assert.equal(towerFor(s,0).record,1);assert.equal(towerFor(s,0).runCoins,10);
- openMenu();assert.match(document.querySelector('#menu-tower-progress').textContent,/ПРОЙДЕНО: 1 · РЕКОРД: 1/);close(dom);
+ openMenu();assert.match(document.querySelector('#menu-tower-progress').textContent,/ПРОЙДЕНО ЭТАЖЕЙ: 1 · РЕКОРД: 1/);close(dom);
  const lossDom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.robots[0].damage('head',1,100);ctx.combat.finished=true;ctx.combat.winner=null;settleTower(null);showResults();
  assert.equal(ctx.resultsTitle.textContent,'ПРОЙДЕНО ЭТАЖЕЙ: 1');assert.match(ctx.resultsSummary.textContent,/на этаже 2/);
  const floorCoins=document.querySelector('.tower-result-numbers').children[2];

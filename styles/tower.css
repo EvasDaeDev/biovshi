@@ -1,9 +1,11 @@
 #robot-tag-hops-v22 .launch-paper{max-height:calc(var(--game-height,100dvh) - 24px);overflow-y:auto;padding-top:22px;padding-bottom:22px}
-#robot-tag-hops-v22 .tower-menu-block{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;margin-top:14px;text-align:left}
-#robot-tag-hops-v22 .tower-menu-block label{font-size:12px;font-weight:bold}
-#robot-tag-hops-v22 .tower-menu-block select{min-height:36px;background:#d9d0b6;color:#27291f;border:1px solid #645d47;padding:5px;width:100%}
-#robot-tag-hops-v22 #menu-bank{grid-column:1/-1;margin:0;font-size:13px}
-#robot-tag-hops-v22 :is(#launch-tower,#tower-reset,#launch-totalizator){grid-column:1/-1;width:100%;padding:12px;background:#4b422d;color:#f3deae;border:1px solid #31291c;cursor:pointer;font-weight:bold}
+#robot-tag-hops-v22 .tower-menu-block{display:flex;flex-direction:column;gap:8px;margin-top:14px;text-align:left}
+#robot-tag-hops-v22 .tower-menu-player{display:grid;grid-template-columns:auto minmax(0,2fr) minmax(0,1fr);gap:8px;align-items:center;width:100%;min-width:0}
+#robot-tag-hops-v22 .tower-menu-player label{font-size:12px;font-weight:bold}
+#robot-tag-hops-v22 .tower-menu-player select{min-height:36px;min-width:0;background:#d9d0b6;color:#27291f;border:1px solid #645d47;padding:5px;width:100%}
+#robot-tag-hops-v22 #menu-bank{margin:0;min-width:0;font-size:13px;font-weight:700;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+#robot-tag-hops-v22 #menu-bank .currency-counter{justify-content:flex-end}
+#robot-tag-hops-v22 :is(#launch-tower,#tower-reset,#launch-totalizator){width:100%;padding:12px;background:#4b422d;color:#f3deae;border:1px solid #31291c;cursor:pointer;font-weight:bold}
 #robot-tag-hops-v22 #tower-reset{background:transparent;color:#393b30;padding:5px;font-size:11px}
 #robot-tag-hops-v22 #launch-totalizator{margin-top:12px}
 #robot-tag-hops-v22 #tower-controls[hidden]{display:none}
@@ -24,7 +26,7 @@
 #robot-tag-hops-v22 #tower-wallet{font-size:12px;color:#eee2bf}
 #robot-tag-hops-v22 #tower-wallet[hidden]{display:none}
 
-#robot-tag-hops-v22 #menu-tower-progress{grid-column:1/-1;margin:0;font-size:12px;font-weight:bold;color:#4b422d}
+#robot-tag-hops-v22 #menu-tower-progress{width:100%;margin:0;font-size:12px;font-weight:bold;color:#4b422d;text-align:center}
 #robot-tag-hops-v22 #tower-floor-preview{display:flex;align-items:center;gap:14px;padding:12px;margin:8px 0 14px;border:1px solid #8c7954;background:#bba67b33}
 #robot-tag-hops-v22 #tower-floor-preview svg{width:76px;height:76px;flex:none;fill:#493b2a;stroke:#9a5a32;stroke-width:2}
 #robot-tag-hops-v22 #tower-floor-preview .arena-obstacle{fill:#bf8851}
@@ -82,3 +84,7 @@
 #robot-tag-hops-v22 .tower-player-wallet[hidden]{display:none!important}
 #robot-tag-hops-v22 .tower-player-name{min-width:0;overflow-wrap:anywhere}
 #robot-tag-hops-v22 .tower-player-bank{font-weight:700;white-space:nowrap}
+
+/* New game is a destructive reset; visually distinguish it from mode selection. */
+#robot-tag-hops-v22 #launch-setup.is-new-game{background:#843d29;color:#f5e6c5;border-color:#5b2d21;font-weight:700}
+#robot-tag-hops-v22 #launch-setup.is-new-game:hover{background:#a55330;color:#fff5d9}
