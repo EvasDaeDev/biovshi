@@ -14,6 +14,7 @@ export function resultPatientStatus(robot, isWinner = false) {
 export function showResults() {
   if (!ctx.combat.finished || !ctx.resultsPanel.hidden) return;
   if(ctx.mode==='tower'){renderBattleStatistics();towerResults();return;}
+  ctx.root.querySelector('#tower-results-player').hidden=true;
   const winner = ctx.combat.winner;
   const names=betWinnerNames(ctx.betting,winner);
   ctx.resultsTitle.innerHTML=winner===null?'НИЧЬЯ — НЕТ ПОБЕДИТЕЛЯ':`ПОБЕДИТЕЛЬ — ${patientName(winner)}${names==='—'?'':' ('+ctx.betEscape(names)+')'}`;

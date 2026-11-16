@@ -136,11 +136,21 @@ test('policy validation rejects impossible checkpoint skills, levels and prices'
 test('preparation replaces Menu with grey priced DMS, turns green after buying, and reports insured defeat',()=>{
  const f=startBossScenario({floor:5});
  try{
-  towerPreparation();const button=document.querySelector('#tower-insurance');assert.equal(document.querySelector('#tower-prep-menu'),null);assert.match(button.textContent,/ДМС.*50/);assert.equal(button.classList.contains('is-active'),false);
-  button.click();assert.equal(f.session.players[0].balance,950);assert.match(button.textContent,/ДМС.*ЭТАЖ 5/);assert.ok(button.classList.contains('is-active'));assert.ok(button.disabled);
+  towerPreparation();const button=document.querySelector('#tower-insurance'),wallet=document.querySelector('#tower-prep-name');
+  assert.equal(wallet.querySelector('.tower-player-name').textContent,'Игрок');
+  assert.match(wallet.querySelector('.tower-player-bank').textContent,/1\s*000/);
+  assert.equal(document.querySelector('#tower-prep-menu'),null);assert.match(button.textContent,/ДМС.*50/);assert.equal(button.classList.contains('is-active'),false);
+  button.click();assert.equal(f.session.players[0].balance,950);
+  assert.match(wallet.querySelector('.tower-player-bank').textContent,/950/,'balance updates after DMS purchase');
+  assert.match(button.textContent,/ДМС.*ЭТАЖ 5/);assert.ok(button.classList.contains('is-active'));assert.ok(button.disabled);
   button.click();towerPreparation();assert.equal(f.session.insuranceSpent,50);assert.match(button.textContent,/ЭТАЖ 5/);
   document.querySelector('#tower-fight').click();advanceStartup(10);ctx.combat.winner=1;ctx.combat.finished=true;settleTower(1);towerResults();
-  assert.equal(towerFor(f.session,0).level,5);assert.equal(towerFor(f.session,0).insurance.checkpoint,null);assert.match(ctx.resultsSummary.textContent,/ДМС сработала/);assert.match(ctx.resultsAgain.textContent,/ДМС.*5/);assert.ok(bettingLoad());
+  assert.equal(towerFor(f.session,0).level,5);assert.equal(towerFor(f.session,0).insurance.checkpoint,null);
+  const resultWallet=document.querySelector('#tower-results-player');
+  assert.equal(resultWallet.hidden,false);assert.equal(resultWallet.querySelector('.tower-player-name').textContent,'Игрок');
+  assert.match(resultWallet.querySelector('.tower-player-bank').textContent,/950/);
+  assert.doesNotMatch(document.querySelector('#bet-result-summary').textContent,/БАНК:/,'bank is not duplicated below artifacts');
+  assert.match(ctx.resultsSummary.textContent,/ДМС сработала/);assert.match(ctx.resultsAgain.textContent,/ДМС.*5/);assert.ok(bettingLoad());
   towerPreparation();assert.match(button.textContent,/ДМС.*55/);assert.equal(button.classList.contains('is-active'),false);
  }finally{f.close();}
 });

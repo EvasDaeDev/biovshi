@@ -17,6 +17,13 @@ import {arenaDiagram} from '../game/arenas.js';
 import {artifactCollectionMarkup} from './artifact-ui.js';
 import {formatChips} from '../ui/currency.js';
 
+function renderTowerPlayerWallet(target){
+  const player=ctx.betting.players[ctx.towerPlayer];
+  const name=document.createElement('span');name.className='tower-player-name';name.textContent=player.name;
+  const bank=document.createElement('span');bank.className='tower-player-bank';bank.innerHTML=`БАНК: ${formatChips(player.balance)}`;
+  target.replaceChildren(name,bank);
+}
+
 export function refreshMenu(){
   const s=ctx.betting,select=ctx.root.querySelector('#menu-player');
   ctx.menuPlayer=s?.players[s.towerPlayerId]?.id??s?.players[0]?.id??0;
@@ -53,7 +60,7 @@ export function towerPreparation(){
   panel.hidden=false;const title=ctx.root.querySelector('#tower-prep-title');
   title.classList.toggle('boss-floor-title',hasBoss(t));
   title.textContent=hasBoss(t)?`${bossName(t.level)}\nЭТАЖ №${t.level}`:`БАШНЯ · ЭТАЖ ${t.level}`;
-  ctx.root.querySelector('#tower-prep-name').textContent=ctx.betting.players[ctx.towerPlayer].name;
+  renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
   ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(bossFloorReward(t))} ${hasBoss(t)?'ЗА БОССА · '+formatChips(10)+' ЗА ПАЦИЕНТА · ВСЕ ПРОТИВ ВСЕХ':'ЗА ЛИЧНОЕ ВЫБИВАНИЕ'}</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div>`;
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   function renderSkills(){
@@ -85,7 +92,7 @@ export function towerPreparation(){
     if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
     try{
       const renewal=Boolean(t.insurance.checkpoint);
-      buyTowerInsurance(ctx.betting,ctx.towerPlayer);bettingSave();renderInsurance();updateTowerHud();
+      buyTowerInsurance(ctx.betting,ctx.towerPlayer);bettingSave();renderInsurance();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));updateTowerHud();
       ctx.root.querySelector('#tower-prep-error').textContent=renewal?`ДМС продлена: этаж ${t.level} и текущие навыки застрахованы.`:'ДМС оформлена: этаж и навыки застрахованы.';
     }
     catch(error){ctx.root.querySelector('#tower-prep-error').textContent=error.message;}
@@ -126,12 +133,14 @@ export function towerResults(){
   ctx.resultsTitle.textContent=won?`ЭТАЖ ${o.floor} ПРОЙДЕН`:`ПРОЙДЕНО ЭТАЖЕЙ: ${o.cleared}`;
   ctx.resultsSummary.textContent=won?`Получено +1 очко навыков. Далее — этаж ${t.level}, противников: ${towerEnemyCount(t)}.`:`${o.reason??'Поражение'} на этаже ${o.floor}. ${o.insuranceFloor?`ДМС сработала: возврат на этаж ${o.insuranceFloor} с застрахованными навыками. Страховка использована.`:'Заработанные монеты сохранены.'}`;
   const coins=o.floorCoins??0;
+  const resultWallet=ctx.root.querySelector('#tower-results-player');
+  renderTowerPlayerWallet(resultWallet);resultWallet.hidden=false;
   ctx.root.querySelector('#bet-result-summary').innerHTML=`<div class="tower-run-summary${o.newRecord?' is-record':''}">
     ${o.newRecord?'<strong class="tower-record-banner">НОВЫЙ ЛИЧНЫЙ РЕКОРД!</strong>':''}
     ${won&&o.cleared%5===0?`<strong class="tower-milestone">РУБЕЖ: ${o.cleared} ЭТАЖЕЙ</strong>`:''}
     <div class="tower-result-numbers"><div><strong>${o.cleared}</strong><span>ЭТАЖЕЙ ПРОЙДЕНО</span></div><div><strong>${o.record}</strong><span>ЛИЧНЫЙ РЕКОРД</span></div><div><strong>${formatChips(coins)}</strong><span>МОНЕТ ЗА ЭТАЖ</span></div></div>
     ${artifactCollectionMarkup(t.artifacts,o.artifact,o.artifactBonus)}
-    <p>БАНК: ${formatChips(ctx.betting.players[ctx.towerPlayer].balance)}${o.runKills==null?'':` · ЛИЧНЫХ ПОБЕД: ${o.runKills}`}</p>
+    ${o.runKills==null?'':`<p>ЛИЧНЫХ ПОБЕД: ${o.runKills}</p>`}
   </div>`;
   ctx.resultsAgain.textContent=won?`НА ЭТАЖ ${t.level}`:o.insuranceFloor?`ДМС · НА ЭТАЖ ${t.level}`:'НОВАЯ ПОПЫТКА · ЭТАЖ 1';
   ctx.resultsAgain.onclick=()=>ctx.startTower(ctx.towerPlayer);

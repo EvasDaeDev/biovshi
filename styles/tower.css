@@ -76,3 +76,9 @@
 #robot-tag-hops-v22 #tower-insurance{background:#4b4b43;color:#eee2bf;white-space:nowrap}
 #robot-tag-hops-v22 #tower-insurance.is-active{background:#405d35;border-color:#2d4326;color:#f3efd9;opacity:1;cursor:default}
 #robot-tag-hops-v22 #tower-insurance.is-active:enabled{cursor:pointer}
+
+/* Bank and player name occupy the same header line on both tower dialogs. */
+#robot-tag-hops-v22 .tower-player-wallet{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:5px 16px;margin:0 0 10px;padding:0 0 7px;border-bottom:1px solid #a58c60;font-size:14px;line-height:1.4;font-variant-numeric:tabular-nums}
+#robot-tag-hops-v22 .tower-player-wallet[hidden]{display:none!important}
+#robot-tag-hops-v22 .tower-player-name{min-width:0;overflow-wrap:anywhere}
+#robot-tag-hops-v22 .tower-player-bank{font-weight:700;white-space:nowrap}
