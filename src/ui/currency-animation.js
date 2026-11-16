@@ -86,3 +86,21 @@ export function trackPlayerBalances(session,root){
  paint(now);
  if(changes.size)schedule();
 }
+
+/**
+ * Restart a display-only animation when its result screen is finally visible.
+ * The ledger and saved balances are never modified.
+ */
+export function replayPlayerBalanceChanges(session,transitions,root){
+ trackPlayerBalances(session,root);
+ if(!session||session!==currentSession||!Array.isArray(transitions))return;
+ const now=Date.now();
+ for(const {id,from,to} of transitions){
+  if(!Number.isInteger(id)||!Number.isSafeInteger(from)||!Number.isSafeInteger(to)
+   ||from<0||from===to||session.players?.[id]?.balance!==to)continue;
+  if(!reducedMotion())changes.set(id,{from,to,started:now});
+  else changes.delete(id);
+ }
+ paint(now);
+ if(changes.size)schedule();
+}

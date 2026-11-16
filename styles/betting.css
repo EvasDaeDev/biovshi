@@ -95,3 +95,38 @@
  #robot-tag-hops-v22 .currency-counter{transition:none}
  #robot-tag-hops-v22 .currency-counter:is(.is-credit,.is-debit){animation:none}
 }
+
+/* Temporary stake receipt stays visible as the betting sheet closes.
+   All amounts are rendered and animated by the shared currency module. */
+#robot-tag-hops-v22 #bet-currency-fx[hidden]{display:none!important}
+#robot-tag-hops-v22 #bet-currency-fx{
+ position:fixed;left:50%;top:clamp(60px,10vh,100px);z-index:950;
+ transform:translateX(-50%);width:min(94vw,660px);box-sizing:border-box;
+ pointer-events:none;max-height:55vh;
+}
+#robot-tag-hops-v22 .bet-currency-fx-sheet{
+ display:grid;grid-template-columns:repeat(auto-fit,minmax(136px,1fr));
+ gap:6px;padding:9px;background:#211f17ee;border:1px solid #b08b53;
+ box-shadow:0 9px 25px #0009;max-height:55vh;overflow:hidden;
+ animation:bet-currency-appear 1.15s both;
+}
+#robot-tag-hops-v22 .bet-currency-fx-row{
+ display:flex;flex-direction:column;justify-content:center;align-items:center;
+ min-width:0;gap:3px;padding:5px 7px;
+ background:#12160e;border:1px solid #5f553c;
+ color:#e8d3a4;font-size:12px;text-align:center;
+}
+#robot-tag-hops-v22 .bet-currency-fx-row>span{
+ display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+#robot-tag-hops-v22 .bet-currency-fx-row strong{font-size:12px;white-space:nowrap}
+#robot-tag-hops-v22 .bet-currency-fx-row .currency-counter{font-size:16px}
+@keyframes bet-currency-appear{
+ 0%{opacity:0;transform:translateY(-9px)}
+ 10%{opacity:1;transform:translateY(0)}
+ 78%{opacity:1;transform:translateY(0)}
+ 100%{opacity:0;transform:translateY(-5px)}
+}
+@media(prefers-reduced-motion:reduce){
+ #robot-tag-hops-v22 .bet-currency-fx-sheet{animation:none}
+}

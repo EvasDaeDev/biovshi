@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
-import {playerBalanceMarkup,counterValue,trackPlayerBalances,COUNTER_DURATION_MS} from '../src/ui/currency-animation.js';
+import {playerBalanceMarkup,counterValue,trackPlayerBalances,replayPlayerBalanceChanges,COUNTER_DURATION_MS} from '../src/ui/currency-animation.js';
 
 test('counter easing is bounded, fast and stops at the exact integer amount',()=>{
  assert.equal(counterValue(1000,800,0),1000);
@@ -41,5 +41,30 @@ test('all player windows reflect independent credits and debits without changing
   assert.equal(root.querySelector('[data-player-balance="0"]').dataset.balanceTarget,'450');
  }finally{
   globalThis.requestAnimationFrame=priorRAF;globalThis.cancelAnimationFrame=priorCancel;dom.window.close();
+ }
+});
+
+test('late results can replay credits without changing session balances',()=>{
+ const dom=new JSDOM('<main id="root"></main>',{url:'https://late-receipt.test/',pretendToBeVisual:true});
+ const priorRAF=globalThis.requestAnimationFrame,priorCancel=globalThis.cancelAnimationFrame;
+ const priorNow=Date.now;let now=1000;
+ globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
+ Date.now=()=>now;
+ try{
+  const root=dom.window.document.querySelector('#root');
+  const session={players:[{id:0,name:'Первый',balance:80},{id:1,name:'Второй',balance:60}]};
+  root.innerHTML=playerBalanceMarkup(0,80)+playerBalanceMarkup(1,60);
+  trackPlayerBalances(session,root);
+  session.players[0].balance=125;trackPlayerBalances(session,root);
+  now+=4000;
+  root.innerHTML=playerBalanceMarkup(0,125)+playerBalanceMarkup(1,60);
+  assert.equal(root.querySelector('[data-player-balance="0"]').classList.contains('is-credit'),false);
+  replayPlayerBalanceChanges(session,[{id:0,from:80,to:125}],root);
+  assert.equal(root.querySelector('[data-player-balance="0"]').classList.contains('is-credit'),true);
+  assert.equal(root.querySelector('[data-player-balance="1"]').classList.contains('is-credit'),false);
+  assert.deepEqual(session.players.map(p=>p.balance),[125,60]);
+ }finally{
+  Date.now=priorNow;globalThis.requestAnimationFrame=priorRAF;
+  globalThis.cancelAnimationFrame=priorCancel;dom.window.close();
  }
 });

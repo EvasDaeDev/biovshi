@@ -7,7 +7,7 @@ import {COIN_ICON} from '../ui/currency.js';
 import {cleanFloor} from '../render/floor-history.js';
 import {garageOpen} from '../garage/ui.js';
 import { ctx } from "../game/state.js";
-import {playerBalanceMarkup} from "../ui/currency-animation.js";
+import {playerBalanceMarkup,replayPlayerBalanceChanges} from "../ui/currency-animation.js";
 import { betCommit, betNewSession, betRefund, betResolve, betAddPlayer, betOdds, jackpotStatus, STARTING_CAPITAL } from "./ledger.js";
 import { bettingLoad, bettingSave } from "./storage.js";
 import { startSpawnSequence } from "../game/session.js";
@@ -82,6 +82,24 @@ export function bettingSetup() {
   };
   count.focus();
 }
+
+function showStakeCurrencyFeedback(debits){
+ const receipt=ctx.root.querySelector('#bet-currency-fx');
+ if(!receipt)return;
+ if(receipt._hideTimer){clearTimeout(receipt._hideTimer);receipt._hideTimer=null;}
+ if(!debits.length){receipt.hidden=true;receipt.replaceChildren();return;}
+ // The betting sheet is closed for combat. Retain the same counters in a
+ // temporary, noninteractive receipt above the arena.
+ replayPlayerBalanceChanges(ctx.betting,debits,ctx.root);
+ receipt.innerHTML='<div class="bet-currency-fx-sheet">'+debits.map(({id,to})=>
+  '<div class="bet-currency-fx-row"><span>'+ctx.betEscape(ctx.betting.players[id].name)+'</span>'+
+  '<strong>СТАВКА · '+playerBalanceMarkup(id,to)+'</strong></div>').join('')+'</div>';
+ receipt.hidden=false;
+ receipt._hideTimer=setTimeout(()=>{
+  receipt.hidden=true;receipt.replaceChildren();receipt._hideTimer=null;
+ },1150);
+}
+
 export function bettingHud() {
   if (!ctx.betting) {
     ctx.betHud.hidden = true;
@@ -205,6 +223,7 @@ export function bettingOpen() {
     if (!stakesForm.reportValidity()) return;
     const draft=bettingReadDraft();
     e.currentTarget.disabled=true;
+    const balancesBefore=ctx.betting.players.map(p=>p.balance);
     try {
       const arenaId=ctx.selectedArenaId??ctx.arenaId??'ward';
       if(arenaId!==ctx.arenaId){if(!ctx.switchArena)throw Error('Подготовка арены недоступна.');await ctx.switchArena(arenaId);}
@@ -218,6 +237,8 @@ export function bettingOpen() {
     bettingHud();
     ctx.betOverlay.hidden = true;
     ctx.betNotice = '';
+    showStakeCurrencyFeedback(ctx.betting.players.flatMap((p,i)=>
+      p.balance<balancesBefore[i]?[{id:p.id,from:balancesBefore[i],to:p.balance}]:[]));
     startSpawnSequence();
   };
   if(ctx.betDraft?.session===ctx.betting&&ctx.betDraft.round===ctx.betting.round){

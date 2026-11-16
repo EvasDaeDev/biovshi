@@ -7,6 +7,7 @@ import {initializeGame} from '../src/game/initialize.js';
 import {betNewSession,betCommit,betResolve,betOdds} from '../src/betting/ledger.js';
 import {bettingOpen,bettingPreview,bettingHud,bettingResults} from '../src/betting/ui.js';
 import {bettingSave,bettingLoad} from '../src/betting/storage.js';
+import {showResults} from '../src/ui/results.js';
 
 function setup(){
   const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://betting.test/',pretendToBeVisual:true});
@@ -84,4 +85,39 @@ test('jackpot progress and bonus receipts survive reload, and malformed rollback
   ctx.betting.roundSnapshot.garage[0].investments={'99':10};bettingSave();
   assert.equal(bettingLoad(),null);
  }finally{close(dom);}
+});
+
+test('committing bets shows debits above arena and delayed results replay winnings',()=>{
+ const dom=setup();
+ const previousNow=Date.now;let now=1000;Date.now=()=>now;
+ try{
+  bettingOpen();
+  for(const b of draft){
+   const row=ctx.betContent.querySelector('[data-bet-player="'+b.player+'"]');
+   row.querySelector('input').value=String(b.amount);
+   row.querySelector('select').value=String(b.robot);
+  }
+  ctx.betContent.querySelector('#bet-fight').click();
+  assert.equal(ctx.betting.phase,'running');
+  assert.equal(ctx.betOverlay.hidden,true);
+  const receipt=ctx.root.querySelector('#bet-currency-fx');
+  assert.equal(receipt.hidden,false);
+  assert.equal(receipt.querySelectorAll('.is-debit').length,2);
+  assert.deepEqual([...receipt.querySelectorAll('[data-player-balance]')]
+   .map(n=>Number(n.dataset.balanceTarget)),[60,60]);
+  assert.deepEqual(ctx.betting.players.map(p=>p.balance),[60,60]);
+
+  const outcome=betResolve(ctx.betting,0);
+  bettingSave();
+  now+=4000;
+  ctx.combat.finished=true;ctx.combat.winner=0;
+  showResults();
+  assert.equal(ctx.resultsPanel.hidden,false);
+  const winner=ctx.root.querySelector('#bet-result-summary tbody tr:first-child [data-player-balance]');
+  const loser=ctx.root.querySelector('#bet-result-summary tbody tr:nth-child(2) [data-player-balance]');
+  assert.equal(winner.dataset.balanceTarget,String(outcome.rows[0].balance));
+  assert.equal(winner.classList.contains('is-credit'),true);
+  assert.equal(loser.classList.contains('is-credit'),false);
+  assert.equal(ctx.betting.players[0].balance,outcome.rows[0].balance);
+ }finally{Date.now=previousNow;close(dom);}
 });

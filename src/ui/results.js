@@ -3,6 +3,7 @@ import {patientName} from './patient.js';
 import { ctx } from "../game/state.js";
 import { betWinnerNames } from "../betting/ledger.js";
 import { bettingResults } from "../betting/ui.js";
+import {replayPlayerBalanceChanges} from "./currency-animation.js";
 // A knocked-out patient keeps the head and accumulated progress; a dead one
 // has lost the head. Do not infer both outcomes from the mobile flag alone.
 export function resultPatientStatus(robot, isWinner = false) {
@@ -22,6 +23,9 @@ export function showResults() {
   renderBattleStatistics();
   bettingResults();
   ctx.resultsPanel.hidden = false;
+  // Combat pays out immediately but the results sheet opens seconds later.
+  replayPlayerBalanceChanges(ctx.betting,ctx.betting?.lastResult?.rows.flatMap((p,id)=>
+    p.payout>0?[{id,from:p.balance-p.payout,to:p.balance}]:[])??[],ctx.root);
   ctx.resultsAgain.focus?.();
 }
 // Both modes expose the same completed battle totals and per-patient rows.
