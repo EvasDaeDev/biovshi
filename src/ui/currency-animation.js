@@ -8,7 +8,14 @@ export function counterValue(from,to,progress){
  return Math.round(from+(to-from)*(1-(1-t)**3));
 }
 export function playerBalanceMarkup(id,balance){
- return '<span class="currency-counter" data-player-balance="'+Number(id)+'" data-balance-target="'+Number(balance)+'"><span class="currency-counter-value">'+pretty(balance)+'</span> '+COIN_ICON+'</span>';
+ // Re-rendered windows join an in-flight animation immediately, without
+ // waiting for MutationObserver's next microtask or the next animation frame.
+ const now=Date.now(),change=changes.get(Number(id));
+ const active=Boolean(change&&change.to===balance&&currentSession?.players?.[Number(id)]?.balance===balance
+  &&now<change.started+COUNTER_DURATION_MS&&!reducedMotion());
+ const kind=active?(change.to>change.from?' is-credit':' is-debit'):'';
+ const amount=active?valueAt(change,now):balance;
+ return '<span class="currency-counter'+kind+'" data-player-balance="'+Number(id)+'" data-balance-target="'+Number(balance)+'"><span class="currency-counter-value">'+pretty(amount)+'</span> '+COIN_ICON+'</span>';
 }
 let currentSession=null,previousBalances=new Map(),changes=new Map();
 let boundRoot=null,observer=null,frameId=null;

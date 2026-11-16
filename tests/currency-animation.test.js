@@ -31,6 +31,8 @@ test('all player windows reflect independent credits and debits without changing
   session.players[1].balance=1513;trackPlayerBalances(session,root);
   assert.ok(root.querySelector('[data-player-balance="1"]').classList.contains('is-credit'));
   root.querySelector('#tower').innerHTML=playerBalanceMarkup(0,850);
+  assert.ok(root.querySelector('#tower .currency-counter').classList.contains('is-debit'),
+    'new wallets immediately inherit the active debit without a microtask');
   trackPlayerBalances(session,root);
   assert.ok(root.querySelector('#tower .currency-counter').classList.contains('is-debit'));
   const fresh={players:[{id:0,name:'Игрок 1',balance:450}]};
