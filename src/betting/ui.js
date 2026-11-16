@@ -149,9 +149,7 @@ export function bettingOpen() {
   bettingHud();
   ctx.selectedArenaId=ctx.betting.arenaId??ctx.arenaId??'ward';
   ctx.betContent.innerHTML = `${ctx.betNotice ? `<p class="bet-muted">${ctx.betEscape(ctx.betNotice)}</p>` : ''}
- <p class="bet-muted">Выберите пациента для каждого игрока и сумму. Ставка 0 — пропустить раунд.</p>
  <p>Ставки раунда: <strong id="bet-bank">0</strong> · Накопленный джекпот: <strong>${ctx.betFormat(ctx.betting.jackpot)}</strong></p>
- <p class="bet-muted" data-jackpot-status>${jackpotStatus(ctx.betting)}</p>
  <div class="bet-pools">${ctx.BET_COLORS.map((c, i) => `<div class="bet-pool" style="--fighter:${c}"><strong>${patientName(i,{short:true})}</strong><small>${skillSummary(ctx.betting.garage?.[i]?.stats,ctx.betting.garage?.[i]?.prosthetics)}</small><span id="bet-pool-${i}"></span><small id="bet-odds-${i}"></small></div>`).join('')}</div>
  <form id="bet-stakes-form"><div class="bet-table-wrap"><table class="bet-table"><thead><tr><th>Игрок <button id="bet-add-player" class="bet-top-up bet-add-player" type="button" aria-label="Добавить игрока" title="Добавить игрока" ${ctx.betting.players.length>=16?'disabled':''}>+</button></th><th>Баланс</th><th>Пациент</th><th>Ставка</th><th>Останется</th></tr></thead><tbody>
  ${ctx.betting.players.map(bettingPlayerRow).join('')}
@@ -159,8 +157,6 @@ export function bettingOpen() {
  <div id="bet-error" class="bet-error" role="status"></div>
  <details class="bet-rules"><summary>Как считается выигрыш · коэффициенты предварительные</summary><p class="bet-muted">Коэффициенты предварительные и включают возврат ставки; итоговая выплата округляется вниз до целых фишек. Победители получают свои ставки и делят 85% проигравших ставок пропорционально своим ставкам. 15% и остатки округления пополняют джекпот. Нет ставок на победителя — все ставки в джекпот. Ничья / отмена — полный возврат ставок. Джекпот сохраняется отдельно. ${jackpotStatus(ctx.betting)}</p></details>
  ${ctx.betting.players.every(p => p.balance === 0) ? '<p class="bet-muted" data-empty-balances>У всех закончились фишки. Можно заработать монеты в башне или смотреть бои без ставок.</p>' : ''}
- <button id="bet-new" type="button" class="bet-secondary">НОВАЯ ИГРА</button>
- <button id="bet-menu" type="button" class="bet-secondary">В МЕНЮ</button>
  <div class="bet-actions"><button id="bet-procedure" type="button">В ПРОЦЕДУРНУЮ</button>${arenaPicker(ctx.selectedArenaId)}<button id="bet-fight" class="bet-primary" type="button"></button></div>
  <p class="bet-muted">${bettingStorageNote()}</p></form>
  ${ctx.betting.history.length ? `<details><summary>История раундов (${ctx.betting.history.length})</summary>${ctx.betting.history.map(r => `<p class="bet-muted">Раунд ${Number(r.round)} · ${r.winner === null ? 'ничья' : 'победитель ' + patientName(r.winner)} · ставки ${ctx.betFormat(Number(r.stakes ?? r.bank))}</p>`).join('')}</details>` : ''}`;
@@ -190,8 +186,6 @@ export function bettingOpen() {
     }catch(error){ctx.betContent.querySelector('#bet-error').textContent=error.message;}
   };
   ctx.betContent.querySelector('#bet-procedure').onclick=()=>{ctx.betDraft={session:ctx.betting,round:ctx.betting.round,bets:bettingReadDraft(),arenaId:ctx.selectedArenaId};garageOpen();};
-  ctx.betContent.querySelector('#bet-new').onclick = bettingSetup;
-  ctx.betContent.querySelector('#bet-menu').onclick=()=>{ctx.betDraft={session:ctx.betting,round:ctx.betting.round,bets:bettingReadDraft(),arenaId:ctx.selectedArenaId};ctx.openMainMenu();};
   ctx.betContent.querySelector('#bet-stakes-form').oninput = bettingPreview;
   const stakesForm = ctx.betContent.querySelector('#bet-stakes-form');
   stakesForm.onsubmit = e => e.preventDefault();

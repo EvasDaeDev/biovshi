@@ -248,3 +248,12 @@ test('phone field uses logical layout sizes even if Safari reports unscaled clie
  ctx.root.__disposeTag();dom.window.close();
 });
 
+
+test('the arena Settings button has a clear layer above betting dimming and below Settings',()=>{
+ const tower=fs.readFileSync(new URL('../styles/tower.css',import.meta.url),'utf8');
+ assert.match(tower,/#robot-tag-hops-v22 #arena-settings-button\s*\{position:relative;z-index:1150\}/);
+ const waste=fs.readFileSync(new URL('../styles/wasteland.css',import.meta.url),'utf8');
+ assert.match(waste,/\.bet-overlay\s*\{position:fixed;inset:0;z-index:1100/);
+ const ui=fs.readFileSync(new URL('../styles/interface.css',import.meta.url),'utf8');
+ assert.match(ui,/\.settings-overlay\s*\{position:fixed;inset:0;z-index:1200/);
+});

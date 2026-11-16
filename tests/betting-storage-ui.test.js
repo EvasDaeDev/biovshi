@@ -22,6 +22,23 @@ function setup(){
 function close(dom){ctx.root.__disposeTag();dom.window.close();}
 const draft=[{player:0,robot:0,amount:20},{player:1,robot:1,amount:40}];
 
+test('wagering window omits auxiliary notes and duplicate navigation, retaining round amounts and rules',()=>{
+ const dom=setup();
+ try{
+  bettingOpen();
+  const content=ctx.betContent,trigger=ctx.root.querySelector('#arena-settings-button');
+  assert.equal(content.querySelector('#bet-new'),null);
+  assert.equal(content.querySelector('#bet-menu'),null);
+  assert.equal(content.querySelector('[data-jackpot-status]'),null);
+  assert.doesNotMatch(content.textContent,/Выберите пациента для каждого игрока и сумму/);
+  assert.match(content.textContent,/Ставки раунда/);
+  assert.match(content.textContent,/Накопленный джекпот/);
+  assert.match(content.querySelector('.bet-rules').textContent,/Коэффициенты предварительные/);
+  assert.equal(ctx.betOverlay.hidden,false);
+  assert.equal(trigger.disabled,false);
+ }finally{close(dom);}
+});
+
 test('preview, fight HUD and results keep the jackpot separate from stakes and odds',()=>{
   const dom=setup();try{
     bettingOpen();
@@ -80,7 +97,7 @@ test('jackpot progress and bonus receipts survive reload, and malformed rollback
   ctx.betting=bettingLoad();assert.ok(ctx.betting);
   assert.equal(ctx.betting.jackpotRounds,0);assert.equal(ctx.betting.lastResult.jackpotPaid,5);
   bettingResults();assert.match(document.querySelector('#bet-result-summary').textContent,/Выплачено из джекпота: 5/);
-  bettingOpen();assert.match(ctx.betContent.querySelector('[data-jackpot-status]').textContent,/через 5/);
+  bettingOpen();assert.match(ctx.betContent.querySelector('.bet-rules').textContent,/через 5/);
   betCommit(ctx.betting,draft);
   ctx.betting.roundSnapshot.garage[0].investments={'99':10};bettingSave();
   assert.equal(bettingLoad(),null);
