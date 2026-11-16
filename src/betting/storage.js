@@ -2,6 +2,7 @@ import {ARENAS} from '../game/arenas.js';
 import {validTower,normalizeTower} from '../tower/model.js';
 import {newGarage,validStats,normalizePatronage,normalizePatient} from '../garage/model.js';
 import { ctx } from "../game/state.js";
+import {trackPlayerBalances} from "../ui/currency-animation.js";
 import { betRefund, JACKPOT_INTERVAL } from "./ledger.js";
 
 function validateGarage(s, garage) {
@@ -26,6 +27,7 @@ export function bettingSave() {
   } catch {
     ctx.betStorageAvailable = false;
   }
+  trackPlayerBalances(ctx.betting,ctx.root);
 }
 export function bettingLoad() {
   try {

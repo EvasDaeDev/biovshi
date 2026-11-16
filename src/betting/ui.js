@@ -7,6 +7,7 @@ import {COIN_ICON} from '../ui/currency.js';
 import {cleanFloor} from '../render/floor-history.js';
 import {garageOpen} from '../garage/ui.js';
 import { ctx } from "../game/state.js";
+import {playerBalanceMarkup} from "../ui/currency-animation.js";
 import { betCommit, betNewSession, betRefund, betResolve, betAddPlayer, betOdds, jackpotStatus, STARTING_CAPITAL } from "./ledger.js";
 import { bettingLoad, bettingSave } from "./storage.js";
 import { startSpawnSequence } from "../game/session.js";
@@ -98,7 +99,7 @@ export function bettingHud() {
     const bet = inRound ? ctx.betting.bets.find(b => b.player === p.id) : null;
     const color = bet ? ctx.BET_COLORS[bet.robot] : '#29485c';
     const stake = bet ? `Ставка: ${ctx.betFormat(bet.amount)} → ${patientName(bet.robot)}` : 'Без ставки';
-    return `<div class="bet-hud-player" style="--fighter:${color}"><div class="bet-hud-player-name">${ctx.betEscape(p.name)}</div><div class="bet-hud-player-balance">Баланс: <strong>${ctx.betFormat(p.balance)}</strong></div><div class="bet-hud-player-stake">${stake}</div></div>`;
+    return `<div class="bet-hud-player" style="--fighter:${color}"><div class="bet-hud-player-name">${ctx.betEscape(p.name)}</div><div class="bet-hud-player-balance">Баланс: <strong>${playerBalanceMarkup(p.id,p.balance)}</strong></div><div class="bet-hud-player-stake">${stake}</div></div>`;
   }).join('');
 }
 export function bettingReadDraft() {
@@ -130,7 +131,7 @@ export function bettingPreview() {
 }
 function bettingPlayerRow(p){
  const i=p.id;
- return `<tr data-bet-player="${i}"><td>${ctx.betEscape(p.name)}</td><td><span data-balance>${ctx.betFormat(p.balance)}</span></td><td><select class="patient-select" style="color:${ROBOT_COLORS[i%4]}" aria-label="Пациент — ${ctx.betEscape(p.name)}" ${p.balance === 0 ? 'disabled' : ''}>${['A', 'B', 'C', 'D'].map((r, j) => `<option style="color:${ROBOT_COLORS[j]}" value="${j}" ${j === i % 4 ? 'selected' : ''}>${r}</option>`).join('')}</select></td><td><div class="bet-stake-controls"><input aria-label="Ставка — ${ctx.betEscape(p.name)}" type="number" value="0" min="0" max="${p.balance}" step="1" required ${p.balance === 0 ? 'disabled' : ''}> ${COIN_ICON}<div class="bet-quick">${[[.25,'¼'],[.5,'½'],[1,'Всё']].map(([share,label])=>`<button type="button" data-share="${share}" aria-label="Ставка ${label} баланса — ${ctx.betEscape(p.name)}">${label}</button>`).join('')}</div></div></td><td data-remaining></td></tr>`;
+ return `<tr data-bet-player="${i}"><td>${ctx.betEscape(p.name)}</td><td><span data-balance>${playerBalanceMarkup(p.id,p.balance)}</span></td><td><select class="patient-select" style="color:${ROBOT_COLORS[i%4]}" aria-label="Пациент — ${ctx.betEscape(p.name)}" ${p.balance === 0 ? 'disabled' : ''}>${['A', 'B', 'C', 'D'].map((r, j) => `<option style="color:${ROBOT_COLORS[j]}" value="${j}" ${j === i % 4 ? 'selected' : ''}>${r}</option>`).join('')}</select></td><td><div class="bet-stake-controls"><input aria-label="Ставка — ${ctx.betEscape(p.name)}" type="number" value="0" min="0" max="${p.balance}" step="1" required ${p.balance === 0 ? 'disabled' : ''}> ${COIN_ICON}<div class="bet-quick">${[[.25,'¼'],[.5,'½'],[1,'Всё']].map(([share,label])=>`<button type="button" data-share="${share}" aria-label="Ставка ${label} баланса — ${ctx.betEscape(p.name)}">${label}</button>`).join('')}</div></div></td><td data-remaining></td></tr>`;
 }
 export function bettingOpen() {
   if (!ctx.betting) {
@@ -248,11 +249,11 @@ export function bettingResults() {
   }
   el.innerHTML = `<strong>ТОТАЛИЗАТОР · СТАВКИ РАУНДА ${ctx.betFormat(r.stakes ?? r.bank)}</strong><p>${ctx.betEscape(r.message)}</p>
  <div class="bet-table-wrap"><table class="bet-table"><thead><tr><th>Игрок</th><th>Ставка</th><th>Выплата</th><th title="Выплата минус ставка">Прибыль</th><th>Баланс</th></tr></thead><tbody>
- ${r.rows.map(p => {
+ ${r.rows.map((p,i) => {
     const net = p.payout - p.stake;
     const before=p.balance-net;
     const gain=p.payout>0?' bet-net-win':'';
-    return `<tr><td>${ctx.betEscape(p.name)}</td><td>${p.robot === null ? '—' : patientName(p.robot,{short:true}) + ' · ' + ctx.betFormat(p.stake)}</td><td class="${gain}">${ctx.betFormat(p.payout)}</td><td><span class="bet-net${net < 0 ? ' bet-net-loss' : net > 0 ? ' bet-net-win' : ''}">${net > 0 ? '+' : ''}${ctx.betFormat(net)}</span></td><td class="bet-balance-equation"><details><summary><strong>${ctx.betFormat(p.balance)}</strong></summary><span>${ctx.betFormat(before)}</span>${p.stake?` <span class="bet-net-loss">−${ctx.betFormat(p.stake)}</span>`:''}${p.payout?` <span class="bet-net-win">+${ctx.betFormat(p.payout)}</span>`:''} = <strong>${ctx.betFormat(p.balance)}</strong></details></td></tr>`;
+    return `<tr><td>${ctx.betEscape(p.name)}</td><td>${p.robot === null ? '—' : patientName(p.robot,{short:true}) + ' · ' + ctx.betFormat(p.stake)}</td><td class="${gain}">${ctx.betFormat(p.payout)}</td><td><span class="bet-net${net < 0 ? ' bet-net-loss' : net > 0 ? ' bet-net-win' : ''}">${net > 0 ? '+' : ''}${ctx.betFormat(net)}</span></td><td class="bet-balance-equation"><details><summary><strong>${playerBalanceMarkup(i,p.balance)}</strong></summary><span>${ctx.betFormat(before)}</span>${p.stake?` <span class="bet-net-loss">−${ctx.betFormat(p.stake)}</span>`:''}${p.payout?` <span class="bet-net-win">+${ctx.betFormat(p.payout)}</span>`:''} = <strong>${ctx.betFormat(p.balance)}</strong></details></td></tr>`;
   }).join('')}
  </tbody></table></div>${r.jackpotAdded !== undefined ? `<p>В джекпот за раунд: +${ctx.betFormat(r.jackpotAdded)}</p>` : ''}${r.jackpotPaid ? `<p class="bet-net-win">Выплачено из джекпота: ${ctx.betFormat(r.jackpotPaid)}</p>` : ''}<p>Накопленный джекпот: ${ctx.betFormat(r.jackpot)}</p>`;
 }

@@ -16,11 +16,12 @@ import {SKILLS,skillHintAttributes} from '../ui/patient.js';
 import {arenaDiagram} from '../game/arenas.js';
 import {artifactCollectionMarkup} from './artifact-ui.js';
 import {formatChips} from '../ui/currency.js';
+import {playerBalanceMarkup} from '../ui/currency-animation.js';
 
 function renderTowerPlayerWallet(target){
   const player=ctx.betting.players[ctx.towerPlayer];
   const name=document.createElement('span');name.className='tower-player-name';name.textContent=player.name;
-  const bank=document.createElement('span');bank.className='tower-player-bank';bank.innerHTML=`БАНК: ${formatChips(player.balance)}`;
+  const bank=document.createElement('span');bank.className='tower-player-bank';bank.innerHTML=`БАНК: ${playerBalanceMarkup(player.id,player.balance)}`;
   target.replaceChildren(name,bank);
 }
 
@@ -31,7 +32,7 @@ export function refreshMenu(){
   for(const p of s?.players??[]){const option=document.createElement('option');option.value=p.id;option.textContent=p.name;option.selected=p.id===ctx.menuPlayer;select.append(option);}
   select.disabled=!s;
   const t=s?towerFor(s,ctx.menuPlayer):null;
-  ctx.root.querySelector('#menu-bank').innerHTML=s?`БАНК: ${formatChips(s.players[ctx.menuPlayer].balance)}`:'Создайте игроков для обоих режимов';
+  ctx.root.querySelector('#menu-bank').innerHTML=s?`БАНК: ${playerBalanceMarkup(ctx.menuPlayer,s.players[ctx.menuPlayer].balance)}`:'Создайте игроков для обоих режимов';
   ctx.root.querySelector('#launch-tower').textContent=`РЕЖИМ БАШНЯ · ЭТАЖ ${t?.level??1}`;
   ctx.root.querySelector('#menu-tower-progress').textContent=`ПРОЙДЕНО: ${t?.wins??0} · РЕКОРД: ${t?.record??0}`;
   ctx.root.querySelector('#tower-reset').disabled=!s;
@@ -108,7 +109,7 @@ export function towerPreparation(){
 export function updateTowerHud(){
   const count=ctx.ROBOT_COUNT-1,remaining=ctx.startup.phase==='running'?ctx.robots.filter(r=>r.id!==0&&r.mobile&&r.visible).length:count;
   const floor=ctx.towerRun.level;
-  ctx.root.querySelector('#tower-wallet').innerHTML=`${hasBoss(ctx.towerRun)?'':`ЭТАЖ ${floor} · ПРОТИВНИКОВ ${remaining}/${count} · `}БАНК ${formatChips(ctx.betting.players[ctx.towerPlayer].balance)}`;
+  ctx.root.querySelector('#tower-wallet').innerHTML=`${hasBoss(ctx.towerRun)?'':`ЭТАЖ ${floor} · ПРОТИВНИКОВ ${remaining}/${count} · `}БАНК ${playerBalanceMarkup(ctx.towerPlayer,ctx.betting.players[ctx.towerPlayer].balance)}`;
 }
 export function settleTower(winner){
   if(ctx.towerSettled)return;ctx.towerSettled=true;
