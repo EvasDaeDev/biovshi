@@ -53,7 +53,7 @@ test('a reused arena recolours rasterized ambient and obstacle lights without to
   assert.notEqual(ctx.ambientColor,first);
   assert.equal(ctx.ambientHue,180);
   assert.equal(applied,-180);
-  assert.equal(ctx.ambientGlowG.style.filter,'hue-rotate(-180.00deg)');
+  assert.equal(ctx.ambientGlowG.style.filter,'hue-rotate(-180deg)');
   assert.equal(ctx.defs.querySelector('stop').getAttribute('stop-color'),ctx.ambientColor);
   assert.equal(CONFIG.light.ambientColor,base);
  }finally{
