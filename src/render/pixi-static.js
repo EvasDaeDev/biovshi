@@ -16,9 +16,10 @@ const PROPERTIES=['fill','fill-opacity','fill-rule','stroke','stroke-width','str
 export async function staticArenaImage(nodes,{outset=0,night=false,forceVisible=false,pixels=null,exclude=null}={}) {
   const doc=ctx.svg.ownerDocument,win=doc.defaultView;
   const root=doc.createElementNS(ctx.NS,'svg'),defs=doc.createElementNS(ctx.NS,'defs');
-  const size=700+outset*2,resolution=pixels?pixels/size:2;
+  const {left=0,top=0,size:arenaSize=700}=ctx.arenaDefinition??{};
+  const size=arenaSize+outset*2,x=left-outset,y=top-outset,resolution=pixels?pixels/size:2;
   root.setAttribute('xmlns',ctx.NS);root.setAttribute('width',size*resolution);root.setAttribute('height',size*resolution);
-  root.setAttribute('viewBox',`${-outset} ${-outset} ${size} ${size}`);
+  root.setAttribute('viewBox',`${x} ${y} ${size} ${size}`);
   root.appendChild(defs);
   // Paint servers and the floor clip live in two different branches of the old scene.
   for(const child of ctx.defs.children)defs.appendChild(child.cloneNode(true));
@@ -52,5 +53,5 @@ export async function staticArenaImage(nodes,{outset=0,night=false,forceVisible=
   const canvas=doc.createElement('canvas');canvas.width=canvas.height=size*resolution;
   canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
   releaseTextureImage(url);
-  return {canvas,x:-outset,y:-outset,size};
+  return {canvas,x,y,size};
 }

@@ -23,7 +23,13 @@ function persist(){
 function install(next){
   ctx.floorCanvas=next;
   ctx.arenaFloors??=new Map();ctx.arenaFloors.set((ctx.betting?.floorId??'demo')+':'+(ctx.arenaId??'ward'),next);
-  if(!ctx.floorImage){ctx.floorImage=document.createElementNS(ctx.NS,'image');for(const [key,value] of Object.entries({x:0,y:0,width:700,height:700,preserveAspectRatio:'none'}))ctx.floorImage.setAttribute(key,value);ctx.grid.after(ctx.floorImage);}
+  if(!ctx.floorImage){
+    ctx.floorImage=document.createElementNS(ctx.NS,'image');
+    const {left,top,size}=ctx.arenaDefinition;
+    for(const [key,value] of Object.entries({x:left,y:top,width:size,height:size,preserveAspectRatio:'none'}))
+      ctx.floorImage.setAttribute(key,value);
+    ctx.grid.after(ctx.floorImage);
+  }
   if(ctx.arenaRenderer)ctx.arenaRenderer.replaceFloor(next);
   else ctx.floorImage.setAttribute('href',next.toDataURL('image/png'));
 }
