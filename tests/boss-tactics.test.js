@@ -12,6 +12,7 @@ import {onGameEvent} from '../src/game/event-bus.js';
 import {obstacleVertices} from '../src/game/arena.js';
 import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
 import {headingForIntent} from '../src/robot/locomotion.js';
+import {recordBossTacticalStrike} from '../src/boss/positioning.js';
 import {critChance} from '../src/garage/model.js';
 function duel({variant='arms',bossX=330,playerX=385}={}){
  const f=startBossScenario({variant,arena:'ring'});ctx.actorsG.replaceChildren();ctx.robots=[];
@@ -207,8 +208,7 @@ test('a dash without a reachable limb keeps its original recovery, and a fleeing
 
 test('boss observes repeated retreat and head hits without forgetting between charges',()=>{
  const f=duel({bossX:280,playerX:370});try{
-  const m=f.state.tacticsByTarget[0]??=undefined;
-  assert.equal(m,undefined);
+  assert.equal(f.state.tacticsByTarget[0],undefined);
   ctx.game.time=1;f.boss.body.intent(f.boss);
   const memory=f.state.tacticsByTarget[0];assert.ok(memory);
   const head=f.boss.hp.get('head');
@@ -248,7 +248,6 @@ test('tactical strike misses change side preference but a hit resets miss accumu
  const f=duel();try{
   f.boss.body.intent(f.boss);const m=f.state.tacticsByTarget[0];
   const source=f.boss.attackSources.find(s=>s.kind==='arm');
-  const {recordBossTacticalStrike}=await import('../src/boss/positioning.js');
   recordBossTacticalStrike(m,source,false,1);
   assert.equal(m.side,1);
   recordBossTacticalStrike(m,source,false,2);
