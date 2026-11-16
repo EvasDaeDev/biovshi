@@ -7,6 +7,7 @@ import { ctx } from "./state.js";
 import { resetCombatAccents } from "../render/effects.js";
 import { rebuildRobots } from "./arena.js";
 import { cameraReset } from "../render/camera.js";
+import { rerollArenaAmbient } from '../render/ambient-hue.js';
 import { bettingInit } from "../betting/ui.js";
 import { CONFIG } from "../config.js";
 import {note} from "./events.js";
@@ -112,6 +113,8 @@ export async function resetRound(destination='betting') {
   ctx.paintAt = -Infinity;
   rebuildRobots();
   cameraReset();
+  // The totalizator may reuse the same arena for several fights.
+  rerollArenaAmbient();
   if(destination==='procedure')garageOpen();else bettingOpen();
   ctx.arenaRenderer?.render();
 }

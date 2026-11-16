@@ -16,6 +16,7 @@ import { initializeSettings } from '../ui/settings.js';
 import { initializeOrientation } from '../ui/orientation.js';
 import { createWalls } from '../render/walls.js';
 import { createObstacleLights } from '../render/ground-spots.js';
+import { selectArenaAmbient } from '../render/ambient-hue.js';
 import { initializeHitEffects } from '../render/hit-effects.js';
 import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
@@ -71,6 +72,8 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.NS = 'http://www.w3.org/2000/svg';
   ctx.floorImage?.remove();ctx.floorImage=null;ctx.floorCanvas=null;
   ctx.arenaId=arenaDefinition(arenaId).id;ctx.arenaDefinition=arenaDefinition(arenaId);
+  // New lighting for every arena entrance, including successive tower floors.
+  selectArenaAmbient();ctx.ambientBakedHue=ctx.ambientHue;
   for (const g of [ctx.grid, ctx.conesG, ctx.flashlightsG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG, ctx.pulsesG, ctx.sparksG, ctx.scoreG]) g.replaceChildren();
   ctx.roles.replaceChildren();
   ctx.intro = ctx.root.querySelector('#tag7hop-intro');
@@ -243,7 +246,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     for (const band of ctx.ambientBands) el('polygon', {
       points,
       fill: 'none',
-      stroke: CONFIG.light.ambientColor,
+      stroke: ctx.ambientColor,
       'stroke-opacity': band.opacity,
       'stroke-width': band.width,
       'stroke-linejoin': 'round'

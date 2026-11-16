@@ -65,7 +65,7 @@ export function obstacleLightBounds(points,extraDiameter=100) {
 export function createObstacleLights() {
   for(const id of ['tag7hop-obstacle-lights','tag7hop-obstacle-light-holes','tag7hop-obstacle-glow','tag7hop-obstacle-reveal'])
     ctx.svg.querySelector('#'+id)?.remove();
-  gradient('tag7hop-obstacle-glow',CONFIG.light.ambientColor,[[0,1],[.6,.6],[1,0]],ctx.defs);
+  gradient('tag7hop-obstacle-glow',ctx.ambientColor,[[0,1],[.6,.6],[1,0]],ctx.defs);
   gradient('tag7hop-obstacle-reveal','#000000',[[0,1],[.6,.6],[1,0]],ctx.defs);
   const group=el('g',{id:'tag7hop-obstacle-lights','pointer-events':'none'},ctx.arenaContent);
   ctx.arenaContent.insertBefore(group,ctx.blockG);

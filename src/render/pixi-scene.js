@@ -44,6 +44,16 @@ export class PixiArena {
     sprite.position.set(x,y);sprite.width=sprite.height=size;return sprite;
   }
   floorSprite(canvas){const sprite=new this.p.Sprite(this.texture(canvas,false));sprite.width=sprite.height=700;return sprite;}
+  setAmbientHue(shift){
+    if(!this.ambient||!this.obstacleGlow||this.disposed)return;
+    if(!this.ambientHueFilters){
+      this.ambientHueFilters=[new this.p.ColorMatrixFilter(),new this.p.ColorMatrixFilter()];
+      this.ambient.filters=[this.ambientHueFilters[0]];
+      this.obstacleGlow.filters=[this.ambientHueFilters[1]];
+    }
+    for(const filter of this.ambientHueFilters)filter.hue(shift,false);
+    this.render();
+  }
   replaceFloor(canvas){
     if(!this.floor||this.disposed)return;
     const old=this.floor.texture;this.floor.texture=this.texture(canvas,false);this.floor.width=this.floor.height=700;
@@ -75,16 +85,19 @@ export class PixiArena {
     await this.prepareSources();
     // Order agrees with the original scene: lights behind walls, oil below actors,
     // darkness above actors, announcements and impact accents above darkness.
-    const [walls,floor,obstacles,night,ambient]=await Promise.all([
+    const [walls,floor,obstacleGlow,obstacles,night,ambient]=await Promise.all([
       this.staticLayer(staticWallNodes(ctx.svg,ctx.outlineG),{outset:ctx.CAMERA_OUTSET}),
       ctx.floorCanvas?Promise.resolve(this.floorSprite(ctx.floorCanvas)):this.staticLayer([ctx.arenaContent.querySelector(':scope > rect'),ctx.svg.querySelector('#tag7hop-floor-decals'),ctx.grid],{pixels:1024}),
-      this.staticLayer([ctx.svg.querySelector('#tag7hop-obstacle-lights'),ctx.blockG]),
+      this.staticLayer([ctx.svg.querySelector('#tag7hop-obstacle-lights')]),
+      this.staticLayer([ctx.blockG]),
       this.staticLayer([ctx.darkness],{night:true}),
       this.staticLayer([ctx.ambientGlowG],{forceVisible:true}),
     ]);
     this.world.addChildAt(walls,0);
     this.floor=floor;this.content.addChild(floor);
     this.attachRoot(ctx.conesG,this.content);
+    // Separate glow from obstacle geometry so hue only affects illumination.
+    this.obstacleGlow=obstacleGlow;this.content.addChild(obstacleGlow);
     this.content.addChild(obstacles);
     for(const root of [ctx.trailsG,ctx.groundG,ctx.oilG,ctx.detachedG,ctx.actorsG,ctx.sparksG,ctx.pulsesG])this.attachRoot(root,this.content);
     this.nightComposition=new this.p.Container();this.nightComposition.addChild(night);
@@ -335,6 +348,8 @@ export class PixiArena {
     this.svg.style.removeProperty('display');this.svg.removeAttribute('aria-hidden');
   }
   clearScene() {
+    for(const filter of this.ambientHueFilters??[])filter.destroy?.();
+    this.ambientHueFilters=null;this.obstacleGlow=null;
     if(this.halo){this.halo.texture.destroy(true);this.halo.filter.destroy();this.halo.gold.destroy();}
     this.postEffects?.destroy();
     this.nightComposition?.destroy({children:true});
