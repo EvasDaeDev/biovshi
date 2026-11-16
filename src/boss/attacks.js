@@ -1,6 +1,6 @@
 import {critChance} from '../garage/model.js';
 import {ctx} from '../game/state.js';
-import {ik,segmentDistance} from '../utils/math.js';
+import {ik,segmentDistance,wrap} from '../utils/math.js';
 import {coreClearBone} from '../systems/collision.js';
 import {BOSS_CONFIG} from './config.js';
 
@@ -47,19 +47,63 @@ export function sweepContact(robot,victim,p,fromAge,toAge){
 }
 // Trace the WHOLE current rig. The regular locomotion solver still validates
 // every actual step and stops the boss if another fighter enters its route.
-export function chargePlan(robot,target){
+// Plan a straight-line dash BEFORE takeoff. Candidate endpoints are offset to
+// expose a surviving arm/leg instead of running the boss's head into the enemy.
+// This is only a reach estimate; every real strike is checked by strikeCandidates.
+export function chargePlan(robot,target,{history=[]}={}){
  if(robot.movementLimbs<2)return null;
  const cfg=BOSS_CONFIG.tactics,dx=target.x-robot.x,dy=target.y-robot.y,d=Math.hypot(dx,dy);
  if(d<cfg.chargeMinGap||d>cfg.chargeMaxGap)return null;
- const direction=Math.atan2(dy,dx),unit={x:dx/d,y:dy/d};
- for(let distance=Math.min(cfg.chargeDistance,d-42);distance>=18;distance-=8){
-  let clear=true;const count=Math.ceil(distance/2);
-  for(let i=0;i<=count&&clear;i++)for(const c of robot.capsules){
-   const x=unit.x*distance*i/count,y=unit.y*distance*i/count;
-   if(!coreClearBone({x:c.a.x+x,y:c.a.y+y},{x:c.b.x+x,y:c.b.y+y},c.r+1)){clear=false;break;}
+ const unit={x:dx/d,y:dy/d},perp={x:-unit.y,y:unit.x};
+ const sources=robot.attackSources.filter(s=>s.kind==='arm'||s.kind==='leg');
+ if(!sources.length)return null;
+ const candidates=[];
+ for(const [approach,offset] of [['direct',0],['left',cfg.chargeSideOffset],['right',-cfg.chargeSideOffset]]){
+  const desired={x:target.x-unit.x*cfg.chargeTerminalGap+perp.x*offset,
+   y:target.y-unit.y*cfg.chargeTerminalGap+perp.y*offset};
+  const vx=desired.x-robot.x,vy=desired.y-robot.y,length=Math.hypot(vx,vy);
+  if(length<18)continue;
+  const direction=Math.atan2(vy,vx),turn=wrap(direction-robot.angle);
+  if(Math.abs(turn)>cfg.chargeSteerLimit)continue;
+  const forward={x:vx/length,y:vy/length};
+  const distance=Math.min(cfg.chargeDistance,length),goal={x:robot.x+forward.x*distance,y:robot.y+forward.y*distance};
+  // Check the rotated full rig at every translation step. The locomotion
+  // solver still performs the authoritative contact validation per tick.
+  const c=Math.cos(turn),s=Math.sin(turn),steps=Math.ceil(distance/2);
+  let clear=true;
+  for(let i=0;i<=steps&&clear;i++){
+   const shift={x:forward.x*distance*i/steps,y:forward.y*distance*i/steps};
+   for(const capsule of robot.capsules){
+    const rotate=p=>({x:robot.x+(p.x-robot.x)*c-(p.y-robot.y)*s+shift.x,
+     y:robot.y+(p.x-robot.x)*s+(p.y-robot.y)*c+shift.y});
+    if(!coreClearBone(rotate(capsule.a),rotate(capsule.b),capsule.r+1)){clear=false;break;}
+   }
   }
-  if(clear)return {direction,distance,origin:{x:robot.x,y:robot.y},goal:{x:robot.x+unit.x*distance,y:robot.y+unit.y*distance}};
+  if(!clear)continue;
+  const bearing=wrap(Math.atan2(target.y-goal.y,target.x-goal.x)-direction);
+  let reachPenalty=Infinity;
+  for(const source of sources){
+   const sector=source.kind==='arm'?Math.abs(bearing)<=1.28:
+    Math.abs(bearing)>=Math.PI*8/9||bearing*source.side>=Math.PI/3;
+   if(!sector)continue;
+   const px=source.point.x-robot.x,py=source.point.y-robot.y;
+   const tip={x:goal.x+px*c-py*s,y:goal.y+px*s+py*c};
+   const gap=Math.hypot(target.x-tip.x,target.y-tip.y);
+   const reach=(18+17.25)*(source.reachFactor??1)*(robot.body?.scaleMultiplier??1);
+   reachPenalty=Math.min(reachPenalty,Math.max(0,gap-reach));
+  }
+  if(!Number.isFinite(reachPenalty))continue;
+  // Persistent outcome feedback: an approach that repeatedly exposes the
+  // head without landing a strike becomes less attractive on future dashes.
+  const punished=history.filter(h=>h.approach===approach&&h.headDamage>0&&!h.landed).length;
+  const worked=history.filter(h=>h.approach===approach&&h.landed).length;
+  const score=reachPenalty+punished*28-worked*6+
+   (approach==='direct'?sources.some(s=>s.kind==='arm')?9:14:2)+Math.abs(turn)*5;
+  candidates.push({direction,distance,origin:{x:robot.x,y:robot.y},goal,approach,score});
  }
- return null;
+ candidates.sort((a,b)=>a.score-b.score||a.distance-b.distance);
+ if(!candidates.length)return null;
+ const {score,...plan}=candidates[0];
+ return plan;
 }
 export function bossDamage(roll,strength=3){return roll<Math.max(BOSS_CONFIG.criticalChance,critChance(strength))?2:1;}

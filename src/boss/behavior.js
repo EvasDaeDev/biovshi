@@ -43,21 +43,59 @@ function applyHit(robot,victim,p,segment){
  note('combat-strike',{from:robot.id,to:victim.id,source:p.source,segment,bossStyle:p.style??'jab'});
 }
 export function createBossBehavior(){
- const state={phase:1,cycles:0,followup:null,charge:null,nextChargeAt:6,lastSeen:null,lastSeenAt:-Infinity,status:''};
+ const state={phase:1,cycles:0,followup:null,charge:null,quickStrike:null,chargeOutcome:null,chargeHistory:[],nextChargeAt:6,lastSeen:null,lastSeenAt:-Infinity,status:''};
  const hold=(robot,point,mode='атакует')=>({goal:{x:robot.x,y:robot.y},speed:0,mode,lookPoint:point??null,brake:true});
  const targetFor=robot=>activeOpponents(robot.id).sort((a,b)=>Math.hypot(a.x-robot.x,a.y-robot.y)-Math.hypot(b.x-robot.x,b.y-robot.y))[0];
+ function updateChargeMemory(robot,now){
+  const result=state.chargeOutcome;
+  if(!result||now<result.reviewAt)return;
+  state.chargeHistory.push({approach:result.approach,
+   headDamage:Math.max(0,result.headHp-(robot.hp.get('head')??0)),
+   landed:(ctx.combat.fighterHits[robot.id]??0)>result.hits});
+  state.chargeHistory.splice(0,Math.max(0,state.chargeHistory.length-BOSS_CONFIG.tactics.chargeMemorySize));
+  state.chargeOutcome=null;
+ }
  function intent(robot){
   updateBossPhase(robot,state);
   if(!robot.mobile||ctx.combat.finished)return hold(robot,null);
   const now=ctx.game.time,cfg=BOSS_CONFIG.tactics,target=targetFor(robot);
+  updateChargeMemory(robot,now);
   if(!target)return hold(robot,null);
   if(robot.movementLimbs===0){state.charge=null;return hold(robot,target.center);}
-  if(state.charge&&robot.movementLimbs<2){state.charge=null;ctx.combat.nextStrike[robot.id]=Math.max(ctx.combat.nextStrike[robot.id],now+.4);}
+  if(state.charge&&robot.movementLimbs<2){
+   state.charge=null;state.chargeOutcome=null;
+   ctx.combat.nextStrike[robot.id]=Math.max(ctx.combat.nextStrike[robot.id],now+.4);
+  }
   if(state.charge){
-   const charge=state.charge,age=now-charge.started;
+   const charge=state.charge,age=now-charge.started,victim=ctx.robots[charge.victim];
    if(age<cfg.chargeWindup){state.status='Готовит рывок';return {...hold(robot,charge.goal),heading:charge.direction};}
+   if(!charge.launched){
+    // A warning is not a guaranteed dash. If the enemy has already escaped,
+    // or the body cannot face the committed ray, abandon BEFORE moving.
+    if(!victim?.mobile||!victim.visible||
+       Math.abs(wrap(robot.angle-charge.direction))>cfg.chargeAlignTolerance||
+       Math.hypot(victim.center.x-charge.goal.x,victim.center.y-charge.goal.y)>cfg.chargeAbandonGap){
+     state.charge=null;state.nextChargeAt=now+cfg.chargeAbortCooldown;
+     state.status='Отменяет рывок';return hold(robot,victim?.center??target.center);
+    }
+    charge.launched=true;
+    state.chargeOutcome={approach:charge.approach,headHp:robot.hp.get('head')??0,
+     hits:ctx.combat.fighterHits[robot.id]??0,reviewAt:Infinity};
+   }
    if(age<cfg.chargeWindup+cfg.chargeDuration&&Math.hypot(robot.x-charge.origin.x,robot.y-charge.origin.y)<charge.distance-2){
     state.status='Рывок';return {goal:charge.goal,heading:charge.direction,speed:CONFIG.movement.chaseSpeedCm*cfg.chargeSpeed,manual:true,mode:'boss-charge',lookPoint:charge.goal};
+   }
+   if(!charge.finishedAt){
+    charge.finishedAt=now;
+    state.chargeOutcome.reviewAt=now+cfg.chargeOutcomeWindow;
+    // Only a REAL, currently reachable limb attack earns a quick follow-up.
+    // No damage is attached to the dash itself.
+    const candidate=victim?.mobile&&victim.visible?ordinaryCandidates(robot,victim).find(c=>c.source.kind!=='head'):null;
+    if(candidate){
+     state.quickStrike={victim:victim.id,source:candidate.source.key,until:now+cfg.chargeQuickAttackWindow};
+     state.charge=null;state.status='Атака после рывка';
+     return hold(robot,victim.center);
+    }
    }
    charge.recoverAt??=now;state.status='Восстанавливается';
    if(now-charge.recoverAt<cfg.chargeRecovery)return hold(robot,charge.goal);
@@ -80,8 +118,8 @@ export function createBossBehavior(){
   if(seen){state.lastSeen={...target.center};state.lastSeenAt=now;}
   if(!seen&&now-state.lastSeenAt>3){state.status='Ищет противника';return fighterIntent(robot);}
   if(seen&&now>=state.nextChargeAt&&Math.abs(wrap(Math.atan2(target.y-robot.y,target.x-robot.x)-robot.angle))<.35){
-   const plan=chargePlan(robot,target.center);
-   if(plan){state.charge={...plan,started:now};state.nextChargeAt=now+cfg.chargeCooldown*(state.phase===2?.8:1);state.status='Готовит рывок';note('boss-charge',{robot:robot.id,goal:plan.goal});return {...hold(robot,plan.goal),heading:plan.direction};}
+   const plan=chargePlan(robot,target.center,{history:state.chargeHistory});
+   if(plan){state.charge={...plan,started:now,victim:target.id};state.nextChargeAt=now+cfg.chargeCooldown*(state.phase===2?.8:1);state.status='Готовит рывок';note('boss-charge',{robot:robot.id,goal:plan.goal});return {...hold(robot,plan.goal),heading:plan.direction};}
    state.nextChargeAt=now+1;
   }
   if(seen&&ordinaryCandidates(robot,target).length){state.status='Выбирает удар';return hold(robot,target.center);}
@@ -89,7 +127,7 @@ export function createBossBehavior(){
  }
  function resolveCombat(robot){
   updateBossPhase(robot,state);
-  if(!robot.mobile||ctx.combat.finished){state.followup=state.charge=null;setPendingStrikes(robot.id,[]);return;}
+  if(!robot.mobile||ctx.combat.finished){state.followup=state.charge=state.quickStrike=state.chargeOutcome=null;setPendingStrikes(robot.id,[]);return;}
   const p=pendingStrikes(robot.id)[0];if(!p)return;
   const victim=ctx.robots[p.victim],source=robot.attackSources.find(s=>s.key===p.source);
   if(!source||!victim?.mobile||!victim.visible){setPendingStrikes(robot.id,[]);state.followup=null;ctx.combat.nextStrike[robot.id]=ctx.game.time+.4;return;}
@@ -119,6 +157,19 @@ export function createBossBehavior(){
  function planCombat(robot){
   if(!robot.visible||!robot.mobile||ctx.combat.finished||state.charge||ctx.combat.pending[robot.id]||robot.actualPose.leap||ctx.game.time<robot.combatRecoverUntil)return;
   const cfg=BOSS_CONFIG.tactics,now=ctx.game.time;
+  if(state.quickStrike){
+   const quick=state.quickStrike;state.quickStrike=null;
+   const victim=ctx.robots[quick.victim];
+   if(now<=quick.until&&victim?.mobile&&victim.visible&&robot.canSee(victim.center)){
+    const candidate=ordinaryCandidates(robot,victim).find(c=>c.source.key===quick.source&&c.source.kind!=='head');
+    if(candidate){
+     begin(robot,candidate,{...cfg.first,windupSec:cfg.chargeAttackWindup});
+     return;
+    }
+   }
+   ctx.combat.nextStrike[robot.id]=Math.max(ctx.combat.nextStrike[robot.id],now+cfg.chargeRecovery);
+   return;
+  }
   if(state.followup){
    const follow=state.followup;if(now<follow.at)return;
    const victim=ctx.robots[follow.victim];state.followup=null;

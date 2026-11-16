@@ -9,8 +9,11 @@ export const BOSS_CONFIG={scale:1.5,headScale:1,headOffset:18,healthMultiplier:2
   second:timing(),
   sweep:timing(),
   sweepHalfAngle:70*Math.PI/180,
-  chargeWindup:.80,chargeDuration:.48,chargeRecovery:.65,chargeCooldown:12,
-  chargeMinGap:70,chargeMaxGap:170,chargeDistance:48,chargeSpeed:2.4,
+  chargeWindup:.80,chargeDuration:.55,chargeRecovery:.65,chargeCooldown:12,
+  chargeMinGap:70,chargeMaxGap:170,chargeDistance:72,chargeSpeed:2.4,
+  chargeTerminalGap:42,chargeSideOffset:24,chargeSteerLimit:.65,chargeAlignTolerance:.26,
+  chargeAbandonGap:120,chargeAbortCooldown:2.5,chargeQuickAttackWindow:.25,
+  chargeAttackWindup:.22,chargeOutcomeWindow:1.5,chargeMemorySize:4,
  }};
 export const BOSS_VARIANTS=[
  {id:'brute',name:'Громила',spineSegments:4},

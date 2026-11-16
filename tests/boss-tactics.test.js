@@ -94,7 +94,7 @@ test('wide strike cannot cross an obstacle, and a player who leaves its arc is m
 
 test('charge telegraphs, commits to a fixed point, uses physical steps and recovers on cooldown',()=>{
  const f=duel({bossX:280,playerX:430});try{
-  const original=chargePlan(f.boss,f.player.center);assert.ok(original);assert.ok(original.distance<=48);
+  const original=chargePlan(f.boss,f.player.center);assert.ok(original);assert.ok(original.distance<=72);
   f.state.nextChargeAt=0;const ready=f.boss.body.intent(f.boss);assert.equal(ready.speed,0);assert.ok(f.state.charge);
   const goal={...f.state.charge.goal},direction=f.state.charge.direction;
   const movedPlayer=createRobot(0,{x:430,y:395,angle:Math.PI});ctx.robots[0]=movedPlayer;
@@ -105,7 +105,7 @@ test('charge telegraphs, commits to a fixed point, uses physical steps and recov
    assert.ok(Math.hypot(f.boss.x-old.x,f.boss.y-old.y)<4,'movement cannot teleport');old={x:f.boss.x,y:f.boss.y};
    assert.ok(f.boss.capsules.every(c=>staticContacts(c).every(h=>h.depth<=(isLimb(c)?5:0)+1e-6)));
   }
-  assert.ok(f.boss.x>281);assert.ok(f.boss.x-280<=52);
+  assert.ok(f.boss.x>281);assert.ok(f.boss.x-280<=76);
   ctx.game.time=1.4;assert.equal(f.boss.body.intent(f.boss).speed,0);
   ctx.game.time=2.2;f.boss.body.intent(f.boss);assert.equal(f.state.charge,null);assert.ok(f.state.nextChargeAt>ctx.game.time);
  }finally{f.close();}
@@ -152,4 +152,55 @@ test('a sweep interrupted by newly blocked geometry cancels without inflicting d
  const f=duel();let attempts=0;f.player.damage=()=>{attempts++;return false;};
  try{const p=prepareWide(f);obstacle();advanceTo(f,p.timing.windupSec+p.timing.thrustSec/2);assert.equal(attempts,0);assert.equal(pendingStrikes(1).length,0);}
  finally{f.close();}
+});
+
+test('charge approach learns from head punishment across cooldowns, without steering mid-dash',()=>{
+ const f=duel({bossX:280,playerX:430});try{
+  const target=f.player.center;
+  const first=chargePlan(f.boss,target);assert.ok(first);assert.ok(['direct','left','right'].includes(first.approach));
+  const punished=Array.from({length:3},()=>({approach:first.approach,headDamage:2,landed:false}));
+  const changed=chargePlan(f.boss,target,{history:punished});
+  assert.ok(changed);assert.notEqual(changed.approach,first.approach);
+  f.state.chargeOutcome={approach:first.approach,headHp:f.boss.hp.get('head'),hits:ctx.combat.fighterHits[1],reviewAt:1};
+  f.state.nextChargeAt=1e6;ctx.game.time=1.1;f.boss.body.intent(f.boss);
+  assert.equal(f.state.chargeHistory.length,1);
+  ctx.game.time=30;f.boss.body.intent(f.boss);
+  assert.equal(f.state.chargeHistory.length,1,'memory persists past the 12-second charge cooldown');
+ }finally{f.close();}
+});
+
+test('successful dash permits only a short, real limb windup and no free damage',()=>{
+ const f=duel({bossX:330,playerX:385});try{
+  const oldHits=ctx.combat.hits;
+  f.state.charge={victim:0,started:-2,launched:true,direction:0,distance:72,
+   origin:{x:f.boss.x,y:f.boss.y},goal:{x:f.boss.x,y:f.boss.y},approach:'direct'};
+  f.state.chargeOutcome={approach:'direct',headHp:f.boss.hp.get('head'),hits:0,reviewAt:Infinity};
+  const intent=f.boss.body.intent(f.boss);
+  assert.equal(intent.speed,0);assert.equal(f.state.charge,null);assert.ok(f.state.quickStrike);
+  f.boss.body.planCombat(f.boss);
+  const attack=pendingStrikes(1)[0];assert.ok(attack);
+  assert.equal(attack.timing.windupSec,BOSS_CONFIG.tactics.chargeAttackWindup);
+  assert.equal(attack.timing.thrustSec,BOSS_CONFIG.combat.thrustSec);
+  assert.equal(ctx.combat.hits,oldHits,'charge and windup cannot deal direct damage');
+ }finally{f.close();}
+});
+
+test('a dash without a reachable limb keeps its original recovery, and a fleeing enemy cancels before takeoff',()=>{
+ const f=duel({bossX:280,playerX:430});try{
+  f.state.nextChargeAt=0;f.boss.body.intent(f.boss);
+  assert.ok(f.state.charge);
+  const far=createRobot(0,{x:575,y:350,angle:Math.PI});ctx.robots[0]=far;
+  ctx.game.time=BOSS_CONFIG.tactics.chargeWindup+.01;
+  const cancelled=f.boss.body.intent(f.boss);
+  assert.equal(cancelled.speed,0);assert.equal(f.state.charge,null);
+  assert.equal(f.state.chargeOutcome,null);assert.ok(f.state.nextChargeAt>ctx.game.time);
+  ctx.robots[0]=f.player;f.state.nextChargeAt=0;ctx.game.time=5;
+  f.boss.body.intent(f.boss);assert.ok(f.state.charge);
+  f.state.charge.launched=true;
+  f.state.chargeOutcome={approach:f.state.charge.approach,headHp:f.boss.hp.get('head'),hits:0,reviewAt:Infinity};
+  ctx.game.time=7;const cooling=f.boss.body.intent(f.boss);
+  assert.equal(cooling.speed,0);assert.ok(f.state.charge);assert.equal(f.state.quickStrike,null);
+  ctx.game.time=7+BOSS_CONFIG.tactics.chargeRecovery+.11;f.boss.body.intent(f.boss);
+  assert.equal(f.state.charge,null);
+ }finally{f.close();}
 });
