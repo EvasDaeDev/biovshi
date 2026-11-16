@@ -122,6 +122,16 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.scale = CONFIG.robot.scale;
   ctx.w = 700;
   ctx.h = 700;
+  // The SVG template is 7m square, but the selected arena may extend past it.
+  const {left:floorLeft,top:floorTop,size:floorSize}=ctx.arenaDefinition;
+  for(const node of [
+    ctx.arenaContent.querySelector(':scope > rect'),
+    ctx.svg.querySelector('#tag7hop-darkness'),
+    ctx.svg.querySelector('#tag7hop-darkness-mask'),
+    ctx.svg.querySelector('#tag7hop-darkness-mask > rect'),
+  ])if(node)for(const [key,value] of Object.entries({
+    x:floorLeft,y:floorTop,width:floorSize,height:floorSize
+  }))attr(node,key,value);
   ctx.HEAD_LIMIT = CONFIG.vision.headScanDeg * Math.PI / 180;
   ctx.SCAN_SPEED = CONFIG.vision.scanSpeedDeg * Math.PI / 180;
   ctx.TRACK_SPEED = CONFIG.vision.trackingSpeedDeg * Math.PI / 180;
@@ -165,10 +175,10 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.ambientBlur = el('filter', {
     id: 'tag7hop-ambient-filter',
     filterUnits: 'userSpaceOnUse',
-    x: -180,
-    y: -180,
-    width: 1060,
-    height: 1060
+    x: floorLeft-180,
+    y: floorTop-180,
+    width: floorSize+360,
+    height: floorSize+360
   }, ctx.defs);
   el('feGaussianBlur', {
     stdDeviation: 5

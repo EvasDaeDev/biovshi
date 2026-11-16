@@ -1,4 +1,5 @@
 import {CONFIG} from '../config.js';
+import {NEW_ARENAS} from './arena-layouts.js';
 // World coordinates are centimetres. Positive angles follow screen clockwise.
 const regularPolygon=(sides,radius)=>Array.from({length:sides},(_,i)=>{
  const angle=-Math.PI/2+i*2*Math.PI/sides;
@@ -12,7 +13,8 @@ export const ARENAS=Object.freeze({
   annulus:{id:'annulus',name:'Кольцо · Ø 6 м',size:600,left:50,top:50,
     points:annulusBoundary,obstacles:[{left:250,right:450,top:250,bottom:450,points:regularPolygon(64,100)}],
     spawnPoints:regularPolygon(4,220),patrolPoints:regularPolygon(8,210),
-    preview:annulusBoundary.map(p=>`${(p.x-50)/6},${(p.y-50)/6}`).join(' ')}
+    preview:annulusBoundary.map(p=>`${(p.x-50)/6},${(p.y-50)/6}`).join(' ')},
+  ...NEW_ARENAS
 });
 export function randomArenaId(value=Math.random()){const ids=Object.keys(ARENAS);return ids[Math.min(ids.length-1,Math.max(0,Math.floor(value*ids.length)))];}
 export const arenaDefinition=id=>ARENAS[id]??ARENAS.ward;
