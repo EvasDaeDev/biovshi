@@ -57,7 +57,8 @@ test('one active player owns every purchase, switching preserves card drafts and
   cards()[2].querySelector('[data-buy]').click();
   assert.deepEqual(s.players.map(p=>p.balance),[100,78]);assert.equal(s.garage[2].head.player,1);
   assert.equal(s.garage[2].investments[1],22);assert.equal(resolvePatron(s.garage[2]),1);
-  assert.match(document.querySelector('#procedure-balance').textContent,/78/);
+  assert.equal(document.querySelector('#procedure-balance [data-player-balance]').dataset.balanceTarget,'78');
+  assert.ok(document.querySelector('#procedure-balance .currency-counter').classList.contains('is-debit'),'purchase starts the shared red counter');
   assert.ok(document.querySelector('[data-patient="2"] [data-error]').textContent.includes('Теперь вы'));
   const other=document.querySelector('#procedure-editor');other.value='0';other.dispatchEvent(new Event('change'));
   assert.equal(document.querySelector('[data-patient="2"] [data-stat]').disabled,true);
