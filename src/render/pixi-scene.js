@@ -223,6 +223,17 @@ export class PixiArena {
       visual.texture=this.radial(fill);visual.anchor.set(.5);
       visual.position.set(number('cx'),number('cy'));
       visual.width=number('rx',number('r'))*2;visual.height=number('ry',number('r'))*2;
+      // Radial light paths use the same gradient sprite as circles, clipped to
+      // their ray-cast silhouette. Keep the mask local to the translated light.
+      if(tag==='path'){
+        if(!record.lightMask){record.lightMask=new this.p.Graphics();object.addChild(record.lightMask);visual.mask=record.lightMask;}
+        const d=node.getAttribute('d')||'';
+        if(record.lightPath!==d){
+          record.lightPath=d;record.lightMask.clear();
+          if(d)record.lightMask.path(new this.p.GraphicsPath(d)).fill('#ffffff');
+        }
+        visual.visible=Boolean(d);
+      }
       // Erase light holes in a GPU render target instead of an SVG luminance mask.
       visual.blendMode=node.closest('#tag7hop-light-holes')?'erase':'normal';return;
     }

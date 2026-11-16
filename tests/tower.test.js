@@ -2,6 +2,8 @@ import {quipCategory} from '../src/ui/streamer-quips.js';
 import {compareStrikeCandidates} from '../src/systems/combat.js';
 import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
 import {createRobot} from '../src/robot/robot.js';
+import {lightPolygon} from '../src/render/lighting.js';
+import {paint} from '../src/render/frame.js';
 import {combatAttacks} from '../src/systems/combat.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -32,6 +34,52 @@ function setup(s,tower,arenaId='ward'){
  installTowerUI();return dom;
 }
 function close(dom){ctx.root.__disposeTag();dom.window.close();ctx.mode='spectator';}
+test('tower hides all arena names and hostile lights, while player rays and perception remain independent',()=>{
+ const s=betNewSession(['Первый']),tower=towerFor(s,0);tower.level=5;
+ const dom=setup(s,tower);
+ try{
+  document.querySelector('#tower-fight').click();
+  advanceStartup(10);
+  const seed=ctx.seed,perception=ctx.robots.map(r=>r.canSee({x:350,y:350}));
+  for(const profile of ['light','full']){
+   ctx.renderProfile={name:profile};paint();
+   assert.ok(ctx.robots.some(r=>r.isBoss),'boss encounter is covered');
+   for(const r of ctx.robots){
+    assert.equal(r.label.getAttribute('display'),'none');
+    if(r.id!==0){
+     assert.equal(Number(r.nearLight.getAttribute('opacity')),0);
+     assert.equal(Number(ctx.conesG.querySelector(`[fill="url(#tag7hop-pool-${r.id})"]`).getAttribute('opacity')),0);
+    }
+   }
+   const player=ctx.robots[0];
+   assert.match(player.vision.getAttribute('d'),/^M0 0L/);
+   assert.equal(player.nearLight.tagName,'path');
+   assert.ok(Number(player.nearLight.getAttribute('opacity'))>0);
+   player.setVisible(false);assert.equal(player.vision.getAttribute('display'),'none');
+   player.setVisible(true);assert.equal(player.vision.getAttribute('display'),'');
+  }
+  assert.equal(ctx.seed,seed);
+  assert.deepEqual(ctx.robots.map(r=>r.canSee({x:350,y:350})),perception);
+ }finally{close(dom);}
+});
+test('flashlight rays stop at obstacle faces and arena perimeter without changing geometry',()=>{
+ const s=betNewSession(['Первый']),dom=setup(s,towerFor(s,0));
+ try{
+  // The central obstacle spans x=300..400 and y=300..400.
+  const before=JSON.stringify(ctx.obstacles),seed=ctx.seed;
+  const d=lightPolygon({x:250,y:350},0,100*Math.PI/180,300);
+  const points=d.slice(1,-1).split('L').map(p=>p.split(' ').map(Number));
+  const straight=points.find(([x,y])=>x>0&&Math.abs(y)<.001);
+  assert.ok(straight);assert.equal(straight[0],50,'central ray ends at x=300, not behind the obstacle');
+  const near=lightPolygon({x:250,y:350},0,Math.PI*2,75);
+  assert.ok(!near.startsWith('M0 0L'),'nearby light is a closed surrounding silhouette');
+  const boundary=lightPolygon({x:40,y:350},Math.PI,Math.PI/2,300);
+  for(const [x,y] of boundary.slice(1,-1).split('L').map(p=>p.split(' ').map(Number))){
+   for(const plane of ctx.arenaPlanes)assert.ok(plane.nx*(40+x)+plane.ny*(350+y)<=plane.c+.1,'light stops inside the arena');
+  }
+  assert.equal(ctx.seed,seed);assert.equal(JSON.stringify(ctx.obstacles),before);
+ }finally{close(dom);}
+});
 test('leaving a spawning or running tower battle confirms cancellation without recording defeat',()=>{
  for(const phase of ['spawning','running']){
   const s=betNewSession(['Первый'],100),dom=setup(s,towerFor(s,0));

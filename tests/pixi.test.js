@@ -16,6 +16,7 @@ import {resetRound} from '../src/game/session.js';
 import {initializeDiagnostics} from '../src/render/diagnostics.js';
 import {victoryGold,goldMatrix} from '../src/render/victory-glow.js';
 import {paintTelemetry} from '../src/ui/paint-telemetry.js';
+import {createRobot} from '../src/robot/robot.js';
 
 test('Pixi static wall atlas includes outer masonry underneath the original wall',()=>{
   const dom=setup();
@@ -80,6 +81,28 @@ function bridge(){
   arena.finish=()=>{arena.observer.disconnect();arena.world.destroy({children:true});source.destroy(true);for(const texture of arena.frames.values())texture.destroy(false);};
   return arena;
 }
+
+test('Pixi clips tower gradient sprites to ray-cast paths and follows visibility changes',()=>{
+ const dom=setup();ctx.mode='tower';ctx.towerRun={patient:0};
+ ctx.betting={players:[{name:'Игрок'}]};ctx.towerPlayer=0;
+ const player=createRobot(0,{x:250,y:350,angle:0});ctx.robots=[player];
+ player.setVisible(true);player.paint();
+ const arena=bridge();
+ try{
+  for(const node of [player.vision,player.lightBeam,player.nearLight]){
+   const record=arena.records.get(node);
+   assert.ok(record.lightMask instanceof PIXI.Graphics);
+   assert.equal(record.visual.mask,record.lightMask);
+   assert.equal(record.lightPath,node.getAttribute('d'));
+   assert.equal(record.visual.visible,true);
+  }
+  assert.equal(arena.records.get(player.vision).visual.blendMode,'erase');
+  player.setVisible(false);arena.flush();
+  assert.equal(arena.records.get(player.vision).object.visible,false);
+  player.setVisible(true);player.paint();arena.flush();
+  assert.equal(arena.records.get(player.vision).object.visible,true);
+ }finally{arena.finish();ctx.mode='spectator';ctx.towerRun=null;ctx.root.__disposeTag();dom.window.close();}
+});
 
 test('native Pixi sprites share cropped atlas sources; changed poses preserve lengths and removed parts disappear',()=>{
   const dom=setup(),arena=bridge();

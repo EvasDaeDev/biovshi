@@ -224,5 +224,6 @@ export function robotPaint(robotState) {
   attr(robotState.label, 'x', robotState.spine[2].x);
   attr(robotState.label, 'y', robotState.spine[2].y - 18);
   attr(robotState.label, 'opacity', '1');
+  attr(robotState.label, 'display', ctx.mode==='tower'?'none':'');
 }
 
