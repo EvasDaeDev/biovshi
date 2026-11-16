@@ -14,6 +14,10 @@ export const BOSS_CONFIG={scale:1.5,headScale:1,headOffset:18,healthMultiplier:2
   chargeTerminalGap:42,chargeSideOffset:24,chargeSteerLimit:.65,chargeAlignTolerance:.26,
   chargeAbandonGap:120,chargeAbortCooldown:2.5,chargeQuickAttackWindow:.25,
   chargeAttackWindup:.22,chargeOutcomeWindow:1.5,chargeMemorySize:4,
+  positionMaxGap:118,positionNearGap:64,positionMaxTravel:155,positionClearance:26,
+  positionPredictionSec:.18,positionCommitSec:1.8,positionTargetReplanCm:42,
+  positionStopGap:18,positionAlignTolerance:.25,positionPivotGap:94,
+  retreatVelocityThreshold:12,retreatPressureTrigger:2.2,
  }};
 export const BOSS_VARIANTS=[
  {id:'brute',name:'Громила',spineSegments:4},

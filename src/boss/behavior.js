@@ -10,6 +10,7 @@ import {strikeCandidates,struckSegment,compareStrikeCandidates} from '../systems
 import {pendingStrikes,setPendingStrikes} from '../systems/strikes.js';
 import {BOSS_CONFIG} from './config.js';
 import {sweepPathClear,sweepContact,chargePlan,bossDamage,poseClear,poseAt} from './attacks.js';
+import {bossOpponentMemory,observeBossOpponent,recordBossTacticalStrike,bossPositionIntent} from './positioning.js';
 const root=key=>key.replace(/-(upper|lower)$/,'');
 const duration=t=>t.windupSec+t.thrustSec+t.recoverSec;
 export function updateBossPhase(robot,state){
@@ -40,10 +41,11 @@ function applyHit(robot,victim,p,segment){
  if(victim.mobile)victim.reactToHit(robot,segment);
  ctx.combat.hits++;ctx.combat.fighterHits[robot.id]++;ctx.combat.fighterTaken[victim.id]++;ctx.combat.lastHitTime=ctx.game.time;
  ctx.agentAI[robot.id].lastHitAt=ctx.game.time;ctx.agentAI[victim.id].lastHitAt=ctx.game.time;
+ recordBossTacticalStrike(bossOpponentMemory(robot.body.behavior.state,victim.id),robot.attackSources.find(s=>s.key===p.source),true,ctx.game.time);
  note('combat-strike',{from:robot.id,to:victim.id,source:p.source,segment,bossStyle:p.style??'jab'});
 }
 export function createBossBehavior(){
- const state={phase:1,cycles:0,followup:null,charge:null,quickStrike:null,chargeOutcome:null,chargeHistory:[],nextChargeAt:6,lastSeen:null,lastSeenAt:-Infinity,status:''};
+ const state={phase:1,cycles:0,followup:null,charge:null,quickStrike:null,chargeOutcome:null,chargeHistory:[],tacticsByTarget:{},nextChargeAt:6,lastSeen:null,lastSeenAt:-Infinity,status:''};
  const hold=(robot,point,mode='атакует')=>({goal:{x:robot.x,y:robot.y},speed:0,mode,lookPoint:point??null,brake:true});
  const targetFor=robot=>activeOpponents(robot.id).sort((a,b)=>Math.hypot(a.x-robot.x,a.y-robot.y)-Math.hypot(b.x-robot.x,b.y-robot.y))[0];
  function updateChargeMemory(robot,now){
@@ -61,6 +63,8 @@ export function createBossBehavior(){
   const now=ctx.game.time,cfg=BOSS_CONFIG.tactics,target=targetFor(robot);
   updateChargeMemory(robot,now);
   if(!target)return hold(robot,null);
+  const memory=bossOpponentMemory(state,target.id);
+  observeBossOpponent(robot,target,memory,now);
   if(robot.movementLimbs===0){state.charge=null;return hold(robot,target.center);}
   if(state.charge&&robot.movementLimbs<2){
    state.charge=null;state.chargeOutcome=null;
@@ -122,7 +126,15 @@ export function createBossBehavior(){
    if(plan){state.charge={...plan,started:now,victim:target.id};state.nextChargeAt=now+cfg.chargeCooldown*(state.phase===2?.8:1);state.status='Готовит рывок';note('boss-charge',{robot:robot.id,goal:plan.goal});return {...hold(robot,plan.goal),heading:plan.direction};}
    state.nextChargeAt=now+1;
   }
-  if(seen&&ordinaryCandidates(robot,target).length){state.status='Выбирает удар';return hold(robot,target.center);}
+  const candidates=seen?ordinaryCandidates(robot,target):
+   ordinaryCandidates(robot,target).filter(c=>c.source.kind==='leg');
+  if(candidates.length){
+   state.status='Выбирает удар';return hold(robot,target.center);
+  }
+  if(seen){
+   const position=bossPositionIntent(robot,target,memory,now);
+   if(position){state.status=position.mode;return position;}
+  }
   state.status='Теснит противника';return {goal:seen?{...target.center}:state.lastSeen,speed:CONFIG.movement.chaseSpeedCm,mode:'преследует',lookPoint:seen?target.center:state.lastSeen};
  }
  function resolveCombat(robot){
@@ -136,8 +148,8 @@ export function createBossBehavior(){
    if(p.style==='sweep'){
     const age=ctx.game.time-p.started,segment=sweepContact(robot,victim,p,p.lastAge??0,age);p.lastAge=age;
     if(segment&&sightClear(robot.center,victim.center))applyHit(robot,victim,p,segment);
-    else if(ctx.game.time>=p.impactAt){p.resolved=true;note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});}
-   }else if(ctx.game.time>=p.impactAt){p.resolved=true;const segment=struckSegment(robot,victim,p);if(segment)applyHit(robot,victim,p,segment);else note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});}
+    else if(ctx.game.time>=p.impactAt){p.resolved=true;recordBossTacticalStrike(bossOpponentMemory(state,victim.id),source,false,ctx.game.time);note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});}
+   }else if(ctx.game.time>=p.impactAt){p.resolved=true;const segment=struckSegment(robot,victim,p);if(segment)applyHit(robot,victim,p,segment);else {recordBossTacticalStrike(bossOpponentMemory(state,victim.id),source,false,ctx.game.time);note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});}}
   }
   if(ctx.game.time>=p.endsAt){
    setPendingStrikes(robot.id,[]);
@@ -182,11 +194,15 @@ export function createBossBehavior(){
    ctx.combat.nextStrike[robot.id]=now+cfg.seriesRest;return;
   }
   if(now<ctx.combat.nextStrike[robot.id])return;
-  const target=targetFor(robot);if(!target||!robot.canSee(target.center))return;
+  const target=targetFor(robot);if(!target)return;
+  const seen=robot.canSee(target.center);
+  // Rear/side leg strikes may be sensed by the foot at contact distance even
+  // if the boss cannot see through the back of its own head.
+  if(!seen&&!ordinaryCandidates(robot,target).some(c=>c.source.kind==='leg'))return;
   const wantsWide=state.cycles%(state.phase===2?2:3)===(state.phase===2?1:2);
   const wide=wantsWide?wideCandidate(robot,target,cfg.sweep):null;
   if(wide){state.cycles++;begin(robot,wide,cfg.sweep,{style:'sweep'});return;}
-  const candidate=ordinaryCandidates(robot,target)[0];if(!candidate)return;
+  const candidate=ordinaryCandidates(robot,target).find(c=>seen||c.source.kind==='leg');if(!candidate)return;
   state.cycles++;begin(robot,candidate,candidate.source.kind==='head'?BOSS_CONFIG.combat:cfg.first,{comboIndex:candidate.source.kind==='head'?undefined:1});
  }
  return {state,intent,resolveCombat,planCombat};

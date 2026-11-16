@@ -204,3 +204,57 @@ test('a dash without a reachable limb keeps its original recovery, and a fleeing
   assert.equal(f.state.charge,null);
  }finally{f.close();}
 });
+
+test('boss observes repeated retreat and head hits without forgetting between charges',()=>{
+ const f=duel({bossX:280,playerX:370});try{
+  const m=f.state.tacticsByTarget[0]??=undefined;
+  assert.equal(m,undefined);
+  ctx.game.time=1;f.boss.body.intent(f.boss);
+  const memory=f.state.tacticsByTarget[0];assert.ok(memory);
+  const head=f.boss.hp.get('head');
+  f.boss.damage('head',0,1);
+  ctx.game.time=1.1;f.boss.body.intent(f.boss);
+  assert.equal(memory.headDanger,1);
+  ctx.game.time=20;f.boss.body.intent(f.boss);
+  assert.equal(memory.headDanger,1);
+  assert.equal(head-f.boss.hp.get('head'),1);
+ }finally{f.close();}
+});
+
+test('losing both arms changes near-range movement toward a rear-leg stance',()=>{
+ const f=duel({variant:'brute',bossX:330,playerX:425});try{
+  for(const part of ['arm--1-upper','arm-1-upper'])f.boss.damage(part,0,100);
+  assert.equal(f.boss.attackSources.filter(s=>s.kind==='arm').length,0);
+  f.state.nextChargeAt=1e6;
+  const intent=f.boss.body.intent(f.boss);
+  assert.ok(['разворачивает ноги','сближается для удара ногой','ищет сектор для удара ногой','готовит удар'].includes(intent.mode),intent.mode);
+  assert.ok(f.boss.attackSources.some(s=>s.kind==='leg'));
+  assert.equal(intent.speed===0||intent.speed===55,true);
+ }finally{f.close();}
+});
+
+test('four-armed boss can keep a valid arm-based stance after losing the front pair',()=>{
+ const f=duel({variant:'arms',bossX:330,playerX:420});try{
+  f.boss.damage('arm--1-upper',0,100);f.boss.damage('arm-1-upper',0,100);
+  assert.equal(f.boss.attackSources.filter(s=>s.kind==='arm').length,2);
+  f.state.nextChargeAt=1e6;
+  f.boss.body.intent(f.boss);
+  const memory=f.state.tacticsByTarget[0];assert.ok(memory);
+  assert.ok(memory.plan===null||f.boss.attackSources.some(s=>s.key===memory.plan.source));
+ }finally{f.close();}
+});
+
+test('tactical strike misses change side preference but a hit resets miss accumulation',()=>{
+ const f=duel();try{
+  f.boss.body.intent(f.boss);const m=f.state.tacticsByTarget[0];
+  const source=f.boss.attackSources.find(s=>s.kind==='arm');
+  const {recordBossTacticalStrike}=await import('../src/boss/positioning.js');
+  recordBossTacticalStrike(m,source,false,1);
+  assert.equal(m.side,1);
+  recordBossTacticalStrike(m,source,false,2);
+  assert.equal(m.side,-1);
+  recordBossTacticalStrike(m,source,true,3);
+  assert.equal(m.misses,0);
+  assert.equal(m.strikeFailures[source.key],0);
+ }finally{f.close();}
+});
