@@ -1,6 +1,7 @@
 import {pendingStrikes,setPendingStrikes} from './strikes.js';
 import {settleTower} from '../tower/ui.js';
-import {patientCombatStats} from '../game/patients.js';
+import {patientCombatStats,patientGarage} from '../game/patients.js';
+import {towerMutationCombatBonus} from '../tower/mutations.js';
 import {critChance} from '../garage/model.js';
 import {random} from '../utils/random.js';
 import { clamp, wrap, smooth } from '../utils/math.js';
@@ -253,6 +254,9 @@ export function finishingPounceInProgress(robot,time) {
   return kind==='combat-pounce'||kind==='combat-retreat'
     || time<(robot?.combatRecoverUntil??0);
 }
+export function towerFighterCombatBonus(id){
+ return ctx.mode==='tower'&&id===0?towerMutationCombatBonus(patientGarage()?.[0]?.mutations):{crit:0,cooldownMultiplier:1};
+}
 export function combatAttacks() {
   if (ctx.combat.finished) return;
   resolvePounceImpacts();
@@ -267,7 +271,7 @@ export function combatAttacks() {
         const src = attacker.attackSources.find(s => s.key === pending.source);
         if (attacker.visible && attacker.mobile && src && victim?.visible && victim.hasHead && victim.segmentCount > 0) {
           const touched = struckSegment(attacker, victim, pending);
-          const damage=touched&&random()<critChance(patientCombatStats(id,attacker).effective[1])?2:1;
+          const damage=touched&&random()<Math.min(.75,critChance(patientCombatStats(id,attacker).effective[1])+towerFighterCombatBonus(id).crit)?2:1;
           if (touched && victim.damage(touched, id, damage)) {
             if (victim.mobile) victim.reactToHit(attacker, touched);
             ctx.combat.hits++;
@@ -322,7 +326,7 @@ export function combatAttacks() {
       })));
       ctx.combat.strikes+=selected.length;
       ctx.combat.fighterSwings[id]+=selected.length;
-      ctx.combat.nextStrike[id]=ctx.game.time+timing.attackCooldownSec*(1+.16*4*(1-attacker.spineCount/(attacker.spineSegmentTotal??4)));
+      ctx.combat.nextStrike[id]=ctx.game.time+timing.attackCooldownSec*(1+.16*4*(1-attacker.spineCount/(attacker.spineSegmentTotal??4)))*towerFighterCombatBonus(id).cooldownMultiplier;
       for(const best of selected)note('combat-windup',{from:id,to:best.victim.id,source:best.source.key});
     }
   }
