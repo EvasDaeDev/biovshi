@@ -5,7 +5,7 @@ import {hasBoss} from '../boss/config.js';
 import {bossFloorReward} from '../boss/encounter.js';
 import {selectedTowerFloor,selectTowerFloor,TOWER_DANGER_STYLES} from './floors.js';
 import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
-import {towerMutationSnapshot,TOWER_MUTATIONS,TOWER_MUTATION_SYNERGIES,towerMutationSynergies,chooseTowerMutation} from './mutations.js';
+import {towerMutationSnapshot,towerMutationCombatBonus,TOWER_MUTATIONS,TOWER_MUTATION_IDS,TOWER_MUTATION_FAMILIES,TOWER_MUTATION_SYNERGIES,towerMutationSynergies,chooseTowerMutation} from './mutations.js';
 import {ctx} from '../game/state.js';
 import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount,buyTowerInsurance,towerEnemyReward} from './model.js';
 import {bettingSave} from '../betting/storage.js';
@@ -109,9 +109,10 @@ export function towerPreparation(){
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   function renderSkills(){
     const snapshot=towerMutationSnapshot(t),stats=snapshot.effective;
+    const combatBonus=towerMutationCombatBonus(t.mutations);
     fields.innerHTML=`<div class="garage-stat-list"><small>Побед: ${t.wins} · заработано очков: ${9+t.wins}</small>
       ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)}><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select data-tower-stat="${i}" aria-label="${skill.name}">${[earnedStats(t.wins)[i]-1,earnedStats(t.wins)[i],earnedStats(t.wins)[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===t.stats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
-      <small class="garage-stat-effects">Скор. ${Math.round(statMultiplier(stats[0])*100)}% Мобиль. ${Math.round(statMultiplier(stats[2])*100)}% Сила +${Math.round(critChance(stats[1])*100)}%крит.</small>
+      <small class="garage-stat-effects">Скор. ${Math.round(statMultiplier(stats[0])*100)}% Мобиль. ${Math.round(statMultiplier(stats[2])*100)}% Крит. ${Math.round(Math.min(.75,critChance(stats[1])+combatBonus.crit)*100)}% · откат ударов ${Math.round(combatBonus.cooldownMultiplier*100)}%</small>
       <button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button>`;
     fields.querySelectorAll('select').forEach(select=>select.onchange=()=>{
       const index=Number(select.dataset.towerStat);
@@ -138,6 +139,10 @@ export function towerPreparation(){
     heading.className='tower-mutation-title';
     heading.textContent=t.mutationDraft?'ПОБЕДА НАД БОССОМ · ВЫБЕРИ МОДУЛЬ':'УСТАНОВЛЕННЫЕ МОДУЛИ';
     mutationPanel.append(heading);
+    const progress=document.createElement('small');
+    progress.className='tower-mutation-progress';
+    progress.textContent=`КОМПЛЕКТ ${t.mutations.length}/${TOWER_MUTATION_IDS.length} · СИНЕРГИИ ${towerMutationSynergies(t.mutations).length}/${Object.keys(TOWER_MUTATION_SYNERGIES).length}`;
+    mutationPanel.append(progress);
     if(t.mutationDraft){
       const note=document.createElement('small');
       note.textContent='Выбери один из предложенных модулей. Он останется до конца забега; ДМС сохраняет установленные модули.';
@@ -154,7 +159,7 @@ export function towerPreparation(){
         const family=document.createElement('small');
         const installed=t.mutations.filter(other=>TOWER_MUTATIONS[other]?.family===module.family).length;
         const bonus=TOWER_MUTATION_SYNERGIES[module.family];
-        family.textContent=(module.family==='mechanical'?'МЕХАНИКА':'БИОЛОГИЯ')
+        family.textContent=TOWER_MUTATION_FAMILIES[module.family]
           +' · КОМПЛЕКТ '+Math.min(2,installed+1)+'/2'
           +(installed===1?' · '+bonus.description:'');
         button.append(label,effect,family);
@@ -173,6 +178,13 @@ export function towerPreparation(){
       equipped.className='tower-mutation-equipped';
       equipped.textContent='УСТАНОВЛЕНО: '+t.mutations.map(id=>TOWER_MUTATIONS[id].name).join(' · ');
       mutationPanel.append(equipped);
+      const perks=towerMutationCombatBonus(t.mutations);
+      if(perks.crit||perks.cooldownMultiplier<1){
+        const detail=document.createElement('small');
+        detail.className='tower-mutation-synergy';
+        detail.textContent='БОЕВЫЕ ЭФФЕКТЫ · +'+Math.round(perks.crit*1000)/10+'% крита · откат атак '+Math.round(perks.cooldownMultiplier*100)+'%';
+        mutationPanel.append(detail);
+      }
       for(const family of towerMutationSynergies(t.mutations)){
         const synergy=document.createElement('small');synergy.className='tower-mutation-synergy';
         synergy.textContent='СИНЕРГИЯ · '+TOWER_MUTATION_SYNERGIES[family].description;
