@@ -43,10 +43,26 @@ export class PixiArena {
     const sprite=new this.p.Sprite(this.texture(canvas,false));
     sprite.position.set(x,y);sprite.width=sprite.height=size;return sprite;
   }
-  floorSprite(canvas){const sprite=new this.p.Sprite(this.texture(canvas,false));sprite.width=sprite.height=700;return sprite;}
+  floorSprite(canvas){
+    const sprite=new this.p.Sprite(this.texture(canvas,false));
+    const {left,top,size}=ctx.arenaDefinition;
+    sprite.position.set(left,top);sprite.width=sprite.height=size;return sprite;
+  }
+  setAmbientHue(shift){
+    if(!this.ambient||!this.obstacleGlow||this.disposed)return;
+    if(!this.ambientHueFilters){
+      this.ambientHueFilters=[new this.p.ColorMatrixFilter(),new this.p.ColorMatrixFilter()];
+      this.ambient.filters=[this.ambientHueFilters[0]];
+      this.obstacleGlow.filters=[this.ambientHueFilters[1]];
+    }
+    for(const filter of this.ambientHueFilters)filter.hue(shift,false);
+    this.render();
+  }
   replaceFloor(canvas){
     if(!this.floor||this.disposed)return;
-    const old=this.floor.texture;this.floor.texture=this.texture(canvas,false);this.floor.width=this.floor.height=700;
+    const {left,top,size}=ctx.arenaDefinition,old=this.floor.texture;
+    this.floor.texture=this.texture(canvas,false);
+    this.floor.position.set(left,top);this.floor.width=this.floor.height=size;
     this.owned.delete(old);old.destroy(true);this.render();
   }
   rasterizeRemains(nodes,size=1024){
@@ -63,7 +79,10 @@ export class PixiArena {
         }
         temporary.addChild(object);
       }
-      return this.app.renderer.extract.canvas({target:temporary,frame:new this.p.Rectangle(0,0,700,700),resolution:size/700,clearColor:[0,0,0,0],antialias:false});
+      const {left,top,size:arenaSize}=ctx.arenaDefinition;
+      return this.app.renderer.extract.canvas({target:temporary,
+        frame:new this.p.Rectangle(left,top,arenaSize,arenaSize),
+        resolution:size/arenaSize,clearColor:[0,0,0,0],antialias:false});
     }finally{
       for(const item of [...moved].reverse())item.parent.addChildAt(item.object,Math.min(item.index,item.parent.children.length));
       for(const [object,visible] of labels)object.visible=visible;
@@ -75,24 +94,32 @@ export class PixiArena {
     await this.prepareSources();
     // Order agrees with the original scene: lights behind walls, oil below actors,
     // darkness above actors, announcements and impact accents above darkness.
-    const [walls,floor,obstacles,night,ambient]=await Promise.all([
+    const [walls,floor,obstacleGlow,obstacles,night,ambient]=await Promise.all([
       this.staticLayer(staticWallNodes(ctx.svg,ctx.outlineG),{outset:ctx.CAMERA_OUTSET}),
       ctx.floorCanvas?Promise.resolve(this.floorSprite(ctx.floorCanvas)):this.staticLayer([ctx.arenaContent.querySelector(':scope > rect'),ctx.svg.querySelector('#tag7hop-floor-decals'),ctx.grid],{pixels:1024}),
-      this.staticLayer([ctx.svg.querySelector('#tag7hop-obstacle-lights'),ctx.blockG]),
+      this.staticLayer([ctx.svg.querySelector('#tag7hop-obstacle-lights')]),
+      this.staticLayer([ctx.blockG]),
       this.staticLayer([ctx.darkness],{night:true}),
       this.staticLayer([ctx.ambientGlowG],{forceVisible:true}),
     ]);
     this.world.addChildAt(walls,0);
     this.floor=floor;this.content.addChild(floor);
     this.attachRoot(ctx.conesG,this.content);
+    // Separate glow from obstacle geometry so hue only affects illumination.
+    this.obstacleGlow=obstacleGlow;this.content.addChild(obstacleGlow);
     this.content.addChild(obstacles);
     for(const root of [ctx.trailsG,ctx.groundG,ctx.oilG,ctx.detachedG,ctx.actorsG,ctx.sparksG,ctx.pulsesG])this.attachRoot(root,this.content);
-    this.nightComposition=new this.p.Container();this.nightComposition.addChild(night);
+    const {left,top,size}=ctx.arenaDefinition;
+    this.nightComposition=new this.p.Container();
+    // RenderTexture origin is local, while the arena itself has world coordinates.
+    this.nightComposition.position.set(-left,-top);
+    this.nightComposition.addChild(night);
     this.nightLights=new this.p.Container();this.nightComposition.addChild(this.nightLights);
     this.attachRoot(ctx.lightHoles,this.nightLights);
-    this.nightTexture=this.p.RenderTexture.create({width:700,height:700,resolution:2});
+    this.nightTexture=this.p.RenderTexture.create({width:size,height:size,resolution:2});
     this.owned.add(this.nightTexture);
-    this.content.addChild(new this.p.Sprite(this.nightTexture));
+    const darknessSprite=new this.p.Sprite(this.nightTexture);
+    darknessSprite.position.set(left,top);this.content.addChild(darknessSprite);
     this.ambient=ambient;ambient.blendMode='screen';this.content.addChild(ambient);
     this.attachRoot(ctx.flashlightsG,this.content);
     for(const root of [ctx.scoreG,ctx.severFlashG,ctx.hitEffects.group])this.attachRoot(root,this.content);
@@ -335,6 +362,8 @@ export class PixiArena {
     this.svg.style.removeProperty('display');this.svg.removeAttribute('aria-hidden');
   }
   clearScene() {
+    for(const filter of this.ambientHueFilters??[])filter.destroy?.();
+    this.ambientHueFilters=null;this.obstacleGlow=null;
     if(this.halo){this.halo.texture.destroy(true);this.halo.filter.destroy();this.halo.gold.destroy();}
     this.postEffects?.destroy();
     this.nightComposition?.destroy({children:true});

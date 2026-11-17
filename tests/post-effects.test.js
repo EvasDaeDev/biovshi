@@ -33,7 +33,8 @@ function engine(){
 test('film look preserves the calibrated optics and one-pass texture budget',()=>{
   const u=postEffectUniforms();
   assert.equal(CONFIG.postEffects.unsharpAmount,.8);assert.equal(CONFIG.postEffects.unsharpRadiusPx,1);
-  assert.equal(CONFIG.postEffects.filmGrain,1.4);assert.equal(CONFIG.postEffects.distortion,-7);
+  assert.equal(CONFIG.postEffects.filmGrain,.7);assert.equal(CONFIG.postEffects.distortion,-7);
+   assert.ok(Math.abs(u.uLook[3]-.0126)<1e-7,'film grain uniform is half of the former 1.4 intensity');
   assert.equal(CONFIG.postEffects.redCyan,-35);assert.equal(CONFIG.postEffects.blueYellow,29);
   assert.equal(CONFIG.postEffects.vignetteAmount,-76);assert.equal(CONFIG.postEffects.vignetteMidpoint,50);
   assert.ok(Math.abs(u.uOptics[0]-.0175)<1e-7);

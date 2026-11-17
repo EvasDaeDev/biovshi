@@ -16,6 +16,7 @@ import { initializeSettings } from '../ui/settings.js';
 import { initializeOrientation } from '../ui/orientation.js';
 import { createWalls } from '../render/walls.js';
 import { createObstacleLights } from '../render/ground-spots.js';
+import { selectArenaAmbient } from '../render/ambient-hue.js';
 import { initializeHitEffects } from '../render/hit-effects.js';
 import { initializePerformance } from '../render/performance.js';
 import { clamp } from '../utils/math.js';
@@ -71,6 +72,8 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.NS = 'http://www.w3.org/2000/svg';
   ctx.floorImage?.remove();ctx.floorImage=null;ctx.floorCanvas=null;
   ctx.arenaId=arenaDefinition(arenaId).id;ctx.arenaDefinition=arenaDefinition(arenaId);
+  // New lighting for every arena entrance, including successive tower floors.
+  selectArenaAmbient();ctx.ambientBakedHue=ctx.ambientHue;
   for (const g of [ctx.grid, ctx.conesG, ctx.flashlightsG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG, ctx.pulsesG, ctx.sparksG, ctx.scoreG]) g.replaceChildren();
   ctx.roles.replaceChildren();
   ctx.intro = ctx.root.querySelector('#tag7hop-intro');
@@ -125,6 +128,16 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.scale = CONFIG.robot.scale;
   ctx.w = 700;
   ctx.h = 700;
+  // The original SVG template is 7m square; resize its floor and darkness masks.
+  const {left:floorLeft,top:floorTop,size:floorSize}=ctx.arenaDefinition;
+  for(const node of [
+    ctx.arenaContent.querySelector(':scope > rect'),
+    ctx.svg.querySelector('#tag7hop-darkness'),
+    ctx.svg.querySelector('#tag7hop-darkness-mask'),
+    ctx.svg.querySelector('#tag7hop-darkness-mask > rect'),
+  ])if(node)for(const [key,value] of Object.entries({
+    x:floorLeft,y:floorTop,width:floorSize,height:floorSize
+  }))attr(node,key,value);
   ctx.HEAD_LIMIT = CONFIG.vision.headScanDeg * Math.PI / 180;
   ctx.SCAN_SPEED = CONFIG.vision.scanSpeedDeg * Math.PI / 180;
   ctx.TRACK_SPEED = CONFIG.vision.trackingSpeedDeg * Math.PI / 180;
@@ -168,10 +181,10 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.ambientBlur = el('filter', {
     id: 'tag7hop-ambient-filter',
     filterUnits: 'userSpaceOnUse',
-    x: -180,
-    y: -180,
-    width: 1060,
-    height: 1060
+    x: floorLeft-180,
+    y: floorTop-180,
+    width: floorSize+360,
+    height: floorSize+360
   }, ctx.defs);
   el('feGaussianBlur', {
     stdDeviation: 5
@@ -243,7 +256,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     for (const band of ctx.ambientBands) el('polygon', {
       points,
       fill: 'none',
-      stroke: CONFIG.light.ambientColor,
+      stroke: ctx.ambientColor,
       'stroke-opacity': band.opacity,
       'stroke-width': band.width,
       'stroke-linejoin': 'round'
@@ -410,7 +423,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   // The clock is a screen-space overlay, not part of the clipped floor.
   ctx.svg.appendChild(ctx.timerOutput);
   ctx.CAMERA_OUTSET = Math.max(0, CONFIG.arena.wallThicknessCm) + Math.max(0, CONFIG.arena.outerWallDepthCm) + CONFIG.arena.wallViewMarginCm;
-  ctx.CAMERA_FULL = ctx.arenaDefinition.size + 2 * ctx.CAMERA_OUTSET;
+  ctx.CAMERA_FULL = (ctx.arenaDefinition.size + 2 * ctx.CAMERA_OUTSET) * CONFIG.arena.cameraMaxDistanceFactor;
   ctx.CAMERA_MIN = 200;
   ctx.CAMERA_MARGIN = 200;
   ctx.camera = {

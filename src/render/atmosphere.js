@@ -11,8 +11,9 @@ export async function bakeStaticLighting() {
   if(!group||group.dataset.rasterized==='true')return;
   const source=group.cloneNode(true);
   source.removeAttribute('style');
-  const size=Math.round(700*CONFIG.light.staticResolution);
-  const markup=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 700 700"><defs>${ctx.ambientBlur.outerHTML}${ctx.fieldClip.outerHTML}</defs>${source.outerHTML}</svg>`;
+  const {left,top,size:arenaSize}=ctx.arenaDefinition;
+  const size=Math.round(arenaSize*CONFIG.light.staticResolution);
+  const markup=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="${left} ${top} ${arenaSize} ${arenaSize}"><defs>${ctx.ambientBlur.outerHTML}${ctx.fieldClip.outerHTML}</defs>${source.outerHTML}</svg>`;
   const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(markup);
   if(!rasters.has(url)){
     const pending=(async()=>{
@@ -29,7 +30,7 @@ export async function bakeStaticLighting() {
   const href=await rasters.get(url);
   if(svg!==ctx.svg||!group.isConnected||ctx.disposed)return;
   group.replaceChildren();group.removeAttribute('filter');
-  el('image',{href,x:0,y:0,width:700,height:700,preserveAspectRatio:'none'},group);
+  el('image',{href,x:left,y:top,width:arenaSize,height:arenaSize,preserveAspectRatio:'none'},group);
   group.dataset.rasterized='true';
   ctx.ambientBlur.remove();ctx.ambientLights=[];
 }

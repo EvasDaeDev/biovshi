@@ -22,7 +22,7 @@ const CONFIG = {
     unsharpAmount: 0.8, // Unsharp Mask: 80%.
     unsharpRadiusPx: 1,
     unsharpThreshold: 0,
-    filmGrain: 1.4,
+    filmGrain: 0.7, // Halved grain intensity; size, colour and other film effects unchanged.
     grainSize: 2.4, // Pixels at the reference viewport; mixed with finer grain.
     grainColour: 0.14,
     filmTone: 0.65, // Cool green shadows / warm lights, with red protection.
@@ -47,6 +47,7 @@ const CONFIG = {
     outerWallDepthCm: 90, // Внешняя кирпичная облицовка за стеной, не игровая зона.
     wallTileLengthCm: 100, // Длина тайла вдоль внутренней кромки стены.
     wallViewMarginCm: 8, // Запас камеры за внешней кромкой.
+    cameraMaxDistanceFactor: 0.8, // И стартовый вид, и максимальное отдаление: 80% от прежнего.
     cornerCutCm: 25,
     // Срез каждого угла внешнего периметра.
     // Границы препятствий, см. cut срезает углы; первый несёт счёт.

@@ -233,7 +233,7 @@ test('outer wall and clock remain outside the floor clip, with a full-size playa
   const tile=ctx.svg.querySelector('#texture-arenaWall');
   assert.equal(tile.getAttribute('width'),'100');
   assert.equal(tile.getAttribute('height'),'30');
-  assert.equal(ctx.CAMERA_FULL,700+2*(CONFIG.arena.wallThicknessCm+CONFIG.arena.outerWallDepthCm+CONFIG.arena.wallViewMarginCm));
+  assert.ok(Math.abs(ctx.CAMERA_FULL-(700+2*(CONFIG.arena.wallThicknessCm+CONFIG.arena.outerWallDepthCm+CONFIG.arena.wallViewMarginCm))*CONFIG.arena.cameraMaxDistanceFactor)<1e-7);
   assert.ok(ctx.svg.querySelector('#tag7hop-walls-outer'),'outer brick facade visible behind existing wall');
   assert.equal(ctx.arenaBoundary.right,700);
   assert.equal(ctx.arenaBoundary.bottom,700);
@@ -256,7 +256,7 @@ test('operating-room lighting, dark footprints and inward textured obstacle wall
     assert.match(pattern.querySelector('image').getAttribute('href'),/wall_02\.webp$/);
     assert.equal(pattern.querySelector('image').getAttribute('transform'),'rotate(180 50 15)');
     assert.equal(ctx.outlineG.getAttribute('stroke'),'none');
-    assert.ok([...ctx.ambientGlowG.querySelectorAll('polygon')].every(n=>n.getAttribute('stroke')==='#8b9e91'));
+    assert.ok([...ctx.ambientGlowG.querySelectorAll('polygon')].every(n=>n.getAttribute('stroke')===ctx.ambientColor));
     assert.equal(ctx.ambientLights.length,6);
     assert.equal(ctx.svg.querySelector('#texture-arenaWall image').getAttribute('opacity'),'0');
     assert.ok([...ctx.trailsG.children].every(n=>n.getAttribute('fill')==='var(--night-trail)'));

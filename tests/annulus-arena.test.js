@@ -31,7 +31,7 @@ test('picker, normalized preview and random tower selection include annulus',()=
  assert.match(arenaPicker('annulus'),/data-arena="annulus" aria-pressed="true"/);
  const dom=new JSDOM(arenaDiagram(ARENAS.annulus)),polygon=dom.window.document.querySelector('.arena-obstacle');
  const points=polygon.getAttribute('points').split(' ').map(p=>p.split(',').map(Number));assert.ok(Math.abs(Math.min(...points.map(p=>p[0]))-100/3)<1e-8);assert.ok(Math.abs(Math.max(...points.map(p=>p[0]))-200/3)<1e-8);dom.window.close();
- assert.deepEqual([0,.34,.67,.999].map(randomArenaId),['ward','ring','annulus','annulus']);
+ assert.deepEqual([0,.2,.34,.5,.67,.85,.999].map(randomArenaId),['ward','ring','annulus','sluice','zigzag','columns','throat']);
 });
 test('annulus initializes all sixteen collision edges and safe patient spawn points, survives saving',()=>{
  const dom=setup();assert.equal(ctx.arenaBoundary.points.length,16);assert.equal(ctx.arenaPlanes.length,16);assert.equal(ctx.obstacles.length,1);
