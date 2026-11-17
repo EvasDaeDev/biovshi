@@ -5,6 +5,7 @@ import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 import { attr, el } from './svg.js';
 import {towerUpgradeAtlas} from '../tower/upgrade-appearance.js';
+import {createSkinReadiness} from './skin-readiness.js';
 
 // r_01..r_04: 256×256, 4×4 cells. All joint axes use y=32.
 // Head and chest anchors are explicitly calibrated in atlas pixels;
@@ -73,6 +74,11 @@ export function createRobotSkin(robot) {
   const parts=robot.skinParts??ROBOT_PARTS;
   const keys=robot.skinParts?Object.keys(parts):[...Object.keys(ROBOT_PARTS).filter(k=>/^(arm|leg)/.test(k)),
     'spine-3','spine-2','spine-1','spine-0','head'];
+  // Extra anatomical cells must finish loading before removing the vector
+  // silhouette. The normal actor renderer retains its previous fast path.
+  const guarded=Boolean(robot.skinParts)&&ctx.mode==='tower'&&robot.id===0;
+  const gate=guarded?createSkinReadiness(keys,()=>activate(true),()=>activate(false)):null;
+  if(guarded)robot.ensureFallback();
   for(const key of keys) {
     const android=robot.prosthetics.includes(key)&&ctx.textureAssets?.robotAndroid?.loaded!==false;
     const replacement=ctx.mode==='tower'&&robot.id===0?
@@ -80,21 +86,29 @@ export function createRobotSkin(robot) {
     const spriteUrl=replacement?assetUrl(replacement):
       android?assetUrl(ASSETS.textures.robotAndroid):url;
     const piece=createPiece(key,spriteUrl,/^(arm|leg)/.test(key)?limbs:body,parts[key]);
-    piece.image.addEventListener('load',()=>activate(true),{once:true});
+    piece.image.addEventListener('load',()=>{
+      if(gate)gate.loaded(key);else activate(true);
+    },{once:true});
     if(replacement){
-      // A user-authored upgrade PNG may be absent or malformed. Keep the rest
-      // of the patient visible and fall back only for that anatomical cell.
       piece.image.addEventListener('error',()=>{
         const fallbackUrl=android?assetUrl(ASSETS.textures.robotAndroid):url;
-        if(piece.url===fallbackUrl){activate(false);return;}
-        piece.url=fallbackUrl;
-        attr(piece.image,'href',fallbackUrl);
+        if(piece.url!==fallbackUrl){
+          piece.url=fallbackUrl;
+          attr(piece.image,'href',fallbackUrl);
+          return;
+        }
+        if(gate)gate.failed(key);else activate(false);
       });
-    }else piece.image.addEventListener('error',()=>activate(false));
+    }else piece.image.addEventListener('error',()=>{
+      if(gate)gate.failed(key);else activate(false);
+    });
     pieces.set(key,piece);
   }
   attr(robot.actor,'data-skin','r_0'+(robot.id+1));
-  if(ctx.textureAssets?.[assetKey]?.loaded)activate(true);
+  if(ctx.textureAssets?.[assetKey]?.loaded&&!guarded)activate(true);
+  // The fallback is not just attached; it must already have visible geometry
+  // while asynchronous SVG <image> elements decode.
+  if(guarded)robot.draw(0);
 }
 
 export function paintRobotSkin(robot,strikePoses=[]) {
