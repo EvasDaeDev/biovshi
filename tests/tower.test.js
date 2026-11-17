@@ -11,7 +11,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
-import {newTower,towerFor,rewardTower,completeTower,resetTower,validTower,floorEnemyCount,towerEnemyCount,normalizeTower} from '../src/tower/model.js';
+import {newTower,towerFor,rewardTower,completeTower,resetTower,validTower,floorEnemyCount,towerEnemyCount,normalizeTower,buyTowerSurgery} from '../src/tower/model.js';
+import {chooseTowerMutation} from '../src/tower/mutations.js';
 import {betNewSession,betCommit,betResolve,betAddPlayer} from '../src/betting/ledger.js';
 import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 import {initializeGame} from '../src/game/initialize.js';
@@ -184,6 +185,26 @@ test('modernization selects surgical body parts from horizontal patient and prev
   modal.querySelector('.tower-upgrade-close').click();
   assert.equal(modal.hidden,true);
   assert.equal(document.querySelector('#tower-fight').disabled,false);
+ }finally{close(dom);}
+});
+
+test('modified live body skin uses exact replacement PNG and falls back only for a failed segment',()=>{
+ const session=betNewSession(['Протезы'],300),run=towerFor(session,0);
+ for(let i=0;i<5;i++)completeTower(session,0,true,()=>.24);
+ assert.equal(chooseTowerMutation(run,run.mutationDraft.options[0]),true);
+ assert.equal(buyTowerSurgery(session,0,'impact','arm-1-upper'),30);
+ const dom=setup(session,run,'ward');
+ try{
+  const player=ctx.robots[0];
+  const piece=player.skin.pieces.get('arm-1-upper');
+  assert.match(piece.url,/ar_surg_impact\.png$/);
+  const unaffected=player.skin.pieces.get('head').url;
+  const opponent=ctx.robots[1].skin?.pieces.get('arm-1-upper')?.url;
+  piece.image.dispatchEvent(new dom.window.Event('error'));
+  assert.match(piece.url,/r_01\.png$/,'only the failed surgical texture reverts to original skin');
+  assert.equal(piece.image.getAttribute('href'),piece.url);
+  assert.equal(player.skin.pieces.get('head').url,unaffected);
+  assert.equal(ctx.robots[1].skin?.pieces.get('arm-1-upper')?.url,opponent);
  }finally{close(dom);}
 });
 
