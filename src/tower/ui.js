@@ -5,7 +5,7 @@ import {hasBoss} from '../boss/config.js';
 import {bossFloorReward} from '../boss/encounter.js';
 import {selectedTowerFloor,selectTowerFloor,TOWER_DANGER_STYLES} from './floors.js';
 import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
-import {prostheticStatSnapshot} from '../garage/prosthetics.js';
+import {towerMutationSnapshot,TOWER_MUTATIONS,TOWER_MUTATION_SYNERGIES,towerMutationSynergies,chooseTowerMutation} from './mutations.js';
 import {ctx} from '../game/state.js';
 import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount,buyTowerInsurance,towerEnemyReward} from './model.js';
 import {bettingSave} from '../betting/storage.js';
@@ -108,7 +108,7 @@ export function towerPreparation(){
   }
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   function renderSkills(){
-    const snapshot=prostheticStatSnapshot(t),stats=snapshot.effective;
+    const snapshot=towerMutationSnapshot(t),stats=snapshot.effective;
     fields.innerHTML=`<div class="garage-stat-list"><small>Побед: ${t.wins} · заработано очков: ${9+t.wins}</small>
       ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)}><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select data-tower-stat="${i}" aria-label="${skill.name}">${[earnedStats(t.wins)[i]-1,earnedStats(t.wins)[i],earnedStats(t.wins)[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===t.stats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
       <small class="garage-stat-effects">Скор. ${Math.round(statMultiplier(stats[0])*100)}% Мобиль. ${Math.round(statMultiplier(stats[2])*100)}% Сила +${Math.round(critChance(stats[1])*100)}%крит.</small>
@@ -121,6 +121,70 @@ export function towerPreparation(){
     fields.querySelector('[data-tower-base]').onclick=()=>{t.stats=earnedStats(t.wins);ctx.towerGarage[0].stats=[...t.stats];bettingSave();renderSkills();};
   }
   renderSkills();
+  // Boss milestone rewards must be chosen before entering the next floor.
+  // Place the panel next to normal skill controls without rebuilding the HUD.
+  let mutationPanel=ctx.root.querySelector('#tower-prep-mutations');
+  if(!mutationPanel){
+    mutationPanel=document.createElement('section');
+    mutationPanel.id='tower-prep-mutations';
+    fields.after(mutationPanel);
+  }
+  const fightButton=ctx.root.querySelector('#tower-fight');
+  function renderMutations(){
+    mutationPanel.replaceChildren();
+    mutationPanel.hidden=!t.mutationDraft&&!(t.mutations?.length);
+    if(mutationPanel.hidden)return;
+    const heading=document.createElement('strong');
+    heading.className='tower-mutation-title';
+    heading.textContent=t.mutationDraft?'ПОБЕДА НАД БОССОМ · ВЫБЕРИ МОДУЛЬ':'УСТАНОВЛЕННЫЕ МОДУЛИ';
+    mutationPanel.append(heading);
+    if(t.mutationDraft){
+      const note=document.createElement('small');
+      note.textContent='Выбери один из трёх. Модуль останется до конца забега; ДМС сохраняет установленные модули.';
+      mutationPanel.append(note);
+      const choices=document.createElement('div');
+      choices.className='tower-mutation-options';
+      for(const id of t.mutationDraft.options){
+        const module=TOWER_MUTATIONS[id];
+        const button=document.createElement('button');
+        button.type='button';
+        button.className='tower-mutation-option';
+        const label=document.createElement('b');label.textContent=module.name;
+        const effect=document.createElement('small');effect.textContent=module.description;
+        const family=document.createElement('small');
+        const installed=t.mutations.filter(other=>TOWER_MUTATIONS[other]?.family===module.family).length;
+        const bonus=TOWER_MUTATION_SYNERGIES[module.family];
+        family.textContent=(module.family==='mechanical'?'МЕХАНИКА':'БИОЛОГИЯ')
+          +' · КОМПЛЕКТ '+Math.min(2,installed+1)+'/2'
+          +(installed===1?' · '+bonus.description:'');
+        button.append(label,effect,family);
+        button.onclick=()=>{
+          if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||!chooseTowerMutation(t,id))return;
+          ctx.towerGarage[0].mutations=[...t.mutations];
+          bettingSave();renderSkills();renderMutations();syncFightLock();
+          ctx.root.querySelector('#tower-prep-error').textContent='Модуль установлен: '+module.name;
+        };
+        choices.append(button);
+      }
+      mutationPanel.append(choices);
+    }
+    if(t.mutations.length){
+      const equipped=document.createElement('div');
+      equipped.className='tower-mutation-equipped';
+      equipped.textContent='УСТАНОВЛЕНО: '+t.mutations.map(id=>TOWER_MUTATIONS[id].name).join(' · ');
+      mutationPanel.append(equipped);
+      for(const family of towerMutationSynergies(t.mutations)){
+        const synergy=document.createElement('small');synergy.className='tower-mutation-synergy';
+        synergy.textContent='СИНЕРГИЯ · '+TOWER_MUTATION_SYNERGIES[family].description;
+        mutationPanel.append(synergy);
+      }
+    }
+  }
+  function syncFightLock(){
+    fightButton.disabled=Boolean(t.mutationDraft);
+    fightButton.title=t.mutationDraft?'Сначала выбери модификацию после победы над боссом':'';
+  }
+  renderMutations();syncFightLock();
   ctx.root.querySelector('#tower-prep-artifacts').innerHTML=artifactCollectionMarkup(t.artifacts)+`<p class="artifact-bonus-note">ПОЛНЫЙ АРТЕФАКТ: +${formatChips(ARTIFACT_COMPLETION_REWARD)}</p>`;
   ctx.root.querySelector('#tower-prep-error').textContent='';
   const insuranceButton=ctx.root.querySelector('#tower-insurance');
@@ -141,13 +205,14 @@ export function towerPreparation(){
     }
     catch(error){ctx.root.querySelector('#tower-prep-error').textContent=error.message;}
   };
-  ctx.root.querySelector('#tower-fight').onclick=()=>{
+  fightButton.onclick=()=>{
+    if(t.mutationDraft){ctx.root.querySelector('#tower-prep-error').textContent='Сначала выбери модификацию после победы над боссом.';return;}
     const stats=[...fields.querySelectorAll('select')].map(n=>Number(n.value));
     if(!validStats(stats,t.wins)){ctx.root.querySelector('#tower-prep-error').textContent='Можно перенести одно очко между навыками, сохранив их сумму.';return;}
     t.stats=stats;t.preparing=false;ctx.towerGarage[0].stats=[...stats];bettingSave();panel.hidden=true;
     ctx.root.querySelector('#tower-controls').hidden=false;startSpawnSequence();
   };
-  ctx.root.querySelector('#tower-fight').focus();
+  (t.mutationDraft?mutationPanel.querySelector('.tower-mutation-option'):fightButton)?.focus();
 }
 export function updateTowerHud(){
   const count=ctx.ROBOT_COUNT-1,remaining=ctx.startup.phase==='running'?ctx.robots.filter(r=>r.id!==0&&r.mobile&&r.visible).length:count;
