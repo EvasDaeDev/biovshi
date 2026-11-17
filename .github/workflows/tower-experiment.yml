@@ -39,10 +39,12 @@ jobs:
         run: node scripts/experiment-tower-fights.mjs --seeds=2 --limit=120 --floors=3,7,9,12,14,17,19 --policy=approach --out=artifacts/tower-long-approach.json
       - name: Compare long fights with orbiting autopilot
         run: node scripts/experiment-tower-fights.mjs --seeds=2 --limit=120 --floors=3,7,9,12,14,17,19 --policy=orbit --out=artifacts/tower-long-orbit.json
+      - name: Compare paired fight outcomes
+        run: node scripts/compare-tower-fights.mjs artifacts/tower-long-approach.json artifacts/tower-long-orbit.json artifacts/tower-fight-comparison.md
       - name: Upload battle results even after a failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tower-fight-report
-          path: artifacts/*.json
+          path: artifacts/*
           if-no-files-found: warn
