@@ -21,7 +21,7 @@ import {controlledIntent} from '../src/tower/input.js';
 import {advanceStartup} from '../src/game/session.js';
 import {step} from '../src/game/loop.js';
 import {note} from '../src/game/events.js';
-import {patientGarage,patientSkin} from '../src/game/patients.js';
+import {patientGarage,patientSkin,patientCombatStats} from '../src/game/patients.js';
 import {patientName} from '../src/ui/patient.js';
 import {showResults} from '../src/ui/results.js';
 function setup(s,tower,arenaId='ward'){
@@ -62,6 +62,34 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
   assert.match(buttons[0].textContent,/Скорость 160%/);
   assert.match(buttons[0].textContent,/Поворот 160%/);
   assert.match(buttons[1].textContent,/Критический удар 50%/);
+ }finally{close(dom);}
+});
+
+test('post-boss module choices lock fight entry and update the actual player combat stats',()=>{
+ const s=betNewSession(['Выбор'],1000),t=towerFor(s,0);
+ for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ const draft=[...t.mutationDraft.options];
+ const dom=setup(s,t,'ward');
+ try{
+  const panel=document.querySelector('#tower-prep-mutations');
+  assert.equal(panel.hidden,false);
+  assert.match(panel.textContent,/ПОБЕДА НАД БОССОМ/);
+  const buttons=[...panel.querySelectorAll('.tower-mutation-option')];
+  assert.equal(buttons.length,3);
+  const fight=document.querySelector('#tower-fight');
+  assert.equal(fight.disabled,true,'must select a module before entering next fight');
+  const before=patientCombatStats(0,ctx.robots[0]).effective;
+  buttons[0].click();
+  assert.equal(t.mutationDraft,undefined);
+  assert.deepEqual(t.mutations,[draft[0]]);
+  assert.deepEqual(ctx.towerGarage[0].mutations,t.mutations);
+  assert.equal(fight.disabled,false);
+  assert.match(panel.textContent,/УСТАНОВЛЕНО/);
+  const after=patientCombatStats(0,ctx.robots[0]).effective;
+  assert.ok(after.some((x,i)=>x>before[i]),'module changes real patient combat statistics');
+  assert.ok(validTower(t));
+  fight.click();advanceStartup(20);
+  assert.equal(ctx.startup.phase,'running');
  }finally{close(dom);}
 });
 
