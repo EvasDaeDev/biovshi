@@ -30,10 +30,10 @@ function candidateArena(floor,danger,random,boss){
  if(boss&&floor>=25&&Object.hasOwn(ARENAS,'columns'))return 'columns';
  return ids[roll(random,ids.length)]??'ward';
 }
-function option(t,danger,random){
- const boss=hasBoss(t),arenaId=candidateArena(t.level,danger,random,boss);
+function option(t,danger,random,arenaOverride=null){
+ const boss=hasBoss(t),arenaId=arenaOverride??candidateArena(t.level,danger,random,boss);
  const max=cap(arenaId)-1;
- const count=boss?3:Math.min(max,Math.max(1,standardCount(t.level)));
+ const count=boss?3:Math.min(max,Math.max(1,standardCount(t.level)+(danger?1:0)));
  return {arenaId,kind:boss?'boss':danger?'danger':'standard',
   profiles:boss?['boss',...opponents(t.level,2,false,random)]:opponents(t.level,count,danger,random)};
 }
