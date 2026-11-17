@@ -24,6 +24,16 @@ export const ASSETS = {
     hat3: 'assets/textures/robots/decor/head/3.png',
     hat4: 'assets/textures/robots/decor/head/4.png',
     robotAndroid: 'assets/textures/robots/ar_01.png',
+    // Include ALL artist-editable Tower upgrade atlases in both hosted and
+    // fully offline standalone builds. Runtime lookups select per segment.
+    ...Object.fromEntries(['brace','alignment','drive','impact','reflex'].map(id=>[
+      'towerSurgery_'+id,'assets/textures/robots/upgrades/ar_surg_'+id+'.png'
+    ])),
+    ...Object.fromEntries(['turbo','servo','piston','adrenal','predator','instinct',
+      'flywheel','gyro','spike','sinews','ossify','twitch','optic','synapse',
+      'focus','metronome','alarm','quiet'].map(id=>[
+      'towerMutation_'+id,'assets/textures/robots/upgrades/ar_mod_'+id+'.png'
+    ])),
     robotA: 'assets/textures/robots/r_01.png',
     robotB: 'assets/textures/robots/r_02.png',
     robotC: 'assets/textures/robots/r_03.png',
