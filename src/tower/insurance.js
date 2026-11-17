@@ -17,7 +17,8 @@ export function purchaseInsurance(session,player,tower){
  if(!buyer||buyer.balance<policy.price)throw Error('Недостаточно монет для ДМС.');
  const price=policy.price;
  policy.checkpoint={level:tower.level,wins:tower.wins,patient:tower.patient,stats:[...tower.stats],prosthetics:[...tower.prosthetics],
-  ...(tower.bossEncounter?{bossEncounter:structuredClone(tower.bossEncounter)}:{})};
+  ...(tower.bossEncounter?{bossEncounter:structuredClone(tower.bossEncounter)}:{}),
+  ...(tower.floorPlan?{floorPlan:structuredClone(tower.floorPlan)}:{})};
  buyer.balance-=price;session.insuranceSpent=(session.insuranceSpent??0)+price;
  policy.price=price+Math.ceil(price*(renewal?3:10)/100);
  return price;
