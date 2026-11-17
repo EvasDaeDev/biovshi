@@ -38,7 +38,7 @@ function option(t,danger,random){
 // credited kills keeps its old enemy count until the next floor.
 export function ensureTowerFloorPlan(t,random=Math.random){
  if(t.floorPlan?.floor===t.level)return t.floorPlan;
- if(t.rewarded?.length)return null;
+ if(t.rewarded?.length||t.legacyEnemyCount!==undefined||t.legacyBossFloor)return null;
  const boss=hasBoss(t);
  t.floorPlan={floor:t.level,selected:0,options:boss?[option(t,false,random)]:[option(t,false,random),option(t,true,random)]};
  return t.floorPlan;
