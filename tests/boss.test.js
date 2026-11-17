@@ -27,6 +27,7 @@ import {pounceContactSegment,pounceOpportunity,selectSimultaneousStrikes,strikeP
 import {bossPortraitBones} from '../src/boss/card.js';
 import {drawDetachedSkin} from '../src/render/robot-skin.js';
 import {limbKey} from '../src/robot/body.js';
+import {bossOpponentMemory,bossSideWeaponIntent} from '../src/boss/positioning.js';
 
 for(const variant of BOSS_VARIANTS)for(const arena of variant.spineSegments>6?['columns']:['ward','ring','annulus'])test(`${variant.id} boss has independent geometry, atlas, supports and unique attack sources in ${arena}`,()=>{
  const f=startBossScenario({variant:variant.id,arena});
@@ -134,6 +135,31 @@ test('extra limbs sever independently and retain boss atlas mapping in detached 
   // Severing the anchor also takes the secondary arm with it.
   ctx.game.time+=1;r.damage('spine-2',0,100);assert.equal(r.hp.get('arm-1-pair2-upper'),0);assert.equal(r.hp.get('spine-5'),0);
  }finally{f.close();}
+});
+
+test('extended bosses use surviving rear limbs after both front arms are severed',()=>{
+ for(const variant of ['long_legs','long_arms']){
+  const f=startBossScenario({variant,arena:'columns',floor:variant==='long_legs'?25:30,seed:23});
+  try{
+   const boss=f.boss;
+   for(const arm of ['arm--1-upper','arm-1-upper'])
+    assert.equal(boss.damage(arm,0,100),true);
+   assert.equal(boss.spineSegmentTotal,8);
+   assert.equal(boss.attackSources.some(s=>s.kind==='arm'&&!s.key.includes('pair2')),false);
+   const remaining=boss.attackSources.filter(s=>s.kind==='arm'||s.kind==='leg');
+   assert.ok(remaining.length>=4,'surviving limbs remain available to attack');
+   if(variant==='long_arms')
+    assert.ok(remaining.some(s=>s.kind==='arm'&&s.key.includes('pair2')));
+   else assert.ok(remaining.filter(s=>s.kind==='leg').length>=4);
+   const memory=bossOpponentMemory(boss.body.behavior.state,f.player.id);
+   const intent=bossSideWeaponIntent(boss,f.player,memory);
+   assert.ok(intent,'boss should retain a side-on limb-based engagement stance');
+   assert.equal(Number.isFinite(intent.heading),true);
+   assert.doesNotMatch(intent.mode,/^преследует$/,'do not regress to head-first pursuit');
+   for(let i=0;i<90;i++)step(1/60);
+   assert.ok(boss.capsules.every(c=>[c.a.x,c.a.y,c.b.x,c.b.y,c.r].every(Number.isFinite)));
+  }finally{f.close();}
+ }
 });
 
 test('boss card conceals stats with skulls, hides trauma and describes destruction accurately',()=>{
