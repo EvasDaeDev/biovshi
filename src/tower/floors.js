@@ -19,7 +19,7 @@ function opponents(floor,count,danger,random){
   if(eliteEligible&&random()<.18)return 'elite';
   // Every dangerous challenge must actually include at least one specialist.
   if(danger&&i===0)return pool[1+roll(random,3)];
-  const specialRate=danger?.75:Math.min(.55,.12+floor*.045);
+  const specialRate=danger ? .75 : Math.min(.55,.12+floor*.045);
   return random()<specialRate?pool[1+roll(random,3)]:'basic';
  });
 }
