@@ -78,8 +78,19 @@ export function towerPreparation(){
       const enemies=option.profiles.map(id=>towerEnemyProfile(id).name);
       const counts=new Map();
       for(const name of enemies)counts.set(name,(counts.get(name)??0)+1);
-      const summary=[...counts].map(([name,count])=>count>1?name+' ×'+count:name).join(' · ');
-      button.textContent=(option.kind==='danger'?'ОПАСНО · +5 ЗА ВЫБИВАНИЕ':'СТАНДАРТ')+'\n'+summary;
+      const heading=document.createElement('strong');
+      heading.textContent=(option.kind==='danger'?'ОПАСНО · 15 ЗА ВЫБИВАНИЕ':'СТАНДАРТ · 10 ЗА ВЫБИВАНИЕ')+' · '+option.profiles.length+' ВРАГ.';
+      button.appendChild(heading);
+      for(const [id,count] of new Map(option.profiles.map(id=>[id,option.profiles.filter(other=>other===id).length]))){
+        const line=document.createElement('span');line.className='tower-enemy-line';
+        const label=document.createElement('b');label.textContent=towerEnemyProfile(id).name+(count>1?' ×'+count:'');
+        line.appendChild(label);
+        if(id!=='basic'){
+          const effect=document.createElement('small');effect.textContent=towerProfileDifference(id);
+          line.appendChild(effect);
+        }
+        button.appendChild(line);
+      }
       button.onclick=()=>{
         if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||index===encounter.selected)return;
         if(selectTowerFloor(t,index)){bettingSave();ctx.startTower(ctx.towerPlayer);}
