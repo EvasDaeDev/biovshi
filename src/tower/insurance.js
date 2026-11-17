@@ -5,6 +5,7 @@ import {validTowerMutationState} from './mutations.js';
 import {validTowerSurgeries} from './surgery.js';
 import {normalizeTowerGraftProsthetics} from './anatomy.js';
 import {validTowerDonorState} from './donors.js';
+import {validTowerRerolls} from './economy.js';
 export const newInsurance=()=>({price:50,checkpoint:null});
 export function validInsurance(policy,record){
  if(!policy||!Number.isSafeInteger(policy.price)||policy.price<50)return false;
@@ -15,6 +16,8 @@ export function validInsurance(policy,record){
   &&validBossEncounter(c.bossEncounter,c.level)&&validTowerFloorPlan(c.floorPlan,c.level)
   &&validTowerMutationState({level:c.level,mutations:c.mutations??[],mutationDraft:c.mutationDraft})
   &&validTowerSurgeries(c.surgeries??[],c.level)
+  &&validTowerRerolls({...c,arenaRerolls:c.arenaRerolls??0})
+  &&(c.arenaRerollLocked===undefined||typeof c.arenaRerollLocked==='boolean')
   &&validTowerDonorState({...c,donorTissues:c.donorTissues??[],surgeries:c.surgeries??[]})
   &&(c.graftProsthetics===undefined||Array.isArray(c.graftProsthetics)
    &&JSON.stringify(c.graftProsthetics)===JSON.stringify(normalizeTowerGraftProsthetics(c.graftProsthetics,c)));
@@ -29,7 +32,7 @@ export function purchaseInsurance(session,player,tower){
   mutations:[...(tower.mutations??[])],
   surgeries:structuredClone(tower.surgeries??[]),
   graftProsthetics:[...(tower.graftProsthetics??[])],
-  donorTissues:structuredClone(tower.donorTissues??[]),
+  donorTissues:structuredClone(tower.donorTissues??[]),arenaRerolls:tower.arenaRerolls??0,arenaRerollLocked:tower.arenaRerollLocked??false,
   ...(tower.mutationDraft?{mutationDraft:structuredClone(tower.mutationDraft)}:{}),
   ...(tower.bossEncounter?{bossEncounter:structuredClone(tower.bossEncounter)}:{}),
   ...(tower.floorPlan?{floorPlan:structuredClone(tower.floorPlan)}:{})};

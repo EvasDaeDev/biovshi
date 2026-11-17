@@ -5,6 +5,7 @@ import {normalizeTowerGraftProsthetics} from './anatomy.js';
 import {validTowerDonorState,awardTowerDonors} from './donors.js';
 import {selectedTowerFloor,towerFloorCount,validTowerFloorPlan} from './floors.js';
 import {TEST_BUILD} from '../build-channel.js';
+import {validTowerRerolls} from './economy.js';
 import {isBossFloor,hasBoss} from '../boss/config.js';
 import {ensureBossEncounter,validBossEncounter,bossFloorReward} from '../boss/encounter.js';
 import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
@@ -16,7 +17,7 @@ export const towerEnemyReward=(t,victim=1)=>{
 };
 export const floorEnemyCount=floor=>1+Math.floor(floor/2);
 export const towerEnemyCount=t=>t.legacyEnemyCount??towerFloorCount(t)??(hasBoss(t)?3:floorEnemyCount(t.level));
-export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],graftProsthetics:[],donorTissues:[],mutations:[],surgeries:[],rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
+export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],graftProsthetics:[],donorTissues:[],mutations:[],surgeries:[],arenaRerolls:0,arenaRerollLocked:false,rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
 export function normalizeTower(t){
  if(!t||typeof t!=='object'||Array.isArray(t))return t;
  const previousBossInterval=t.artifacts?.bossEvery??(TEST_BUILD?2:5);
@@ -25,6 +26,8 @@ export function normalizeTower(t){
  t.surgeries??=[];
  t.graftProsthetics=normalizeTowerGraftProsthetics(t.graftProsthetics,t);
  t.donorTissues??=[];
+ t.arenaRerolls??=0;
+ t.arenaRerollLocked??=false;
  t.insurance??=newInsurance();
  if(isBossFloor(t.level)&&!t.bossEncounter&&t.rewarded?.length&&t.legacyEnemyCount===undefined)t.legacyBossFloor=true;
  if(t.version===undefined||t.version===1){
@@ -51,7 +54,7 @@ export function validTower(t){
  const count=towerEnemyCount(t),optionalCount=n=>n===null||Number.isSafeInteger(n)&&n>=0;
  return validBossEncounter(t.bossEncounter,t.level)&&validTowerFloorPlan(t.floorPlan,t.level)&&t&&t.version===2&&Number.isSafeInteger(t.level)&&t.level>=1&&Number.isSafeInteger(t.wins)&&t.wins===t.level-1
   &&Number.isInteger(t.patient)&&t.patient>=0&&t.patient<4&&validStats(t.stats,t.wins)
-  &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&validArtifactCollection(t.artifacts,t.record)&&optionalCount(t.runKills)&&optionalCount(t.runCoins)&&validInsurance(t.insurance,t.record)&&validTowerMutationState(t)&&validTowerSurgeries(t.surgeries,t.level)&&validTowerDonorState(t)
+  &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&validArtifactCollection(t.artifacts,t.record)&&optionalCount(t.runKills)&&optionalCount(t.runCoins)&&validInsurance(t.insurance,t.record)&&validTowerMutationState(t)&&validTowerSurgeries(t.surgeries,t.level)&&validTowerDonorState(t)&&validTowerRerolls(t)&&typeof t.arenaRerollLocked==='boolean'
   &&Array.isArray(t.graftProsthetics)&&JSON.stringify(t.graftProsthetics)===JSON.stringify(normalizeTowerGraftProsthetics(t.graftProsthetics,t))
   &&(t.legacyEnemyCount===undefined||(t.legacyEnemyCount===t.level||t.legacyEnemyCount===1))
   &&(t.legacyBossFloor===undefined||t.legacyBossFloor===true&&isBossFloor(t.level)&&t.bossEncounter===undefined)
@@ -84,7 +87,7 @@ export function completeTower(session,player,won,random=Math.random){
  const t=towerFor(session,player);
  if(won){const bossWon=hasBoss(t);
   if(bossWon)awardBossArtifact(t.artifacts,t.level,random);
-  creditArtifactRewards(session,player,t);t.record=Math.max(t.record,t.level);patientVictory(t);t.level++;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;delete t.floorPlan;
+  creditArtifactRewards(session,player,t);t.record=Math.max(t.record,t.level);patientVictory(t);t.level++;t.arenaRerolls=0;t.arenaRerollLocked=false;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;delete t.floorPlan;
   if(bossWon)grantTowerMutationDraft(t,random);}
  else {
   const c=t.insurance.checkpoint,next=newTower(undefined,t.record,t.artifacts,t.insurance);
