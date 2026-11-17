@@ -48,6 +48,23 @@ test('tower tactics adjust existing preferences only for specialist profiles',()
  assert.deepEqual(base,{flankMin:67,flankMax:170,flankAngle:.7,flankQuietSec:6,closeRange:36,approachStallSec:6,guardTriggerCm:135},'base profile remains unmodified');
 });
 
+test('tower enemy tactical initialization is scoped away from player, boss and betting',()=>{
+ const mode=ctx.mode,garage=ctx.towerGarage;
+ try{
+  ctx.mode='tower';
+  ctx.towerGarage=[{profileId:null},{profileId:'agile'},{profileId:'strong'}];
+  assert.equal(fighterTacticalProfile({id:1,isBoss:false}).flankMax,195);
+  assert.equal(fighterTacticalProfile({id:2,isBoss:false}).closeRange,53);
+  assert.ok(fighterTacticalProfile({id:0,isBoss:false}).flankMax<195,'player retains default random profile');
+  assert.ok(fighterTacticalProfile({id:1,isBoss:true}).flankMax<195,'boss remains unchanged');
+  ctx.mode='spectator';
+  assert.ok(fighterTacticalProfile({id:1,isBoss:false}).flankMax<195,'normal patients remain unchanged');
+ }finally{
+  ctx.mode=mode;
+  ctx.towerGarage=garage;
+ }
+});
+
 test('risk floors offer saved selection, crowd and mixed compositions',()=>{
  for(const [seed,style] of [[.01,'trial'],[.45,'crowd'],[.85,'mixed']]){
   const t=newTower(0);t.level=6;t.wins=5;
