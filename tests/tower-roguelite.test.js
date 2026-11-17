@@ -95,6 +95,20 @@ test('risk floors offer saved selection, crowd and mixed compositions',()=>{
  assert.equal(ensureTowerFloorPlan(old).options[1].style,undefined);
 });
 
+test('every enemy profile description is safe during robot card creation',()=>{
+ for(const id of ['basic','fast','strong','agile','elite']){
+  const description=towerProfileDifference(id);
+  assert.equal(typeof description,'string');
+  assert.ok(description.length>0);
+  if(id!=='basic')assert.ok(description.includes(towerEnemyProfile(id).focus),
+   'specialist description includes its tactical focus: '+id);
+ }
+ assert.match(towerProfileDifference('fast'),/160%/);
+ assert.match(towerProfileDifference('strong'),/50%/);
+ assert.match(towerProfileDifference('agile'),/160%/);
+ assert.match(towerProfileDifference('elite'),/135%/);
+});
+
 test('chosen floor and composition persist, with at most ten combatants including player',()=>{
  for(const floor of [1,2,4,6,8,16,40,100]){
   if(floor%BOSS_FLOOR_INTERVAL===0)continue;
