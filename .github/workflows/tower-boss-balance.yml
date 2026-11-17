@@ -34,6 +34,10 @@ jobs:
         run: node scripts/experiment-tower-fights.mjs --bossBench=true --seeds=12 --limit=75 --policy=idle --out=artifacts/boss5-idle.json
       - name: Observe first boss with player keeping distance
         run: node scripts/experiment-tower-fights.mjs --bossBench=true --seeds=12 --limit=75 --policy=evade --out=artifacts/boss5-evade.json
+      - name: Measure naturally generated first-boss fights with idle player
+        run: node scripts/experiment-tower-fights.mjs --naturalBoss=true --seeds=40 --limit=75 --policy=idle --out=artifacts/boss5-natural-idle.json
+      - name: Measure naturally generated first-boss fights with evading player
+        run: node scripts/experiment-tower-fights.mjs --naturalBoss=true --seeds=40 --limit=75 --policy=evade --out=artifacts/boss5-natural-evade.json
       - name: Upload independent experiment logs
         if: always()
         uses: actions/upload-artifact@v4
