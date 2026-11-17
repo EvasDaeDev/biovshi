@@ -78,7 +78,7 @@ export function completeTower(session,player,won,random=Math.random){
  else {
   const c=t.insurance.checkpoint,next=newTower(undefined,t.record,t.artifacts,t.insurance);
   if(c){
-   Object.assign(next,structuredClone(c),{runKills:t.runKills,runCoins:t.runCoins});
+   Object.assign(next,structuredClone(c),{runKills:t.runKills,runCoins:t.runCoins,preparing:Boolean(c.mutationDraft)});
    next.insurance.checkpoint=null;
   }
   session.towers[player]=next;
