@@ -53,7 +53,7 @@ export function validTowerMutationState(run){
   &&validTowerMutationDraft(run.mutationDraft,run.mutations,run.level);
 }
 export function towerMutationBonus(mutations=[]){
- const result=[0,0,0],groups={mechanical:0,organic:0};
+ const result=[0,0,0],groups={mechanical:0,organic:0,neural:0};
  for(const id of mutations){
   const mutation=TOWER_MUTATIONS[id];
   if(!mutation)continue;
