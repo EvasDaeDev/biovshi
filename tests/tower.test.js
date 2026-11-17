@@ -93,6 +93,37 @@ test('post-boss module choices lock fight entry and update the actual player com
  }finally{close(dom);}
 });
 
+test('surgeon lets the player buy one body-specific operation and saves combat impact',()=>{
+ const s=betNewSession(['Хирург'],300),t=towerFor(s,0);
+ for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ const dom=setup(s,t,'ward');
+ try{
+  const panel=document.querySelector('#tower-prep-surgery');
+  assert.equal(panel.hidden,false);
+  const purchase=panel.querySelector('.tower-surgery-purchase');
+  assert.equal(purchase.disabled,true,'pending mutation choice blocks surgery');
+  document.querySelector('#tower-prep-mutations .tower-mutation-option').click();
+  const type=panel.querySelector('[aria-label="Вид операции"]');
+  type.value='impact';type.dispatchEvent(new Event('change'));
+  const site=panel.querySelector('[aria-label="Сегмент для операции"]');
+  site.value='arm-1-upper';
+  assert.equal(purchase.disabled,false);
+  const base=patientCombatStats(0,ctx.robots[0]).effective[1];
+  purchase.click();
+  assert.equal(s.players[0].balance,270);
+  assert.equal(s.surgerySpent,30);
+  assert.deepEqual(t.surgeries,[{site:'arm-1-upper',procedure:'impact'}]);
+  assert.deepEqual(ctx.towerGarage[0].surgeries,t.surgeries);
+  assert.ok(patientCombatStats(0,ctx.robots[0]).effective[1]>=base+.45-1e-6);
+  assert.match(panel.textContent,/ХИРУРГИЯ · 1\/1/);
+  assert.equal(bettingLoad().surgerySpent,30);
+  const insured=document.querySelector('#tower-insurance');insured.click();
+  assert.deepEqual(t.insurance.checkpoint.surgeries,t.surgeries);
+  assert.equal(s.players[0].balance,220);
+  assert.ok(validTower(t));
+ }finally{close(dom);}
+});
+
 test('generated tower encounters start with complete rigs clear on every supported arena',()=>{
  const solid=c=>c.segment==='head'||c.segment?.startsWith('spine-');
  for(const [arenaId,capacity] of Object.entries(TOWER_ARENA_CAPACITY)){
