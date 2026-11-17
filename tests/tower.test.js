@@ -44,8 +44,8 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
  const dom=setup(session,t,'ward');
  try{
   assert.equal(ctx.robots.length,3);
-  assert.deepEqual(ctx.towerGarage[1].stats,[5,2,3]);
-  assert.deepEqual(ctx.towerGarage[2].stats,[3,2,5]);
+  assert.deepEqual(ctx.towerGarage[1].stats,[7,2,3]);
+  assert.deepEqual(ctx.towerGarage[2].stats,[3,2,7]);
   assert.equal(ctx.towerGarage[1].voice,'male');
   assert.equal(ctx.towerGarage[2].voice,'female');
   assert.equal(ctx.robots[1].body.skinKey,'robotEnemy1');
