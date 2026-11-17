@@ -130,7 +130,10 @@
 #robot-tag-hops-v22 #tower-upgrade-open{display:block;width:100%;margin:10px 0;padding:12px;border:1px solid #ae9159;background:#51442a;color:#f4e6c5;font-weight:800;letter-spacing:.035em;cursor:pointer}
 #robot-tag-hops-v22 #tower-upgrade-open.has-reward{border-color:#e3bc68;background:#6d4928}
 #robot-tag-hops-v22 #tower-upgrade-window[hidden],#robot-tag-hops-v22 .tower-upgrade-page[hidden]{display:none!important}
-#robot-tag-hops-v22 #tower-upgrade-window{position:fixed;inset:0;z-index:2400;display:flex;justify-content:center;align-items:center;padding:12px;box-sizing:border-box;background:#0a0b09e8;overflow:hidden;color:#efe3c8}
+#robot-tag-hops-v22 #tower-upgrade-window::backdrop{background:#070905d4}
+#robot-tag-hops-v22 #tower-upgrade-window:not([open]){display:none!important}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-paper{pointer-events:auto}
+#robot-tag-hops-v22 #tower-upgrade-window{position:fixed;inset:0;z-index:2400;width:100%;height:100%;max-width:none;max-height:none;margin:0;border:0;pointer-events:auto;display:flex;justify-content:center;align-items:center;padding:12px;box-sizing:border-box;background:#0a0b09e8;overflow:hidden;color:#efe3c8}
 #robot-tag-hops-v22 .tower-upgrade-paper{box-sizing:border-box;width:min(880px,100%);max-height:calc(var(--game-height,100dvh) - 24px);max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain;padding:16px;background:#20241e;border:1px solid #a18c63;box-shadow:0 18px 65px #000a}
 #robot-tag-hops-v22 .tower-upgrade-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:10px;border-bottom:1px solid #665d46}
 #robot-tag-hops-v22 .tower-upgrade-heading h2{font-size:clamp(17px,3vw,23px);font-weight:800;line-height:1.2;margin:0;color:#e9dcc2}
