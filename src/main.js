@@ -3,7 +3,7 @@ import {setPaused} from './ui/controls.js';
 import {randomArenaId} from './game/arenas.js';
 import {installTowerUI,openMenu} from './tower/ui.js';
 import {towerFor} from './tower/model.js';
-import {selectedTowerFloor} from './tower/floors.js';
+import {ensureTowerFloorPlan,selectedTowerFloor} from './tower/floors.js';
 import {bettingSetup,bettingCancel} from './betting/ui.js';
 import {initializeFloor} from './render/floor-history.js';
 import {initializeModalFocus} from './ui/modal-focus.js';
