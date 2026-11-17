@@ -11,10 +11,16 @@ import {betNewSession} from '../src/betting/ledger.js';
 import {purchaseInsurance,validInsurance} from '../src/tower/insurance.js';
 
 test('four specialist profiles have distinct atlases and the intended voice groups',()=>{
- assert.deepEqual(TOWER_ENEMY_PROFILES.fast.stats,[5,2,3]);
- assert.deepEqual(TOWER_ENEMY_PROFILES.strong.stats,[2,5,3]);
- assert.deepEqual(TOWER_ENEMY_PROFILES.agile.stats,[3,2,5]);
- assert.deepEqual(TOWER_ENEMY_PROFILES.elite.stats,[4,4,4]);
+ assert.deepEqual(TOWER_ENEMY_PROFILES.fast.stats,[7,2,3]);
+ assert.deepEqual(TOWER_ENEMY_PROFILES.strong.stats,[2,7,3]);
+ assert.deepEqual(TOWER_ENEMY_PROFILES.agile.stats,[3,2,7]);
+ assert.deepEqual(TOWER_ENEMY_PROFILES.elite.stats,[5,5,5]);
+ assert.deepEqual(towerProfileEffect('basic'),{speed:100,critical:15,maneuver:100});
+ assert.deepEqual(towerProfileEffect('fast'),{speed:160,critical:0,maneuver:100});
+ assert.deepEqual(towerProfileEffect('strong'),{speed:80,critical:50,maneuver:100});
+ assert.deepEqual(towerProfileEffect('agile'),{speed:100,critical:0,maneuver:160});
+ assert.deepEqual(towerProfileEffect('elite'),{speed:135,critical:38,maneuver:135});
+ assert.match(towerProfileDifference('strong'),/50%/);
  for(const [id,key,voice] of [['fast','robotEnemy1','male'],['strong','robotEnemy2','male'],['agile','robotEnemy3','female'],['elite','robotEnemy4','female']]){
   assert.equal(towerEnemyProfile(id).skinKey,key);
   assert.equal(towerEnemyProfile(id).voice,voice);
