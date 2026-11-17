@@ -2,6 +2,7 @@
 // disabled if the operated segment is severed during combat, and returns
 // if patientRecovery repairs the part after a successful floor.
 import {PROSTHETIC_SEGMENTS} from '../garage/model.js';
+import {towerAvailableDonors,validTowerDonors} from './donors.js';
 
 export const TOWER_SURGERY_MIN_LEVEL=6;
 export const TOWER_SURGERY_MAX=3;
@@ -18,7 +19,11 @@ export const TOWER_SURGERY_OPERATIONS=Object.freeze({
   site:'arm',bonus:[0,.1,.35]}),
  graft_arm:Object.freeze({name:'Пересадка руки',description:'Дополнительная рука на выбранной стороне тела',site:'arm',bonus:[0,0,0],requiresUpper:true}),
  graft_leg:Object.freeze({name:'Пересадка ноги',description:'Дополнительная опорная нога на выбранной стороне тела',site:'leg',bonus:[0,0,0],requiresUpper:true}),
- extend_spine:Object.freeze({name:'Удлинение корпуса',description:'Дополнительный сегмент позвоночника с реальной геометрией',site:'spine',bonus:[0,0,0]})
+ extend_spine:Object.freeze({name:'Удлинение корпуса',description:'Дополнительный сегмент позвоночника с реальной геометрией',site:'spine',bonus:[0,0,0]}),
+ lengthen_arm:Object.freeze({name:'Удлинение руки',description:'Увеличить плечо и предплечье на 20%: реальная досягаемость',site:'arm',bonus:[0,0,0],requiresUpper:true}),
+ lengthen_leg:Object.freeze({name:'Удлинение ноги',description:'Увеличить бедро и голень на 20%: реальная длина опоры',site:'leg',bonus:[0,0,0],requiresUpper:true}),
+ transplant_arm:Object.freeze({name:'Донорская рука',description:'Пересадить руку поверженного пациента',site:'arm',bonus:[0,0,0],requiresUpper:true,donor:true}),
+ transplant_leg:Object.freeze({name:'Донорская нога',description:'Пересадить ногу поверженного пациента',site:'leg',bonus:[0,0,0],requiresUpper:true,donor:true})
 });
 export const TOWER_SURGERY_IDS=Object.freeze(Object.keys(TOWER_SURGERY_OPERATIONS));
 const siteKind=site=>typeof site==='string'&&site.startsWith('spine-')?'spine':
@@ -29,14 +34,21 @@ export const towerSurgeryCapacity=level=>Math.min(TOWER_SURGERY_MAX,
  Math.max(0,Math.floor((level-1)/5)));
 export function validTowerSurgeries(surgeries,level){
  if(!Array.isArray(surgeries)||surgeries.length>towerSurgeryCapacity(level))return false;
- const sites=new Set();
+ const sites=new Set(),donors=new Set();
  for(const item of surgeries){
   if(!item||typeof item!=='object'||Array.isArray(item)
     ||!Object.hasOwn(TOWER_SURGERY_OPERATIONS,item.procedure)
     ||!PROSTHETIC_SEGMENTS.includes(item.site)
     ||siteKind(item.site)!==TOWER_SURGERY_OPERATIONS[item.procedure].site
     ||(TOWER_SURGERY_OPERATIONS[item.procedure].requiresUpper&&!item.site.endsWith('-upper'))
-    ||sites.has(item.site))return false;
+    ||sites.has(item.site)
+    ||(TOWER_SURGERY_OPERATIONS[item.procedure].donor&&
+      (typeof item.donorId!=='string'||!/^\d+:[1-9]\d*:(arm|leg)$/.test(item.donorId)
+       ||!item.donorId.endsWith(':'+TOWER_SURGERY_OPERATIONS[item.procedure].site)
+       ||typeof item.donorProfile!=='string'||!['basic','fast','strong','agile','elite','boss'].includes(item.donorProfile)))
+    ||(!TOWER_SURGERY_OPERATIONS[item.procedure].donor&&(item.donorId!==undefined||item.donorProfile!==undefined)))return false;
+  if(item.donorId&&donors.has(item.donorId))return false;
+  if(item.donorId)donors.add(item.donorId);
   sites.add(item.site);
  }
  return true;
@@ -60,18 +72,21 @@ export function towerSurgeryAvailableSites(run,procedure){
  return PROSTHETIC_SEGMENTS.filter(site=>siteKind(site)===operation.site
   &&(!operation.requiresUpper||site.endsWith('-upper'))&&!installed.has(site));
 }
-export function purchaseTowerSurgery(session,player,run,procedure,site){
+export function purchaseTowerSurgery(session,player,run,procedure,site,donorId=null){
  const operation=TOWER_SURGERY_OPERATIONS[procedure];
  if(!operation||!run?.preparing||run.mutationDraft||run.rewarded?.length
-   ||!validTowerSurgeries(run.surgeries,run.level)
+   ||!validTowerSurgeries(run.surgeries,run.level)||!validTowerDonors(run.donorTissues??[])
    ||run.surgeries.length>=towerSurgeryCapacity(run.level)
    ||!towerSurgeryAvailableSites(run,procedure).includes(site))
   throw Error('Операция недоступна на этом этаже или для выбранного сегмента.');
+ const donor=operation.donor?towerAvailableDonors(run,procedure).find(item=>item.id===donorId):null;
+ if(operation.donor&&!donor)throw Error('Для пересадки требуется подходящий донор, полученный в бою.');
  const buyer=session.players?.[player],price=towerSurgeryPrice(run);
  if(!buyer||buyer.balance<price)throw Error('Недостаточно монет для операции.');
  const spent=session.surgerySpent??0;
  if(!Number.isSafeInteger(spent)||spent+price>16000000)throw Error('Недопустимая стоимость операции.');
- run.surgeries.push({site,procedure});
+ run.surgeries.push({site,procedure,...(donor?{donorId:donor.id,donorProfile:donor.profile}:{})});
+ if(donor)run.donorTissues=run.donorTissues.filter(item=>item.id!==donor.id);
  buyer.balance-=price;
  session.surgerySpent=spent+price;
  return price;
