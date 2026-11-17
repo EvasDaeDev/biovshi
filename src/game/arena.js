@@ -148,10 +148,15 @@ export function rebuildRobots() {
   for (const group of [ctx.conesG, ctx.flashlightsG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG]) group.replaceChildren();
   ctx.robots.length = 0;
   const encounter=ctx.mode==='tower'?ensureBossEncounter(ctx.towerRun):null;
+  // Newly generated floor plans guarantee collision-free FULL bodies, not
+  // merely clear centre points. Preserve historical unplanned tower layouts.
+  const plannedFloor=ctx.mode==='tower'&&ctx.towerRun?.floorPlan?.floor===ctx.towerRun?.level;
+  const preflight=Boolean(encounter||plannedFloor);
+  const normalRig=preflight?{spineSegments:4,pelvisKey:'spine-3',limbs:standardLimbs()}:null;
   layout.forEach((p,id)=>{
-    // Preflight the controlled patient as well as the two ordinary enemies:
-    // a clear body centre does not guarantee that its whole rig fits.
-    const start=encounter&&id!==1?bossSpawn(p,{spineSegments:4,pelvisKey:'spine-3',limbs:standardLimbs()},1):p;
+    // Insert fighters one by one; the full-rig preflight tests each against
+    // obstacles and already spawned bodies, including the controlled player.
+    const start=preflight&&!(encounter&&id===1)?bossSpawn(p,normalRig,1):p;
     const skinKey=ctx.mode==='tower'&&id>0?ctx.towerGarage?.[id]?.skinKey:null;
     ctx.robots.push(encounter&&id===1?createBoss(id,start,encounter):createRobot(id,start,skinKey?{skinKey}:{}));
   });
