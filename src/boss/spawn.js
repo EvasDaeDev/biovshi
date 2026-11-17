@@ -80,25 +80,44 @@ function neutralRigClear(capsules,peerSolids){
 // robot-ID order to keep identity, skins, rewards, and AI indices unchanged.
 export function planNeutralRigSpawns(layout,rigs){
  if(layout.length!==rigs.length)return null;
- const points=new Array(layout.length),occupied=[];
- const order=layout.map((_,id)=>id).sort((a,b)=>
-  rigs[b].body.spineSegments*rigs[b].scaleMultiplier-
-  rigs[a].body.spineSegments*rigs[a].scaleMultiplier||a-b);
- for(const id of order){
-  const {body,scaleMultiplier}=rigs[id];
-  let selected=null;
-  const valid=p=>{
-   const capsules=neutralCapsules(p,body,scaleMultiplier);
-   if(!neutralRigClear(capsules,occupied))return false;
-   selected=capsules;
-   return true;
-  };
-  const start=findBossSpawn(layout[id],ctx.arenaBoundary,valid);
-  if(!start)return null;
-  points[id]=start;
-  occupied.push(...selected.filter(solid));
+ const boundary=ctx.arenaBoundary;
+ const cx=(boundary.left+(boundary.right??boundary.left+boundary.size))/2;
+ const cy=(boundary.top+(boundary.bottom??boundary.top+boundary.size))/2;
+ // Greedy placement can fail solely because equally sized patients were
+ // reserved in an unfortunate order. Retry a few deterministic orders before
+ // declaring the chosen arena impossible. No RNG or persistent state changes.
+ for(let attempt=0;attempt<3;attempt++){
+  const points=new Array(layout.length),occupied=[];
+  const order=layout.map((_,id)=>id).sort((a,b)=>{
+   const difference=rigs[b].body.spineSegments*rigs[b].scaleMultiplier-
+    rigs[a].body.spineSegments*rigs[a].scaleMultiplier;
+   if(difference)return difference;
+   if(attempt===1)return b-a;
+   if(attempt===2){
+    const da=(layout[a].x-cx)**2+(layout[a].y-cy)**2;
+    const db=(layout[b].x-cx)**2+(layout[b].y-cy)**2;
+    return db-da||a-b;
+   }
+   return a-b;
+  });
+  let complete=true;
+  for(const id of order){
+   const {body,scaleMultiplier}=rigs[id];
+   let selected=null;
+   const valid=p=>{
+    const capsules=neutralCapsules(p,body,scaleMultiplier);
+    if(!neutralRigClear(capsules,occupied))return false;
+    selected=capsules;
+    return true;
+   };
+   const start=findBossSpawn(layout[id],boundary,valid);
+   if(!start){complete=false;break;}
+   points[id]=start;
+   occupied.push(...selected.filter(solid));
+  }
+  if(complete)return points;
  }
- return points;
+ return null;
 }
 export function bossSpawn(start,body,scaleMultiplier=BOSS_CONFIG.scale){
  const boundary=ctx.arenaBoundary;
