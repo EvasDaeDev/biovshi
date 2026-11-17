@@ -7,7 +7,7 @@ import {selectedTowerFloor,selectTowerFloor} from './floors.js';
 import {towerEnemyProfile} from './profiles.js';
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {ctx} from '../game/state.js';
-import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount,buyTowerInsurance} from './model.js';
+import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount,buyTowerInsurance,towerEnemyReward} from './model.js';
 import {bettingSave} from '../betting/storage.js';
 import {bettingSetup,bettingCancel,bettingReadDraft} from '../betting/ui.js';
 import {patientRecovery,validStats,earnedStats,redistributeStat,statMultiplier,critChance} from '../garage/model.js';
