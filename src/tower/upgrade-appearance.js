@@ -26,7 +26,7 @@ export const TOWER_UPGRADE_PARTS=Object.freeze({
  quiet:['head','spine-0','spine-1']
 });
 export const TOWER_SURGERY_ATLAS=Object.freeze(Object.fromEntries(
- Object.keys(TOWER_SURGERY_OPERATIONS).map(id=>[id,ROOT+'ar_surg_'+id+'.png'])
+ Object.keys(TOWER_SURGERY_OPERATIONS).filter(id=>!id.startsWith('graft_')&&id!=='extend_spine').map(id=>[id,ROOT+'ar_surg_'+id+'.png'])
 ));
 export const TOWER_MUTATION_ATLAS=Object.freeze(Object.fromEntries(
  Object.keys(TOWER_MUTATIONS).map(id=>[id,ROOT+'ar_mod_'+id+'.png'])
