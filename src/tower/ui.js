@@ -80,7 +80,7 @@ export function towerPreparation(){
       const heading=document.createElement('strong');
       heading.textContent=(option.kind==='danger'?'ОПАСНО · 15 ЗА ВЫБИВАНИЕ':'СТАНДАРТ · 10 ЗА ВЫБИВАНИЕ')+' · '+option.profiles.length+' ВРАГ.';
       button.appendChild(heading);
-      for(const [id,count] of new Map(option.profiles.map(id=>[id,option.profiles.filter(other=>other===id).length]))){
+      for(const [id,count] of profileCounts){
         const line=document.createElement('span');line.className='tower-enemy-line';
         const label=document.createElement('b');label.textContent=towerEnemyProfile(id).name+(count>1?' ×'+count:'');
         line.appendChild(label);
