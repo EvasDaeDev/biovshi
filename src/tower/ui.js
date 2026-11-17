@@ -56,7 +56,8 @@ export function openMenu(){
   ctx.clearTowerInput?.();ctx.clearTowerDestination?.();setPaused(true);
   ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;
   ctx.root.querySelector('#tower-preparation').hidden=true;
-  const upgrade=ctx.root.querySelector('#tower-upgrade-window');if(upgrade)upgrade.hidden=true;
+  const upgrade=ctx.root.querySelector('#tower-upgrade-window');
+  if(upgrade){if(upgrade.open&&typeof upgrade.close==='function')upgrade.close();upgrade.removeAttribute('open');upgrade.hidden=true;}
   ctx.root.querySelector('#tower-controls').hidden=true;
   refreshMenu();ctx.root.querySelector('#launch-overlay').hidden=false;
   ctx.root.querySelector('#launch-tower').focus();
@@ -376,7 +377,9 @@ export function installTowerUI(){
   };
   ctx.root.querySelector('#launch-totalizator').onclick=async()=>{ctx.audio?.unlock();await ctx.startTotalizator();};
   if(ctx.mode!=='tower'){
-    ctx.root.querySelector('#tower-upgrade-window')?.remove();
+    const staleUpgrade=ctx.root.querySelector('#tower-upgrade-window');
+    if(staleUpgrade?.open&&typeof staleUpgrade.close==='function')staleUpgrade.close();
+    staleUpgrade?.remove();
     ctx.root.querySelector('#tower-upgrade-open')?.remove();
     ctx.root.querySelector('#tower-controls').hidden=true;ctx.root.querySelector('#tower-preparation').hidden=true;
     ctx.resultsProcedure.textContent='ПРОЦЕДУРНАЯ';ctx.resultsAgain.textContent='К СТАВКАМ СЛЕДУЮЩЕГО РАУНДА';ctx.resultsProcedure.hidden=false;
