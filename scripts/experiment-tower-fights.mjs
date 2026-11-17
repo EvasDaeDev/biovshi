@@ -125,9 +125,14 @@ function runScenario(scenario,seed){
    if(ctx.combat.escapeUntil[boss.id]>now){record('escaping');return;}
    const seen=boss.canSee(target.center)&&sightClear(boss.center,target.center);
    if(!seen){record('unseen');return;}
+   if(state.chargeAim)record('chargeAimActive');
    if(now<state.nextChargeAt){record('chargeCooldown');return;}
+   const gap=Math.hypot(target.center.x-boss.x,target.center.y-boss.y);
+   if(gap<BOSS_CONFIG.tactics.chargeMinGap){record('tooClose');return;}
+   if(gap>BOSS_CONFIG.tactics.chargeMaxGap){record('tooFar');return;}
+   record('withinDashRange');
    const angle=Math.abs(wrap(Math.atan2(target.y-boss.y,target.x-boss.x)-boss.angle));
-   if(angle>=.35){record('notAligned');return;}
+   if(angle>=.35){record('notAlignedInRange');return;}
    const reasons={},plan=chargePlan(boss,target.center,{history:state.chargeHistory,diagnostics:reasons});
    if(plan)record('planAvailable');
    else record('planRejected');
