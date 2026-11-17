@@ -32,7 +32,7 @@ jobs:
       - name: Build playable game
         run: npm run build
       - name: Simulate tower battles (all seven arenas and six bosses)
-        run: node scripts/experiment-tower-fights.mjs --seeds=1 --limit=35 --out=artifacts/tower-fights.json
+        run: node scripts/experiment-tower-fights.mjs --seeds=3 --limit=75 --policy=orbit --out=artifacts/tower-fights.json
       - name: Upload battle results even after a failure
         if: always()
         uses: actions/upload-artifact@v4
