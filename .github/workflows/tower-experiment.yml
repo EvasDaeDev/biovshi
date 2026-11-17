@@ -31,6 +31,10 @@ jobs:
         run: npm test
       - name: Build playable game
         run: npm run build
+      - name: Verify standalone game embeds upgrade atlases
+        run: |
+          npm run standalone
+          node --input-type=module -e "import fs from 'node:fs';const html=fs.readFileSync('dist/biovshi.html','utf8');for(const id of ['ar_surg_impact.png','ar_mod_turbo.png','ar_mod_quiet.png'])if(!html.includes(id))throw new Error('Missing inline atlas '+id);console.log('Upgrade textures embedded in offline HTML')"
       - name: Simulate tower battles (all seven arenas and six bosses)
         run: node scripts/experiment-tower-fights.mjs --seeds=3 --limit=75 --policy=orbit --out=artifacts/tower-fights.json
       - name: Diagnose boss charges and live body overlaps
