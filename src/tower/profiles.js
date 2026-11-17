@@ -20,6 +20,7 @@ export function towerProfileEffect(id){
   maneuver:Math.round(statMultiplier(maneuver)*100)};
 }
 export function towerProfileDifference(id){
+ const profile=towerEnemyProfile(id);
  const {speed,critical,maneuver}=towerProfileEffect(id);
  if(id==='fast')return 'Скорость '+speed+'% вместо 100% · '+profile.focus;
  if(id==='strong')return 'Критический удар '+critical+'% вместо 15% · '+profile.focus;
