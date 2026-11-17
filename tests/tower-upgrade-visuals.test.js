@@ -15,8 +15,11 @@ test('every one of the twenty-three upgrade PNG placeholders is registered for s
  assert.equal(Object.keys(TOWER_SURGERY_ATLAS).length,5);
  for(const id of TOWER_MUTATION_IDS)
   assert.ok(registered.has(TOWER_MUTATION_ATLAS[id]),'missing offline asset for '+id);
- for(const id of TOWER_SURGERY_IDS)
-  assert.ok(registered.has(TOWER_SURGERY_ATLAS[id]),'missing offline surgery for '+id);
+ for(const [id,atlas] of Object.entries(TOWER_SURGERY_ATLAS))
+  assert.ok(registered.has(atlas),'missing offline surgery for '+id);
+ for(const id of TOWER_SURGERY_IDS.filter(id=>!(id in TOWER_SURGERY_ATLAS)))
+  assert.equal(TOWER_SURGERY_ATLAS[id],undefined,
+   'geometry-only F3 procedure '+id+' must reuse base skin without a nonexistent PNG');
  assert.equal(Object.keys(TOWER_PATIENT_POSE).length,13);
  assert.deepEqual(Object.keys(TOWER_PATIENT_POSE).sort(),Object.keys(ROBOT_PARTS).sort());
 });
