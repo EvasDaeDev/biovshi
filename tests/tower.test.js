@@ -132,12 +132,14 @@ test('modernization is a separate window with a horizontal patient and two real 
  try{
   const launch=document.querySelector('#tower-upgrade-open');
   const modal=document.querySelector('#tower-upgrade-window');
+  assert.equal(modal.tagName,'DIALOG','use browser top layer instead of an ordinary DIV');
   assert.ok(launch,'preparation opens the separate upgrade dialog');
   assert.equal(modal.hidden,true,'no forced popup before first boss');
   assert.equal(document.querySelector('#tower-prep-mutations').closest('#tower-upgrade-window'),modal);
   assert.equal(document.querySelector('#tower-prep-surgery').closest('#tower-upgrade-window'),modal);
   launch.click();
   assert.equal(modal.hidden,false);
+  assert.equal(modal.hasAttribute('open'),true,'a native dialog must be opened for hit testing');
   assert.match(modal.textContent,/МОДЕРНИЗАЦИЯ ПАЦИЕНТА/);
   assert.equal(modal.querySelectorAll('[role="tab"]').length,2);
   assert.equal(modal.querySelector('[data-tower-patient-pose]').getAttribute('data-tower-patient-pose'),'horizontal');
@@ -147,10 +149,12 @@ test('modernization is a separate window with a horizontal patient and two real 
   assert.match(modal.querySelector('#tower-prep-surgery').textContent,/откроются после прохождения пятого этажа/);
   modal.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
   assert.equal(modal.hidden,true);
+  assert.equal(modal.hasAttribute('open'),false,'closing exits the native top layer');
   assert.equal(document.activeElement,launch,'closing returns focus to preparation');
   launch.click();assert.equal(modal.hidden,false);
   assert.equal(openMenu(),true);
   assert.equal(modal.hidden,true,'leaving preparation closes the dialog');
+  assert.equal(modal.hasAttribute('open'),false,'menu transition cannot leave a hidden top-layer dialog');
  }finally{close(dom);}
 });
 
@@ -161,6 +165,7 @@ test('modernization selects surgical body parts from horizontal patient and prev
  try{
   const modal=document.querySelector('#tower-upgrade-window');
   assert.equal(modal.hidden,false,'boss milestone reward opens on modifications');
+  assert.equal(modal.hasAttribute('open'),true,'automatic milestone prompt enters native top layer');
   const draftButton=modal.querySelector('.tower-mutation-option');
   assert.ok(draftButton);
   draftButton.dispatchEvent(new dom.window.MouseEvent('mouseenter',{bubbles:true}));
@@ -184,6 +189,7 @@ test('modernization selects surgical body parts from horizontal patient and prev
   assert.match(modal.querySelector('#tower-upgrade-feedback').textContent,/Операция/);
   modal.querySelector('.tower-upgrade-close').click();
   assert.equal(modal.hidden,true);
+  assert.equal(modal.hasAttribute('open'),false);
   assert.equal(document.querySelector('#tower-fight').disabled,false);
  }finally{close(dom);}
 });
