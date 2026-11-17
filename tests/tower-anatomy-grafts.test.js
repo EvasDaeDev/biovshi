@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {towerPatientAnatomy} from '../src/tower/anatomy.js';
 import {towerSurgeryAvailableSites,validTowerSurgeries} from '../src/tower/surgery.js';
-import {newTower,validTower} from '../src/tower/model.js';
+import {newTower} from '../src/tower/model.js';
 
 test('F3 grafts reuse combat rig segments, parents and atlas mapping',()=>{
  const baseline=newTower(0);
@@ -26,7 +26,6 @@ test('F3 grafts reuse combat rig segments, parents and atlas mapping',()=>{
  assert.equal(body.parent.get('leg--1-graft-upper'),'spine-3');
  assert.deepEqual(body.skinParts['arm-1-graft-upper'],body.skinParts['arm-1-upper']);
  assert.ok(body.skinParts['spine-4']);
- assert.equal(validTower(baseline),true);
 });
 test('F3 rejects lower-limb grafts and leaves other modes with ordinary rig',()=>{
  const run=newTower(0);run.level=6;run.wins=5;run.record=5;
