@@ -73,7 +73,8 @@ export function purchaseTowerSurgery(session,player,run,procedure,site){
 }
 export function towerSurgerySiteLabel(site){
  if(site.startsWith('spine-'))return 'Позвонок '+site.slice(6);
- const [part,side,segment]=site.split('-');
+ const [,part,side,segment]=/^(arm|leg)-(-?1)-(upper|lower)$/.exec(site)??[];
+ if(!part)return site;
  return (part==='arm'?'Рука':'Нога')+' '+(side==='1'?'справа':'слева')+
   ' · '+(segment==='upper'?'верхний':'нижний')+' сегмент';
 }
