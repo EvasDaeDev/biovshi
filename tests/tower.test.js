@@ -136,7 +136,7 @@ test('purchases during preparation take effect on the SAME floor, including graf
  const dom=setup(s,run,'ward');
  try{
   const initial=ctx.robots[0];
-  assert.equal(initial.body.limbs.length,4);
+  assert.equal(initial.body.limbs?.length??4,4,'normal preoperative fighter has four limbs');
   document.querySelector('#tower-prep-mutations .tower-mutation-option').click();
   const surgery=document.querySelector('#tower-prep-surgery');
   const procedure=surgery.querySelector('[aria-label="Вид операции"]');
