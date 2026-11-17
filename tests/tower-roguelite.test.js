@@ -30,6 +30,48 @@ test('four specialist profiles have distinct atlases and the intended voice grou
  assert.equal(towerEnemyProfile('basic').voice,null);
 });
 
+test('tower tactics adjust existing preferences only for specialist profiles',()=>{
+ const base={flankMin:67,flankMax:170,flankAngle:.7,flankQuietSec:6,closeRange:36,approachStallSec:6,guardTriggerCm:135};
+ assert.equal(towerTacticalProfile(base,'basic'),base);
+ assert.equal(towerTacticalProfile(base,undefined),base);
+ for(const id of ['fast','strong','agile','elite']){
+  const tactical=towerTacticalProfile(base,id);
+  assert.deepEqual(tactical,{...base,...TOWER_TACTICAL_BIASES[id]});
+  assert.notEqual(tactical,base);
+  assert.ok(tactical.closeRange>0&&tactical.flankMax>tactical.closeRange);
+ }
+ assert.ok(towerTacticalProfile(base,'fast').flankMax<base.flankMax,'fast fighters pursue directly');
+ assert.ok(towerTacticalProfile(base,'strong').closeRange>base.closeRange,'strong fighters stay nearer');
+ assert.ok(towerTacticalProfile(base,'agile').flankMax>base.flankMax,'agile fighters favor wider flanks');
+ assert.deepEqual(base,{flankMin:67,flankMax:170,flankAngle:.7,flankQuietSec:6,closeRange:36,approachStallSec:6,guardTriggerCm:135},'base profile remains unmodified');
+});
+
+test('risk floors offer saved selection, crowd and mixed compositions',()=>{
+ for(const [seed,style] of [[.01,'trial'],[.45,'crowd'],[.85,'mixed']]){
+  const t=newTower(0);t.level=6;t.wins=5;
+  const plan=ensureTowerFloorPlan(t,()=>seed);
+  const [standard,danger]=plan.options;
+  assert.equal(danger.style,style);
+  assert.equal(danger.arenaId,standard.arenaId);
+  assert.equal(validTowerFloorPlan(plan,t.level),true);
+  assert.ok(TOWER_DANGER_STYLES[style].description);
+  if(style==='trial'){
+   assert.ok(danger.profiles.length<=standard.profiles.length);
+   assert.ok(danger.profiles.every(p=>p!=='basic'));
+  }
+  if(style==='crowd')assert.ok(danger.profiles.length>=standard.profiles.length);
+  if(style==='mixed')assert.ok(new Set(danger.profiles.filter(p=>p!=='basic')).size>=2);
+  assert.equal(ensureTowerFloorPlan(t,()=>1),plan,'existing plan must not reroll');
+ }
+ const old=newTower(0);old.level=6;
+ old.floorPlan={floor:6,selected:1,options:[
+   {arenaId:'ward',kind:'standard',profiles:['basic']},
+   {arenaId:'ward',kind:'danger',profiles:['fast']}
+ ]};
+ assert.equal(validTowerFloorPlan(old.floorPlan,6),true,'older saved plans do not require style');
+ assert.equal(ensureTowerFloorPlan(old).options[1].style,undefined);
+});
+
 test('chosen floor and composition persist, with at most ten combatants including player',()=>{
  for(const floor of [1,2,4,6,8,16,40,100]){
   if(floor%BOSS_FLOOR_INTERVAL===0)continue;
