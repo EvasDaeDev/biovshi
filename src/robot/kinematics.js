@@ -194,7 +194,8 @@ export function origin(robotState, l) {
   return l.kind === 'extra' ? robotState.local(robotState.spine[2], 0, l.side * 12) : l.kind === 'arm' ? robotState.local(robotState.chest, 3, l.side * 15) : robotState.local(robotState.pelvis, -5, l.side * 12);
 }
 export function lengths(robotState, l) {
-  return l.kind === 'extra' ? [CONFIG.robot.extraLimbLengthCm, CONFIG.robot.extraLimbLengthCm] : l.kind === 'arm' ? [27 * (robotState.scale??ctx.scale), 29 * (robotState.scale??ctx.scale)] : [32 * (robotState.scale??ctx.scale), 33 * (robotState.scale??ctx.scale)];
+  const factor=(robotState.scale??ctx.scale)*(l.lengthScale??1);
+  return l.kind === 'extra' ? [CONFIG.robot.extraLimbLengthCm, CONFIG.robot.extraLimbLengthCm] : l.kind === 'arm' ? [27*factor,29*factor] : [32*factor,33*factor];
 }
 export function rest(robotState, l) {
   if(l.anchor!==undefined)return robotState.local(robotState.spine[l.anchor],l.kind==='arm'?30:-28,l.side*(l.kind==='arm'?35:40));
