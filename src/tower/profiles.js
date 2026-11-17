@@ -8,7 +8,7 @@ export const TOWER_ENEMY_PROFILES=Object.freeze({
  fast:Object.freeze({name:'Быстрый',stats:[7,2,3],skinKey:'robotEnemy1',voice:'male',focus:'Предпочитает прямое преследование и быстрое сближение'}),
  strong:Object.freeze({name:'Силовой',stats:[2,7,3],skinKey:'robotEnemy2',voice:'male',focus:'Навязывает ближний бой и чаще наносит критические удары'}),
  agile:Object.freeze({name:'Маневренный',stats:[3,2,7],skinKey:'robotEnemy3',voice:'female',focus:'Шире заходит с фланга и быстрее разворачивается'}),
- elite:Object.freeze({name:'Элитный',stats:[5,5,5],skinKey:'robotEnemy4',voice:'female',focus:'Сбалансированное усиление всех характеристик'})
+ elite:Object.freeze({name:'Элитный',stats:[5,5,5],skinKey:'robotEnemy4',voice:'female',focus:'Сочетает усиленные характеристики и гибкую тактику'})
 });
 export const towerEnemyProfile=id=>TOWER_ENEMY_PROFILES[id]??TOWER_ENEMY_PROFILES.basic;
 export const validTowerProfile=id=>typeof id==='string'&&Object.hasOwn(TOWER_ENEMY_PROFILES,id);
