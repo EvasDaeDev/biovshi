@@ -196,15 +196,17 @@ test('modified live body skin uses exact replacement PNG and falls back only for
  const dom=setup(session,run,'ward');
  try{
   const player=ctx.robots[0];
-  const piece=player.skin.pieces.get('arm-1-upper');
-  assert.match(piece.url,/ar_surg_impact\.png$/);
-  const unaffected=player.skin.pieces.get('head').url;
-  const opponent=ctx.robots[1].skin?.pieces.get('arm-1-upper')?.url;
-  piece.image.dispatchEvent(new dom.window.Event('error'));
-  assert.match(piece.url,/r_01\.png$/,'only the failed surgical texture reverts to original skin');
-  assert.equal(piece.image.getAttribute('href'),piece.url);
-  assert.equal(player.skin.pieces.get('head').url,unaffected);
-  assert.equal(ctx.robots[1].skin?.pieces.get('arm-1-upper')?.url,opponent);
+  const piece=player.actor.querySelector('[data-skin-segment="arm-1-upper"] image');
+  assert.ok(piece,'arena renders a texture for the modified upper arm');
+  assert.match(piece.getAttribute('href'),/ar_surg_impact\.png$/);
+  const unaffected=player.actor.querySelector('[data-skin-segment="head"] image').getAttribute('href');
+  const enemyPiece=ctx.robots[1].actor.querySelector('[data-skin-segment="arm-1-upper"] image');
+  const opponent=enemyPiece?.getAttribute('href');
+  piece.dispatchEvent(new dom.window.Event('error'));
+  assert.match(piece.getAttribute('href'),/r_01\.png$/,
+   'only the failed surgical texture reverts to original patient skin');
+  assert.equal(player.actor.querySelector('[data-skin-segment="head"] image').getAttribute('href'),unaffected);
+  assert.equal(enemyPiece?.getAttribute('href'),opponent);
  }finally{close(dom);}
 });
 
