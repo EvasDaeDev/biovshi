@@ -18,9 +18,12 @@ export function cameraBounds(size, outset = 8) {
 }
 
 export function cameraReset() {
-  ctx.camera.x = (ctx.arenaDefinition?.left??0)-ctx.CAMERA_OUTSET;
-  ctx.camera.y = (ctx.arenaDefinition?.top??0)-ctx.CAMERA_OUTSET;
-  ctx.camera.size = ctx.CAMERA_FULL;
+  // Preserve the true arena centre when the maximum view is narrower than
+  // the full floor-plus-walls extent.
+  const arena=ctx.arenaDefinition??{left:0,top:0,size:700};
+  ctx.camera.size=ctx.CAMERA_FULL;
+  ctx.camera.x=arena.left+(arena.size-ctx.CAMERA_FULL)/2;
+  ctx.camera.y=arena.top+(arena.size-ctx.CAMERA_FULL)/2;
   cameraApply();
 }
 

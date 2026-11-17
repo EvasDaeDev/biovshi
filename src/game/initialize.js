@@ -423,7 +423,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   // The clock is a screen-space overlay, not part of the clipped floor.
   ctx.svg.appendChild(ctx.timerOutput);
   ctx.CAMERA_OUTSET = Math.max(0, CONFIG.arena.wallThicknessCm) + Math.max(0, CONFIG.arena.outerWallDepthCm) + CONFIG.arena.wallViewMarginCm;
-  ctx.CAMERA_FULL = ctx.arenaDefinition.size + 2 * ctx.CAMERA_OUTSET;
+  ctx.CAMERA_FULL = (ctx.arenaDefinition.size + 2 * ctx.CAMERA_OUTSET) * CONFIG.arena.cameraMaxDistanceFactor;
   ctx.CAMERA_MIN = 200;
   ctx.CAMERA_MARGIN = 200;
   ctx.camera = {

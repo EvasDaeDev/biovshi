@@ -8,10 +8,11 @@ import {ctx} from '../src/game/state.js';
 import {chooseSpawnLayout,containsPoint} from '../src/game/arena.js';
 import {coreClearCircle} from '../src/systems/collision.js';
 import {wallRibbon} from '../src/render/wall-geometry.js';
+import {cameraReset,cameraApply} from '../src/render/camera.js';
 import {betNewSession} from '../src/betting/ledger.js';
 import {newTower} from '../src/tower/model.js';
 import {CONFIG} from '../src/config.js';
-const layouts={sluice:[600,1],zigzag:[750,2],columns:[900,4],throat:[1000,2]};
+const layouts={sluice:[600,2],zigzag:[750,2],columns:[900,4],throat:[800,2]};
 function clockwiseConvex(ps){
  let sign=0;
  for(let i=0;i<ps.length;i++){
@@ -52,6 +53,20 @@ test('four layouts use convex world geometry and render finite wall ribbons',()=
   assert.match(arenaDiagram(a),/arena-obstacle/);
  }
 });
+test('sluice columns are 150cm long with an unobstructed 150cm centre gap',()=>{
+ const [first,second]=ARENAS.sluice.obstacles;
+  // The first centreline endpoint pair uses p[0]/p[3] and p[1]/p[2].
+ for(const column of [first,second]){
+  const p=column.points;
+  const a={x:(p[0].x+p[3].x)/2,y:(p[0].y+p[3].y)/2};
+  const b={x:(p[1].x+p[2].x)/2,y:(p[1].y+p[2].y)/2};
+  assert.ok(Math.abs(Math.hypot(a.x-b.x,a.y-b.y)-150)<1e-7);
+ }
+ const a=first.points,b=second.points;
+ const end={x:(a[1].x+a[2].x)/2,y:(a[1].y+a[2].y)/2};
+ const start={x:(b[0].x+b[3].x)/2,y:(b[0].y+b[3].y)/2};
+ assert.ok(Math.abs(Math.hypot(end.x-start.x,end.y-start.y)-150)<1e-7);
+});
 test('all four arenas initialize a bounded floor, masks and four safe betting spawns',()=>{
  for(const id of Object.keys(layouts)){
   const dom=setup(id);try{
@@ -63,6 +78,14 @@ test('all four arenas initialize a bounded floor, masks and four safe betting sp
     assert.equal(Number(node.getAttribute('width')),a.size,id);
    }
    assert.equal(ctx.robots.length,4,id);
+   const full=(a.size+2*ctx.CAMERA_OUTSET)*CONFIG.arena.cameraMaxDistanceFactor;
+   assert.ok(Math.abs(ctx.CAMERA_FULL-full)<1e-7,id+' maximum zoom out');
+   assert.ok(Math.abs(ctx.camera.size-full)<1e-7,id+' starting zoom');
+   assert.ok(Math.abs(ctx.camera.x-(a.left+(a.size-full)/2))<1e-7,id+' horizontal centering');
+   assert.ok(Math.abs(ctx.camera.y-(a.top+(a.size-full)/2))<1e-7,id+' vertical centering');
+   ctx.camera.size=full+100;cameraApply();
+   assert.equal(Number(ctx.svg.getAttribute('viewBox').split(' ')[2]),Number(full.toFixed(3)));
+   cameraReset();
    assert.ok(chooseSpawnLayout().every(p=>coreClearCircle(p,CONFIG.startup.spawnMarginCm)),id);
    for(const r of ctx.robots){
     assert.ok(Number.isFinite(r.x)&&Number.isFinite(r.y),id);
