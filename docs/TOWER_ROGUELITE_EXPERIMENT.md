@@ -78,6 +78,8 @@
 ## Затронутые места
 
 - `src/tower/profiles.js` — определения противников.
+- `src/tower/tactics.js` — тактические склонности профилей, без отдельного боевого алгоритма.
+- `src/systems/ai.js` — применение этих склонностей только к противникам Башни.
 - `src/tower/floors.js` — испытания и вместимость.
 - `src/tower/model.js`, `src/tower/ui.js`, `src/tower/insurance.js` — прогресс, выбор, выплаты и ДМС.
 - `src/game/initialize.js`, `src/game/arena.js`, `src/main.js` — загрузка бойцов и выбранной арены.
