@@ -6,8 +6,9 @@ import {bossFloorReward} from '../boss/encounter.js';
 import {selectedTowerFloor,selectTowerFloor,TOWER_DANGER_STYLES} from './floors.js';
 import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
 import {towerMutationSnapshot,towerMutationCombatBonus,TOWER_MUTATIONS,TOWER_MUTATION_IDS,TOWER_MUTATION_FAMILIES,TOWER_MUTATION_SYNERGIES,towerMutationSynergies,chooseTowerMutation} from './mutations.js';
+import {TOWER_SURGERY_IDS,TOWER_SURGERY_OPERATIONS,TOWER_SURGERY_MIN_LEVEL,towerSurgeryCapacity,towerSurgeryPrice,towerSurgeryAvailableSites,towerSurgerySiteLabel} from './surgery.js';
 import {ctx} from '../game/state.js';
-import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount,buyTowerInsurance,towerEnemyReward} from './model.js';
+import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount,buyTowerInsurance,buyTowerSurgery,towerEnemyReward} from './model.js';
 import {bettingSave} from '../betting/storage.js';
 import {bettingSetup,bettingCancel,bettingReadDraft} from '../betting/ui.js';
 import {patientRecovery,validStats,earnedStats,redistributeStat,statMultiplier,critChance} from '../garage/model.js';
@@ -166,7 +167,7 @@ export function towerPreparation(){
         button.onclick=()=>{
           if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||!chooseTowerMutation(t,id))return;
           ctx.towerGarage[0].mutations=[...t.mutations];
-          bettingSave();renderSkills();renderMutations();syncFightLock();
+          bettingSave();renderSkills();renderMutations();syncFightLock();renderSurgery();
           ctx.root.querySelector('#tower-prep-error').textContent='Модуль установлен: '+module.name;
         };
         choices.append(button);
@@ -197,6 +198,83 @@ export function towerPreparation(){
     fightButton.title=t.mutationDraft?'Сначала выбери модификацию после победы над боссом':'';
   }
   renderMutations();syncFightLock();
+  // Paid operations are available only during preparation, in new milestone
+  // slots. A procedure is implanted in one actual anatomical segment.
+  let surgeryPanel=ctx.root.querySelector('#tower-prep-surgery');
+  if(!surgeryPanel){
+    surgeryPanel=document.createElement('section');
+    surgeryPanel.id='tower-prep-surgery';
+    mutationPanel.after(surgeryPanel);
+  }
+  function renderSurgery(){
+    surgeryPanel.replaceChildren();
+    const slots=towerSurgeryCapacity(t.level);
+    surgeryPanel.hidden=t.level<TOWER_SURGERY_MIN_LEVEL;
+    if(surgeryPanel.hidden)return;
+    const heading=document.createElement('strong');
+    heading.className='tower-surgery-title';
+    heading.textContent='ХИРУРГИЯ · '+t.surgeries.length+'/'+slots;
+    surgeryPanel.append(heading);
+    const installed=document.createElement('small');
+    installed.textContent=t.surgeries.length
+      ?'ИМПЛАНТИРОВАНО: '+t.surgeries.map(op=>TOWER_SURGERY_OPERATIONS[op.procedure].name+
+       ' ('+towerSurgerySiteLabel(op.site)+')').join(' · ')
+      :'Первый операционный слот открывается после босса пятого этажа.';
+    surgeryPanel.append(installed);
+    if(t.surgeries.length>=slots){
+      const note=document.createElement('small');
+      note.textContent='Свободных слотов нет. Новый откроется после следующего босса (максимум три).';
+      surgeryPanel.append(note);
+      return;
+    }
+    const note=document.createElement('small');
+    note.textContent='Операция оплачивается монетами и остаётся до конца забега. При потере сегмента её эффект отключится до восстановления. ДМС сохранит проведённые операции.';
+    surgeryPanel.append(note);
+    const controls=document.createElement('div');
+    controls.className='tower-surgery-controls';
+    const procedureSelect=document.createElement('select');
+    procedureSelect.setAttribute('aria-label','Вид операции');
+    for(const id of TOWER_SURGERY_IDS){
+      const option=document.createElement('option');option.value=id;
+      option.textContent=TOWER_SURGERY_OPERATIONS[id].name+' · '+TOWER_SURGERY_OPERATIONS[id].description;
+      procedureSelect.append(option);
+    }
+    const siteSelect=document.createElement('select');
+    siteSelect.setAttribute('aria-label','Сегмент для операции');
+    const purchase=document.createElement('button');purchase.type='button';
+    purchase.className='tower-surgery-purchase';
+    const refreshSites=()=>{
+      siteSelect.replaceChildren();
+      for(const site of towerSurgeryAvailableSites(t,procedureSelect.value)){
+        const option=document.createElement('option');option.value=site;
+        option.textContent=towerSurgerySiteLabel(site);
+        siteSelect.append(option);
+      }
+      const price=towerSurgeryPrice(t);
+      purchase.textContent='ОПЕРИРОВАТЬ · '+formatChips(price);
+      purchase.disabled=Boolean(t.mutationDraft)||!siteSelect.options.length
+        ||ctx.betting.players[ctx.towerPlayer].balance<price;
+      purchase.title=t.mutationDraft?'Сначала выбери награду за босса':
+        'Операция на выбранном сегменте; отменить покупку нельзя.';
+    };
+    procedureSelect.onchange=refreshSites;
+    purchase.onclick=()=>{
+      if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
+      try{
+        const procedure=procedureSelect.value,site=siteSelect.value;
+        const price=buyTowerSurgery(ctx.betting,ctx.towerPlayer,procedure,site);
+        ctx.towerGarage[0].surgeries=structuredClone(t.surgeries);
+        bettingSave();renderSkills();renderSurgery();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
+        renderInsurance();updateTowerHud();
+        ctx.root.querySelector('#tower-prep-error').textContent=
+          'Операция «'+TOWER_SURGERY_OPERATIONS[procedure].name+'» выполнена: −'+price+' монет.';
+      }catch(error){ctx.root.querySelector('#tower-prep-error').textContent=error.message;}
+    };
+    controls.append(procedureSelect,siteSelect,purchase);
+    surgeryPanel.append(controls);
+    refreshSites();
+  }
+  renderSurgery();
   ctx.root.querySelector('#tower-prep-artifacts').innerHTML=artifactCollectionMarkup(t.artifacts)+`<p class="artifact-bonus-note">ПОЛНЫЙ АРТЕФАКТ: +${formatChips(ARTIFACT_COMPLETION_REWARD)}</p>`;
   ctx.root.querySelector('#tower-prep-error').textContent='';
   const insuranceButton=ctx.root.querySelector('#tower-insurance');
