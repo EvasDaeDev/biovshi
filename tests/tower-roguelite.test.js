@@ -31,6 +31,8 @@ test('chosen floor and composition persist, with at most ten combatants includin
   const random=()=>.49;
   const first=ensureTowerFloorPlan(run,random);
   assert.equal(first.options.length,2);
+  assert.equal(first.options[0].arenaId,first.options[1].arenaId,'risk options must use the same arena');
+  assert.ok(first.options[1].profiles.length>=first.options[0].profiles.length,'danger never has fewer opponents');
   assert.equal(ensureTowerFloorPlan(run,()=>.99),first,'no reroll');
   assert.equal(validTowerFloorPlan(first,floor),true);
   assert.equal(selectTowerFloor(run,1),true);
