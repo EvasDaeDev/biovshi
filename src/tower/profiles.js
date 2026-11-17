@@ -21,9 +21,9 @@ export function towerProfileEffect(id){
 }
 export function towerProfileDifference(id){
  const {speed,critical,maneuver}=towerProfileEffect(id);
- if(id==='fast')return 'Скорость '+speed+'% вместо 100%';
- if(id==='strong')return 'Критический удар '+critical+'% вместо 15%';
- if(id==='agile')return 'Поворот '+maneuver+'% вместо 100%';
- if(id==='elite')return 'Скорость '+speed+'% · крит '+critical+'% · поворот '+maneuver+'%';
+ if(id==='fast')return 'Скорость '+speed+'% вместо 100% · '+profile.focus;
+ if(id==='strong')return 'Критический удар '+critical+'% вместо 15% · '+profile.focus;
+ if(id==='agile')return 'Поворот '+maneuver+'% вместо 100% · '+profile.focus;
+ if(id==='elite')return 'Скорость '+speed+'% · крит '+critical+'% · поворот '+maneuver+'% · '+profile.focus;
  return 'Обычный · скорость 100% · крит 15% · поворот 100%';
 }
