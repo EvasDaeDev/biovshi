@@ -24,7 +24,7 @@ export function initializeModalFocus(){
   if(current){
    background=[...root.querySelector('.atmosphere-controls').children,root.querySelector('.tag7hop-sidebar-wrap'),ctx.svg,ctx.betHud].filter(node=>node&&node!==settings&&!node.contains(current)).map(node=>[node,Boolean(node.inert)]);
    for(const [node] of background)node.inert=true;
-   if(!ownsFocus(current))controls(current)[0]?.focus();
+   if(!ownsFocus(current)&&!activeTowerUpgrade())controls(current)[0]?.focus();
   }else if(previous?.isConnected&&!previous.closest('[hidden]'))previous.focus();
  }
  const key=event=>{
