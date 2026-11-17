@@ -43,7 +43,8 @@ export function ensureTowerFloorPlan(t,random=Math.random){
  if(t.floorPlan?.floor===t.level)return t.floorPlan;
  if(t.rewarded?.length||t.legacyEnemyCount!==undefined||t.legacyBossFloor)return null;
  const boss=hasBoss(t);
- t.floorPlan={floor:t.level,selected:0,options:boss?[option(t,false,random)]:[option(t,false,random),option(t,true,random)]};
+ const standard=option(t,false,random);
+ t.floorPlan={floor:t.level,selected:0,options:boss?[standard]:[standard,option(t,true,random,standard.arenaId)]};
  return t.floorPlan;
 }
 export const selectedTowerFloor=t=>t.floorPlan?.floor===t.level?t.floorPlan.options[t.floorPlan.selected]:null;
