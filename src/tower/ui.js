@@ -140,7 +140,7 @@ export function towerPreparation(){
     mutationPanel.append(heading);
     if(t.mutationDraft){
       const note=document.createElement('small');
-      note.textContent='Выбери один из трёх. Модуль останется до конца забега; ДМС сохраняет установленные модули.';
+      note.textContent='Выбери один из предложенных модулей. Он останется до конца забега; ДМС сохраняет установленные модули.';
       mutationPanel.append(note);
       const choices=document.createElement('div');
       choices.className='tower-mutation-options';
@@ -193,7 +193,7 @@ export function towerPreparation(){
     insuranceButton.classList.toggle('is-active',Boolean(c));
     insuranceButton.innerHTML=renewal?`ПРОДЛИТЬ ДМС · ${formatChips(t.insurance.price)}`:c?`ДМС · ЭТАЖ ${c.level}`:`ДМС · ${formatChips(t.insurance.price)}`;
     insuranceButton.disabled=Boolean(c&&!renewal)||ctx.betting.players[ctx.towerPlayer].balance<t.insurance.price;
-    insuranceButton.title=renewal?`Перенести ДМС с этажа ${c.level} на этаж ${t.level} за ${t.insurance.price} монет и сохранить текущие навыки и протезы. Старый полис заменяется. Следующий тариф дороже на 3%, с округлением вверх.`:c?`При поражении вернёт на этаж ${c.level} с сохранёнными навыками. Страховка одноразовая. На более высоком этаже её можно продлить.`:'Одноразовая страховка этажа и выбранных навыков. Следующая покупка дороже на 10%, с округлением вверх.';
+    insuranceButton.title=renewal?`Перенести ДМС с этажа ${c.level} на этаж ${t.level} за ${t.insurance.price} монет и сохранить текущие навыки, протезы и модули. Старый полис заменяется. Следующий тариф дороже на 3%, с округлением вверх.`:c?`При поражении вернёт на этаж ${c.level} с сохранёнными навыками и модулями. Страховка одноразовая. На более высоком этаже её можно продлить.`:'Одноразовая страховка этажа, выбранных навыков и модулей. Следующая покупка дороже на 10%, с округлением вверх.';
   };
   renderInsurance();
   insuranceButton.onclick=()=>{
@@ -240,7 +240,7 @@ export function settleTower(winner){
 export function towerResults(){
   const won=ctx.combat.winner===0,t=towerFor(ctx.betting,ctx.towerPlayer),o=ctx.towerOutcome??{floor:ctx.towerRun.level,cleared:won?ctx.towerRun.level:ctx.towerRun.level-1,record:t.record};
   ctx.resultsTitle.textContent=won?`ЭТАЖ ${o.floor} ПРОЙДЕН`:`ПРОЙДЕНО ЭТАЖЕЙ: ${o.cleared}`;
-  ctx.resultsSummary.textContent=won?`Получено +1 очко навыков. Далее — этаж ${t.level}, противников: ${towerEnemyCount(t)}.`:`${o.reason??'Поражение'} на этаже ${o.floor}. ${o.insuranceFloor?`ДМС сработала: возврат на этаж ${o.insuranceFloor} с застрахованными навыками. Страховка использована.`:'Заработанные монеты сохранены.'}`;
+  ctx.resultsSummary.textContent=won?`Получено +1 очко навыков. ${t.mutationDraft?'Открыт выбор модификации после победы над боссом. ':''}Далее — этаж ${t.level}, противников: ${towerEnemyCount(t)}.`:`${o.reason??'Поражение'} на этаже ${o.floor}. ${o.insuranceFloor?`ДМС сработала: возврат на этаж ${o.insuranceFloor} с застрахованными навыками. Страховка использована.`:'Заработанные монеты сохранены.'}`;
   const coins=o.floorCoins??0;
   const resultWallet=ctx.root.querySelector('#tower-results-player');
   renderTowerPlayerWallet(resultWallet);resultWallet.hidden=false;
