@@ -17,6 +17,8 @@ function opponents(floor,count,danger,random){
  return Array.from({length:count},(_,i)=>{
   const eliteEligible=floor>=ELITE_FROM_FLOOR&&danger;
   if(eliteEligible&&random()<.18)return 'elite';
+  // Every dangerous challenge must actually include at least one specialist.
+  if(danger&&i===0)return pool[1+roll(random,3)];
   const specialRate=danger?.75:Math.min(.55,.12+floor*.045);
   return random()<specialRate?pool[1+roll(random,3)]:'basic';
  });
