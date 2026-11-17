@@ -3,6 +3,8 @@ import {validBossEncounter} from '../boss/encounter.js';
 import {validTowerFloorPlan} from './floors.js';
 import {validTowerMutationState} from './mutations.js';
 import {validTowerSurgeries} from './surgery.js';
+import {normalizeTowerGraftProsthetics} from './anatomy.js';
+import {validTowerDonorState} from './donors.js';
 export const newInsurance=()=>({price:50,checkpoint:null});
 export function validInsurance(policy,record){
  if(!policy||!Number.isSafeInteger(policy.price)||policy.price<50)return false;
@@ -12,7 +14,10 @@ export function validInsurance(policy,record){
   &&Array.isArray(c.prosthetics)&&JSON.stringify(c.prosthetics)===JSON.stringify(normalizeProsthetics(c.prosthetics))
   &&validBossEncounter(c.bossEncounter,c.level)&&validTowerFloorPlan(c.floorPlan,c.level)
   &&validTowerMutationState({level:c.level,mutations:c.mutations??[],mutationDraft:c.mutationDraft})
-  &&validTowerSurgeries(c.surgeries??[],c.level);
+  &&validTowerSurgeries(c.surgeries??[],c.level)
+  &&validTowerDonorState({...c,donorTissues:c.donorTissues??[],surgeries:c.surgeries??[]})
+  &&(c.graftProsthetics===undefined||Array.isArray(c.graftProsthetics)
+   &&JSON.stringify(c.graftProsthetics)===JSON.stringify(normalizeTowerGraftProsthetics(c.graftProsthetics,c)));
 }
 export function purchaseInsurance(session,player,tower){
  const policy=tower.insurance,buyer=session.players[player];
@@ -23,6 +28,8 @@ export function purchaseInsurance(session,player,tower){
  policy.checkpoint={level:tower.level,wins:tower.wins,patient:tower.patient,stats:[...tower.stats],prosthetics:[...tower.prosthetics],
   mutations:[...(tower.mutations??[])],
   surgeries:structuredClone(tower.surgeries??[]),
+  graftProsthetics:[...(tower.graftProsthetics??[])],
+  donorTissues:structuredClone(tower.donorTissues??[]),
   ...(tower.mutationDraft?{mutationDraft:structuredClone(tower.mutationDraft)}:{}),
   ...(tower.bossEncounter?{bossEncounter:structuredClone(tower.bossEncounter)}:{}),
   ...(tower.floorPlan?{floorPlan:structuredClone(tower.floorPlan)}:{})};
