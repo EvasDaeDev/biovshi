@@ -6,7 +6,7 @@ import {ensureBossEncounter} from '../src/boss/encounter.js';
 import {BOSS_FLOOR_INTERVAL} from '../src/build-channel.js';
 import {newTower,towerEnemyCount,towerEnemyReward,validTower,towerFor} from '../src/tower/model.js';
 import {ensureTowerFloorPlan,selectedTowerFloor,selectTowerFloor,validTowerFloorPlan,TOWER_ARENA_CAPACITY} from '../src/tower/floors.js';
-import {TOWER_ENEMY_PROFILES,towerEnemyProfile} from '../src/tower/profiles.js';
+import {TOWER_ENEMY_PROFILES,towerEnemyProfile,towerProfileEffect,towerProfileDifference} from '../src/tower/profiles.js';
 import {betNewSession} from '../src/betting/ledger.js';
 import {purchaseInsurance,validInsurance} from '../src/tower/insurance.js';
 
