@@ -6,6 +6,10 @@ on:
       - experiment/tower-bosses
   workflow_dispatch:
 
+concurrency:
+  group: tower-experiment-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
