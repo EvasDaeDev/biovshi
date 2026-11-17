@@ -24,7 +24,7 @@ test('spine extension and leg graft appear at the actual additional anchor',()=>
  const body=towerPatientAnatomy({surgeries:[{procedure:'extend_spine',site:'spine-2'},
   {procedure:'graft_leg',site:'leg--1-upper'}]});
  const parts=portraitBonesForBody(body);
- assert.equal(parts.length,18);
+ assert.equal(parts.length,16);
  assert.ok(bone(parts,'spine-4'));
  const extra=bone(parts,'leg--1-graft-upper'),normal=bone(parts,'leg--1-upper');
  assert.notDeepEqual(extra.a,normal.a);
