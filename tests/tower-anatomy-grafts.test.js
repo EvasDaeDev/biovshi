@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {towerPatientAnatomy} from '../src/tower/anatomy.js';
 import {towerSurgeryAvailableSites,validTowerSurgeries} from '../src/tower/surgery.js';
-import {newTower} from '../src/tower/model.js';
+import {newTower,towerFor,buyTowerSurgery,buyTowerInsurance,completeTower} from '../src/tower/model.js';
+import {betNewSession} from '../src/betting/ledger.js';
 
 test('F3 grafts reuse combat rig segments, parents and atlas mapping',()=>{
  const baseline=newTower(0);
@@ -40,4 +41,22 @@ test('F3 rejects lower-limb grafts and leaves other modes with ordinary rig',()=
  assert.equal(towerPatientAnatomy(withOne).spineSegments,4);
  assert.equal(towerPatientAnatomy(withOne).limbs.length,5);
  assert.equal(towerPatientAnatomy(newTower(0)),null);
+});
+
+test('F3 graft purchase is charged once and anatomy persists through DMS restore',()=>{
+ const session=betNewSession(['Хирург'],500);
+ const run=towerFor(session,0);
+ Object.assign(run,{level:6,wins:5,record:5,preparing:true});
+ const before=session.players[0].balance;
+ assert.equal(buyTowerSurgery(session,0,'graft_arm','arm-1-upper'),30);
+ assert.equal(session.players[0].balance,before-30);
+ assert.equal(session.surgerySpent,30);
+ assert.equal(towerPatientAnatomy(run).limbs.length,5);
+ assert.throws(()=>buyTowerSurgery(session,0,'graft_arm','arm-1-upper'),/недоступна/);
+ assert.equal(buyTowerInsurance(session,0),50);
+ assert.deepEqual(run.insurance.checkpoint.surgeries,run.surgeries);
+ const restored=completeTower(session,0,false);
+ assert.deepEqual(restored.surgeries,run.surgeries);
+ assert.equal(towerPatientAnatomy(restored).limbs.length,5);
+ assert.equal(restored.insurance.checkpoint,null);
 });
