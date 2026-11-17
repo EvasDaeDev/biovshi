@@ -56,6 +56,7 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
   assert.equal(buttons.length,2);
   assert.equal(buttons[0].getAttribute('aria-pressed'),'true');
   assert.match(buttons[1].textContent,/ОПАСНО/);
+  assert.match(buttons[1].textContent,/ПЕРЕПОЛНЕНИЕ/);
   assert.match(buttons[0].textContent,/Скорость 160%/);
   assert.match(buttons[0].textContent,/Поворот 160%/);
   assert.match(buttons[1].textContent,/Критический удар 50%/);
