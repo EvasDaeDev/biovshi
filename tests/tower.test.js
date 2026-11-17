@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {newTower,towerFor,rewardTower,completeTower,resetTower,validTower,floorEnemyCount,towerEnemyCount,normalizeTower,buyTowerSurgery} from '../src/tower/model.js';
 import {chooseTowerMutation} from '../src/tower/mutations.js';
+import {towerUpgradeApplies} from '../src/tower/upgrade-appearance.js';
 import {betNewSession,betCommit,betResolve,betAddPlayer} from '../src/betting/ledger.js';
 import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 import {initializeGame} from '../src/game/initialize.js';
@@ -125,6 +126,43 @@ test('surgeon lets the player buy one body-specific operation and saves combat i
   assert.deepEqual(t.insurance.checkpoint.surgeries,t.surgeries);
   assert.equal(s.players[0].balance,220);
   assert.ok(validTower(t));
+ }finally{close(dom);}
+});
+
+test('purchases during preparation take effect on the SAME floor, including graft geometry and module atlas',()=>{
+ const s=betNewSession(['Момент установки'],1000),run=towerFor(s,0);
+ for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ const chosen=run.mutationDraft.options[0];
+ const dom=setup(s,run,'ward');
+ try{
+  const initial=ctx.robots[0];
+  assert.equal(initial.body.limbs.length,4);
+  document.querySelector('#tower-prep-mutations .tower-mutation-option').click();
+  const surgery=document.querySelector('#tower-prep-surgery');
+  const procedure=surgery.querySelector('[aria-label="Вид операции"]');
+  procedure.value='graft_arm';procedure.dispatchEvent(new Event('change'));
+  const site=surgery.querySelector('[aria-label="Сегмент для операции"]');
+  site.value='arm-1-upper';
+  surgery.querySelector('.tower-surgery-purchase').click();
+  assert.equal(run.surgeries[0].procedure,'graft_arm');
+  assert.deepEqual(run.mutations,[chosen]);
+  assert.equal(ctx.towerRun.surgeries.length,0,'preparation started from a detached snapshot');
+  document.querySelector('.tower-upgrade-close').click();
+  document.querySelector('#tower-fight').click();
+  assert.equal(ctx.startup.phase,'spawning');
+  assert.equal(ctx.towerRun.surgeries[0].procedure,'graft_arm');
+  assert.deepEqual(ctx.towerRun.mutations,[chosen]);
+  assert.notEqual(ctx.robots[0],initial,'fighter is rebuilt after purchases');
+  assert.equal(ctx.robots[0].body.limbs.length,5);
+  const piece=ctx.robots[0].actor.querySelector('[data-skin-segment="arm-1-graft-upper"] image');
+  assert.ok(piece,'new arm has texture in the immediately upcoming fight');
+  const siteForModule=Object.keys(ctx.robots[0].body.skinParts).find(key=>towerUpgradeApplies(chosen,key));
+  assert.ok(siteForModule,'selected module changes an atlas part');
+  const modified=ctx.robots[0].skin.pieces.get(siteForModule);
+  assert.ok(modified.url.endsWith('ar_mod_'+chosen+'.png'),'chosen mutation texture is already active');
+  advanceStartup(20);
+  assert.equal(ctx.startup.phase,'running');
+  assert.ok(validTower(run));
  }finally{close(dom);}
 });
 
