@@ -10,6 +10,7 @@ import {ctx} from '../src/game/state.js';
 import {onGameEvent} from '../src/game/event-bus.js';
 import {betNewSession} from '../src/betting/ledger.js';
 import {towerFor} from '../src/tower/model.js';
+import {ensureTowerFloorPlan} from '../src/tower/floors.js';
 import {earnedStats} from '../src/garage/model.js';
 import {BOSS_CONFIG,bossVariantForFloor} from '../src/boss/config.js';
 import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
@@ -24,6 +25,7 @@ const out=args.out??'artifacts/tower-fights.json';
 const policy=args.policy??'approach';
 const selectedFloors=args.floors?.split(',').map(Number)??null;
 const bossBench=args.bossBench==='true';
+const naturalBoss=args.naturalBoss==='true';
 const diagnose=args.diagnose==='true';
 const maxAllowedBodyOverlapCm=Number(args.maxOverlapCm??2);
 if(!['approach','orbit','idle','evade'].includes(policy))throw Error('Invalid policy');
@@ -85,11 +87,17 @@ function runScenario(scenario,seed){
   const option={arenaId:scenario.arena,kind:scenario.kind==='boss'?'boss':'danger',
    ...(scenario.kind==='normal'?{style:'mixed'}:{}),profiles:scenario.profiles};
   tower.floorPlan={floor:scenario.floor,selected:0,options:[option]};
+  if(naturalBoss){
+   delete tower.floorPlan;
+   const generated=ensureTowerFloorPlan(tower,Math.random);
+   row.arena=generated.options[0].arenaId;
+   row.profiles=[...generated.options[0].profiles];
+  }
   if(scenario.kind==='boss')tower.bossEncounter={
    floor:scenario.floor,variant:row.variant,
    texture:'assets/textures/robots/boss/b_01.png'
   };
-  initializeGame({session,entry:'tower',tower:structuredClone(tower),arenaId:scenario.arena});
+  initializeGame({session,entry:'tower',tower:structuredClone(tower),arenaId:row.arena});
   installTowerUI();document.querySelector('#tower-fight').click();
   advanceStartup(20);
   ctx.paused=false;ctx.appInactive=false;ctx.orientationBlocked=false;
@@ -227,7 +235,7 @@ function runScenario(scenario,seed){
  return row;
 }
 const runs=[];
-for(const scenario of (bossBench?bossBenchScenarios:scenarios).filter(s=>!selectedFloors||selectedFloors.includes(s.floor))){
+for(const scenario of (naturalBoss?[{kind:'boss',arena:'ward',floor:5,profiles:['boss','basic','basic'],label:'naturally generated'}]:bossBench?bossBenchScenarios:scenarios).filter(s=>!selectedFloors||selectedFloors.includes(s.floor))){
  for(let sample=0;sample<samples;sample++){
   const row=runScenario(scenario,offset+sample*15485863+scenario.floor*7919);
   runs.push(row);
@@ -271,7 +279,7 @@ const summary={
    [reason,runs.filter(r=>!r.completed&&(r.longFight?.reason??'error')===reason).length])),
  cpuSeconds:Math.round(runs.reduce((n,r)=>n+r.elapsedCpuMs,0)/100)/10
 };
-const result={simulation:'headless real 1/60s game loop',selectedFloors,diagnose,bossBench,maxAllowedBodyOverlapCm,
+const result={simulation:'headless real 1/60s game loop',selectedFloors,diagnose,bossBench,naturalBoss,maxAllowedBodyOverlapCm,
  policy:policy==='orbit'?'Player approaches and circles a nearby enemy at about 55 cm; not human performance':
  policy==='idle'?'Player remains idle and never presses movement controls':
  policy==='evade'?'Player avoids other fighters when closer than 170 cm and does not attack deliberately':
