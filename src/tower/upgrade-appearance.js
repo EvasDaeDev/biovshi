@@ -2,7 +2,6 @@
 // placeholders copied from ar_01.png. Replacing them changes BOTH the arena
 // patient and the horizontal preparation preview, with no save-format changes.
 import {TOWER_MUTATIONS} from './mutations.js';
-import {TOWER_SURGERY_OPERATIONS} from './surgery.js';
 
 const ROOT='assets/textures/robots/upgrades/';
 export const TOWER_UPGRADE_PARTS=Object.freeze({
@@ -26,7 +25,7 @@ export const TOWER_UPGRADE_PARTS=Object.freeze({
  quiet:['head','spine-0','spine-1']
 });
 export const TOWER_SURGERY_ATLAS=Object.freeze(Object.fromEntries(
- Object.keys(TOWER_SURGERY_OPERATIONS).filter(id=>!id.startsWith('graft_')&&id!=='extend_spine').map(id=>[id,ROOT+'ar_surg_'+id+'.png'])
+ ['brace','alignment','drive','impact','reflex'].map(id=>[id,ROOT+'ar_surg_'+id+'.png'])
 ));
 export const TOWER_MUTATION_ATLAS=Object.freeze(Object.fromEntries(
  Object.keys(TOWER_MUTATIONS).map(id=>[id,ROOT+'ar_mod_'+id+'.png'])
