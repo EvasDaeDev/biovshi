@@ -26,7 +26,11 @@ export const BOSS_VARIANTS=[
  {id:'long',name:'Длинный',spineSegments:6},
  {id:'arms',name:'Многорукий',spineSegments:6,extra:'arm'},
  {id:'legs',name:'Многоногий',spineSegments:6,extra:'leg'},
+ {id:'long_legs',name:'Длинный многоногий',spineSegments:8,extra:'leg',extraAnchor:5},
+ {id:'long_arms',name:'Длинный многорукий',spineSegments:8,extra:'arm',extraAnchor:3},
 ];
+export const BOSS_ANATOMY_SEQUENCE=Object.freeze(['brute','long','legs','arms','long_legs','long_arms']);
+export const bossVariantForFloor=level=>BOSS_ANATOMY_SEQUENCE[(Math.max(1,Math.floor(level/BOSS_FLOOR_INTERVAL))-1)%BOSS_ANATOMY_SEQUENCE.length];
 export const isBossFloor=level=>Number.isSafeInteger(level)&&level>0&&level%BOSS_FLOOR_INTERVAL===0;
 
 export const hasBoss=t=>isBossFloor(t.level)&&t.legacyEnemyCount===undefined&&!t.legacyBossFloor;
