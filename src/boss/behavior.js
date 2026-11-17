@@ -45,7 +45,7 @@ function applyHit(robot,victim,p,segment){
  note('combat-strike',{from:robot.id,to:victim.id,source:p.source,segment,bossStyle:p.style??'jab'});
 }
 export function createBossBehavior(){
- const state={phase:1,cycles:0,followup:null,charge:null,quickStrike:null,chargeOutcome:null,chargeHistory:[],tacticsByTarget:{},nextChargeAt:6,lastSeen:null,lastSeenAt:-Infinity,status:''};
+ const state={phase:1,cycles:0,followup:null,charge:null,quickStrike:null,chargeOutcome:null,chargeHistory:[],tacticsByTarget:{},nextChargeAt:6,chargeAim:null,lastSeen:null,lastSeenAt:-Infinity,lastSeenTarget:null,status:''};
  const hold=(robot,point,mode='атакует')=>({goal:{x:robot.x,y:robot.y},speed:0,mode,lookPoint:point??null,brake:true});
  const targetFor=robot=>activeOpponents(robot.id).sort((a,b)=>Math.hypot(a.x-robot.x,a.y-robot.y)-Math.hypot(b.x-robot.x,b.y-robot.y))[0];
  function updateChargeMemory(robot,now){
@@ -119,7 +119,26 @@ export function createBossBehavior(){
    state.status='Обходит препятствие';return {goal:ctx.combat.escapeGoal[robot.id],speed:CONFIG.movement.chaseSpeedCm,mode:'обходит препятствие',lookPoint:target.center};
   }
   const seen=robot.canSee(target.center)&&sightClear(robot.center,target.center);
-  if(seen){state.lastSeen={...target.center};state.lastSeenAt=now;}
+  if(seen){state.lastSeen={...target.center};state.lastSeenAt=now;state.lastSeenTarget=target.id;}
+  // The long multi-legged rig often adopts a rear-kick stance that points its
+  // head away from the next possible forward dash. Allow a SHORT deliberate
+  // turn toward a seen/recently seen target, not steering while airborne.
+  // Stop after a bounded attempt so rear-leg combat cannot be starved.
+  if(robot.body?.variant?.id==='long_legs'&&now>=state.nextChargeAt){
+   const known=seen?target.center:state.lastSeenTarget===target.id&&now-state.lastSeenAt<=1.5?state.lastSeen:null;
+   const gap=known?Math.hypot(known.x-robot.x,known.y-robot.y):Infinity;
+   if(known&&gap>=cfg.chargeMinGap&&gap<=cfg.chargeMaxGap){
+    const heading=Math.atan2(known.y-robot.y,known.x-robot.x);
+    if(Math.abs(wrap(heading-robot.angle))>=.35){
+     if(!state.chargeAim||state.chargeAim.target!==target.id)state.chargeAim={target:target.id,since:now};
+     if(now-state.chargeAim.since<1.15){
+      state.status='Разворачивается для рывка';
+      return {...hold(robot,known),heading};
+     }
+     state.chargeAim=null;state.nextChargeAt=now+3;
+    }else state.chargeAim=null;
+   }else state.chargeAim=null;
+  }else state.chargeAim=null;
   if(!seen&&now-state.lastSeenAt>3){state.status='Ищет противника';return fighterIntent(robot);}
   if(seen&&now>=state.nextChargeAt&&Math.abs(wrap(Math.atan2(target.y-robot.y,target.x-robot.x)-robot.angle))<.35){
    const plan=chargePlan(robot,target.center,{history:state.chargeHistory});
