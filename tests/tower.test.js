@@ -34,6 +34,29 @@ function setup(s,tower,arenaId='ward'){
  installTowerUI();return dom;
 }
 function close(dom){ctx.root.__disposeTag();dom.window.close();ctx.mode='spectator';}
+
+test('saved floor profiles reach live robots, texture keys, voices and preparation choices',()=>{
+ const session=betNewSession(['Проверка'],100),t=towerFor(session,0);
+ t.floorPlan={floor:1,selected:0,options:[
+  {arenaId:'ward',kind:'standard',profiles:['fast','agile']},
+  {arenaId:'ward',kind:'danger',profiles:['strong','elite']}
+ ]};
+ const dom=setup(session,t,'ward');
+ try{
+  assert.equal(ctx.robots.length,3);
+  assert.deepEqual(ctx.towerGarage[1].stats,[5,2,3]);
+  assert.deepEqual(ctx.towerGarage[2].stats,[3,2,5]);
+  assert.equal(ctx.towerGarage[1].voice,'male');
+  assert.equal(ctx.towerGarage[2].voice,'female');
+  assert.equal(ctx.robots[1].body.skinKey,'robotEnemy1');
+  assert.equal(ctx.robots[2].body.skinKey,'robotEnemy3');
+  const buttons=[...document.querySelectorAll('.tower-challenge-option')];
+  assert.equal(buttons.length,2);
+  assert.equal(buttons[0].getAttribute('aria-pressed'),'true');
+  assert.match(buttons[1].textContent,/ОПАСНО/);
+ }finally{close(dom);}
+});
+
 test('tower hides all arena names and hostile lights, while player rays and perception remain independent',()=>{
  const s=betNewSession(['Первый']),tower=towerFor(s,0);tower.level=5;
  const dom=setup(s,tower);
