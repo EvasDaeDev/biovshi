@@ -15,13 +15,17 @@ const format=n=>(Math.round(n*100)/100).toLocaleString('ru-RU',{maximumFractionD
 const statNames=['СКОРОСТЬ','СИЛА','МАНЁВРЕННОСТЬ'];
 
 export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,surgeryPanel}){
- root.querySelector('#tower-upgrade-window')?.remove();
+ const previous=root.querySelector('#tower-upgrade-window');
+ if(previous?.open&&typeof previous.close==='function')previous.close();
+ previous?.remove();
  root.querySelector('#tower-upgrade-open')?.remove();
  const launch=create('button','tower-upgrade-open');
  launch.id='tower-upgrade-open';
  launch.type='button';
  statsPanel.after(launch);
- const overlay=create('div','tower-upgrade-overlay');
+ // A native modal is promoted into the browser top layer. A z-index-only
+ // DIV can appear visible while a transparent top-layer sheet steals taps.
+ const overlay=create('dialog','tower-upgrade-overlay');
  overlay.id='tower-upgrade-window';
  overlay.hidden=true;
  overlay.setAttribute('role','dialog');
@@ -152,19 +156,30 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  }
  function open(tab=run.mutationDraft?'mutations':activeTab){
   if(root.querySelector('#tower-preparation')?.hidden)return;
-  refresh();overlay.hidden=false;setTab(tab);
+  if(overlay.open)return;
+  refresh();
+  overlay.hidden=false;
+  if(typeof overlay.showModal==='function')overlay.showModal();
+  else overlay.setAttribute('open','');
+  setTab(tab);
   (run.mutationDraft?mutationPanel.querySelector('.tower-mutation-option'):null)?.focus();
   if(!run.mutationDraft)(tab==='surgery'?surgeryTab:mutationTab).focus();
  }
  function close(){
-  if(overlay.hidden)return;
-  overlay.hidden=true;hoverMutation=null;launch.focus();
+  if(overlay.hidden&&!overlay.open)return;
+  // Closing a native dialog must also remove it from the browser top layer.
+  if(overlay.open&&typeof overlay.close==='function')overlay.close();
+  else overlay.removeAttribute('open');
+  overlay.hidden=true;hoverMutation=null;
+  if(launch.isConnected&&!root.querySelector('#tower-preparation')?.hidden)
+    launch.focus({preventScroll:true});
  }
  launch.onclick=()=>open();
  closeButton.onclick=close;
  mutationTab.onclick=()=>setTab('mutations');
  surgeryTab.onclick=()=>setTab('surgery');
  overlay.addEventListener('click',event=>{if(event.target===overlay)close();});
+ overlay.addEventListener('cancel',event=>{event.preventDefault();close();});
  overlay.addEventListener('keydown',event=>{
   if(event.key==='Escape'){event.preventDefault();close();return;}
   if(event.key!=='Tab')return;
