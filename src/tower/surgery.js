@@ -15,7 +15,10 @@ export const TOWER_SURGERY_OPERATIONS=Object.freeze({
  impact:Object.freeze({name:'Боек',description:'Усиление руки: сила +0,45',
   site:'arm',bonus:[0,.45,0]}),
  reflex:Object.freeze({name:'Рефлекс',description:'Нервная петля руки: манёвр +0,35 · сила +0,1',
-  site:'arm',bonus:[0,.1,.35]})
+  site:'arm',bonus:[0,.1,.35]}),
+ graft_arm:Object.freeze({name:'Пересадка руки',description:'Дополнительная рука на выбранной стороне тела',site:'arm',bonus:[0,0,0],requiresUpper:true}),
+ graft_leg:Object.freeze({name:'Пересадка ноги',description:'Дополнительная опорная нога на выбранной стороне тела',site:'leg',bonus:[0,0,0],requiresUpper:true}),
+ extend_spine:Object.freeze({name:'Удлинение корпуса',description:'Дополнительный сегмент позвоночника с реальной геометрией',site:'spine',bonus:[0,0,0]})
 });
 export const TOWER_SURGERY_IDS=Object.freeze(Object.keys(TOWER_SURGERY_OPERATIONS));
 const siteKind=site=>typeof site==='string'&&site.startsWith('spine-')?'spine':
@@ -32,6 +35,7 @@ export function validTowerSurgeries(surgeries,level){
     ||!Object.hasOwn(TOWER_SURGERY_OPERATIONS,item.procedure)
     ||!PROSTHETIC_SEGMENTS.includes(item.site)
     ||siteKind(item.site)!==TOWER_SURGERY_OPERATIONS[item.procedure].site
+    ||(TOWER_SURGERY_OPERATIONS[item.procedure].requiresUpper&&!item.site.endsWith('-upper'))
     ||sites.has(item.site))return false;
   sites.add(item.site);
  }
@@ -53,7 +57,8 @@ export function towerSurgeryAvailableSites(run,procedure){
  const operation=TOWER_SURGERY_OPERATIONS[procedure];
  if(!operation)return [];
  const installed=new Set(run?.surgeries?.map(s=>s.site));
- return PROSTHETIC_SEGMENTS.filter(site=>siteKind(site)===operation.site&&!installed.has(site));
+ return PROSTHETIC_SEGMENTS.filter(site=>siteKind(site)===operation.site
+  &&(!operation.requiresUpper||site.endsWith('-upper'))&&!installed.has(site));
 }
 export function purchaseTowerSurgery(session,player,run,procedure,site){
  const operation=TOWER_SURGERY_OPERATIONS[procedure];
