@@ -9,6 +9,10 @@ export function initializeModalFocus(){
  let current=null,previous=null,background=[];
  const controls=sheet=>[...sheet.querySelectorAll('button,input,select,summary,[tabindex="0"]'),settings].filter(node=>!node.disabled&&!node.closest('[hidden]')&&!(node.closest('details')?.open===false&&node.tagName!=='SUMMARY'));
  const ownsFocus=sheet=>sheet.contains(doc.activeElement)||doc.activeElement===settings;
+ // Tower modernization is a sibling of #tower-preparation, not a child.
+ // It lives in the native dialog top layer, but events still capture through
+ // the game root. Treat its content as part of the active Tower sheet.
+ const activeTowerUpgrade=()=>root.querySelector('#tower-upgrade-window[open]:not([hidden])');
  function sync(){
   if(ctx.tutorial?.active)return;
   const next=sheets.find(sheet=>!sheet.hidden)??null;
@@ -25,7 +29,11 @@ export function initializeModalFocus(){
  }
  const key=event=>{
   if(ctx.tutorial?.active)return;
-  sync();if(!current||current.id==='arena-settings'||doc.querySelector('.betting-input-dialog[open]'))return;
+  sync();
+  // Let the top-layer dialog own Tab and Escape. Trapping focus inside the
+  // preparation sheet would make the modernization controls unreachable.
+  if(activeTowerUpgrade())return;
+  if(!current||current.id==='arena-settings'||doc.querySelector('.betting-input-dialog[open]'))return;
   if(event.key==='Tab'){
    const nodes=controls(current),index=nodes.indexOf(doc.activeElement);
    event.preventDefault();
@@ -39,6 +47,12 @@ export function initializeModalFocus(){
  const pointer=event=>{
   if(ctx.tutorial?.active||doc.querySelector('.betting-input-dialog[open]'))return;
   sync();
+  const upgrade=activeTowerUpgrade();
+  if(upgrade){
+   if(upgrade.contains(event.target))return;
+   // No controls behind an open modernization dialog may be activated.
+   event.preventDefault();event.stopImmediatePropagation();return;
+  }
   if(!current||current.id==='arena-settings'||current.contains(event.target)||settings.contains(event.target))return;
   event.preventDefault();event.stopImmediatePropagation();
  };
