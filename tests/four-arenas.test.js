@@ -53,6 +53,23 @@ test('four layouts use convex world geometry and render finite wall ribbons',()=
   assert.match(arenaDiagram(a),/arena-obstacle/);
  }
 });
+test('throat obstacle outer tips are chamfered into strictly obtuse convex corners',()=>{
+ const [left,right]=ARENAS.throat.obstacles;
+ assert.equal(left.points.length,6);
+ assert.equal(right.points.length,6);
+ for(const obstacle of [left,right]){
+  const ps=obstacle.points;
+  assert.ok(clockwiseConvex(ps),'obstacle remains convex');
+  for(let i=0;i<ps.length;i++){
+   const vertex=ps[i],previous=ps[(i+ps.length-1)%ps.length],next=ps[(i+1)%ps.length];
+   const dot=(previous.x-vertex.x)*(next.x-vertex.x)+(previous.y-vertex.y)*(next.y-vertex.y);
+   assert.ok(dot<0,'all obstacle inner corners must be obtuse: '+i);
+  }
+ }
+ // The opposed vertical faces stay at 3.08m and 4.92m.
+ const centralClearance=right.left-left.right;
+ assert.ok(Math.abs(centralClearance-184)<1e-7);
+});
 test('sluice columns are 150cm long with an unobstructed 150cm centre gap',()=>{
  const [first,second]=ARENAS.sluice.obstacles;
   // The first centreline endpoint pair uses p[0]/p[3] and p[1]/p[2].
