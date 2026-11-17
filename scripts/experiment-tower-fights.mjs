@@ -92,7 +92,7 @@ function runScenario(scenario,seed){
     }
    }
    for(let i=0;i<bodies.length;i++)for(let j=i+1;j<bodies.length;j++){
-    let deepest=0;
+    let deepest=-Infinity;
     for(const a of bodies[i].capsules.filter(solid))
      for(const b of bodies[j].capsules.filter(solid))
       deepest=Math.max(deepest,a.r+b.r-segmentDistance(a.a,a.b,b.a,b.b));
