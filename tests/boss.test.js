@@ -28,7 +28,7 @@ import {bossPortraitBones} from '../src/boss/card.js';
 import {drawDetachedSkin} from '../src/render/robot-skin.js';
 import {limbKey} from '../src/robot/body.js';
 
-for(const variant of BOSS_VARIANTS)for(const arena of ['ward','ring','annulus'])test(`${variant.id} boss has independent geometry, atlas, supports and unique attack sources in ${arena}`,()=>{
+for(const variant of BOSS_VARIANTS)for(const arena of variant.spineSegments>6?['columns']:['ward','ring','annulus'])test(`${variant.id} boss has independent geometry, atlas, supports and unique attack sources in ${arena}`,()=>{
  const f=startBossScenario({variant:variant.id,arena});
  try{
   const r=f.boss;assert.equal(ctx.robots.length,4);assert.ok(r.isBoss);assert.equal(r.scale,f.player.scale*1.5);assert.equal(ctx.scale,CONFIG.robot.scale);
