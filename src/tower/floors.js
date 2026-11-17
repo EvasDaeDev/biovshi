@@ -24,7 +24,8 @@ function opponents(floor,count,danger,random){
  });
 }
 function candidateArena(floor,danger,random,boss){
- const ids=Object.keys(ARENAS).filter(id=>!boss||id==='ward'||id==='columns');
+ const minimum=boss?6:floor>=20?7:floor>=10?6:floor>=5?4:2;
+ const ids=Object.keys(ARENAS).filter(id=>boss?(id==='ward'||id==='columns'):cap(id)>=minimum);
  // More enemies and long bosses are safest on the spacious presets.
  if(boss&&floor>=25&&Object.hasOwn(ARENAS,'columns'))return 'columns';
  return ids[roll(random,ids.length)]??'ward';
