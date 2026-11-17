@@ -59,7 +59,7 @@ test('risk floors offer saved selection, crowd and mixed compositions',()=>{
    assert.ok(danger.profiles.length<=standard.profiles.length);
    assert.ok(danger.profiles.every(p=>p!=='basic'));
   }
-  if(style==='crowd')assert.ok(danger.profiles.length>=standard.profiles.length);
+  if(style==='crowd')assert.equal(danger.profiles.length,standard.profiles.length+1,'crowd really adds an opponent');
   if(style==='mixed')assert.ok(new Set(danger.profiles.filter(p=>p!=='basic')).size>=2);
   assert.equal(ensureTowerFloorPlan(t,()=>1),plan,'existing plan must not reroll');
  }
