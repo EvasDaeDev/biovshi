@@ -186,3 +186,25 @@
 /* Purchases remain acknowledged after the controls are re-rendered. */
 #robot-tag-hops-v22 .tower-operation-receipt{margin:6px 0;padding:9px 12px;border-left:3px solid #9cb96c;background:#39412b;color:#e9f2d5;font-weight:700;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
 #robot-tag-hops-v22 .tower-upgrade-feedback:not(:empty){padding:8px 10px;border-left:3px solid #c8ae70;background:#36392e;font-weight:700}
+
+/* Stage G: the dice is a large purchase control, always to the right of the map. */
+#robot-tag-hops-v22 #tower-floor-preview .tower-arena-overview{display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:12px;align-items:center;flex-basis:100%;min-width:0}
+#robot-tag-hops-v22 #tower-floor-preview .tower-arena-map{display:flex;align-items:center;gap:12px;min-width:0}
+#robot-tag-hops-v22 #tower-floor-preview .tower-arena-map>div{min-width:0}
+#robot-tag-hops-v22 #tower-floor-preview .tower-arena-dice{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+#robot-tag-hops-v22 .tower-reroll-button{display:grid;place-items:center;width:94px;height:94px;padding:7px;border:2px solid #64533a;border-radius:15px;background:#665439;box-shadow:0 3px 0 #32281d;cursor:pointer;touch-action:manipulation;transition:transform .12s,box-shadow .12s}
+#robot-tag-hops-v22 .tower-reroll-button:not(:disabled):active{transform:translateY(2px) rotate(7deg);box-shadow:0 1px 0 #32281d}
+#robot-tag-hops-v22 .tower-reroll-button:focus-visible{outline:3px solid #e8cf83;outline-offset:3px}
+#robot-tag-hops-v22 .tower-reroll-button:disabled{opacity:.4;cursor:not-allowed}
+#robot-tag-hops-v22 #tower-floor-preview .tower-reroll-button svg{width:76px;height:76px;fill:none;stroke:none}
+#robot-tag-hops-v22 #tower-floor-preview .tower-reroll-button rect{fill:#d9caa9;stroke:#f8eac9;stroke-width:2}
+#robot-tag-hops-v22 #tower-floor-preview .tower-reroll-button circle{fill:#493e30}
+#robot-tag-hops-v22 .tower-reroll-price{font-size:16px;line-height:1.25;color:#f4d18f;background:#3b382a;padding:3px 7px;border-radius:4px;white-space:nowrap}
+#robot-tag-hops-v22 .tower-reroll-caption{font-size:10px;font-weight:800;text-align:center;letter-spacing:.03em}
+#robot-tag-hops-v22 .tower-stat-confirm{display:flex;flex-wrap:wrap;gap:9px;align-items:stretch}
+#robot-tag-hops-v22 .tower-stat-confirm button{min-height:44px;padding:9px 12px;cursor:pointer}
+#robot-tag-hops-v22 .tower-stat-confirm [data-tower-apply]{font-weight:800;flex:1;background:#725733;color:#fceabe;border:1px solid #3f3020}
+#robot-tag-hops-v22 .tower-stat-confirm [data-tower-apply]:disabled{opacity:.45;cursor:not-allowed}
+#robot-tag-hops-v22 .tower-stat-message{display:block;font-weight:700;font-size:12px;line-height:1.4}
+@media(max-width:450px){#robot-tag-hops-v22 #tower-floor-preview .tower-arena-overview{grid-template-columns:minmax(0,1fr) 94px;gap:8px}#robot-tag-hops-v22 #tower-floor-preview .tower-arena-map{gap:6px}#robot-tag-hops-v22 #tower-floor-preview .tower-arena-map>svg{width:62px;height:62px}#robot-tag-hops-v22 .tower-reroll-button{width:80px;height:80px}#robot-tag-hops-v22 #tower-floor-preview .tower-reroll-button svg{width:65px;height:65px}}
+@media(prefers-reduced-motion:reduce){#robot-tag-hops-v22 .tower-reroll-button{transition:none}}
