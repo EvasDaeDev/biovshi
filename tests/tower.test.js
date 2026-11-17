@@ -39,7 +39,7 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
  const session=betNewSession(['Проверка'],100),t=towerFor(session,0);
  t.floorPlan={floor:1,selected:0,options:[
   {arenaId:'ward',kind:'standard',profiles:['fast','agile']},
-  {arenaId:'ward',kind:'danger',profiles:['strong','elite']}
+  {arenaId:'ward',kind:'danger',style:'crowd',profiles:['strong','elite']}
  ]};
  const dom=setup(session,t,'ward');
  try{
