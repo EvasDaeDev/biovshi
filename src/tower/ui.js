@@ -78,8 +78,16 @@ export function towerPreparation(){
       const profileCounts=new Map();
       for(const id of option.profiles)profileCounts.set(id,(profileCounts.get(id)??0)+1);
       const heading=document.createElement('strong');
-      heading.textContent=(option.kind==='danger'?'ОПАСНО · 15 ЗА ВЫБИВАНИЕ':'СТАНДАРТ · 10 ЗА ВЫБИВАНИЕ')+' · '+option.profiles.length+' ВРАГ.';
+      const style=TOWER_DANGER_STYLES[option.style];
+      const challenge=option.kind==='danger'?'ОПАСНО'+(style?' · '+style.name.toUpperCase():'')+' · 15 ЗА ВЫБИВАНИЕ':'СТАНДАРТ · 10 ЗА ВЫБИВАНИЕ';
+      heading.textContent=challenge+' · '+option.profiles.length+' ВРАГ.';
       button.appendChild(heading);
+      if(style){
+        const detail=document.createElement('small');
+        detail.className='tower-challenge-detail';
+        detail.textContent=style.description;
+        button.appendChild(detail);
+      }
       for(const [id,count] of profileCounts){
         const line=document.createElement('span');line.className='tower-enemy-line';
         const label=document.createElement('b');label.textContent=towerEnemyProfile(id).name+(count>1?' ×'+count:'');
