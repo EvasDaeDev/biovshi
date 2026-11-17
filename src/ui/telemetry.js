@@ -1,6 +1,7 @@
 import {bossAction} from '../boss/card.js';
 import {uiIcon} from './icons.js';
 import {patientName} from './patient.js';
+import {towerEnemyProfile,towerProfileDifference} from '../tower/profiles.js';
 import { TELEMETRY_COLOURS } from './telemetry-colours.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "../game/state.js";
