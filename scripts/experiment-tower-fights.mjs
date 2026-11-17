@@ -18,6 +18,8 @@ import {segmentDistance} from '../src/utils/math.js';
 const args=Object.fromEntries(process.argv.slice(2).map(x=>x.replace(/^--/,'').split('=')));
 const samples=Number(args.seeds??1),seconds=Number(args.limit??35),offset=Number(args.offset??19274);
 const out=args.out??'artifacts/tower-fights.json';
+const policy=args.policy??'approach';
+if(!['approach','orbit'].includes(policy))throw Error('Invalid policy');
 if(!Number.isInteger(samples)||samples<1||samples>20||!Number.isInteger(seconds)||seconds<5||seconds>180)throw Error('Invalid seeds/limit');
 const scenarios=[
  {kind:'normal',arena:'ring',floor:3,profiles:['basic','fast']},
@@ -104,7 +106,13 @@ function runScenario(scenario,seed){
     others.sort((a,b)=>Math.hypot(a.x-me.x,a.y-me.y)-Math.hypot(b.x-me.x,b.y-me.y));
     const foe=others[0],dx=foe?foe.x-me.x:0,dy=foe?foe.y-me.y:0;
     const length=Math.hypot(dx,dy);
-    ctx.towerInput=length>36?{x:dx/length,y:dy/length}:{x:0,y:0};
+    if(policy==='orbit'&&length>0&&length<110){
+      const radial=Math.max(-.7,Math.min(.7,(length-55)/20));
+      const vx=dx/length*radial-dy/length*.9;
+      const vy=dy/length*radial+dx/length*.9;
+      const norm=Math.max(1,Math.hypot(vx,vy));
+      ctx.towerInput={x:vx/norm,y:vy/norm};
+    }else ctx.towerInput=length>36?{x:dx/length,y:dy/length}:{x:0,y:0};
    }
    step(1/60);
    if(tick%60===59)inspect();
@@ -115,6 +123,7 @@ function runScenario(scenario,seed){
   row.hits=ctx.combat.hits;row.strikes=ctx.combat.strikes;
   row.aliveAtEnd=ctx.robots.filter(r=>r.mobile).length;
   row.coins=session.players[0].balance-1000;
+  row.playerAlive=ctx.robots[0].mobile;
  }catch(error){
   row.errors.push(String(error?.stack??error).slice(0,2000));
  }finally{
@@ -133,9 +142,10 @@ for(const scenario of scenarios){
   console.log('FIGHT '+JSON.stringify({
    arena:row.arena,floor:row.floor,variant:row.variant,participants:row.participants,
    seed:row.seed,completed:row.completed,winner:row.winner,seconds:row.duration,
-   hits:row.hits,strikes:row.strikes,unstucks:row.unstucks,charges:row.charges,
-   nonFinite:row.nonFinite,initialPenetrations:row.initialPenetrations,
-   initialOverlaps:row.initialOverlaps,error:row.errors[0]?.slice(0,230)??null
+   hits:row.hits,strikes:row.strikes,unstucks:row.unstucks,charges:row.charges,sweeps:row.sweeps,
+   nonFinite:row.nonFinite,bodyPenetrations:row.bodyPenetrations,bodyOverlaps:row.bodyOverlaps,
+   initialPenetrations:row.initialPenetrations,initialOverlaps:row.initialOverlaps,
+   playerAlive:row.playerAlive,error:row.errors[0]?.slice(0,230)??null
   }));
  }
 }
@@ -154,7 +164,7 @@ const summary={
  playerWins:runs.filter(r=>r.winner===0).length,
  cpuSeconds:Math.round(runs.reduce((n,r)=>n+r.elapsedCpuMs,0)/100)/10
 };
-const result={simulation:'headless real 1/60s game loop',policy:'Player automatically approaches nearest moving enemy and stops at 36 cm; not human performance',seconds,seeds:samples,summary,runs};
+const result={simulation:'headless real 1/60s game loop',policy:policy==='orbit'?'Player approaches and circles a nearby enemy at about 55 cm; not human performance':'Player automatically approaches nearest moving enemy and stops at 36 cm; not human performance',seconds,seeds:samples,summary,runs};
 fs.mkdirSync(out.split('/').slice(0,-1).join('/')||'.',{recursive:true});
 fs.writeFileSync(out,JSON.stringify(result,null,2)+'\n');
 console.log('SUMMARY '+JSON.stringify(summary));
