@@ -1,6 +1,8 @@
 import {quipCategory} from '../src/ui/streamer-quips.js';
 import {compareStrikeCandidates} from '../src/systems/combat.js';
 import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
+import {segmentDistance} from '../src/utils/math.js';
+import {TOWER_ARENA_CAPACITY,validTowerFloorPlan} from '../src/tower/floors.js';
 import {createRobot} from '../src/robot/robot.js';
 import {lightPolygon} from '../src/render/lighting.js';
 import {paint} from '../src/render/frame.js';
@@ -61,6 +63,32 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
   assert.match(buttons[0].textContent,/Поворот 160%/);
   assert.match(buttons[1].textContent,/Критический удар 50%/);
  }finally{close(dom);}
+});
+
+test('generated tower encounters start with complete rigs clear on every supported arena',()=>{
+ const solid=c=>c.segment==='head'||c.segment?.startsWith('spine-');
+ for(const [arenaId,capacity] of Object.entries(TOWER_ARENA_CAPACITY)){
+  const session=betNewSession(['Геометрия'],100);
+  const tower=towerFor(session,0);
+  tower.floorPlan={floor:1,selected:0,options:[
+   {arenaId,kind:'standard',profiles:Array.from({length:capacity-1},(_,i)=>i%2?'fast':'basic')}
+  ]};
+  assert.equal(validTowerFloorPlan(tower.floorPlan,1),true,arenaId+' plan is legal');
+  const dom=setup(session,tower,arenaId);
+  try{
+   assert.equal(ctx.robots.length,capacity,arenaId+' should use its declared maximum');
+   for(const robot of ctx.robots)for(const capsule of robot.capsules){
+    assert.ok(staticContacts(capsule).every(hit=>hit.depth<=(isLimb(capsule)?5:0)+1e-6),
+     arenaId+': '+robot.id+' '+capsule.segment+' intersects a wall or obstacle');
+   }
+   for(let i=0;i<ctx.robots.length;i++)for(let j=i+1;j<ctx.robots.length;j++){
+    for(const a of ctx.robots[i].capsules.filter(solid))
+     for(const b of ctx.robots[j].capsules.filter(solid))
+      assert.ok(segmentDistance(a.a,a.b,b.a,b.b)>=a.r+b.r+.15-1e-6,
+       arenaId+': bodies '+i+' and '+j+' overlap at spawn');
+   }
+  }finally{close(dom);}
+ }
 });
 
 test('tower hides all arena names and hostile lights, while player rays and perception remain independent',()=>{
