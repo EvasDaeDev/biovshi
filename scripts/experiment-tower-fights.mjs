@@ -13,12 +13,16 @@ import {towerFor} from '../src/tower/model.js';
 import {earnedStats} from '../src/garage/model.js';
 import {BOSS_CONFIG,bossVariantForFloor} from '../src/boss/config.js';
 import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
-import {segmentDistance} from '../src/utils/math.js';
+import {segmentDistance,wrap} from '../src/utils/math.js';
+import {sightClear} from '../src/systems/collision.js';
+import {chargePlan} from '../src/boss/attacks.js';
 
 const args=Object.fromEntries(process.argv.slice(2).map(x=>x.replace(/^--/,'').split('=')));
 const samples=Number(args.seeds??1),seconds=Number(args.limit??35),offset=Number(args.offset??19274);
 const out=args.out??'artifacts/tower-fights.json';
 const policy=args.policy??'approach';
+const selectedFloors=args.floors?.split(',').map(Number)??null;
+const diagnose=args.diagnose==='true';
 if(!['approach','orbit'].includes(policy))throw Error('Invalid policy');
 if(!Number.isInteger(samples)||samples<1||samples>20||!Number.isInteger(seconds)||seconds<5||seconds>180)throw Error('Invalid seeds/limit');
 const scenarios=[
@@ -48,7 +52,8 @@ function runScenario(scenario,seed){
   profiles:scenario.profiles,seed,participants:scenario.profiles.length+1,
   completed:false,winner:null,duration:0,hits:0,strikes:0,
   charges:0,sweeps:0,unstucks:0,nonFinite:0,bodyPenetrations:0,bodyOverlaps:0,
-  initialPenetrations:0,initialOverlaps:0,errors:[],elapsedCpuMs:0};
+  initialPenetrations:0,initialOverlaps:0,maxBodyOverlapCm:0,overlapSamples:[],chargeProbe:{},
+  errors:[],elapsedCpuMs:0};
  const began=Date.now();
  try{
   dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),
@@ -87,11 +92,46 @@ function runScenario(scenario,seed){
     }
    }
    for(let i=0;i<bodies.length;i++)for(let j=i+1;j<bodies.length;j++){
-    if(bodies[i].capsules.filter(solid).some(a=>bodies[j].capsules.filter(solid)
-     .some(b=>segmentDistance(a.a,a.b,b.a,b.b)<a.r+b.r+.15-1e-6))){
+    let deepest=0;
+    for(const a of bodies[i].capsules.filter(solid))
+     for(const b of bodies[j].capsules.filter(solid))
+      deepest=Math.max(deepest,a.r+b.r-segmentDistance(a.a,a.b,b.a,b.b));
+    if(deepest>-.15+1e-6){
      if(initial)row.initialOverlaps++;else row.bodyOverlaps++;
+     const penetration=Math.max(0,deepest);
+     if(!initial){
+      row.maxBodyOverlapCm=Math.max(row.maxBodyOverlapCm,penetration);
+      if(row.overlapSamples.length<12)row.overlapSamples.push({
+       time:Math.round(ctx.game.time*10)/10,robots:[i,j],depthCm:Math.round(penetration*100)/100,
+       leap:!!(bodies[i].actualPose?.leap||bodies[j].actualPose?.leap)
+      });
+     }
     }
    }
+  };
+  const diagnoseCharge=()=>{
+   const boss=ctx.robots.find(r=>r.isBoss);
+   if(!boss?.mobile)return;
+   const state=boss.body?.behavior?.state;
+   if(!state)return;
+   const record=key=>row.chargeProbe[key]=(row.chargeProbe[key]??0)+1;
+   const target=ctx.robots.filter(r=>r.id!==boss.id&&r.mobile&&r.visible)
+    .sort((a,b)=>Math.hypot(a.x-boss.x,a.y-boss.y)-Math.hypot(b.x-boss.x,b.y-boss.y))[0];
+   const now=ctx.game.time;
+   if(!target){record('noTarget');return;}
+   if(state.charge){record('charging');return;}
+   if(ctx.combat.pending[boss.id]?.length){record('striking');return;}
+   if(now<ctx.combat.nextStrike[boss.id]){record('attackCooldown');return;}
+   if(ctx.combat.escapeUntil[boss.id]>now){record('escaping');return;}
+   const seen=boss.canSee(target.center)&&sightClear(boss.center,target.center);
+   if(!seen){record('unseen');return;}
+   if(now<state.nextChargeAt){record('chargeCooldown');return;}
+   const angle=Math.abs(wrap(Math.atan2(target.y-boss.y,target.x-boss.x)-boss.angle));
+   if(angle>=.35){record('notAligned');return;}
+   const reasons={},plan=chargePlan(boss,target.center,{history:state.chargeHistory,diagnostics:reasons});
+   if(plan)record('planAvailable');
+   else record('planRejected');
+   for(const [key,value] of Object.entries(reasons))row.chargeProbe[key]=(row.chargeProbe[key]??0)+value;
   };
   inspect(true);
   off=onGameEvent(e=>{
@@ -114,6 +154,7 @@ function runScenario(scenario,seed){
       ctx.towerInput={x:vx/norm,y:vy/norm};
     }else ctx.towerInput=length>36?{x:dx/length,y:dy/length}:{x:0,y:0};
    }
+   if(diagnose&&tick%12===0&&scenario.kind==='boss')diagnoseCharge();
    step(1/60);
    if(tick%60===59)inspect();
   }
@@ -135,7 +176,7 @@ function runScenario(scenario,seed){
  return row;
 }
 const runs=[];
-for(const scenario of scenarios){
+for(const scenario of scenarios.filter(s=>!selectedFloors||selectedFloors.includes(s.floor))){
  for(let sample=0;sample<samples;sample++){
   const row=runScenario(scenario,offset+sample*15485863+scenario.floor*7919);
   runs.push(row);
@@ -145,6 +186,7 @@ for(const scenario of scenarios){
    hits:row.hits,strikes:row.strikes,unstucks:row.unstucks,charges:row.charges,sweeps:row.sweeps,
    nonFinite:row.nonFinite,bodyPenetrations:row.bodyPenetrations,bodyOverlaps:row.bodyOverlaps,
    initialPenetrations:row.initialPenetrations,initialOverlaps:row.initialOverlaps,
+   maxBodyOverlapCm:row.maxBodyOverlapCm,chargeProbe:diagnose?row.chargeProbe:undefined,
    playerAlive:row.playerAlive,error:row.errors[0]?.slice(0,230)??null
   }));
  }
@@ -158,13 +200,14 @@ const summary={
  initialOverlaps:runs.reduce((n,r)=>n+r.initialOverlaps,0),
  bodyPenetrations:runs.reduce((n,r)=>n+r.bodyPenetrations,0),
  bodyOverlaps:runs.reduce((n,r)=>n+r.bodyOverlaps,0),
+ maxBodyOverlapCm:Math.max(0,...runs.map(r=>r.maxBodyOverlapCm)),
  unstucks:runs.reduce((n,r)=>n+r.unstucks,0),
  hits:runs.reduce((n,r)=>n+r.hits,0),
  charges:runs.reduce((n,r)=>n+r.charges,0),
  playerWins:runs.filter(r=>r.winner===0).length,
  cpuSeconds:Math.round(runs.reduce((n,r)=>n+r.elapsedCpuMs,0)/100)/10
 };
-const result={simulation:'headless real 1/60s game loop',policy:policy==='orbit'?'Player approaches and circles a nearby enemy at about 55 cm; not human performance':'Player automatically approaches nearest moving enemy and stops at 36 cm; not human performance',seconds,seeds:samples,summary,runs};
+const result={simulation:'headless real 1/60s game loop',selectedFloors,diagnose,policy:policy==='orbit'?'Player approaches and circles a nearby enemy at about 55 cm; not human performance':'Player automatically approaches nearest moving enemy and stops at 36 cm; not human performance',seconds,seeds:samples,summary,runs};
 fs.mkdirSync(out.split('/').slice(0,-1).join('/')||'.',{recursive:true});
 fs.writeFileSync(out,JSON.stringify(result,null,2)+'\n');
 console.log('SUMMARY '+JSON.stringify(summary));
