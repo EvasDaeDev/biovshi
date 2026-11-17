@@ -4,6 +4,8 @@ import {ROBOT_PARTS,skinMatrix} from '../render/robot-skin.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
 import {towerUpgradeAtlas} from './upgrade-appearance.js';
 import {towerSurgerySiteLabel} from './surgery.js';
+import {towerUpgradePose,towerPoseFit} from './upgrade-pose.js';
+import {towerPatientAnatomy} from './anatomy.js';
 
 const NS='http://www.w3.org/2000/svg';
 const make=(name,attributes={},parent=null)=>{
