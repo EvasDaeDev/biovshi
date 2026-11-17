@@ -67,7 +67,7 @@ function creditArtifactRewards(session,player,t){
 }
 export function completeTower(session,player,won,random=Math.random){
  const t=towerFor(session,player);
- if(won){if(hasBoss(t))awardBossArtifact(t.artifacts,t.level,random);creditArtifactRewards(session,player,t);t.record=Math.max(t.record,t.level);patientVictory(t);t.level++;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;}
+ if(won){if(hasBoss(t))awardBossArtifact(t.artifacts,t.level,random);creditArtifactRewards(session,player,t);t.record=Math.max(t.record,t.level);patientVictory(t);t.level++;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;delete t.floorPlan;}
  else {
   const c=t.insurance.checkpoint,next=newTower(undefined,t.record,t.artifacts,t.insurance);
   if(c){
