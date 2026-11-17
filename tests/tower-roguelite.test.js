@@ -104,7 +104,16 @@ test('chosen floor and composition persist, with at most ten combatants includin
   const first=ensureTowerFloorPlan(run,random);
   assert.equal(first.options.length,2);
   assert.equal(first.options[0].arenaId,first.options[1].arenaId,'risk options must use the same arena');
-  assert.ok(first.options[1].profiles.length>=first.options[0].profiles.length,'danger never has fewer opponents');
+  const [normal,danger]=first.options;
+  if(danger.style==='trial'){
+   assert.ok(danger.profiles.length<=normal.profiles.length,'selection trades numbers for specialists');
+   assert.ok(danger.profiles.every(id=>id!=='basic'),'selection contains specialists only');
+  }else if(danger.style==='crowd'){
+   assert.equal(danger.profiles.length,normal.profiles.length+1,'crowd adds exactly one enemy');
+  }else{
+   assert.equal(danger.profiles.length,normal.profiles.length,'mixed changes the composition, not the roster size');
+   assert.ok(new Set(danger.profiles.filter(id=>id!=='basic')).size>=2,'mixed has distinct specialists');
+  }
   assert.equal(ensureTowerFloorPlan(run,()=>.99),first,'no reroll');
   assert.equal(validTowerFloorPlan(first,floor),true);
   assert.equal(selectTowerFloor(run,1),true);
