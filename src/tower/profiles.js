@@ -6,7 +6,7 @@ import {statMultiplier,critChance} from '../garage/model.js';
 export const TOWER_ENEMY_PROFILES=Object.freeze({
  basic:Object.freeze({name:'Обычный',stats:[3,3,3],skinKey:null,voice:null,focus:'Стандартные характеристики'}),
  fast:Object.freeze({name:'Быстрый',stats:[7,2,3],skinKey:'robotEnemy1',voice:'male',focus:'Предпочитает прямое преследование и быстрое сближение'}),
- strong:Object.freeze({name:'Силовой',stats:[2,7,3],skinKey:'robotEnemy2',voice:'male',focus:'Часто наносит критические удары'}),
+ strong:Object.freeze({name:'Силовой',stats:[2,7,3],skinKey:'robotEnemy2',voice:'male',focus:'Навязывает ближний бой и чаще наносит критические удары'}),
  agile:Object.freeze({name:'Маневренный',stats:[3,2,7],skinKey:'robotEnemy3',voice:'female',focus:'Быстрее разворачивается и меняет направление'}),
  elite:Object.freeze({name:'Элитный',stats:[5,5,5],skinKey:'robotEnemy4',voice:'female',focus:'Сбалансированное усиление всех характеристик'})
 });
