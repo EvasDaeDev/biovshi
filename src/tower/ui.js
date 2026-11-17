@@ -3,7 +3,7 @@ import {bossName} from '../boss/names.js';
 import {setPaused} from '../ui/controls.js';
 import {hasBoss} from '../boss/config.js';
 import {bossFloorReward} from '../boss/encounter.js';
-import {selectedTowerFloor,selectTowerFloor} from './floors.js';
+import {selectedTowerFloor,selectTowerFloor,TOWER_DANGER_STYLES} from './floors.js';
 import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {ctx} from '../game/state.js';
