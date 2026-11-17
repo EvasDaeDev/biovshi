@@ -7,6 +7,8 @@ import {BOSS_FLOOR_INTERVAL} from '../src/build-channel.js';
 import {newTower,towerEnemyCount,towerEnemyReward,validTower,towerFor} from '../src/tower/model.js';
 import {ensureTowerFloorPlan,selectedTowerFloor,selectTowerFloor,validTowerFloorPlan,TOWER_ARENA_CAPACITY,TOWER_DANGER_STYLES} from '../src/tower/floors.js';
 import {towerTacticalProfile,TOWER_TACTICAL_BIASES} from '../src/tower/tactics.js';
+import {fighterTacticalProfile} from '../src/systems/ai.js';
+import {ctx} from '../src/game/state.js';
 import {TOWER_ENEMY_PROFILES,towerEnemyProfile,towerProfileEffect,towerProfileDifference} from '../src/tower/profiles.js';
 import {betNewSession} from '../src/betting/ledger.js';
 import {purchaseInsurance,validInsurance} from '../src/tower/insurance.js';
