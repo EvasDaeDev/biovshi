@@ -1,6 +1,7 @@
 import {validStats,normalizeProsthetics} from '../garage/model.js';
 import {validBossEncounter} from '../boss/encounter.js';
 import {validTowerFloorPlan} from './floors.js';
+import {validTowerMutationState} from './mutations.js';
 export const newInsurance=()=>({price:50,checkpoint:null});
 export function validInsurance(policy,record){
  if(!policy||!Number.isSafeInteger(policy.price)||policy.price<50)return false;
@@ -8,7 +9,8 @@ export function validInsurance(policy,record){
  return c&&Number.isSafeInteger(c.level)&&c.level>=1&&c.level<=record+1&&c.wins===c.level-1
   &&Number.isInteger(c.patient)&&c.patient>=0&&c.patient<4&&validStats(c.stats,c.wins)
   &&Array.isArray(c.prosthetics)&&JSON.stringify(c.prosthetics)===JSON.stringify(normalizeProsthetics(c.prosthetics))
-  &&validBossEncounter(c.bossEncounter,c.level)&&validTowerFloorPlan(c.floorPlan,c.level);
+  &&validBossEncounter(c.bossEncounter,c.level)&&validTowerFloorPlan(c.floorPlan,c.level)
+  &&validTowerMutationState({level:c.level,mutations:c.mutations??[],mutationDraft:c.mutationDraft});
 }
 export function purchaseInsurance(session,player,tower){
  const policy=tower.insurance,buyer=session.players[player];
@@ -17,6 +19,8 @@ export function purchaseInsurance(session,player,tower){
  if(!buyer||buyer.balance<policy.price)throw Error('Недостаточно монет для ДМС.');
  const price=policy.price;
  policy.checkpoint={level:tower.level,wins:tower.wins,patient:tower.patient,stats:[...tower.stats],prosthetics:[...tower.prosthetics],
+  mutations:[...(tower.mutations??[])],
+  ...(tower.mutationDraft?{mutationDraft:structuredClone(tower.mutationDraft)}:{}),
   ...(tower.bossEncounter?{bossEncounter:structuredClone(tower.bossEncounter)}:{}),
   ...(tower.floorPlan?{floorPlan:structuredClone(tower.floorPlan)}:{})};
  buyer.balance-=price;session.insuranceSpent=(session.insuranceSpent??0)+price;
