@@ -1,5 +1,6 @@
 import {pendingStrikes} from './strikes.js';
 import {patientGarage} from '../game/patients.js';
+import {towerTacticalProfile} from '../tower/tactics.js';
 import { clamp, wrap } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { random } from "../utils/random.js";
@@ -138,6 +139,13 @@ export function tacticalProfile() {
     dodgeSide: random() < .5 ? -1 : 1
   };
 }
+// Scope the personality to tower enemies. Other game modes and the controlled
+// player still use the unchanged randomized tactical profile.
+export function fighterTacticalProfile(r){
+  const standard=tacticalProfile();
+  if(ctx.mode!=='tower'||r.id===0||r.isBoss)return standard;
+  return towerTacticalProfile(standard,patientGarage()?.[r.id]?.profileId);
+}
 function pursuitProgress(ai, now, foe, distance, quietSeconds) {
   if (ai.pursuitTarget !== foe.id || !Number.isFinite(ai.bestPursuitDistance)) {
     ai.pursuitTarget = foe.id;
@@ -255,7 +263,7 @@ export function fighterIntent(r) {
   // A real pincer needs TWO visible, attack-capable opponents nearby. Scan
   // toward the most immediate threat with the HEAD; travelling and attack
   // headings must not be driven by a speculative "looking around" turn.
-  ai.profile ??= tacticalProfile();
+  ai.profile ??= fighterTacticalProfile(r);
   const pincerRadius = 60 + ai.profile.closeRange; // 92-104 cm per fighter
   const nearbyAttackers = active.filter(o =>
     pincerThreat(r,o,pincerRadius,
@@ -392,7 +400,7 @@ export function fighterIntent(r) {
     return {goal:patrol(r),speed:CONFIG.movement.walkSpeedCm,
       mode:'ищет врага',lookPoint:null};
   }
-  ai.profile ??= tacticalProfile();
+  ai.profile ??= fighterTacticalProfile(r);
   // Caution is a SHORT manoeuvre, not a permanent state at low head HP.
   // Once used, the patient must re-engage for several seconds before guarding again.
   // This prevents two wounded patients from circling indefinitely without attacking.
