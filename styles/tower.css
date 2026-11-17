@@ -114,3 +114,14 @@
 #robot-tag-hops-v22 .tower-mutation-equipped{font-size:11px;line-height:1.5;overflow-wrap:anywhere}
 #robot-tag-hops-v22 .tower-mutation-synergy{color:#d6bd7b;font-size:11px}
 @media(max-width:420px){#robot-tag-hops-v22 .tower-mutation-options{grid-template-columns:1fr}#robot-tag-hops-v22 .tower-mutation-option{min-height:0;padding:9px}}
+
+/* Tower-only paid anatomy operations: compact controls with readable labels. */
+#robot-tag-hops-v22 #tower-prep-surgery:not([hidden]){display:grid;gap:8px;margin:10px 0;padding:12px;background:#292c20;border:1px solid #8b784f}
+#robot-tag-hops-v22 #tower-prep-surgery .tower-surgery-title{font-size:13px;letter-spacing:.04em}
+#robot-tag-hops-v22 #tower-prep-surgery small{font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+#robot-tag-hops-v22 .tower-surgery-controls{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:8px}
+#robot-tag-hops-v22 .tower-surgery-controls select{min-width:0;width:100%;padding:8px 6px;background:#3e4330;color:#f2e7c9;border:1px solid #8b784f;font-size:12px}
+#robot-tag-hops-v22 .tower-surgery-purchase{min-width:130px;padding:8px;background:#6c5836;color:#f2e7c9;border:1px solid #8b784f;white-space:normal;font-weight:700;cursor:pointer}
+#robot-tag-hops-v22 .tower-surgery-purchase:disabled{opacity:.45;cursor:not-allowed}
+#robot-tag-hops-v22 .tower-surgery-controls :is(select,button):focus-visible{outline:2px solid #e6c882;outline-offset:2px}
+@media(max-width:600px){#robot-tag-hops-v22 .tower-surgery-controls{grid-template-columns:minmax(0,1fr)}#robot-tag-hops-v22 .tower-surgery-purchase{width:100%}}
