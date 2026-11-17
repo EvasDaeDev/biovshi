@@ -15,6 +15,7 @@ export function betNewSession(names, capital = STARTING_CAPITAL) {
     garage: newGarage(),
     shopSpent: 0,
     insuranceSpent: 0,
+    surgerySpent: 0,
     topUps: 0,
     towerEarned: 0,
     towerEnemyGenerations: {},
