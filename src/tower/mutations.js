@@ -2,6 +2,7 @@
 // fractional EFFECTIVE skill points so existing movement, turning, and combat
 // curves remain authoritative. Never mutate earned/base stats or prosthetics.
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
+import {towerSurgeryBonus} from './surgery.js';
 
 export const TOWER_MUTATIONS=Object.freeze({
  turbo:Object.freeze({name:'Форсаж',family:'mechanical',description:'Привод повышает скорость',bonus:[.55,0,0]}),
@@ -85,7 +86,9 @@ export function towerMutationSynergies(mutations=[]){
 export function towerMutationSnapshot(patient,robot=null){
  const snapshot=prostheticStatSnapshot(patient,robot);
  const mutationBonus=towerMutationBonus(patient?.mutations);
- return {...snapshot,mutationBonus,effective:snapshot.effective.map((n,i)=>n+mutationBonus[i])};
+ const surgeryBonus=towerSurgeryBonus(patient?.surgeries,robot);
+ return {...snapshot,mutationBonus,surgeryBonus,
+  effective:snapshot.effective.map((n,i)=>n+mutationBonus[i]+surgeryBonus[i])};
 }
 export function grantTowerMutationDraft(run,random=Math.random){
  if(!validTowerMutations(run.mutations)||run.mutationDraft)return false;
