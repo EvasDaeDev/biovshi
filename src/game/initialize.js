@@ -3,6 +3,8 @@ import {SESSION_STORAGE} from '../build-channel.js';
 import {initializeKeyboardViewport} from '../ui/keyboard-viewport.js';
 import {initializeStreamerMascot} from '../ui/streamer-mascot.js';
 import {towerEnemyCount} from '../tower/model.js';
+import {selectedTowerFloor} from '../tower/floors.js';
+import {towerEnemyProfile} from '../tower/profiles.js';
 import {arenaDefinition} from './arenas.js';
 import {initializeCombatLog} from '../ui/combat-log.js';
 import {bettingLoad,bettingSave} from '../betting/storage.js';
