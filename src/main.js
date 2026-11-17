@@ -3,6 +3,7 @@ import {setPaused} from './ui/controls.js';
 import {randomArenaId} from './game/arenas.js';
 import {installTowerUI,openMenu} from './tower/ui.js';
 import {towerFor} from './tower/model.js';
+import {ensureTowerFloorPlan,selectedTowerFloor} from './tower/floors.js';
 import {bettingSetup,bettingCancel} from './betting/ui.js';
 import {initializeFloor} from './render/floor-history.js';
 import {initializeModalFocus} from './ui/modal-focus.js';
@@ -73,8 +74,9 @@ async function boot(){
  ctx.openMainMenu=openMenu;
  ctx.startTower=async player=>{
    const current=ctx.betting;bettingCancel();ctx.towerPlayer=player;
-   const tower=structuredClone(towerFor(current,player));current.towerPlayerId=player;bettingSave();
-   await transition({session:current,entry:'tower',tower,arenaId:randomArenaId()});
+   const run=towerFor(current,player);ensureTowerFloorPlan(run);
+   const tower=structuredClone(run);current.towerPlayerId=player;bettingSave();
+   await transition({session:current,entry:'tower',tower,arenaId:selectedTowerFloor(tower)?.arenaId??randomArenaId()});
  };
  ctx.startTotalizator=()=>{bettingCancel();return transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId});};
  ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});setPaused(true);ctx.afterSetup='menu';bettingSetup();};

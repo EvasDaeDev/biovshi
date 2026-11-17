@@ -3,9 +3,11 @@ import {bossName} from '../boss/names.js';
 import {setPaused} from '../ui/controls.js';
 import {hasBoss} from '../boss/config.js';
 import {bossFloorReward} from '../boss/encounter.js';
+import {selectedTowerFloor,selectTowerFloor,TOWER_DANGER_STYLES} from './floors.js';
+import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {ctx} from '../game/state.js';
-import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount,buyTowerInsurance} from './model.js';
+import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount,buyTowerInsurance,towerEnemyReward} from './model.js';
 import {bettingSave} from '../betting/storage.js';
 import {bettingSetup,bettingCancel,bettingReadDraft} from '../betting/ui.js';
 import {patientRecovery,validStats,earnedStats,redistributeStat,statMultiplier,critChance} from '../garage/model.js';
@@ -64,7 +66,46 @@ export function towerPreparation(){
   title.classList.toggle('boss-floor-title',hasBoss(t));
   title.textContent=hasBoss(t)?`${bossName(t.level)}\nЭТАЖ №${t.level}`:`БАШНЯ · ЭТАЖ ${t.level}`;
   renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
-  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(bossFloorReward(t))} ${hasBoss(t)?'ЗА БОССА · '+formatChips(10)+' ЗА ПАЦИЕНТА · ВСЕ ПРОТИВ ВСЕХ':'ЗА ЛИЧНОЕ ВЫБИВАНИЕ'}</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div>`;
+  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(towerEnemyReward(t))} ${hasBoss(t)?'ЗА БОССА · '+formatChips(10)+' ЗА ПАЦИЕНТА · ВСЕ ПРОТИВ ВСЕХ':'ЗА ЛИЧНОЕ ВЫБИВАНИЕ'}</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div>`;
+  const encounter=t.floorPlan;
+  const preview=ctx.root.querySelector('#tower-floor-preview');
+  if(encounter?.options.length>1){
+    const choices=document.createElement('div');choices.className='tower-challenge-options';
+    encounter.options.forEach((option,index)=>{
+      const button=document.createElement('button');button.type='button';
+      button.className='tower-challenge-option'+(index===encounter.selected?' is-selected':'');
+      button.setAttribute('aria-pressed',String(index===encounter.selected));
+      const profileCounts=new Map();
+      for(const id of option.profiles)profileCounts.set(id,(profileCounts.get(id)??0)+1);
+      const heading=document.createElement('strong');
+      const style=TOWER_DANGER_STYLES[option.style];
+      const challenge=option.kind==='danger'?'ОПАСНО'+(style?' · '+style.name.toUpperCase():'')+' · 15 ЗА ВЫБИВАНИЕ':'СТАНДАРТ · 10 ЗА ВЫБИВАНИЕ';
+      heading.textContent=challenge+' · '+option.profiles.length+' ВРАГ.';
+      button.appendChild(heading);
+      if(style){
+        const detail=document.createElement('small');
+        detail.className='tower-challenge-detail';
+        detail.textContent=style.description;
+        button.appendChild(detail);
+      }
+      for(const [id,count] of profileCounts){
+        const line=document.createElement('span');line.className='tower-enemy-line';
+        const label=document.createElement('b');label.textContent=towerEnemyProfile(id).name+(count>1?' ×'+count:'');
+        line.appendChild(label);
+        if(id!=='basic'){
+          const effect=document.createElement('small');effect.textContent=towerProfileDifference(id);
+          line.appendChild(effect);
+        }
+        button.appendChild(line);
+      }
+      button.onclick=()=>{
+        if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||index===encounter.selected)return;
+        if(selectTowerFloor(t,index)){bettingSave();ctx.startTower(ctx.towerPlayer);}
+      };
+      choices.appendChild(button);
+    });
+    preview.appendChild(choices);
+  }
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   function renderSkills(){
     const snapshot=prostheticStatSnapshot(t),stats=snapshot.effective;
@@ -171,7 +212,7 @@ export function installTowerUI(){
   ctx.towerSettled=false;ctx.towerFloorCoins=0;ctx.towerOutcome=null;ctx.towerFeedbackUntil=0;
   const off=onGameEvent(event=>{
     if(event.type==='robot-immobilized'&&!ctx.towerSettled&&rewardTower(ctx.betting,ctx.towerPlayer,event.robot,event.lastAttacker)){
-      const reward=bossFloorReward(ctx.towerRun,event.robot);ctx.towerFloorCoins+=reward;bettingSave();
+      const reward=towerEnemyReward(ctx.towerRun,event.robot);ctx.towerFloorCoins+=reward;bettingSave();
       const toast=ctx.root.querySelector('#tower-reward-toast');toast.innerHTML='+'+formatChips(reward);toast.hidden=false;ctx.towerFeedbackUntil=ctx.game.time+1.2;
     }
     if(event.type==='robot-immobilized')updateTowerHud();

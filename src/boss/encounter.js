@@ -1,9 +1,9 @@
-import {BOSS_VARIANTS,isBossFloor,BOSS_CONFIG,hasBoss} from './config.js';
+import {BOSS_VARIANTS,bossVariantForFloor,isBossFloor,BOSS_CONFIG,hasBoss} from './config.js';
 import {BOSS_TEXTURES} from './assets.js';
 export function ensureBossEncounter(t,random=Math.random){
  if(!hasBoss(t))return null;
  if(!t.bossEncounter||t.bossEncounter.floor!==t.level){
-  t.bossEncounter={floor:t.level,variant:BOSS_VARIANTS[Math.floor(random()*BOSS_VARIANTS.length)].id,texture:BOSS_TEXTURES[Math.floor(random()*BOSS_TEXTURES.length)]};
+  t.bossEncounter={floor:t.level,variant:bossVariantForFloor(t.level),texture:BOSS_TEXTURES[Math.floor(random()*BOSS_TEXTURES.length)]};
  }
  return t.bossEncounter;
 }

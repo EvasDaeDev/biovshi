@@ -3,6 +3,8 @@ import {SESSION_STORAGE} from '../build-channel.js';
 import {initializeKeyboardViewport} from '../ui/keyboard-viewport.js';
 import {initializeStreamerMascot} from '../ui/streamer-mascot.js';
 import {towerEnemyCount} from '../tower/model.js';
+import {selectedTowerFloor} from '../tower/floors.js';
+import {towerEnemyProfile} from '../tower/profiles.js';
 import {arenaDefinition} from './arenas.js';
 import {initializeCombatLog} from '../ui/combat-log.js';
 import {bettingLoad,bettingSave} from '../betting/storage.js';
@@ -47,7 +49,13 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   // Body creation must see this session's prostheses, including on a fresh load.
   ctx.betting=session;
   ctx.towerRun=tower;
-  ctx.towerGarage=tower?Array.from({length:towerEnemyCount(tower)+1},(_,id)=>({stats:id===0?[...tower.stats]:[3,3,3],head:null,prosthetics:id===0?[...(tower.prosthetics??[])]:[]})):null;
+  ctx.towerGarage=tower?Array.from({length:towerEnemyCount(tower)+1},(_,id)=>{
+    const profile=id>0?towerEnemyProfile(selectedTowerFloor(tower)?.profiles[id-1]):null;
+    return {stats:id===0?[...tower.stats]:[...profile.stats],head:null,
+      prosthetics:id===0?[...(tower.prosthetics??[])]:[],
+      ...(id>0?{profileId:selectedTowerFloor(tower)?.profiles[id-1]??'basic',
+        skinKey:profile.skinKey,voice:profile.voice}:{})};
+   }):null;
   ctx.textureAssets=textures;
   ctx.root = root;
   ctx.svg = ctx.root.querySelector('#tag7hop-field');

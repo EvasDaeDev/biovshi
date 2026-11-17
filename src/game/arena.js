@@ -150,7 +150,8 @@ export function rebuildRobots() {
   const encounter=ctx.mode==='tower'?ensureBossEncounter(ctx.towerRun):null;
   layout.forEach((p,id)=>{
     const start=encounter&&id>1?bossSpawn(p,{spineSegments:4,pelvisKey:'spine-3',limbs:standardLimbs()},1):p;
-    ctx.robots.push(encounter&&id===1?createBoss(id,start,encounter):createRobot(id,start));
+    const skinKey=ctx.mode==='tower'&&id>0?ctx.towerGarage?.[id]?.skinKey:null;
+    ctx.robots.push(encounter&&id===1?createBoss(id,start,encounter):createRobot(id,start,skinKey?{skinKey}:{}));
   });
   ctx.robots.forEach(r => r.setVisible(false));
 }

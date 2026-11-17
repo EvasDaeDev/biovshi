@@ -28,7 +28,7 @@ import {bossPortraitBones} from '../src/boss/card.js';
 import {drawDetachedSkin} from '../src/render/robot-skin.js';
 import {limbKey} from '../src/robot/body.js';
 
-for(const variant of BOSS_VARIANTS)for(const arena of ['ward','ring','annulus'])test(`${variant.id} boss has independent geometry, atlas, supports and unique attack sources in ${arena}`,()=>{
+for(const variant of BOSS_VARIANTS)for(const arena of variant.spineSegments>6?['columns']:['ward','ring','annulus'])test(`${variant.id} boss has independent geometry, atlas, supports and unique attack sources in ${arena}`,()=>{
  const f=startBossScenario({variant:variant.id,arena});
  try{
   const r=f.boss;assert.equal(ctx.robots.length,4);assert.ok(r.isBoss);assert.equal(r.scale,f.player.scale*1.5);assert.equal(ctx.scale,CONFIG.robot.scale);
@@ -124,14 +124,14 @@ test('boss card conceals stats with skulls, hides trauma and describes destructi
 });
 
 test('boss fallback handles every anatomy when texture loading fails',()=>{
- for(const {id} of BOSS_VARIANTS){const f=startBossScenario({variant:id,textured:false});try{f.boss.paint(0);assert.equal(f.boss.actor.querySelectorAll('[data-robot-fallback]').length,2);assert.doesNotMatch(f.boss.actor.outerHTML,/NaN|undefined/);}finally{f.close();}}
+ for(const {id,spineSegments} of BOSS_VARIANTS){const f=startBossScenario({variant:id,arena:spineSegments>6?'columns':'ward',textured:false});try{f.boss.paint(0);assert.equal(f.boss.actor.querySelectorAll('[data-robot-fallback]').length,2);assert.doesNotMatch(f.boss.actor.outerHTML,/NaN|undefined/);}finally{f.close();}}
 });
 
 test('boss encounter survives serialization, rerolls only on the next boss floor and preserves old paid floors',()=>{
  const s=betNewSession(['Test'],100),t=towerFor(s,0);Object.assign(t,{level:5,wins:4,record:4,stats:[4,5,4]});
  const e=ensureBossEncounter(t,()=>.6),copy=JSON.parse(JSON.stringify(t));assert.deepEqual(ensureBossEncounter(copy,()=>0),e);assert.equal(towerEnemyCount(copy),3);
  completeTower(s,0,true);assert.equal(t.bossEncounter,undefined);
- Object.assign(t,{level:10,wins:9,stats:[6,6,6],record:9});assert.equal(ensureBossEncounter(t,()=>0).variant,'brute');
+ Object.assign(t,{level:10,wins:9,stats:[6,6,6],record:9});assert.equal(ensureBossEncounter(t,()=>0).variant,'long');
  const old=JSON.parse(JSON.stringify(t));delete old.bossEncounter;old.rewarded=[1,2];s.towers[0]=old;
  assert.equal(towerEnemyCount(towerFor(s,0)),6);assert.equal(old.legacyBossFloor,true);assert.equal(rewardTower(s,0,1,0),false);assert.equal(rewardTower(s,0,3,0),false,'preparing floors cannot pay');
  old.preparing=false;const before=s.players[0].balance;assert.equal(rewardTower(s,0,3,0),true);assert.equal(s.players[0].balance-before,10);

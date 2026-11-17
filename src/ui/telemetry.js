@@ -1,6 +1,7 @@
 import {bossAction} from '../boss/card.js';
 import {uiIcon} from './icons.js';
 import {patientName} from './patient.js';
+import {towerEnemyProfile,towerProfileDifference} from '../tower/profiles.js';
 import { TELEMETRY_COLOURS } from './telemetry-colours.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "../game/state.js";
@@ -9,7 +10,13 @@ export function makeRobotCard(id) {
   const card = document.createElement('section');
   card.className = 'robot-card';
   card.style.setProperty('--accent', ROBOT_COLORS[id%4]);
-  card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${patientName(id,{short:true})}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><span aria-hidden="true">${uiIcon('bone')}</span> <span class="robot-card-segments">13/13</span></div></div>
+  const profileId=ctx.mode==='tower'&&id>0?ctx.towerGarage?.[id]?.profileId:null;
+  const profile=profileId&&profileId!=='basic'?towerEnemyProfile(profileId):null;
+  if(profile){
+    card.dataset.enemyProfile=profileId;
+    card.title=profile.name+': '+towerProfileDifference(profileId);
+  }
+  card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${patientName(id,{short:true})}</strong>${profile?'<span class="tower-enemy-label">'+profile.name+'</span>':''}</div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><span aria-hidden="true">${uiIcon('bone')}</span> <span class="robot-card-segments">13/13</span></div></div>
   <div class="robot-card-body"><div class="portrait-wrap"><canvas class="patient-portrait" width="280" height="224" role="img" aria-label="Пациент ${String.fromCharCode(65+id)}"></canvas></div>
   <div class="patient-summary"><div class="patient-skills" aria-label="Умения пациента">
   <div aria-label="Сила" tabindex="0" data-hint-tap data-hint="Шанс критического урона (КРИТ)"><span aria-hidden="true">${uiIcon('strength')}</span><span class="js-strength">3 · 15%</span></div>
