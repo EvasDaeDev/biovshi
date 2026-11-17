@@ -1,5 +1,6 @@
 import {planNeutralRigSpawns} from '../boss/spawn.js';
 import {bossAnatomy} from '../boss/anatomy.js';
+import {towerPatientAnatomy} from '../tower/anatomy.js';
 import {BOSS_CONFIG} from '../boss/config.js';
 import {standardLimbs} from '../robot/body.js';
 import {createBoss} from '../boss/boss.js';
@@ -155,16 +156,18 @@ export function rebuildRobots() {
   const plannedFloor=ctx.mode==='tower'&&ctx.towerRun?.floorPlan?.floor===ctx.towerRun?.level;
   const preflight=Boolean(encounter||plannedFloor);
   const normalRig=preflight?{spineSegments:4,pelvisKey:'spine-3',limbs:standardLimbs()}:null;
+  const playerBody=ctx.mode==='tower'?towerPatientAnatomy(ctx.towerRun):null;
   const rigs=preflight?layout.map((_,id)=>encounter&&id===1
     ?{body:bossAnatomy(encounter.variant),scaleMultiplier:BOSS_CONFIG.scale}
-    :{body:normalRig,scaleMultiplier:1}):null;
+    :{body:id===0&&playerBody?playerBody:normalRig,scaleMultiplier:1}):null;
   const starts=preflight?planNeutralRigSpawns(layout,rigs):layout;
   if(!starts)throw Error('Не удалось разместить всех пациентов без пересечений арены');
-  // Construct actors only after ALL starting bodies fit. The plan reserves
-  // space for extended bosses before the smaller patients are committed.
+  // Reserve space for the patient's grafted anatomy in the exact same
+  // preflight used by the longer boss rigs.
   starts.forEach((start,id)=>{
     const skinKey=ctx.mode==='tower'&&id>0?ctx.towerGarage?.[id]?.skinKey:null;
-    ctx.robots.push(encounter&&id===1?createBoss(id,start,encounter):createRobot(id,start,skinKey?{skinKey}:{}));
+    ctx.robots.push(encounter&&id===1?createBoss(id,start,encounter):createRobot(id,start,
+      id===0&&playerBody?playerBody:skinKey?{skinKey}:{}));
   });
   ctx.robots.forEach(r => r.setVisible(false));
 }
