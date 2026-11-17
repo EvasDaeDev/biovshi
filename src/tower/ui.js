@@ -7,11 +7,13 @@ import {selectedTowerFloor,selectTowerFloor,TOWER_DANGER_STYLES} from './floors.
 import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
 import {towerMutationSnapshot,towerMutationCombatBonus,TOWER_MUTATIONS,TOWER_MUTATION_IDS,TOWER_MUTATION_FAMILIES,TOWER_MUTATION_SYNERGIES,towerMutationSynergies,chooseTowerMutation} from './mutations.js';
 import {TOWER_SURGERY_IDS,TOWER_SURGERY_OPERATIONS,TOWER_SURGERY_MIN_LEVEL,towerSurgeryCapacity,towerSurgeryPrice,towerSurgeryAvailableSites,towerSurgerySiteLabel} from './surgery.js';
+import {towerAvailableDonors} from './donors.js';
 import {ctx} from '../game/state.js';
 import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount,buyTowerInsurance,buyTowerSurgery,towerEnemyReward} from './model.js';
 import {bettingSave} from '../betting/storage.js';
 import {bettingSetup,bettingCancel,bettingReadDraft} from '../betting/ui.js';
 import {patientRecovery,validStats,earnedStats,redistributeStat,statMultiplier,critChance} from '../garage/model.js';
+import {recoverTowerGrafts} from './anatomy.js';
 import {startSpawnSequence} from '../game/session.js';
 import {onGameEvent} from '../game/event-bus.js';
 import {installTowerInput} from './input.js';
@@ -258,6 +260,8 @@ export function towerPreparation(){
     }
     const siteSelect=document.createElement('select');
     siteSelect.setAttribute('aria-label','Сегмент для операции');
+    const donorSelect=document.createElement('select');
+    donorSelect.setAttribute('aria-label','Донор для пересадки');
     const purchase=document.createElement('button');purchase.type='button';
     purchase.className='tower-surgery-purchase';
     const refreshSites=()=>{
@@ -267,9 +271,17 @@ export function towerPreparation(){
         option.textContent=towerSurgerySiteLabel(site);
         siteSelect.append(option);
       }
+      donorSelect.replaceChildren();
+      donorSelect.hidden=!TOWER_SURGERY_OPERATIONS[procedureSelect.value]?.donor;
+      for(const donor of towerAvailableDonors(t,procedureSelect.value)){
+        const option=document.createElement('option');option.value=donor.id;
+        option.textContent=donor.profile+' · '+donor.id;
+        donorSelect.append(option);
+      }
       const price=towerSurgeryPrice(t);
       purchase.textContent='ОПЕРИРОВАТЬ · '+formatChips(price);
       purchase.disabled=Boolean(t.mutationDraft)||!siteSelect.options.length
+        ||(!donorSelect.hidden&&!donorSelect.options.length)
         ||ctx.betting.players[ctx.towerPlayer].balance<price;
       purchase.title=t.mutationDraft?'Сначала выбери награду за босса':
         'Операция на выбранном сегменте; отменить покупку нельзя.';
@@ -279,14 +291,14 @@ export function towerPreparation(){
       if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
       try{
         const procedure=procedureSelect.value,site=siteSelect.value;
-        const price=buyTowerSurgery(ctx.betting,ctx.towerPlayer,procedure,site);
+        const price=buyTowerSurgery(ctx.betting,ctx.towerPlayer,procedure,site,donorSelect.hidden?null:donorSelect.value);
         ctx.towerGarage[0].surgeries=structuredClone(t.surgeries);
         bettingSave();renderSkills();renderSurgery();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
         renderInsurance();updateTowerHud();upgradeModal?.refresh();
         upgradeMessage('Операция «'+TOWER_SURGERY_OPERATIONS[procedure].name+'» выполнена: −'+price+' монет.');
       }catch(error){upgradeMessage(error.message);}
     };
-    controls.append(procedureSelect,siteSelect,purchase);
+    controls.append(procedureSelect,siteSelect,donorSelect,purchase);
     surgeryPanel.append(controls);
     refreshSites();
   }
@@ -332,7 +344,7 @@ export function settleTower(winner){
   ctx.towerOutcome={won,floor:t.level,cleared,record:Math.max(t.record,cleared),newRecord:cleared>t.record,
     runKills:t.runKills,runCoins:t.runCoins,floorCoins:ctx.towerFloorCoins??0,time:ctx.round.elapsedSec,
     reason:ctx.robots[0].hasHead?'Потерял сознание':'Погиб'};
-  if(won)patientRecovery(t,ctx.robots[0]);
+  if(won){patientRecovery(t,ctx.robots[0]);recoverTowerGrafts(t,ctx.robots[0]);}
   const insuredFloor=!won?t.insurance.checkpoint?.level:null;
   ctx.towerOutcome.insuranceFloor=insuredFloor;
   const priorPieces=[...t.artifacts.pieces];
