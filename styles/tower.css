@@ -125,3 +125,51 @@
 #robot-tag-hops-v22 .tower-surgery-purchase:disabled{opacity:.45;cursor:not-allowed}
 #robot-tag-hops-v22 .tower-surgery-controls :is(select,button):focus-visible{outline:2px solid #e6c882;outline-offset:2px}
 @media(max-width:600px){#robot-tag-hops-v22 .tower-surgery-controls{grid-template-columns:minmax(0,1fr)}#robot-tag-hops-v22 .tower-surgery-purchase{width:100%}}
+
+/* Modernization is a separate sheet; preparation retains a single entry button. */
+#robot-tag-hops-v22 #tower-upgrade-open{display:block;width:100%;margin:10px 0;padding:12px;border:1px solid #ae9159;background:#51442a;color:#f4e6c5;font-weight:800;letter-spacing:.035em;cursor:pointer}
+#robot-tag-hops-v22 #tower-upgrade-open.has-reward{border-color:#e3bc68;background:#6d4928}
+#robot-tag-hops-v22 #tower-upgrade-window[hidden],#robot-tag-hops-v22 .tower-upgrade-page[hidden]{display:none!important}
+#robot-tag-hops-v22 #tower-upgrade-window{position:fixed;inset:0;z-index:2400;display:flex;justify-content:center;align-items:center;padding:12px;box-sizing:border-box;background:#0a0b09e8;overflow:hidden;color:#efe3c8}
+#robot-tag-hops-v22 .tower-upgrade-paper{box-sizing:border-box;width:min(880px,100%);max-height:calc(var(--game-height,100dvh) - 24px);max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain;padding:16px;background:#20241e;border:1px solid #a18c63;box-shadow:0 18px 65px #000a}
+#robot-tag-hops-v22 .tower-upgrade-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:10px;border-bottom:1px solid #665d46}
+#robot-tag-hops-v22 .tower-upgrade-heading h2{font-size:clamp(17px,3vw,23px);font-weight:800;line-height:1.2;margin:0;color:#e9dcc2}
+#robot-tag-hops-v22 .tower-upgrade-close{border:1px solid #7d6d50;min-width:40px;min-height:40px;font-size:23px;line-height:1;background:#34382c;color:#efe3c8;cursor:pointer}
+#robot-tag-hops-v22 .tower-upgrade-table{padding:10px 8px 4px;text-align:center}
+#robot-tag-hops-v22 .tower-upgrade-drawing{width:min(100%,580px);margin:0 auto}
+#robot-tag-hops-v22 .tower-upgrade-drawing svg{display:block;width:100%;height:auto;max-height:250px}
+#robot-tag-hops-v22 .tower-upgrade-site{font-size:11px;font-weight:bold;letter-spacing:.06em;margin:3px 0}
+#robot-tag-hops-v22 .tower-upgrade-help{font-size:11px;color:#b8ad95;margin:4px 0 9px}
+#robot-tag-hops-v22 .tower-upgrade-stats{padding:10px;border:1px solid #665d46;background:#2d3027}
+#robot-tag-hops-v22 .tower-upgrade-stats-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+#robot-tag-hops-v22 .tower-upgrade-stats-head strong{font-size:12px}
+#robot-tag-hops-v22 .tower-upgrade-stats-head small,#robot-tag-hops-v22 .tower-upgrade-stats-note{font-size:11px;color:#b8ad95}
+#robot-tag-hops-v22 .tower-upgrade-stat-values{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#robot-tag-hops-v22 .tower-upgrade-stat{display:grid;gap:3px}
+#robot-tag-hops-v22 .tower-upgrade-stat span{font-size:10px;color:#cec5ad;letter-spacing:.02em}
+#robot-tag-hops-v22 .tower-upgrade-stat b{font-size:13px;font-variant-numeric:tabular-nums}
+#robot-tag-hops-v22 .tower-upgrade-stat b.is-improved{color:#e4c16a}
+#robot-tag-hops-v22 .tower-upgrade-stats-note{display:block;margin-top:8px}
+#robot-tag-hops-v22 .tower-upgrade-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:12px}
+#robot-tag-hops-v22 .tower-upgrade-tab{min-height:43px;padding:10px;background:#292d25;border:1px solid #635842;color:#cabda3;font-weight:bold;cursor:pointer}
+#robot-tag-hops-v22 .tower-upgrade-tab.is-active{background:#51442b;color:#f1dfb8;border-color:#b39b67}
+#robot-tag-hops-v22 .tower-upgrade-content{min-height:130px}
+#robot-tag-hops-v22 .tower-upgrade-content #tower-prep-mutations,
+#robot-tag-hops-v22 .tower-upgrade-content #tower-prep-surgery{margin:0;padding:12px;border-top:0}
+#robot-tag-hops-v22 .tower-upgrade-feedback{font-size:12px;color:#e8ce8d;margin:8px 2px 0;min-height:1em}
+#robot-tag-hops-v22 .tower-upgrade-body-part.is-selectable{cursor:pointer}
+#robot-tag-hops-v22 .tower-upgrade-body-part.is-selectable:focus-visible{outline:none;filter:drop-shadow(0 0 6px #eed280)}
+#robot-tag-hops-v22 .tower-upgrade-body-part.is-selected{filter:drop-shadow(0 0 5px #f1be6c)}
+#robot-tag-hops-v22 #tower-upgrade-window button:focus-visible,
+#robot-tag-hops-v22 #tower-upgrade-open:focus-visible{outline:2px solid #efd389;outline-offset:2px}
+@media(max-width:520px){
+ #robot-tag-hops-v22 #tower-upgrade-window{padding:5px}
+ #robot-tag-hops-v22 .tower-upgrade-paper{padding:10px;width:100%;max-height:calc(100dvh - 10px)}
+ #robot-tag-hops-v22 .tower-upgrade-heading{padding-bottom:5px}
+ #robot-tag-hops-v22 .tower-upgrade-help{font-size:10px}
+ #robot-tag-hops-v22 .tower-upgrade-stat-values{gap:3px}
+ #robot-tag-hops-v22 .tower-upgrade-stat b{font-size:11px}
+ #robot-tag-hops-v22 .tower-upgrade-table{padding:6px 0}
+ #robot-tag-hops-v22 .tower-upgrade-content #tower-prep-mutations,
+ #robot-tag-hops-v22 .tower-upgrade-content #tower-prep-surgery{padding:8px}
+}
