@@ -78,9 +78,13 @@ export function selectTowerFloor(t,index){
 export function validTowerFloorPlan(p,level){
  if(p===undefined)return true;
  if(!p||p.floor!==level||!Number.isInteger(p.selected)||!Array.isArray(p.options)||p.options.length<1||p.options.length>2||p.selected>=p.options.length||p.selected<0)return false;
+ if(hasBoss({level})?p.options.length!==1||p.options[0]?.kind!=='boss'
+  :p.options.length!==2||p.options[0]?.kind!=='standard'
+   ||p.options[1]?.kind!=='danger'||p.options[0]?.arenaId!==p.options[1]?.arenaId)
+  return false;
  return p.options.every(o=>o&&Object.hasOwn(ARENAS,o.arenaId)&&['standard','danger','boss'].includes(o.kind)
   &&(o.style===undefined||(o.kind==='danger'&&Object.hasOwn(TOWER_DANGER_STYLES,o.style)))
   &&Array.isArray(o.profiles)&&o.profiles.length>=1&&o.profiles.length<=cap(o.arenaId)-1
   &&o.profiles.every(id=>id==='boss'||validTowerProfile(id))
-  &&(o.kind==='boss'?o.profiles.length===3&&o.profiles[0]==='boss':o.profiles.every(id=>id!=='boss')));
+  &&(o.kind==='boss'?o.profiles.length===3&&o.profiles[0]==='boss'&&o.profiles.slice(1).every(validTowerProfile):o.profiles.every(id=>id!=='boss')));
 }
