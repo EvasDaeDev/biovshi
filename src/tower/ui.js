@@ -76,8 +76,9 @@ export function towerPreparation(){
       button.className='tower-challenge-option'+(index===encounter.selected?' is-selected':'');
       button.setAttribute('aria-pressed',String(index===encounter.selected));
       const enemies=option.profiles.map(id=>towerEnemyProfile(id).name);
-      const summary=Object.entries(Object.groupBy(enemies,name=>name))
-        .map(([name,items])=>items.length>1?name+' ×'+items.length:name).join(' · ');
+      const counts=new Map();
+      for(const name of enemies)counts.set(name,(counts.get(name)??0)+1);
+      const summary=[...counts].map(([name,count])=>count>1?name+' ×'+count:name).join(' · ');
       button.textContent=(option.kind==='danger'?'ОПАСНО · +5 ЗА ВЫБИВАНИЕ':'СТАНДАРТ')+'\n'+summary;
       button.onclick=()=>{
         if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||index===encounter.selected)return;
