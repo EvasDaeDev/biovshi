@@ -50,6 +50,8 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
   assert.equal(ctx.towerGarage[2].voice,'female');
   assert.equal(ctx.robots[1].body.skinKey,'robotEnemy1');
   assert.equal(ctx.robots[2].body.skinKey,'robotEnemy3');
+  assert.equal(ctx.cardNodes[1].card.dataset.enemyProfile,'fast');
+  assert.match(ctx.cardNodes[1].card.textContent,/Быстрый/);
   const buttons=[...document.querySelectorAll('.tower-challenge-option')];
   assert.equal(buttons.length,2);
   assert.equal(buttons[0].getAttribute('aria-pressed'),'true');
