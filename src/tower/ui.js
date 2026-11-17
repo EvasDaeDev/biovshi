@@ -22,6 +22,7 @@ import {SKILLS,skillHintAttributes} from '../ui/patient.js';
 import {arenaDiagram} from '../game/arenas.js';
 import {artifactCollectionMarkup} from './artifact-ui.js';
 import {formatChips} from '../ui/currency.js';
+import {purchaseTowerArenaReroll,purchaseTowerStatChange,towerRerollPrice,towerRerollCandidates,TOWER_STAT_CHANGE_PRICE} from './economy.js';
 import {installTowerUpgradeWindow} from './upgrade-modal.js';
 import {playerBalanceMarkup} from '../ui/currency-animation.js';
 
@@ -73,9 +74,32 @@ export function towerPreparation(){
   title.classList.toggle('boss-floor-title',hasBoss(t));
   title.textContent=hasBoss(t)?`${bossName(t.level)}\nЭТАЖ №${t.level}`:`БАШНЯ · ЭТАЖ ${t.level}`;
   renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
-  ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(towerEnemyReward(t))} ${hasBoss(t)?'ЗА БОССА · '+formatChips(10)+' ЗА ПАЦИЕНТА · ВСЕ ПРОТИВ ВСЕХ':'ЗА ЛИЧНОЕ ВЫБИВАНИЕ'}</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div>`;
+  ctx.root.querySelector('#tower-floor-preview').innerHTML=`<div class="tower-arena-overview"><div class="tower-arena-map">${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(towerEnemyReward(t))} ${hasBoss(t)?'ЗА БОССА · '+formatChips(10)+' ЗА ПАЦИЕНТА · ВСЕ ПРОТИВ ВСЕХ':'ЗА ЛИЧНОЕ ВЫБИВАНИЕ'}</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div></div></div>`;
   const encounter=t.floorPlan;
   const preview=ctx.root.querySelector('#tower-floor-preview');
+  if(encounter?.floor===t.level){
+    const dice=document.createElement('div');dice.className='tower-arena-dice';
+    const button=document.createElement('button');button.type='button';
+    button.className='tower-reroll-button';button.setAttribute('aria-label','Случайно сменить арену');
+    button.innerHTML='<svg viewBox="0 0 100 100" aria-hidden="true"><rect x="9" y="9" width="82" height="82" rx="16"/><circle cx="28" cy="28" r="7"/><circle cx="72" cy="28" r="7"/><circle cx="50" cy="50" r="7"/><circle cx="28" cy="72" r="7"/><circle cx="72" cy="72" r="7"/></svg>';
+    const price=document.createElement('strong');price.className='tower-reroll-price';
+    const notice=document.createElement('small');notice.className='tower-reroll-caption';notice.textContent='ДРУГАЯ АРЕНА';
+    const cost=towerRerollPrice(t.arenaRerolls);
+    price.innerHTML=Number.isFinite(cost)?formatChips(cost):'—';
+    button.disabled=!towerRerollCandidates(t).length||ctx.betting.players[ctx.towerPlayer].balance<cost;
+    button.title=button.disabled?'Реролл недоступен: нужна другая подходящая арена и достаточно монет':
+      'Случайно выбрать другую арену за '+cost+' монет. Враги и награды не изменятся.';
+    button.onclick=()=>{
+      if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||button.disabled)return;
+      button.disabled=true;
+      try{
+        purchaseTowerArenaReroll(ctx.betting,ctx.towerPlayer,t);
+        bettingSave();ctx.startTower(ctx.towerPlayer);
+      }catch(error){button.disabled=false;ctx.root.querySelector('#tower-prep-error').textContent=error.message;}
+    };
+    dice.append(button,price,notice);
+    preview.querySelector('.tower-arena-overview').append(dice);
+  }
   if(encounter?.options.length>1){
     const choices=document.createElement('div');choices.className='tower-challenge-options';
     encounter.options.forEach((option,index)=>{
@@ -115,25 +139,49 @@ export function towerPreparation(){
   }
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   let upgradeModal=null;
-  let lastSurgeryReceipt=null,lastMutationReceipt=null;
+  let lastSurgeryReceipt=null,lastMutationReceipt=null,lastStatReceipt=null;
+  let draftStats=[...t.stats];
   const upgradeMessage=message=>{
     ctx.root.querySelector('#tower-prep-error').textContent=message;
     const output=ctx.root.querySelector('#tower-upgrade-feedback');
     if(output)output.textContent=message;
   };
   function renderSkills(){
-    const snapshot=towerMutationSnapshot(t),stats=snapshot.effective;
+    const snapshot=towerMutationSnapshot({...t,stats:draftStats}),stats=snapshot.effective;
     const combatBonus=towerMutationCombatBonus(t.mutations);
     fields.innerHTML=`<div class="garage-stat-list"><small>Побед: ${t.wins} · заработано очков: ${9+t.wins}</small>
-      ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)}><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select data-tower-stat="${i}" aria-label="${skill.name}">${[earnedStats(t.wins)[i]-1,earnedStats(t.wins)[i],earnedStats(t.wins)[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===t.stats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
+      ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)}><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select data-tower-stat="${i}" aria-label="${skill.name}">${[earnedStats(t.wins)[i]-1,earnedStats(t.wins)[i],earnedStats(t.wins)[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===draftStats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
       <small class="garage-stat-effects">Скор. ${Math.round(statMultiplier(stats[0])*100)}% Мобиль. ${Math.round(statMultiplier(stats[2])*100)}% Крит. ${Math.round(Math.min(.75,critChance(stats[1])+combatBonus.crit)*100)}% · откат ударов ${Math.round(combatBonus.cooldownMultiplier*100)}%</small>
-      <button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button>`;
+      <div class="tower-stat-confirm"><button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button><button type="button" data-tower-apply>ПРИМЕНИТЬ · 50 🪙</button></div><small class="tower-stat-message" role="status"></small>`;
+    const changed=draftStats.some((v,i)=>v!==t.stats[i]);
+    const transfer=draftStats.reduce((sum,v,i)=>sum+Math.max(0,v-t.stats[i]),0);
+    const apply=fields.querySelector('[data-tower-apply]');
+    apply.disabled=!changed||transfer!==1||!validStats(draftStats,t.wins)
+      ||ctx.betting.players[ctx.towerPlayer].balance<TOWER_STAT_CHANGE_PRICE;
+    fields.querySelector('.tower-stat-message').textContent=lastStatReceipt?'✓ '+lastStatReceipt:
+      changed?'ПРЕДПРОСМОТР · изменение вступит в силу только после оплаты 50 монет.':
+      'Нет изменений · оплата не требуется.';
+    fields.querySelector('.garage-stat-effects').prepend(document.createTextNode(changed?'ПРЕДПРОСМОТР · ':''));
     fields.querySelectorAll('select').forEach(select=>select.onchange=()=>{
       const index=Number(select.dataset.towerStat);
-      t.stats=redistributeStat(t,index,Number(select.value));ctx.towerGarage[0].stats=[...t.stats];bettingSave();renderSkills();upgradeModal?.refresh();
-      fields.querySelector(`[data-tower-stat="${index}"]`).focus();
+      try{draftStats=redistributeStat({...t,stats:draftStats},index,Number(select.value));lastStatReceipt=null;}
+      catch(error){upgradeMessage(error.message);}
+      renderSkills();
+      fields.querySelector(`[data-tower-stat="${index}"]`)?.focus();
     });
-    fields.querySelector('[data-tower-base]').onclick=()=>{t.stats=earnedStats(t.wins);ctx.towerGarage[0].stats=[...t.stats];bettingSave();renderSkills();upgradeModal?.refresh();};
+    fields.querySelector('[data-tower-base]').onclick=()=>{
+      draftStats=earnedStats(t.wins);lastStatReceipt=null;renderSkills();
+    };
+    apply.onclick=()=>{
+      if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
+      try{
+        purchaseTowerStatChange(ctx.betting,ctx.towerPlayer,t,draftStats);
+        ctx.towerGarage[0].stats=[...t.stats];
+        lastStatReceipt='Перераспределение подтверждено · −50 монет';
+        bettingSave();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
+        renderInsurance();renderSkills();upgradeModal?.refresh();upgradeMessage(lastStatReceipt);
+      }catch(error){upgradeMessage(error.message);renderSkills();}
+    };
   }
   renderSkills();
   // Boss milestone rewards must be chosen before entering the next floor.
@@ -344,9 +392,8 @@ export function towerPreparation(){
   };
   fightButton.onclick=()=>{
     if(t.mutationDraft){ctx.root.querySelector('#tower-prep-error').textContent='Сначала выбери модификацию после победы над боссом.';return;}
-    const stats=[...fields.querySelectorAll('select')].map(n=>Number(n.value));
-    if(!validStats(stats,t.wins)){ctx.root.querySelector('#tower-prep-error').textContent='Можно перенести одно очко между навыками, сохранив их сумму.';return;}
-    t.stats=stats;t.preparing=false;
+    // An unpaid preview never changes the saved fighter.
+    draftStats=[...t.stats];t.preparing=false;t.arenaRerollLocked=true;
     // Preparing the floor edits the canonical saved run, while initializeGame
     // originally created a detached snapshot and its robot BEFORE purchases.
     // Refresh both sources before the first frame of this very floor.
