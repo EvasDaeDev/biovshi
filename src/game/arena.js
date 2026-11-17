@@ -1,4 +1,6 @@
-import {bossSpawn} from '../boss/spawn.js';
+import {planNeutralRigSpawns} from '../boss/spawn.js';
+import {bossAnatomy} from '../boss/anatomy.js';
+import {BOSS_CONFIG} from '../boss/config.js';
 import {standardLimbs} from '../robot/body.js';
 import {createBoss} from '../boss/boss.js';
 import {ensureBossEncounter} from '../boss/encounter.js';
@@ -153,10 +155,14 @@ export function rebuildRobots() {
   const plannedFloor=ctx.mode==='tower'&&ctx.towerRun?.floorPlan?.floor===ctx.towerRun?.level;
   const preflight=Boolean(encounter||plannedFloor);
   const normalRig=preflight?{spineSegments:4,pelvisKey:'spine-3',limbs:standardLimbs()}:null;
-  layout.forEach((p,id)=>{
-    // Insert fighters one by one; the full-rig preflight tests each against
-    // obstacles and already spawned bodies, including the controlled player.
-    const start=preflight&&!(encounter&&id===1)?bossSpawn(p,normalRig,1):p;
+  const rigs=preflight?layout.map((_,id)=>encounter&&id===1
+    ?{body:bossAnatomy(encounter.variant),scaleMultiplier:BOSS_CONFIG.scale}
+    :{body:normalRig,scaleMultiplier:1}):null;
+  const starts=preflight?planNeutralRigSpawns(layout,rigs):layout;
+  if(!starts)throw Error('Не удалось разместить всех пациентов без пересечений арены');
+  // Construct actors only after ALL starting bodies fit. The plan reserves
+  // space for extended bosses before the smaller patients are committed.
+  starts.forEach((start,id)=>{
     const skinKey=ctx.mode==='tower'&&id>0?ctx.towerGarage?.[id]?.skinKey:null;
     ctx.robots.push(encounter&&id===1?createBoss(id,start,encounter):createRobot(id,start,skinKey?{skinKey}:{}));
   });
