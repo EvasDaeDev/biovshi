@@ -158,8 +158,10 @@ test('purchases during preparation take effect on the SAME floor, including graf
   assert.ok(piece,'new arm has texture in the immediately upcoming fight');
   const siteForModule=Object.keys(ctx.robots[0].body.skinParts).find(key=>towerUpgradeApplies(chosen,key));
   assert.ok(siteForModule,'selected module changes an atlas part');
-  const modified=ctx.robots[0].skin.pieces.get(siteForModule);
-  assert.ok(modified.url.endsWith('ar_mod_'+chosen+'.png'),'chosen mutation texture is already active');
+  const modified=ctx.robots[0].actor.querySelector('[data-skin-segment="'+siteForModule+'"] image');
+  assert.ok(modified,'modified segment has an SVG sprite');
+  assert.ok(modified.getAttribute('href').endsWith('ar_mod_'+chosen+'.png'),
+   'chosen mutation texture is already active');
   advanceStartup(20);
   assert.equal(ctx.startup.phase,'running');
   assert.ok(validTower(run));
