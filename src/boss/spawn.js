@@ -22,18 +22,61 @@ function neutralCapsules(start,body,scaleMultiplier){
  }
  return capsules;
 }
+// Search uses only already known arena geometry and is deterministic: re-entering
+// the same encounter cannot change the boss's shape or create a new RNG dependency.
+// Pure selector: the caller supplies collision testing for the complete neutral rig.
+export function findBossSpawn(start,boundary,valid){
+ const right=boundary.right??boundary.left+boundary.size;
+ const bottom=boundary.bottom??boundary.top+boundary.size;
+ const cx=(boundary.left+right)/2,cy=(boundary.top+bottom)/2;
+ const rotations=[0,Math.PI/4,-Math.PI/4,Math.PI/2,-Math.PI/2,Math.PI];
+ const tried=new Set();
+ function probe(x,y){
+  if(x<boundary.left||x>right||y<boundary.top||y>bottom)return null;
+  const key=Math.round(x*10)+':'+Math.round(y*10);
+  if(tried.has(key))return null;
+  tried.add(key);
+  const heading=Math.atan2(cy-y,cx-x);
+  for(const offset of rotations){
+   const p={x,y,angle:heading+offset};
+   if(valid(p))return p;
+  }
+  return null;
+ }
+ if(valid(start))return start;
+ // First look close to the intended spawn, retaining the original placement.
+ for(let radius=16;radius<=160;radius+=16){
+  for(let i=0;i<24;i++){
+   const a=i*Math.PI/12;
+   const candidate=probe(start.x+Math.cos(a)*radius,start.y+Math.sin(a)*radius);
+   if(candidate)return candidate;
+  }
+ }
+ // Long bodies can need an entirely different region of a large arena.
+ // Search the full bounding box; the collision predicate rejects cut corners,
+ // columns and other inaccessible floor.
+ const step=40,points=[];
+ for(let y=boundary.top+20;y<=bottom-20;y+=step){
+  for(let x=boundary.left+20;x<=right-20;x+=step){
+   points.push({x,y,d:(x-start.x)**2+(y-start.y)**2});
+  }
+ }
+ points.sort((a,b)=>a.d-b.d);
+ for(const p of points){
+  const candidate=probe(p.x,p.y);
+  if(candidate)return candidate;
+ }
+ return null;
+}
 export function bossSpawn(start,body,scaleMultiplier=BOSS_CONFIG.scale){
- const boundary=ctx.arenaBoundary,cx=(boundary.left+boundary.right)/2,cy=(boundary.top+boundary.bottom)/2;
+ const boundary=ctx.arenaBoundary;
  const valid=p=>{
   const capsules=neutralCapsules(p,body,scaleMultiplier);
   if(capsules.some(c=>staticContacts(c).some(hit=>hit.depth>(isLimb(c)?5:0)+1e-6)))return false;
   const solid=c=>c.segment==='head'||c.segment.startsWith('spine-');
   return !capsules.filter(solid).some(c=>ctx.robots.some(r=>r.capsules.filter(solid).some(other=>segmentDistance(c.a,c.b,other.a,other.b)<c.r+other.r+.15)));
  };
- if(valid(start))return start;
- for(let radius=8;radius<=160;radius+=8)for(let i=0;i<24;i++){
-  const p={x:start.x+Math.cos(i*Math.PI/12)*radius,y:start.y+Math.sin(i*Math.PI/12)*radius};p.angle=Math.atan2(cy-p.y,cx-p.x);
-  if(valid(p))return p;
- }
+ const located=findBossSpawn(start,boundary,valid);
+ if(located)return located;
  throw Error('Не удалось разместить босса без пересечения арены');
 }
