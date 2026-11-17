@@ -4,6 +4,7 @@ import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 import { attr, el } from './svg.js';
+import {towerUpgradeAtlas} from '../tower/upgrade-appearance.js';
 
 // r_01..r_04: 256×256, 4×4 cells. All joint axes use y=32.
 // Head and chest anchors are explicitly calibrated in atlas pixels;
@@ -74,7 +75,11 @@ export function createRobotSkin(robot) {
     'spine-3','spine-2','spine-1','spine-0','head'];
   for(const key of keys) {
     const android=robot.prosthetics.includes(key)&&ctx.textureAssets?.robotAndroid?.loaded!==false;
-    const piece=createPiece(key,android?assetUrl(ASSETS.textures.robotAndroid):url,/^(arm|leg)/.test(key)?limbs:body,parts[key]);
+    const replacement=ctx.mode==='tower'&&robot.id===0?
+      towerUpgradeAtlas(patientGarage()?.[0],key):null;
+    const spriteUrl=replacement?assetUrl(replacement):
+      android?assetUrl(ASSETS.textures.robotAndroid):url;
+    const piece=createPiece(key,spriteUrl,/^(arm|leg)/.test(key)?limbs:body,parts[key]);
     piece.image.addEventListener('load',()=>activate(true),{once:true});
     piece.image.addEventListener('error',()=>activate(false));
     pieces.set(key,piece);
