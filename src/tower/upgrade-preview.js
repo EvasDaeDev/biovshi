@@ -25,7 +25,7 @@ const chest=[290,100],neck=[chest[0]+20*boneScale,100];
 const spine=Array.from({length:5},(_,i)=>[chest[0]-spineStep*i,100]);
 const pose={};
 for(let i=0;i<4;i++)pose['spine-'+i]=[spine[i],spine[i+1]];
-pose.head=[[neck[0]-10*boneScale,100],[neck[0]+10*boneScale,100]];
+pose.head=[[neck[0]+10*boneScale,100],[neck[0]-10*boneScale,100]];
 for(const side of [-1,1]){
  const armJoint=point(...chest,.58,side*.814616,armUpper);
  const armTip=point(...armJoint,.74,side*.672607,armLower);
