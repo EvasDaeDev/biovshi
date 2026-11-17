@@ -52,7 +52,7 @@ export function validTower(t){
 export function rewardTower(session,player,victim,by){
  const t=towerFor(session,player);
  if(by!==0||!Number.isInteger(victim)||victim<1||victim>towerEnemyCount(t)||t.preparing||t.rewarded.includes(victim))return false;
- const reward=bossFloorReward(t,victim);
+ const reward=towerEnemyReward(t,victim);
  const issued=session.players.length*session.capital+(session.topUps??0)+(session.towerEarned??0);
  if(issued+reward>16000000)return false;
  t.rewarded.push(victim);session.players[player].balance+=reward;session.towerEarned=(session.towerEarned??0)+reward;
