@@ -10,6 +10,12 @@ export function makeRobotCard(id) {
   const card = document.createElement('section');
   card.className = 'robot-card';
   card.style.setProperty('--accent', ROBOT_COLORS[id%4]);
+  const profileId=ctx.mode==='tower'&&id>0?ctx.towerGarage?.[id]?.profileId:null;
+  const profile=profileId&&profileId!=='basic'?towerEnemyProfile(profileId):null;
+  if(profile){
+    card.dataset.enemyProfile=profileId;
+    card.title=profile.name+': '+towerProfileDifference(profileId);
+  }
   card.innerHTML = `<div class="robot-card-header"><div class="robot-card-name"><strong>${patientName(id,{short:true})}</strong></div><div class="robot-card-action">Ожидает выхода на арену</div><div class="robot-card-score"><span aria-hidden="true">${uiIcon('bone')}</span> <span class="robot-card-segments">13/13</span></div></div>
   <div class="robot-card-body"><div class="portrait-wrap"><canvas class="patient-portrait" width="280" height="224" role="img" aria-label="Пациент ${String.fromCharCode(65+id)}"></canvas></div>
   <div class="patient-summary"><div class="patient-skills" aria-label="Умения пациента">
