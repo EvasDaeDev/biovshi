@@ -1,5 +1,6 @@
 import {validStats,normalizeProsthetics} from '../garage/model.js';
 import {validBossEncounter} from '../boss/encounter.js';
+import {validTowerFloorPlan} from './floors.js';
 export const newInsurance=()=>({price:50,checkpoint:null});
 export function validInsurance(policy,record){
  if(!policy||!Number.isSafeInteger(policy.price)||policy.price<50)return false;
