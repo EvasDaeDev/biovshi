@@ -490,18 +490,59 @@ function manualFixture(arenaId='ring'){
  ctx.robots=[];const r=createRobot(0,{x:arenaId==='annulus'?170:350,y:350,angle:0}),foe=createRobot(1,{x:450,y:450,angle:0});ctx.robots=[r,foe];r.setVisible(true);foe.setVisible(false);
  return {s,dom,r};
 }
-test('tower selectors automatically transfer a point, show standard effects and reset to earned skills',()=>{
- const {s,dom}=manualFixture();openMenu();
- // Reopen the actual preparation interface, not a separately computed draft.
- ctx.root.querySelector('#tower-preparation').hidden=false;
- let speed=document.querySelector('[data-tower-stat="0"]');speed.value='4';speed.dispatchEvent(new Event('change'));
- assert.deepEqual(towerFor(s,0).stats,[4,2,3]);assert.deepEqual(ctx.towerGarage[0].stats,[4,2,3]);
- assert.deepEqual([...document.querySelectorAll('[data-tower-stat]')].map(n=>Number(n.value)),[4,2,3]);
- assert.match(document.querySelector('#tower-stats .garage-stat-effects').textContent,/Скор\. 120% Мобиль\. 100% Крит\. 0% · откат ударов 100%/);
- assert.deepEqual(bettingLoad().towers[0].stats,[4,2,3]);
- const strength=document.querySelector('[data-tower-stat="1"]');strength.value='4';strength.dispatchEvent(new Event('change'));
- assert.deepEqual(towerFor(s,0).stats,[3,4,2],'changing the other selector replaces the previous transfer');
- document.querySelector('[data-tower-base]').click();assert.deepEqual(towerFor(s,0).stats,[3,3,3]);close(dom);
+test('tower skill selection is a nonpaying preview until explicit 50-coin confirmation',()=>{
+ const session=betNewSession(['Игрок'],200),run=towerFor(session,0);
+ const dom=setup(session,run);
+ try{
+  let speed=document.querySelector('[data-tower-stat="0"]');speed.value='4';speed.dispatchEvent(new Event('change'));
+  assert.deepEqual(run.stats,[3,3,3]);assert.deepEqual(ctx.towerGarage[0].stats,[3,3,3]);
+  assert.deepEqual([...document.querySelectorAll('[data-tower-stat]')].map(n=>Number(n.value)),[4,2,3]);
+  assert.match(document.querySelector('#tower-stats .garage-stat-effects').textContent,/ПРЕДПРОСМОТР/);
+  assert.match(document.querySelector('[data-tower-apply]').textContent,/ПРИМЕНИТЬ/);
+  assert.match(document.querySelector('[data-tower-apply]').textContent,/50/);
+  assert.equal(session.players[0].balance,200);
+  document.querySelector('[data-tower-base]').click();
+  assert.equal(document.querySelector('[data-tower-apply]').disabled,true);
+  assert.equal(session.towerEconomySpent,0);
+  speed=document.querySelector('[data-tower-stat="0"]');speed.value='4';speed.dispatchEvent(new Event('change'));
+  document.querySelector('[data-tower-apply]').click();
+  assert.deepEqual(run.stats,[4,2,3]);assert.deepEqual(ctx.towerGarage[0].stats,[4,2,3]);
+  assert.equal(session.players[0].balance,150);assert.equal(session.towerEconomySpent,50);
+  assert.equal(document.querySelector('[data-tower-apply]').disabled,true);
+  assert.deepEqual(bettingLoad().towers[0].stats,[4,2,3]);
+  assert.match(document.querySelector('#tower-stats .tower-stat-message').textContent,/подтверждено/);
+  const strength=document.querySelector('[data-tower-stat="1"]');strength.value='4';strength.dispatchEvent(new Event('change'));
+  assert.deepEqual(run.stats,[4,2,3],'next change is still only a preview');
+  document.querySelector('#tower-fight').click();
+  assert.deepEqual(ctx.towerRun.stats,[4,2,3],'unpaid preview is discarded at fight entry');
+ }finally{close(dom);}
+});
+
+test('arena dice shows the price below the icon and rerolls the same challenge without changing profiles',()=>{
+ const session=betNewSession(['Кубик'],200),run=towerFor(session,0);
+ run.floorPlan={floor:1,selected:1,options:[
+  {arenaId:'ward',kind:'standard',profiles:['basic']},
+  {arenaId:'ward',kind:'danger',style:'mixed',profiles:['fast','strong']}
+ ]};
+ const dom=setup(session,run);
+ const previous=ctx.startTower;let triggered=0;
+ try{
+  ctx.startTower=()=>{triggered++;};
+  const dice=document.querySelector('.tower-arena-overview .tower-arena-dice');
+  assert.ok(dice);assert.equal(dice.previousElementSibling.className,'tower-arena-map');
+  assert.equal(dice.querySelector('.tower-reroll-price').textContent.includes('50'),true);
+  const button=dice.querySelector('.tower-reroll-button');assert.equal(button.disabled,false);
+  button.click();button.click();
+  assert.equal(triggered,1);
+  assert.equal(session.players[0].balance,150);
+  assert.equal(session.towerEconomySpent,50);
+  assert.equal(run.arenaRerolls,1);
+  assert.notEqual(run.floorPlan.options[0].arenaId,'ward');
+  assert.equal(run.floorPlan.options[0].arenaId,run.floorPlan.options[1].arenaId);
+  assert.deepEqual(run.floorPlan.options.map(o=>o.profiles),[['basic'],['fast','strong']]);
+  assert.equal(run.floorPlan.selected,1);
+  assert.equal(bettingLoad().towerEconomySpent,50);
+ }finally{ctx.startTower=previous;close(dom);}
 });
 test('standing manual patient never rotates toward another patient',()=>{
  const {dom,r}=manualFixture();const foe=ctx.robots[1];foe.setVisible(true);
