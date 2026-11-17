@@ -27,6 +27,7 @@ import {pounceContactSegment,pounceOpportunity,selectSimultaneousStrikes,strikeP
 import {bossPortraitBones} from '../src/boss/card.js';
 import {drawDetachedSkin} from '../src/render/robot-skin.js';
 import {limbKey} from '../src/robot/body.js';
+import {findBossSpawn} from '../src/boss/spawn.js';
 
 for(const variant of BOSS_VARIANTS)for(const arena of variant.spineSegments>6?['columns']:['ward','ring','annulus'])test(`${variant.id} boss has independent geometry, atlas, supports and unique attack sources in ${arena}`,()=>{
  const f=startBossScenario({variant:variant.id,arena});
@@ -69,6 +70,29 @@ for(const variant of BOSS_VARIANTS)for(const arena of variant.spineSegments>6?['
   assert.equal((portrait.a.x+portrait.b.x)/2,18);
 
  }finally{f.close();}
+});
+
+test('long combined bosses spawn safely with several independent arena seeds',()=>{
+ const solid=c=>c.segment==='head'||c.segment?.startsWith('spine-');
+ for(const variant of ['long_legs','long_arms'])for(const seed of [3,37,251]){
+  const f=startBossScenario({variant,arena:'columns',floor:variant==='long_legs'?25:30,seed});
+  try{
+   assert.equal(f.boss.spineSegmentTotal,8);
+   assert.equal(f.boss.limbs.length,6);
+   for(const robot of ctx.robots){
+    assert.ok(robot.capsules.every(c=>staticContacts(c).every(h=>h.depth<=(isLimb(c)?5:0)+1e-6)),
+     variant+' seed '+seed+' initially intersects the arena');
+   }
+   for(let i=0;i<ctx.robots.length;i++)for(let j=i+1;j<ctx.robots.length;j++)
+    for(const a of ctx.robots[i].capsules.filter(solid))
+     for(const b of ctx.robots[j].capsules.filter(solid))
+      assert.ok(segmentDistance(a.a,a.b,b.a,b.b)>=a.r+b.r+.15-1e-6,
+       variant+' seed '+seed+' starts with overlapping bodies');
+   for(let tick=0;tick<90;tick++)step(1/60);
+   assert.ok(f.boss.capsules.every(c=>[c.a.x,c.a.y,c.b.x,c.b.y,c.r].every(Number.isFinite)),
+    variant+' seed '+seed+' produced non-finite physics');
+  }finally{f.close();}
+ }
 });
 
 test('boss ignores cumulative trauma, but head destruction still kills and pays exactly 100 once',()=>{
