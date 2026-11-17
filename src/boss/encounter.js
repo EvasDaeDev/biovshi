@@ -1,4 +1,4 @@
-import {BOSS_VARIANTS,isBossFloor,BOSS_CONFIG,hasBoss} from './config.js';
+import {BOSS_VARIANTS,bossVariantForFloor,isBossFloor,BOSS_CONFIG,hasBoss} from './config.js';
 import {BOSS_TEXTURES} from './assets.js';
 export function ensureBossEncounter(t,random=Math.random){
  if(!hasBoss(t))return null;
