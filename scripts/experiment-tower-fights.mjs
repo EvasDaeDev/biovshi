@@ -30,7 +30,7 @@ const diagnose=args.diagnose==='true';
 const maxAllowedBodyOverlapCm=Number(args.maxOverlapCm??2);
 if(!['approach','orbit','idle','evade'].includes(policy))throw Error('Invalid policy');
 if(!Number.isFinite(maxAllowedBodyOverlapCm)||maxAllowedBodyOverlapCm<0)throw Error('Invalid maximum body overlap');
-if(!Number.isInteger(samples)||samples<1||samples>20||!Number.isInteger(seconds)||seconds<5||seconds>180)throw Error('Invalid seeds/limit');
+if(!Number.isInteger(samples)||samples<1||samples>(naturalBoss?60:20)||!Number.isInteger(seconds)||seconds<5||seconds>180)throw Error('Invalid seeds/limit');
 const scenarios=[
  {kind:'normal',arena:'ring',floor:3,profiles:['basic','fast']},
  {kind:'normal',arena:'annulus',floor:7,profiles:['agile','fast','strong']},
