@@ -23,6 +23,39 @@ export function portraitBones() {
   return bones.map(bone=>({...bone,part:ROBOT_PARTS[bone.key],matrix:skinMatrix(bone.a,bone.b,ROBOT_PARTS[bone.key])}));
 }
 export const PORTRAIT_BONES=portraitBones();
+
+const anatomyPortraitCache=new WeakMap();
+// Combat-card anatomy uses the same limb anchors, lengths and sprite cells as
+// the actual fight rig. A second arm grows from its assigned spine segment,
+// never from the original shoulder by accident.
+export function portraitBonesForBody(body){
+ if(!body?.limbs||!body.skinParts)return PORTRAIT_BONES;
+ if(anatomyPortraitCache.has(body))return anatomyPortraitCache.get(body);
+ const count=body.spineSegments??4,bones=[];
+ for(const limb of body.limbs){
+  const kind=limb.kind,side=limb.side;
+  if(kind!=='arm'&&kind!=='leg')continue;
+  const index=limb.anchor??(kind==='arm'?0:count);
+  const extra=limb.key?.includes('-graft')??false;
+  const a={x:-index*10+(kind==='arm'?3:-5),y:side*(kind==='arm'?15:12)+(extra?side*8:0)};
+  const factor=limb.lengthScale??1;
+  const end={x:a.x+(kind==='arm'?27:-23)*factor,
+   y:a.y+side*(extra?24:kind==='arm'?12:19)*factor};
+  const solved=ik(a,end,...(kind==='arm'?[27*factor,29*factor]:[32*factor,33*factor]),kind==='arm'?side:-side);
+  const key=limb.key??`${kind}-${side}`;
+  bones.push({key:`${key}-upper`,a,b:solved.joint},
+   {key:`${key}-lower`,a:solved.joint,b:solved.end});
+ }
+ for(let i=count-1;i>=0;i--)bones.push({key:`spine-${i}`,a:{x:-i*10,y:0},b:{x:-(i+1)*10,y:0}});
+ bones.push({key:'head',a:{x:15,y:0},b:{x:35,y:0}});
+ const result=bones.map(bone=>{
+  const part=body.skinParts[bone.key]??ROBOT_PARTS[bone.key];
+  return {...bone,part,matrix:skinMatrix(bone.a,bone.b,part)};
+ });
+ anatomyPortraitCache.set(body,result);
+ return result;
+}
+
 const palettes=new Map();
 const hatImages=new Map();
 let androidAtlas=null;
