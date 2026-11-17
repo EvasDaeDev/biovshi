@@ -52,7 +52,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.towerGarage=tower?Array.from({length:towerEnemyCount(tower)+1},(_,id)=>{
     const profile=id>0?towerEnemyProfile(selectedTowerFloor(tower)?.profiles[id-1]):null;
     return {stats:id===0?[...tower.stats]:[...profile.stats],head:null,
-      prosthetics:id===0?[...(tower.prosthetics??[])]:[],
+      prosthetics:id===0?[...(tower.prosthetics??[]),...(tower.graftProsthetics??[])]:[],
       ...(id===0?{mutations:[...(tower.mutations??[])],surgeries:structuredClone(tower.surgeries??[])}:{}),
       ...(id>0?{profileId:selectedTowerFloor(tower)?.profiles[id-1]??'basic',
         skinKey:profile.skinKey,voice:profile.voice}:{})};
