@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {betNewSession} from '../src/betting/ledger.js';
 import {newTower,towerFor,completeTower,resetTower,validTower,buyTowerInsurance} from '../src/tower/model.js';
 import {towerMutationBonus,towerMutationSnapshot,towerMutationSynergies,grantTowerMutationDraft,
- chooseTowerMutation,validTowerMutationState,TOWER_MUTATION_IDS} from '../src/tower/mutations.js';
+ chooseTowerMutation,validTowerMutationState,TOWER_MUTATION_IDS,TOWER_MUTATIONS,TOWER_MUTATION_FAMILIES,
+ towerMutationCombatBonus} from '../src/tower/mutations.js';
+import {towerFighterCombatBonus} from '../src/systems/combat.js';
 import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 import {ctx} from '../src/game/state.js';
 import {JSDOM} from 'jsdom';
@@ -49,6 +51,49 @@ test('mechanical and biological sets grant actual fractional skill points',()=>{
  assert.deepEqual(snapshot.effective,[3.75,3,3.75]);
  const normal=towerMutationSnapshot({...patient,mutations:[]});
  assert.deepEqual(normal.effective,[3,3,3]);
+});
+test('expanded module catalogue has eighteen distinct choices across three compatible families',()=>{
+ assert.equal(TOWER_MUTATION_IDS.length,18);
+ for(const family of ['mechanical','organic','neural']){
+  assert.equal(TOWER_MUTATION_IDS.filter(id=>TOWER_MUTATIONS[id].family===family).length,6);
+  assert.ok(TOWER_MUTATION_FAMILIES[family]);
+ }
+ assert.ok(TOWER_MUTATION_IDS.every(id=>TOWER_MUTATIONS[id].bonus.length===3));
+ assert.deepEqual(towerMutationSynergies(['optic','synapse']),['neural']);
+ assert.deepEqual(towerMutationBonus(['optic','synapse']),[.5,.2,.55]);
+ assert.deepEqual(towerMutationBonus(['turbo','servo','optic','synapse']),[1.25,.2,1.3]);
+});
+test('neural combat perks affect only the controlled Tower patient',()=>{
+ const ids=['optic','focus','quiet','synapse','metronome','alarm','flywheel'];
+ assert.deepEqual(towerMutationCombatBonus([]),{crit:0,cooldownMultiplier:1});
+ assert.deepEqual(towerMutationCombatBonus(ids),{crit:.075,cooldownMultiplier:.86});
+ const previous={mode:ctx.mode,garage:ctx.towerGarage};
+ try{
+  ctx.mode='tower';ctx.towerGarage=[{mutations:ids},{mutations:ids}];
+  assert.deepEqual(towerFighterCombatBonus(0),{crit:.075,cooldownMultiplier:.86});
+  assert.deepEqual(towerFighterCombatBonus(1),{crit:0,cooldownMultiplier:1});
+  ctx.mode='spectator';
+  assert.deepEqual(towerFighterCombatBonus(0),{crit:0,cooldownMultiplier:1});
+ }finally{ctx.mode=previous.mode;ctx.towerGarage=previous.garage;}
+});
+test('new boss drafts include a chance to complete an existing one-piece synergy',()=>{
+ const s=betNewSession(['Улучшения'],1000);
+ const t=towerFor(s,0);
+ t.level=11;t.wins=10;t.mutations=['turbo'];
+ const rolled=grantTowerMutationDraft(t,()=>0);
+ assert.equal(rolled,true);
+ assert.equal(t.mutationDraft.options.length,3);
+ assert.ok(t.mutationDraft.options.some(id=>TOWER_MUTATIONS[id].family==='mechanical'));
+ assert.ok(!t.mutationDraft.options.includes('turbo'));
+ assert.equal(grantTowerMutationDraft(t,()=>1),false,'pending choice must not be rerolled');
+});
+test('legacy one- or two-option boss offers survive catalogue expansion intact',()=>{
+ const owned=TOWER_MUTATION_IDS.slice(0,5);
+ const one={level:31,mutations:owned,mutationDraft:{floor:31,options:[TOWER_MUTATION_IDS[5]]}};
+ assert.equal(validTowerMutationState(one),true);
+ const two={...one,mutationDraft:{floor:31,options:[TOWER_MUTATION_IDS[5],TOWER_MUTATION_IDS[6]]}};
+ assert.equal(validTowerMutationState(two),true);
+ assert.equal(validTowerMutationState({...one,mutationDraft:{floor:31,options:[]}}),false);
 });
 test('mutations survive insured defeat and do not survive an uninsured reset',()=>{
  const s=betNewSession(['ДМС'],1000);
