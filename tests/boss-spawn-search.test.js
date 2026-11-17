@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {findBossSpawn} from '../src/boss/spawn.js';
+import {findBossSpawn,planNeutralRigSpawns} from '../src/boss/spawn.js';
+import {ctx} from '../src/game/state.js';
+import {standardLimbs} from '../src/robot/body.js';
+import {bossAnatomy} from '../src/boss/anatomy.js';
+import {BOSS_CONFIG} from '../src/boss/config.js';
 
 // Pure search tests: actual neutral-rig collision checks are covered in boss.test.js.
 test('boss spawn search keeps a collision-free starting point unchanged',()=>{
@@ -35,4 +39,55 @@ test('boss spawn considers alternative headings before discarding a usable spot'
 test('boss spawn does not invent a position when all full-rig checks fail',()=>{
  const boundary={left:0,right:250,top:0,bottom:250};
  assert.equal(findBossSpawn({x:60,y:60,angle:0},boundary,()=>false),null);
+});
+
+test('encounter planner gives an extended boss first choice of a contested spawn',()=>{
+ const previous={boundary:ctx.arenaBoundary,planes:ctx.arenaPlanes,obstacles:ctx.obstacles};
+ try{
+  ctx.arenaBoundary={left:0,right:700,top:0,bottom:700};
+  ctx.arenaPlanes=[
+   {nx:-1,ny:0,c:0,length:1},{nx:0,ny:-1,c:0,length:1},
+   {nx:1,ny:0,c:700,length:1},{nx:0,ny:1,c:700,length:1}
+  ];
+  ctx.obstacles=[];
+  const normal={spineSegments:4,pelvisKey:'spine-3',limbs:standardLimbs()};
+  const layout=[
+   {x:350,y:350,angle:0},
+   {x:350,y:350,angle:0},
+   {x:520,y:520,angle:0}
+  ];
+  const rigs=[
+   {body:normal,scaleMultiplier:1},
+   {body:bossAnatomy('long_arms'),scaleMultiplier:BOSS_CONFIG.scale},
+   {body:normal,scaleMultiplier:1}
+  ];
+  const placed=planNeutralRigSpawns(layout,rigs);
+  assert.ok(placed&&placed.length===3);
+  assert.deepEqual(placed[1],layout[1],'the largest rig keeps the safe original position');
+  assert.notDeepEqual(placed[0],layout[0],'the player moves away instead of blocking the boss');
+  assert.deepEqual(planNeutralRigSpawns(layout,rigs),placed,'placement must not reroll on reload');
+ }finally{
+  ctx.arenaBoundary=previous.boundary;
+  ctx.arenaPlanes=previous.planes;
+  ctx.obstacles=previous.obstacles;
+ }
+});
+
+test('encounter planner fails explicitly rather than accepting overlapping bodies',()=>{
+ const previous={boundary:ctx.arenaBoundary,planes:ctx.arenaPlanes,obstacles:ctx.obstacles};
+ try{
+  ctx.arenaBoundary={left:0,right:70,top:0,bottom:70};
+  ctx.arenaPlanes=[
+   {nx:-1,ny:0,c:0,length:1},{nx:0,ny:-1,c:0,length:1},
+   {nx:1,ny:0,c:70,length:1},{nx:0,ny:1,c:70,length:1}
+  ];
+  ctx.obstacles=[];
+  const normal={spineSegments:4,pelvisKey:'spine-3',limbs:standardLimbs()};
+  const starts=[{x:35,y:35,angle:0},{x:35,y:35,angle:0}];
+  assert.equal(planNeutralRigSpawns(starts,[{body:normal,scaleMultiplier:1},{body:normal,scaleMultiplier:1}]),null);
+ }finally{
+  ctx.arenaBoundary=previous.boundary;
+  ctx.arenaPlanes=previous.planes;
+  ctx.obstacles=previous.obstacles;
+ }
 });
