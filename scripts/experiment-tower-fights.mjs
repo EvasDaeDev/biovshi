@@ -23,9 +23,10 @@ const samples=Number(args.seeds??1),seconds=Number(args.limit??35),offset=Number
 const out=args.out??'artifacts/tower-fights.json';
 const policy=args.policy??'approach';
 const selectedFloors=args.floors?.split(',').map(Number)??null;
+const bossBench=args.bossBench==='true';
 const diagnose=args.diagnose==='true';
 const maxAllowedBodyOverlapCm=Number(args.maxOverlapCm??2);
-if(!['approach','orbit'].includes(policy))throw Error('Invalid policy');
+if(!['approach','orbit','idle','evade'].includes(policy))throw Error('Invalid policy');
 if(!Number.isFinite(maxAllowedBodyOverlapCm)||maxAllowedBodyOverlapCm<0)throw Error('Invalid maximum body overlap');
 if(!Number.isInteger(samples)||samples<1||samples>20||!Number.isInteger(seconds)||seconds<5||seconds>180)throw Error('Invalid seeds/limit');
 const scenarios=[
@@ -43,6 +44,13 @@ const scenarios=[
  {kind:'boss',arena:'columns',floor:25,profiles:['boss','fast','elite']},
  {kind:'boss',arena:'columns',floor:30,profiles:['boss','strong','agile']}
 ];
+const bossBenchScenarios=[
+ {kind:'boss',arena:'ward',floor:5,profiles:['boss','basic','basic'],label:'two ordinary'},
+ {kind:'boss',arena:'ward',floor:5,profiles:['boss','basic','strong'],label:'one strong'},
+ {kind:'boss',arena:'ward',floor:5,profiles:['boss','strong','strong'],label:'two strong'},
+ {kind:'boss',arena:'ward',floor:5,profiles:['boss','basic','fast'],label:'one fast'},
+ {kind:'boss',arena:'ward',floor:5,profiles:['boss','strong','agile'],label:'strong plus agile'}
+];
 function randomGenerator(seed){
  let x=seed>>>0;return ()=>{x=(Math.imul(x,1664525)+1013904223)>>>0;return x/4294967296};
 }
@@ -52,11 +60,12 @@ function runScenario(scenario,seed){
  let dom,off=()=>{};
  const row={kind:scenario.kind,arena:scenario.arena,floor:scenario.floor,
   variant:scenario.kind==='boss'?bossVariantForFloor(scenario.floor):null,
-  profiles:scenario.profiles,seed,participants:scenario.profiles.length+1,
+  profiles:scenario.profiles,label:scenario.label??null,seed,participants:scenario.profiles.length+1,
   completed:false,winner:null,duration:0,hits:0,strikes:0,
   charges:0,sweeps:0,unstucks:0,nonFinite:0,bodyPenetrations:0,bodyOverlaps:0,
   initialPenetrations:0,initialOverlaps:0,maxBodyOverlapCm:0,overlapSamples:[],chargeProbe:{},
-  combatSamples:[],longFight:null,
+  combatSamples:[],longFight:null,bossHitsFrom:{},bossStrikesFrom:{},bossKilledBy:null,
+  patientHitsOnBoss:0,playerHitsOnBoss:0,bossHitsOnOthers:0,headHpAtEnd:null,
   errors:[],elapsedCpuMs:0};
  const began=Date.now();
  try{
@@ -144,6 +153,18 @@ function runScenario(scenario,seed){
   };
   inspect(true);
   off=onGameEvent(e=>{
+   if(e.type==='combat-strike'&&scenario.kind==='boss'){
+     if(e.to===1){
+      const source=String(e.from);
+      row.bossHitsFrom[source]=(row.bossHitsFrom[source]??0)+1;
+      if(e.from===0)row.playerHitsOnBoss++;else row.patientHitsOnBoss++;
+     }
+     if(e.from===1)row.bossHitsOnOthers++;
+   }
+   if(e.type==='combat-windup'&&scenario.kind==='boss'&&e.to===1){
+    const source=String(e.from);row.bossStrikesFrom[source]=(row.bossStrikesFrom[source]??0)+1;
+   }
+   if(e.type==='robot-immobilized'&&scenario.kind==='boss'&&e.robot===1)row.bossKilledBy=e.lastAttacker??null;
    if(e.type==='combat-unstuck')row.unstucks++;
    if(e.type==='boss-charge')row.charges++;
    if(e.type==='combat-windup'&&e.bossStyle==='sweep')row.sweeps++;
@@ -155,7 +176,16 @@ function runScenario(scenario,seed){
     others.sort((a,b)=>Math.hypot(a.x-me.x,a.y-me.y)-Math.hypot(b.x-me.x,b.y-me.y));
     const foe=others[0],dx=foe?foe.x-me.x:0,dy=foe?foe.y-me.y:0;
     const length=Math.hypot(dx,dy);
-    if(policy==='orbit'&&length>0&&length<110){
+    if(policy==='evade'){
+      const alive=ctx.robots.filter(r=>r.id!==0&&r.mobile&&r.visible);
+      const nearest=alive.sort((a,b)=>Math.hypot(a.x-me.x,a.y-me.y)-Math.hypot(b.x-me.x,b.y-me.y))[0];
+      const d=nearest?Math.hypot(nearest.x-me.x,nearest.y-me.y):Infinity;
+      if(nearest&&d<170){
+        const awayX=me.x-nearest.x,awayY=me.y-nearest.y;
+        ctx.towerInput={x:awayX/Math.max(1,d),y:awayY/Math.max(1,d)};
+      }else ctx.towerInput={x:0,y:0};
+    }else if(policy==='idle')ctx.towerInput={x:0,y:0};
+    else if(policy==='orbit'&&length>0&&length<110){
       const radial=Math.max(-.7,Math.min(.7,(length-55)/20));
       const vx=dx/length*radial-dy/length*.9;
       const vy=dy/length*radial+dx/length*.9;
@@ -177,6 +207,8 @@ function runScenario(scenario,seed){
   row.aliveAtEnd=ctx.robots.filter(r=>r.mobile).length;
   row.coins=session.players[0].balance-1000;
   row.playerAlive=ctx.robots[0].mobile;
+  row.bossAlive=scenario.kind==='boss'?ctx.robots[1].mobile:null;
+  row.headHpAtEnd=scenario.kind==='boss'?ctx.robots[1].hp.get('head'):null;
   row.longFight=diagnoseLongTowerFight(row.combatSamples,row.completed);
  }catch(error){
   row.errors.push(String(error?.stack??error).slice(0,2000));
@@ -189,18 +221,20 @@ function runScenario(scenario,seed){
  return row;
 }
 const runs=[];
-for(const scenario of scenarios.filter(s=>!selectedFloors||selectedFloors.includes(s.floor))){
+for(const scenario of (bossBench?bossBenchScenarios:scenarios).filter(s=>!selectedFloors||selectedFloors.includes(s.floor))){
  for(let sample=0;sample<samples;sample++){
   const row=runScenario(scenario,offset+sample*15485863+scenario.floor*7919);
   runs.push(row);
   console.log('FIGHT '+JSON.stringify({
-   arena:row.arena,floor:row.floor,variant:row.variant,participants:row.participants,
+   arena:row.arena,floor:row.floor,variant:row.variant,label:row.label,participants:row.participants,
    seed:row.seed,completed:row.completed,winner:row.winner,seconds:row.duration,
    hits:row.hits,strikes:row.strikes,unstucks:row.unstucks,charges:row.charges,sweeps:row.sweeps,
    nonFinite:row.nonFinite,bodyPenetrations:row.bodyPenetrations,bodyOverlaps:row.bodyOverlaps,
    initialPenetrations:row.initialPenetrations,initialOverlaps:row.initialOverlaps,
    maxBodyOverlapCm:row.maxBodyOverlapCm,chargeProbe:diagnose?row.chargeProbe:undefined,
-   playerAlive:row.playerAlive,longFight:row.longFight,
+   playerAlive:row.playerAlive,bossAlive:row.bossAlive,bossKilledBy:row.bossKilledBy,
+   patientHitsOnBoss:row.patientHitsOnBoss,playerHitsOnBoss:row.playerHitsOnBoss,
+   bossHitsOnOthers:row.bossHitsOnOthers,headHpAtEnd:row.headHpAtEnd,longFight:row.longFight,
    error:row.errors[0]?.slice(0,230)??null
   }));
  }
@@ -219,11 +253,20 @@ const summary={
  hits:runs.reduce((n,r)=>n+r.hits,0),
  charges:runs.reduce((n,r)=>n+r.charges,0),
  playerWins:runs.filter(r=>r.winner===0).length,
+ bossDeaths:runs.filter(r=>r.kind==='boss'&&r.bossAlive===false).length,
+ bossKilledByPatients:runs.filter(r=>r.kind==='boss'&&r.bossAlive===false&&r.bossKilledBy>1).length,
+ totalPatientHitsOnBoss:runs.reduce((n,r)=>n+r.patientHitsOnBoss,0),
+ totalPlayerHitsOnBoss:runs.reduce((n,r)=>n+r.playerHitsOnBoss,0),
  longFightReasons:Object.fromEntries([...new Set(runs.filter(r=>!r.completed).map(r=>r.longFight?.reason??'error'))].map(reason=>
    [reason,runs.filter(r=>!r.completed&&(r.longFight?.reason??'error')===reason).length])),
  cpuSeconds:Math.round(runs.reduce((n,r)=>n+r.elapsedCpuMs,0)/100)/10
 };
-const result={simulation:'headless real 1/60s game loop',selectedFloors,diagnose,maxAllowedBodyOverlapCm,policy:policy==='orbit'?'Player approaches and circles a nearby enemy at about 55 cm; not human performance':'Player automatically approaches nearest moving enemy and stops at 36 cm; not human performance',seconds,seeds:samples,summary,runs};
+const result={simulation:'headless real 1/60s game loop',selectedFloors,diagnose,bossBench,maxAllowedBodyOverlapCm,
+ policy:policy==='orbit'?'Player approaches and circles a nearby enemy at about 55 cm; not human performance':
+ policy==='idle'?'Player remains idle and never presses movement controls':
+ policy==='evade'?'Player avoids other fighters when closer than 170 cm and does not attack deliberately':
+ 'Player automatically approaches nearest moving enemy and stops at 36 cm; not human performance',
+ seconds,seeds:samples,summary,runs};
 fs.mkdirSync(out.split('/').slice(0,-1).join('/')||'.',{recursive:true});
 fs.writeFileSync(out,JSON.stringify(result,null,2)+'\n');
 console.log('SUMMARY '+JSON.stringify(summary));
