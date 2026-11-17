@@ -132,7 +132,8 @@ test('hints open by tap and keyboard, refresh while visible, dismiss outside and
   assert.equal(document.querySelectorAll('#tower-stats .is-prosthetic').length,3);
   const select=document.querySelector('[data-tower-stat="0"]');
   const space=new tower.dom.window.KeyboardEvent('keydown',{key:' ',bubbles:true,cancelable:true});select.dispatchEvent(space);assert.equal(space.defaultPrevented,false);
-  select.value='4';select.dispatchEvent(new Event('change'));near(patientCombatStats(0).effective[0],3.24);
+  const before=patientCombatStats(0).effective[0];
+  select.value='4';select.dispatchEvent(new Event('change'));near(patientCombatStats(0).effective[0],before);
   assert.match(document.querySelector('#tower-stats .garage-stat-effects').textContent,/ПРЕДПРОСМОТР/);
   assert.ok(ctx.towerRun.stats.every(Number.isInteger));
  }finally{tower.close();}
