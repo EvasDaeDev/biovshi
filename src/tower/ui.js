@@ -67,6 +67,26 @@ export function towerPreparation(){
   title.textContent=hasBoss(t)?`${bossName(t.level)}\nЭТАЖ №${t.level}`:`БАШНЯ · ЭТАЖ ${t.level}`;
   renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
   ctx.root.querySelector('#tower-floor-preview').innerHTML=`${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${formatChips(bossFloorReward(t))} ${hasBoss(t)?'ЗА БОССА · '+formatChips(10)+' ЗА ПАЦИЕНТА · ВСЕ ПРОТИВ ВСЕХ':'ЗА ЛИЧНОЕ ВЫБИВАНИЕ'}</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div>`;
+  const encounter=t.floorPlan;
+  const preview=ctx.root.querySelector('#tower-floor-preview');
+  if(encounter?.options.length>1){
+    const choices=document.createElement('div');choices.className='tower-challenge-options';
+    encounter.options.forEach((option,index)=>{
+      const button=document.createElement('button');button.type='button';
+      button.className='tower-challenge-option'+(index===encounter.selected?' is-selected':'');
+      button.setAttribute('aria-pressed',String(index===encounter.selected));
+      const enemies=option.profiles.map(id=>towerEnemyProfile(id).name);
+      const summary=Object.entries(Object.groupBy(enemies,name=>name))
+        .map(([name,items])=>items.length>1?name+' ×'+items.length:name).join(' · ');
+      button.textContent=(option.kind==='danger'?'ОПАСНО · +5 ЗА ВЫБИВАНИЕ':'СТАНДАРТ')+'\n'+summary;
+      button.onclick=()=>{
+        if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||index===encounter.selected)return;
+        if(selectTowerFloor(t,index)){bettingSave();ctx.startTower(ctx.towerPlayer);}
+      };
+      choices.appendChild(button);
+    });
+    preview.appendChild(choices);
+  }
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   function renderSkills(){
     const snapshot=prostheticStatSnapshot(t),stats=snapshot.effective;
