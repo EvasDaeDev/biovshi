@@ -4,6 +4,7 @@ import {towerMutationSnapshot,towerMutationSynergies,TOWER_MUTATIONS} from './mu
 import {towerSurgeryAvailableSites,towerSurgerySiteLabel,towerSurgeryCapacity,
  towerSurgeryPrice,TOWER_SURGERY_OPERATIONS} from './surgery.js';
 import {renderTowerUpgradePatient} from './upgrade-preview.js';
+import {towerPatientAnatomy} from './anatomy.js';
 
 const create=(tag,className,text)=>{
  const node=document.createElement(tag);
@@ -67,18 +68,20 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  let activeTab='mutations',hoverMutation=null,site=null;
  const control=()=>({
   proc:surgeryPanel.querySelector('[aria-label="Вид операции"]'),
-  selected:surgeryPanel.querySelector('[aria-label="Сегмент для операции"]')
+  selected:surgeryPanel.querySelector('[aria-label="Сегмент для операции"]'),
+  donor:surgeryPanel.querySelector('[aria-label="Донор для пересадки"]')
  });
  function paint(){
-  const {proc,selected}=control();
+  const {proc,selected,donor}=control();
   const surgeryOptions=proc?.value?towerSurgeryAvailableSites(run,proc.value):[];
   if(selected?.value&&surgeryOptions.includes(selected.value))site=selected.value;
   else if(!surgeryOptions.includes(site))site=surgeryOptions[0]??null;
   if(selected&&site&&surgeryOptions.includes(site))selected.value=site;
   const editingSurgery=activeTab==='surgery';
   const proposedSurgery=editingSurgery&&proc?.value&&site&&
+    (!TOWER_SURGERY_OPERATIONS[proc.value]?.donor||donor?.value)&&
     run.surgeries.length<towerSurgeryCapacity(run.level)&&!run.mutationDraft?
-    {procedure:proc.value,site}:null;
+    {procedure:proc.value,site,...(!donor?.hidden&&donor?.value?{donorId:donor.value,donorProfile:run.donorTissues?.find(item=>item.id===donor.value)?.profile}:{})}:null;
   const proposedMutation=!editingSurgery&&hoverMutation&&
     run.mutationDraft?.options.includes(hoverMutation)?hoverMutation:null;
   const before=towerMutationSnapshot(run).effective;
@@ -105,6 +108,18 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
     proposedMutation?'ПРЕДПРОСМОТР: '+TOWER_MUTATIONS[proposedMutation].name:
      'Установлено '+run.mutations.length+' модулей · активных синергий '+towerMutationSynergies(run.mutations).length;
   stats.append(create('small','tower-upgrade-stats-note',detail));
+  const anatomySummary=run=>{
+   const body=towerPatientAnatomy(run);
+   return {segments:body?.segments.length??13,
+    arms:body?.limbs.filter(l=>l.kind==='arm').length??2,
+    legs:body?.limbs.filter(l=>l.kind==='leg').length??2,
+    extended:body?.limbs.filter(l=>(l.lengthScale??1)>1).length??0};
+  };
+  const baseAnatomy=anatomySummary(run),newAnatomy=anatomySummary(draft);
+  const summary=key=>baseAnatomy[key]===newAnatomy[key]?String(baseAnatomy[key]):baseAnatomy[key]+' → '+newAnatomy[key];
+  stats.append(create('small','tower-upgrade-stats-note',
+   'АНАТОМИЯ · частей '+summary('segments')+' · рук '+summary('arms')+
+   ' · ног '+summary('legs')+' · удлинённых '+summary('extended')));
   drawing.replaceChildren();
   renderTowerUpgradePatient(drawing,run,{
    selectedSite:editingSurgery?site:null,
@@ -151,6 +166,11 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   if(selected&&!selected.dataset.upgradeBound){
    selected.dataset.upgradeBound='true';
    selected.addEventListener('change',()=>{site=selected.value;if(activeTab==='surgery')paint();});
+  }
+  const {donor}=control();
+  if(donor&&!donor.dataset.upgradeBound){
+   donor.dataset.upgradeBound='true';
+   donor.addEventListener('change',()=>{if(activeTab==='surgery')paint();});
   }
   if(!overlay.hidden)paint();
  }
