@@ -8,7 +8,7 @@ export function validInsurance(policy,record){
  return c&&Number.isSafeInteger(c.level)&&c.level>=1&&c.level<=record+1&&c.wins===c.level-1
   &&Number.isInteger(c.patient)&&c.patient>=0&&c.patient<4&&validStats(c.stats,c.wins)
   &&Array.isArray(c.prosthetics)&&JSON.stringify(c.prosthetics)===JSON.stringify(normalizeProsthetics(c.prosthetics))
-  &&validBossEncounter(c.bossEncounter,c.level);
+  &&validBossEncounter(c.bossEncounter,c.level)&&validTowerFloorPlan(c.floorPlan,c.level);
 }
 export function purchaseInsurance(session,player,tower){
  const policy=tower.insurance,buyer=session.players[player];
