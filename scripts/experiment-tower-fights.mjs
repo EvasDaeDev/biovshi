@@ -65,7 +65,8 @@ function runScenario(scenario,seed){
   charges:0,sweeps:0,unstucks:0,nonFinite:0,bodyPenetrations:0,bodyOverlaps:0,
   initialPenetrations:0,initialOverlaps:0,maxBodyOverlapCm:0,overlapSamples:[],chargeProbe:{},
   combatSamples:[],longFight:null,bossHitsFrom:{},bossStrikesFrom:{},bossKilledBy:null,
-  patientHitsOnBoss:0,playerHitsOnBoss:0,bossHitsOnOthers:0,headHpAtEnd:null,
+  patientHitsOnBoss:0,playerHitsOnBoss:0,playerHitsTotal:0,bossHitsOnOthers:0,
+  bossDeathAt:null,playerAliveAtBossDeath:null,headHpAtEnd:null,
   errors:[],elapsedCpuMs:0};
  const began=Date.now();
  try{
@@ -154,6 +155,7 @@ function runScenario(scenario,seed){
   inspect(true);
   off=onGameEvent(e=>{
    if(e.type==='combat-strike'&&scenario.kind==='boss'){
+     if(e.from===0)row.playerHitsTotal++;
      if(e.to===1){
       const source=String(e.from);
       row.bossHitsFrom[source]=(row.bossHitsFrom[source]??0)+1;
@@ -164,7 +166,11 @@ function runScenario(scenario,seed){
    if(e.type==='combat-windup'&&scenario.kind==='boss'&&e.to===1){
     const source=String(e.from);row.bossStrikesFrom[source]=(row.bossStrikesFrom[source]??0)+1;
    }
-   if(e.type==='robot-immobilized'&&scenario.kind==='boss'&&e.robot===1)row.bossKilledBy=e.lastAttacker??null;
+   if(e.type==='robot-immobilized'&&scenario.kind==='boss'&&e.robot===1){
+    row.bossKilledBy=e.lastAttacker??null;
+    row.bossDeathAt=Math.round(e.time*10)/10;
+    row.playerAliveAtBossDeath=ctx.robots[0]?.mobile??null;
+   }
    if(e.type==='combat-unstuck')row.unstucks++;
    if(e.type==='boss-charge')row.charges++;
    if(e.type==='combat-windup'&&e.bossStyle==='sweep')row.sweeps++;
@@ -234,7 +240,9 @@ for(const scenario of (bossBench?bossBenchScenarios:scenarios).filter(s=>!select
    maxBodyOverlapCm:row.maxBodyOverlapCm,chargeProbe:diagnose?row.chargeProbe:undefined,
    playerAlive:row.playerAlive,bossAlive:row.bossAlive,bossKilledBy:row.bossKilledBy,
    patientHitsOnBoss:row.patientHitsOnBoss,playerHitsOnBoss:row.playerHitsOnBoss,
-   bossHitsOnOthers:row.bossHitsOnOthers,headHpAtEnd:row.headHpAtEnd,longFight:row.longFight,
+   bossHitsOnOthers:row.bossHitsOnOthers,playerHitsTotal:row.playerHitsTotal,
+   bossDeathAt:row.bossDeathAt,playerAliveAtBossDeath:row.playerAliveAtBossDeath,
+   headHpAtEnd:row.headHpAtEnd,longFight:row.longFight,
    error:row.errors[0]?.slice(0,230)??null
   }));
  }
@@ -255,6 +263,8 @@ const summary={
  playerWins:runs.filter(r=>r.winner===0).length,
  bossDeaths:runs.filter(r=>r.kind==='boss'&&r.bossAlive===false).length,
  bossKilledByPatients:runs.filter(r=>r.kind==='boss'&&r.bossAlive===false&&r.bossKilledBy>1).length,
+ bossKilledByPatientsWithoutPlayerHit:runs.filter(r=>r.kind==='boss'&&r.bossAlive===false&&r.bossKilledBy>1&&r.playerHitsTotal===0).length,
+ bossKilledByPatientsWhilePlayerAlive:runs.filter(r=>r.kind==='boss'&&r.bossAlive===false&&r.bossKilledBy>1&&r.playerAliveAtBossDeath).length,
  totalPatientHitsOnBoss:runs.reduce((n,r)=>n+r.patientHitsOnBoss,0),
  totalPlayerHitsOnBoss:runs.reduce((n,r)=>n+r.playerHitsOnBoss,0),
  longFightReasons:Object.fromEntries([...new Set(runs.filter(r=>!r.completed).map(r=>r.longFight?.reason??'error'))].map(reason=>
