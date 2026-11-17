@@ -75,7 +75,7 @@ async function boot(){
  ctx.startTower=async player=>{
    const current=ctx.betting;bettingCancel();ctx.towerPlayer=player;
    const tower=structuredClone(towerFor(current,player));current.towerPlayerId=player;bettingSave();
-   await transition({session:current,entry:'tower',tower,arenaId:randomArenaId()});
+   await transition({session:current,entry:'tower',tower,arenaId:selectedTowerFloor(tower)?.arenaId??randomArenaId()});
  };
  ctx.startTotalizator=()=>{bettingCancel();return transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId});};
  ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});setPaused(true);ctx.afterSetup='menu';bettingSetup();};
