@@ -6,12 +6,20 @@ import {betNewSession} from '../src/betting/ledger.js';
 import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 import {towerFor,completeTower,resetTower,validTower,buyTowerInsurance,rewardTower} from '../src/tower/model.js';
 import {validInsurance} from '../src/tower/insurance.js';
+import {chooseTowerMutation} from '../src/tower/mutations.js';
 import {redistributeStat} from '../src/garage/model.js';
 import {startBossScenario} from '../scripts/boss-harness.mjs';
 import {towerPreparation,settleTower,towerResults} from '../src/tower/ui.js';
 import {advanceStartup} from '../src/game/session.js';
 import {ctx} from '../src/game/state.js';
-function reach(s,player,floor){while(towerFor(s,player).level<floor)completeTower(s,player,true,()=>.99);const t=towerFor(s,player);t.preparing=false;return t;}
+function reach(s,player,floor){
+ while(towerFor(s,player).level<floor){
+  const run=towerFor(s,player);
+  if(run.mutationDraft)assert.equal(chooseTowerMutation(run,run.mutationDraft.options[0]),true);
+  completeTower(s,player,true,()=>.99);
+ }
+ const t=towerFor(s,player);t.preparing=false;return t;
+}
 
 test('new DMS purchases grow the next tariff by ten percent; same-floor policy cannot be purchased twice',()=>{
  const s=betNewSession(['Игрок'],1000),t=reach(s,0,3);
