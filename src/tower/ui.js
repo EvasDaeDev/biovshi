@@ -75,9 +75,8 @@ export function towerPreparation(){
       const button=document.createElement('button');button.type='button';
       button.className='tower-challenge-option'+(index===encounter.selected?' is-selected':'');
       button.setAttribute('aria-pressed',String(index===encounter.selected));
-      const enemies=option.profiles.map(id=>towerEnemyProfile(id).name);
-      const counts=new Map();
-      for(const name of enemies)counts.set(name,(counts.get(name)??0)+1);
+      const profileCounts=new Map();
+      for(const id of option.profiles)profileCounts.set(id,(profileCounts.get(id)??0)+1);
       const heading=document.createElement('strong');
       heading.textContent=(option.kind==='danger'?'ОПАСНО · 15 ЗА ВЫБИВАНИЕ':'СТАНДАРТ · 10 ЗА ВЫБИВАНИЕ')+' · '+option.profiles.length+' ВРАГ.';
       button.appendChild(heading);
