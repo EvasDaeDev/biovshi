@@ -33,10 +33,12 @@ jobs:
         run: npm run build
       - name: Simulate tower battles (all seven arenas and six bosses)
         run: node scripts/experiment-tower-fights.mjs --seeds=3 --limit=75 --policy=orbit --out=artifacts/tower-fights.json
+      - name: Diagnose boss charges and live body overlaps
+        run: node scripts/experiment-tower-fights.mjs --seeds=4 --limit=75 --floors=15,25,30 --diagnose=true --policy=orbit --out=artifacts/tower-charge-diagnostics.json
       - name: Upload battle results even after a failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tower-fight-report
-          path: artifacts/tower-fights.json
+          path: artifacts/*.json
           if-no-files-found: warn
