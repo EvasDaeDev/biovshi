@@ -4,7 +4,7 @@ import {SKILLS,skillValue,skillHint} from './patient.js';
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 import { friendlyAction, segmentDisplayState } from './telemetry.js';
-import { PORTRAIT_BONES,paintPatientPortrait } from './patient-portrait.js';
+import { PORTRAIT_BONES,portraitBonesForBody,paintPatientPortrait } from './patient-portrait.js';
 const setText = (node, value) => { if (node.textContent !== value) node.textContent = value; };
 const setClass = (node,key,on) => {if(node.classList.contains(key)!==on)node.classList.toggle(key,on);};
 const formatTrauma = new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
@@ -48,7 +48,7 @@ export function paintTelemetry() {
     }
     setClass(card.card,'bleeding', ctx.combat.unarmedDeadline[r.id] !== null && r.mobile);
     setClass(card.card,'disabled', !r.mobile);
-    const bones=r.isBoss?bossPortraitBones(r.body):PORTRAIT_BONES;
+    const bones=r.isBoss?bossPortraitBones(r.body):r.body?.skinParts?portraitBonesForBody(r.body):PORTRAIT_BONES;
     paintPatientPortrait(card,r.id,bones.map(({key})=>({key,...segmentDisplayState(r,key)})),bones);
   }
 }
