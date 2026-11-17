@@ -12,10 +12,11 @@ export function patientCombatStats(id,robot=ctx.robots?.[id]){
  const cached=combatStatsCache.get(robot);
  if(cached&&cached.parts===patient?.prosthetics&&cached.segments===robot.segmentCount
    &&cached.hasHead===robot.hasHead&&cached.mutations===(patient?.mutations??[]).join(',')
+   &&cached.surgeries===JSON.stringify(patient?.surgeries??[])
    &&cached.snapshot.base.every((value,index)=>value===base[index]))return cached.snapshot;
  const snapshot=snapshotFor(patient,robot,id);
  combatStatsCache.set(robot,{parts:patient?.prosthetics,segments:robot.segmentCount,hasHead:robot.hasHead,
-  mutations:(patient?.mutations??[]).join(','),snapshot});
+  mutations:(patient?.mutations??[]).join(','),surgeries:JSON.stringify(patient?.surgeries??[]),snapshot});
  return snapshot;
 }
 export const patientSkin=id=>ctx.mode==='tower'&&id===0?ctx.towerRun.patient:id%4;
