@@ -85,6 +85,7 @@ test('post-boss module choices lock fight entry and update the actual player com
   assert.deepEqual(ctx.towerGarage[0].mutations,t.mutations);
   assert.equal(fight.disabled,false);
   assert.match(panel.textContent,/УСТАНОВЛЕНО/);
+  document.querySelector('.tower-upgrade-close').click();
   const after=patientCombatStats(0,ctx.robots[0]).effective;
   assert.ok(after.some((x,i)=>x>before[i]),'module changes real patient combat statistics');
   assert.ok(validTower(t));
@@ -122,6 +123,67 @@ test('surgeon lets the player buy one body-specific operation and saves combat i
   assert.deepEqual(t.insurance.checkpoint.surgeries,t.surgeries);
   assert.equal(s.players[0].balance,220);
   assert.ok(validTower(t));
+ }finally{close(dom);}
+});
+
+test('modernization is a separate window with a horizontal patient and two real tabs',()=>{
+ const s=betNewSession(['Модернизация'],250),t=towerFor(s,0),dom=setup(s,t,'ward');
+ try{
+  const launch=document.querySelector('#tower-upgrade-open');
+  const modal=document.querySelector('#tower-upgrade-window');
+  assert.ok(launch,'preparation opens the separate upgrade dialog');
+  assert.equal(modal.hidden,true,'no forced popup before first boss');
+  assert.equal(document.querySelector('#tower-prep-mutations').closest('#tower-upgrade-window'),modal);
+  assert.equal(document.querySelector('#tower-prep-surgery').closest('#tower-upgrade-window'),modal);
+  launch.click();
+  assert.equal(modal.hidden,false);
+  assert.match(modal.textContent,/МОДЕРНИЗАЦИЯ ПАЦИЕНТА/);
+  assert.equal(modal.querySelectorAll('[role="tab"]').length,2);
+  assert.equal(modal.querySelector('[data-tower-patient-pose]').getAttribute('data-tower-patient-pose'),'horizontal');
+  assert.equal(modal.querySelectorAll('[data-upgrade-site]').length,13);
+  modal.querySelector('[data-upgrade-tab="surgery"]').click();
+  assert.equal(modal.querySelector('[data-upgrade-tab="surgery"]').getAttribute('aria-selected'),'true');
+  assert.match(modal.querySelector('#tower-prep-surgery').textContent,/откроются после прохождения пятого этажа/);
+  modal.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  assert.equal(modal.hidden,true);
+  assert.equal(document.activeElement,launch,'closing returns focus to preparation');
+  launch.click();assert.equal(modal.hidden,false);
+  assert.equal(openMenu(),true);
+  assert.equal(modal.hidden,true,'leaving preparation closes the dialog');
+ }finally{close(dom);}
+});
+
+test('modernization selects surgical body parts from horizontal patient and previews atlas before purchase',()=>{
+ const s=betNewSession(['Операция'],300),t=towerFor(s,0);
+ for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ const dom=setup(s,t,'ward');
+ try{
+  const modal=document.querySelector('#tower-upgrade-window');
+  assert.equal(modal.hidden,false,'boss milestone reward opens on modifications');
+  const draftButton=modal.querySelector('.tower-mutation-option');
+  assert.ok(draftButton);
+  draftButton.dispatchEvent(new dom.window.MouseEvent('mouseenter',{bubbles:true}));
+  assert.match(modal.querySelector('#tower-upgrade-stats').textContent,/ПРЕДПРОСМОТР/);
+  draftButton.click();
+  assert.equal(t.mutationDraft,undefined);
+  assert.equal(modal.querySelector('#tower-upgrade-open'),null);
+  modal.querySelector('[data-upgrade-tab="surgery"]').click();
+  const procedure=modal.querySelector('[aria-label="Вид операции"]');
+  procedure.value='impact';procedure.dispatchEvent(new dom.window.Event('change',{bubbles:true}));
+  const target=modal.querySelector('[data-upgrade-site="arm--1-lower"]');
+  assert.equal(target.getAttribute('aria-disabled'),'false');
+  target.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true}));
+  assert.equal(modal.querySelector('[aria-label="Сегмент для операции"]').value,'arm--1-lower');
+  assert.match(modal.querySelector('#tower-upgrade-stats').textContent,/ПРЕДПРОСМОТР: Боек/);
+  assert.match(modal.querySelector('[data-upgrade-site="arm--1-lower"] image').getAttribute('href'),/ar_surg_impact\.png$/);
+  const before=patientCombatStats(0,ctx.robots[0]).effective[1];
+  modal.querySelector('.tower-surgery-purchase').click();
+  assert.deepEqual(t.surgeries,[{site:'arm--1-lower',procedure:'impact'}]);
+  assert.ok(patientCombatStats(0,ctx.robots[0]).effective[1]>before);
+  assert.match(modal.querySelector('#tower-upgrade-feedback').textContent,/Операция/);
+  modal.querySelector('.tower-upgrade-close').click();
+  assert.equal(modal.hidden,true);
+  assert.equal(document.querySelector('#tower-fight').disabled,false);
  }finally{close(dom);}
 });
 
