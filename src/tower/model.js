@@ -37,7 +37,7 @@ export function towerFor(session,player){
 export function validTower(t){
  if(!t||typeof t!=='object')return false;
  const count=towerEnemyCount(t),optionalCount=n=>n===null||Number.isSafeInteger(n)&&n>=0;
- return validBossEncounter(t.bossEncounter,t.level)&&t&&t.version===2&&Number.isSafeInteger(t.level)&&t.level>=1&&Number.isSafeInteger(t.wins)&&t.wins===t.level-1
+ return validBossEncounter(t.bossEncounter,t.level)&&validTowerFloorPlan(t.floorPlan,t.level)&&t&&t.version===2&&Number.isSafeInteger(t.level)&&t.level>=1&&Number.isSafeInteger(t.wins)&&t.wins===t.level-1
   &&Number.isInteger(t.patient)&&t.patient>=0&&t.patient<4&&validStats(t.stats,t.wins)
   &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&validArtifactCollection(t.artifacts,t.record)&&optionalCount(t.runKills)&&optionalCount(t.runCoins)&&validInsurance(t.insurance,t.record)
   &&(t.legacyEnemyCount===undefined||(t.legacyEnemyCount===t.level||t.legacyEnemyCount===1))
