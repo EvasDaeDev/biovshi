@@ -157,6 +157,7 @@ export function towerPreparation(){
     const transfer=draftStats.reduce((sum,v,i)=>sum+Math.max(0,v-t.stats[i]),0);
     const apply=fields.querySelector('[data-tower-apply]');
     apply.disabled=!changed||transfer!==1||!validStats(draftStats,t.wins)
+      ||t.arenaRerollLocked||Boolean(t.rewarded?.length)
       ||ctx.betting.players[ctx.towerPlayer].balance<TOWER_STAT_CHANGE_PRICE;
     fields.querySelector('.tower-stat-message').textContent=lastStatReceipt?'✓ '+lastStatReceipt:
       changed?'ПРЕДПРОСМОТР · изменение вступит в силу только после оплаты 50 монет.':
