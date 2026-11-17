@@ -114,6 +114,7 @@ export function towerPreparation(){
   }
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   let upgradeModal=null;
+  let lastSurgeryReceipt=null,lastMutationReceipt=null;
   const upgradeMessage=message=>{
     ctx.root.querySelector('#tower-prep-error').textContent=message;
     const output=ctx.root.querySelector('#tower-upgrade-feedback');
@@ -159,6 +160,13 @@ export function towerPreparation(){
     progress.className='tower-mutation-progress';
     progress.textContent=`КОМПЛЕКТ ${t.mutations.length}/${TOWER_MUTATION_IDS.length} · СИНЕРГИИ ${towerMutationSynergies(t.mutations).length}/${Object.keys(TOWER_MUTATION_SYNERGIES).length}`;
     mutationPanel.append(progress);
+    if(lastMutationReceipt){
+      const receipt=document.createElement('p');
+      receipt.className='tower-operation-receipt';
+      receipt.setAttribute('role','status');
+      receipt.textContent='✓ '+lastMutationReceipt;
+      mutationPanel.append(receipt);
+    }
     if(t.mutationDraft){
       const note=document.createElement('small');
       note.textContent='Выбери один из предложенных модулей. Он останется до конца забега; ДМС сохраняет установленные модули.';
@@ -182,8 +190,9 @@ export function towerPreparation(){
         button.onclick=()=>{
           if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||!chooseTowerMutation(t,id))return;
           ctx.towerGarage[0].mutations=[...t.mutations];
+          lastMutationReceipt='Модуль установлен: '+module.name;
           bettingSave();renderSkills();renderMutations();syncFightLock();renderSurgery();upgradeModal?.refresh();
-          upgradeMessage('Модуль установлен: '+module.name);
+          upgradeMessage(lastMutationReceipt);
         };
         choices.append(button);
       }
@@ -229,6 +238,13 @@ export function towerPreparation(){
     heading.className='tower-surgery-title';
     heading.textContent='ХИРУРГИЯ · '+t.surgeries.length+'/'+slots;
     surgeryPanel.append(heading);
+    if(lastSurgeryReceipt){
+      const receipt=document.createElement('p');
+      receipt.className='tower-operation-receipt';
+      receipt.setAttribute('role','status');
+      receipt.textContent='✓ '+lastSurgeryReceipt;
+      surgeryPanel.append(receipt);
+    }
     if(t.level<TOWER_SURGERY_MIN_LEVEL){
       const soon=document.createElement('small');
       soon.textContent='Операции откроются после прохождения пятого этажа и победы над боссом.';
@@ -293,9 +309,10 @@ export function towerPreparation(){
         const procedure=procedureSelect.value,site=siteSelect.value;
         const price=buyTowerSurgery(ctx.betting,ctx.towerPlayer,procedure,site,donorSelect.hidden?null:donorSelect.value);
         ctx.towerGarage[0].surgeries=structuredClone(t.surgeries);
+        lastSurgeryReceipt='Операция «'+TOWER_SURGERY_OPERATIONS[procedure].name+'» выполнена на '+towerSurgerySiteLabel(site)+' · −'+price+' монет';
         bettingSave();renderSkills();renderSurgery();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
         renderInsurance();updateTowerHud();upgradeModal?.refresh();
-        upgradeMessage('Операция «'+TOWER_SURGERY_OPERATIONS[procedure].name+'» выполнена: −'+price+' монет.');
+        upgradeMessage(lastSurgeryReceipt);
       }catch(error){upgradeMessage(error.message);}
     };
     controls.append(procedureSelect,siteSelect,donorSelect,purchase);
