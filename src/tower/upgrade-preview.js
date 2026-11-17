@@ -11,23 +11,34 @@ const make=(name,attributes={},parent=null)=>{
  for(const [key,value] of Object.entries(attributes))node.setAttribute(key,String(value));
  parent?.appendChild(node);return node;
 };
-export const TOWER_PATIENT_POSE=Object.freeze({
- // Head to the RIGHT, feet to the LEFT; limbs are extended and all 13
- // mapped parts are independently selectable. No animation or game physics.
- 'leg--1-lower':[[132,63],[58,37]],
- 'leg-1-lower':[[132,137],[58,163]],
- 'leg--1-upper':[[193,99],[132,63]],
- 'leg-1-upper':[[193,101],[132,137]],
- 'arm--1-lower':[[281,55],[229,24]],
- 'arm-1-lower':[[281,145],[229,176]],
- 'arm--1-upper':[[323,93],[281,55]],
- 'arm-1-upper':[[323,107],[281,145]],
- 'spine-3':[[217,100],[193,100]],
- 'spine-2':[[249,100],[217,100]],
- 'spine-1':[[281,100],[249,100]],
- 'spine-0':[[323,100],[281,100]],
- 'head':[[390,100],[362,100]]
-});
+// Keep static anatomy proportional to combat kinematics: game uses
+// vertebraBaseCm * robot.scale, 27/29 * scale for arms and 32/33 for legs.
+// Only the overall preview zoom differs, never the size of individual parts.
+import {CONFIG} from '../config.js';
+const PREVIEW_ZOOM=3.2;
+const boneScale=CONFIG.robot.scale*PREVIEW_ZOOM;
+const spineStep=CONFIG.robot.vertebraBaseCm*boneScale;
+const armUpper=27*boneScale,armLower=29*boneScale;
+const legUpper=32*boneScale,legLower=33*boneScale;
+const point=(x,y,dx,dy,len)=>[x+dx*len,y+dy*len];
+const chest=[290,100],neck=[chest[0]+20*boneScale,100];
+const spine=Array.from({length:5},(_,i)=>[chest[0]-spineStep*i,100]);
+const pose={};
+for(let i=0;i<4;i++)pose['spine-'+i]=[spine[i],spine[i+1]];
+pose.head=[[neck[0]-10*boneScale,100],[neck[0]+10*boneScale,100]];
+for(const side of [-1,1]){
+ const armJoint=point(...chest,.58,side*.814616,armUpper);
+ const armTip=point(...armJoint,.74,side*.672607,armLower);
+ pose['arm-'+side+'-upper']=[chest,armJoint];
+ pose['arm-'+side+'-lower']=[armJoint,armTip];
+ const hip=spine[4];
+ const knee=point(...hip,-.75,side*.661438,legUpper);
+ const foot=point(...knee,-.8,side*.6,legLower);
+ pose['leg-'+side+'-upper']=[hip,knee];
+ pose['leg-'+side+'-lower']=[knee,foot];
+}
+export const TOWER_PATIENT_POSE=Object.freeze(pose);
+
 const labelFor=site=>site==='head'?'Голова':
  site==='spine-0'?'Грудной сегмент':towerSurgerySiteLabel(site);
 export function renderTowerUpgradePatient(target,patient,{
@@ -58,11 +69,6 @@ export function renderTowerUpgradePatient(target,patient,{
    transform:'matrix('+skinMatrix({x:ax,y:ay},{x:bx,y:by},part).join(' ')+')',
    class:'tower-upgrade-body-part'+(selected?' is-selected':'')+(selectable?' is-selectable':'')
   },svg);
-  const selectedFrame=make('rect',{
-   x:4,y:17,width:56,height:30,rx:7,
-   fill:selected?'#9d834832':'transparent',
-   stroke:selected?'#ebc87d':'transparent','stroke-width':2.5
-  },g);
   const sprite=make('svg',{
    x:0,y:0,width:64,height:64,
    viewBox:`${part.col*64} ${part.row*64} 64 64`,
@@ -84,8 +90,6 @@ export function renderTowerUpgradePatient(target,patient,{
     if(e.key==='Enter'||e.key===' '){e.preventDefault();onSelect(site);}
    });
   }
-  // Retain reference for future appearance updates in a single redraw.
-  selectedFrame.setAttribute('data-upgrade-highlight',site);
  }
  return svg;
 }
