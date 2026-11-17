@@ -51,9 +51,11 @@ export function towerUpgradeAtlas(patient,site,{previewSurgery=null,previewMutat
   (patient?.surgeries??[]).find(op=>op.site===site);
  if(surgery&&TOWER_SURGERY_ATLAS[surgery.procedure])
   return TOWER_SURGERY_ATLAS[surgery.procedure];
- if(previewMutation&&towerUpgradeApplies(previewMutation,site))
-  return TOWER_MUTATION_ATLAS[previewMutation]??null;
  for(const id of patient?.mutations??[])
   if(towerUpgradeApplies(id,site))return TOWER_MUTATION_ATLAS[id]??null;
+ // A hovered/pending module only fills free sprite slots; it does not
+ // hide an earlier installed module that will remain visible after purchase.
+ if(previewMutation&&towerUpgradeApplies(previewMutation,site))
+  return TOWER_MUTATION_ATLAS[previewMutation]??null;
  return null;
 }
