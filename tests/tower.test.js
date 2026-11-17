@@ -266,7 +266,7 @@ test('tower selectors automatically transfer a point, show standard effects and 
  let speed=document.querySelector('[data-tower-stat="0"]');speed.value='4';speed.dispatchEvent(new Event('change'));
  assert.deepEqual(towerFor(s,0).stats,[4,2,3]);assert.deepEqual(ctx.towerGarage[0].stats,[4,2,3]);
  assert.deepEqual([...document.querySelectorAll('[data-tower-stat]')].map(n=>Number(n.value)),[4,2,3]);
- assert.match(document.querySelector('#tower-stats .garage-stat-effects').textContent,/Скор\. 120% Мобиль\. 100% Сила \+0%крит\./);
+ assert.match(document.querySelector('#tower-stats .garage-stat-effects').textContent,/Скор\. 120% Мобиль\. 100% Крит\. 0% · откат ударов 100%/);
  assert.deepEqual(bettingLoad().towers[0].stats,[4,2,3]);
  const strength=document.querySelector('[data-tower-stat="1"]');strength.value='4';strength.dispatchEvent(new Event('change'));
  assert.deepEqual(towerFor(s,0).stats,[3,4,2],'changing the other selector replaces the previous transfer');
