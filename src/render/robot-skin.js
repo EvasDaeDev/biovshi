@@ -81,7 +81,16 @@ export function createRobotSkin(robot) {
       android?assetUrl(ASSETS.textures.robotAndroid):url;
     const piece=createPiece(key,spriteUrl,/^(arm|leg)/.test(key)?limbs:body,parts[key]);
     piece.image.addEventListener('load',()=>activate(true),{once:true});
-    piece.image.addEventListener('error',()=>activate(false));
+    if(replacement){
+      // A user-authored upgrade PNG may be absent or malformed. Keep the rest
+      // of the patient visible and fall back only for that anatomical cell.
+      piece.image.addEventListener('error',()=>{
+        const fallbackUrl=android?assetUrl(ASSETS.textures.robotAndroid):url;
+        if(piece.url===fallbackUrl){activate(false);return;}
+        piece.url=fallbackUrl;
+        attr(piece.image,'href',fallbackUrl);
+      });
+    }else piece.image.addEventListener('error',()=>activate(false));
     pieces.set(key,piece);
   }
   attr(robot.actor,'data-skin','r_0'+(robot.id+1));
