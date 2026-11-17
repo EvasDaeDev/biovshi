@@ -1,0 +1,29 @@
+name: Tower experimental validation
+
+on:
+  push:
+    branches:
+      - experiment/tower-bosses
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tower-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out experimental code
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Run full game regression suite
+        run: npm test
+      - name: Build playable game
+        run: npm run build
