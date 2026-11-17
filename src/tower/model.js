@@ -1,5 +1,5 @@
 import {newInsurance,validInsurance,purchaseInsurance} from './insurance.js';
-import {ensureTowerFloorPlan,selectedTowerFloor,towerFloorCount,validTowerFloorPlan} from './floors.js';
+import {selectedTowerFloor,towerFloorCount,validTowerFloorPlan} from './floors.js';
 import {TEST_BUILD} from '../build-channel.js';
 import {isBossFloor,hasBoss} from '../boss/config.js';
 import {ensureBossEncounter,validBossEncounter,bossFloorReward} from '../boss/encounter.js';
