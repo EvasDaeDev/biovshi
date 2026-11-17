@@ -18,6 +18,7 @@ import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 import {initializeGame} from '../src/game/initialize.js';
 import {ctx} from '../src/game/state.js';
 import {installTowerUI,openMenu,settleTower} from '../src/tower/ui.js';
+import {initializeModalFocus} from '../src/ui/modal-focus.js';
 import {controlledIntent} from '../src/tower/input.js';
 import {advanceStartup} from '../src/game/session.js';
 import {step} from '../src/game/loop.js';
@@ -124,6 +125,70 @@ test('surgeon lets the player buy one body-specific operation and saves combat i
   assert.deepEqual(t.insurance.checkpoint.surgeries,t.surgeries);
   assert.equal(s.players[0].balance,220);
   assert.ok(validTower(t));
+ }finally{close(dom);}
+});
+
+test('real global modal guard allows mouse and touch events inside modernization but blocks the background',()=>{
+ const s=betNewSession(['Защита кликов'],300),run=towerFor(s,0);
+ const dom=setup(s,run,'ward');
+ try{
+  document.querySelector('#launch-overlay').hidden=true;
+  initializeModalFocus(); // The real app installs this after Tower UI.
+  const launch=document.querySelector('#tower-upgrade-open');
+  const modal=document.querySelector('#tower-upgrade-window');
+  launch.click();
+  assert.equal(modal.open,true);
+  const surgery=modal.querySelector('[data-upgrade-tab="surgery"]');
+  for(const type of ['pointerdown','pointerup'])
+   assert.equal(surgery.dispatchEvent(new dom.window.MouseEvent(type,{bubbles:true,cancelable:true})),true,
+    type+' must not be cancelled by the global modal guard');
+  surgery.click();
+  assert.equal(surgery.getAttribute('aria-selected'),'true',
+   'actual bubbling click must reach the surgical tab');
+  const tabEvent=new dom.window.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});
+  surgery.dispatchEvent(tabEvent);
+  assert.equal(tabEvent.defaultPrevented,false,
+   'native modal owns keyboard focus, not the underlying preparation sheet');
+  let backgroundClicks=0;
+  const fight=document.querySelector('#tower-fight');
+  fight.addEventListener('click',()=>backgroundClicks++);
+  fight.click();
+  assert.equal(backgroundClicks,0,'background fight must remain blocked while upgrading');
+  assert.equal(ctx.startup.phase,'tower-ready');
+  modal.querySelector('.tower-upgrade-close').click();
+  assert.equal(modal.open,false,'cross button must pass global capture handler');
+  assert.equal(modal.hidden,true);
+  launch.click();
+  assert.equal(modal.open,true,'the same dialog must reopen');
+  modal.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+  assert.equal(modal.open,false,'Escape must close the dialog');
+ }finally{close(dom);}
+});
+test('global capture guard allows auto-open boss reward choice and live surgery purchase',()=>{
+ const s=betNewSession(['Награда и хирургия'],300),run=towerFor(s,0);
+ for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ const dom=setup(s,run,'ward');
+ try{
+  document.querySelector('#launch-overlay').hidden=true;
+  const modal=document.querySelector('#tower-upgrade-window');
+  assert.equal(modal.open,true,'boss reward dialog opens before global modal focus initialization');
+  initializeModalFocus();
+  const module=modal.querySelector('.tower-mutation-option');
+  module.click();
+  assert.equal(run.mutationDraft,undefined,'module selection must not be swallowed by capture guard');
+  const tab=modal.querySelector('[data-upgrade-tab="surgery"]');
+  tab.click();
+  assert.equal(tab.getAttribute('aria-selected'),'true');
+  const proc=modal.querySelector('[aria-label="Вид операции"]');
+  proc.value='impact';proc.dispatchEvent(new dom.window.Event('change',{bubbles:true}));
+  const segment=modal.querySelector('[data-upgrade-site="arm-1-upper"]');
+  segment.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true,cancelable:true}));
+  assert.equal(modal.querySelector('[aria-label="Сегмент для операции"]').value,'arm-1-upper');
+  modal.querySelector('.tower-surgery-purchase').click();
+  assert.deepEqual(run.surgeries,[{site:'arm-1-upper',procedure:'impact'}],
+   'surgery purchase must receive bubbling click through modal focus');
+  modal.querySelector('.tower-upgrade-close').click();
+  assert.equal(modal.open,false);
  }finally{close(dom);}
 });
 
