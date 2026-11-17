@@ -15,6 +15,7 @@ import {bettingSetup,bettingCancel,bettingReadDraft} from '../betting/ui.js';
 import {patientRecovery,validStats,earnedStats,redistributeStat,statMultiplier,critChance} from '../garage/model.js';
 import {recoverTowerGrafts} from './anatomy.js';
 import {startSpawnSequence} from '../game/session.js';
+import {rebuildRobots} from '../game/arena.js';
 import {onGameEvent} from '../game/event-bus.js';
 import {installTowerInput} from './input.js';
 import {SKILLS,skillHintAttributes} from '../ui/patient.js';
@@ -345,7 +346,18 @@ export function towerPreparation(){
     if(t.mutationDraft){ctx.root.querySelector('#tower-prep-error').textContent='Сначала выбери модификацию после победы над боссом.';return;}
     const stats=[...fields.querySelectorAll('select')].map(n=>Number(n.value));
     if(!validStats(stats,t.wins)){ctx.root.querySelector('#tower-prep-error').textContent='Можно перенести одно очко между навыками, сохранив их сумму.';return;}
-    t.stats=stats;t.preparing=false;ctx.towerGarage[0].stats=[...stats];bettingSave();upgradeModal?.close();panel.hidden=true;
+    t.stats=stats;t.preparing=false;
+    // Preparing the floor edits the canonical saved run, while initializeGame
+    // originally created a detached snapshot and its robot BEFORE purchases.
+    // Refresh both sources before the first frame of this very floor.
+    ctx.towerRun=structuredClone(t);
+    Object.assign(ctx.towerGarage[0],{
+      stats:[...t.stats],mutations:[...t.mutations],surgeries:structuredClone(t.surgeries),
+      prosthetics:[...(t.prosthetics??[]),...(t.graftProsthetics??[])]
+    });
+    bettingSave();upgradeModal?.close();panel.hidden=true;
+    rebuildRobots();
+    ctx.telemetryDirty=true;ctx.lastTelemetryAt=-Infinity;
     ctx.root.querySelector('#tower-controls').hidden=false;startSpawnSequence();
   };
   (t.mutationDraft?mutationPanel.querySelector('.tower-mutation-option'):fightButton)?.focus();
