@@ -124,7 +124,7 @@ test('boss card conceals stats with skulls, hides trauma and describes destructi
 });
 
 test('boss fallback handles every anatomy when texture loading fails',()=>{
- for(const {id} of BOSS_VARIANTS){const f=startBossScenario({variant:id,textured:false});try{f.boss.paint(0);assert.equal(f.boss.actor.querySelectorAll('[data-robot-fallback]').length,2);assert.doesNotMatch(f.boss.actor.outerHTML,/NaN|undefined/);}finally{f.close();}}
+ for(const {id,spineSegments} of BOSS_VARIANTS){const f=startBossScenario({variant:id,arena:spineSegments>6?'columns':'ward',textured:false});try{f.boss.paint(0);assert.equal(f.boss.actor.querySelectorAll('[data-robot-fallback]').length,2);assert.doesNotMatch(f.boss.actor.outerHTML,/NaN|undefined/);}finally{f.close();}}
 });
 
 test('boss encounter survives serialization, rerolls only on the next boss floor and preserves old paid floors',()=>{
