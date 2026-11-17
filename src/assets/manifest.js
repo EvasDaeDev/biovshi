@@ -28,6 +28,10 @@ export const ASSETS = {
     robotB: 'assets/textures/robots/r_02.png',
     robotC: 'assets/textures/robots/r_03.png',
     robotD: 'assets/textures/robots/r_04.png',
+    robotEnemy1: 'assets/textures/robots/e_01.png',
+    robotEnemy2: 'assets/textures/robots/e_02.png',
+    robotEnemy3: 'assets/textures/robots/e_03.png',
+    robotEnemy4: 'assets/textures/robots/e_04.png',
   },
   sounds: {
     // Patient voices are separate from the impact and severing effects.
