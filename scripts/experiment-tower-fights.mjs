@@ -23,7 +23,9 @@ const out=args.out??'artifacts/tower-fights.json';
 const policy=args.policy??'approach';
 const selectedFloors=args.floors?.split(',').map(Number)??null;
 const diagnose=args.diagnose==='true';
+const maxAllowedBodyOverlapCm=Number(args.maxOverlapCm??2);
 if(!['approach','orbit'].includes(policy))throw Error('Invalid policy');
+if(!Number.isFinite(maxAllowedBodyOverlapCm)||maxAllowedBodyOverlapCm<0)throw Error('Invalid maximum body overlap');
 if(!Number.isInteger(samples)||samples<1||samples>20||!Number.isInteger(seconds)||seconds<5||seconds>180)throw Error('Invalid seeds/limit');
 const scenarios=[
  {kind:'normal',arena:'ring',floor:3,profiles:['basic','fast']},
@@ -212,9 +214,10 @@ const summary={
  playerWins:runs.filter(r=>r.winner===0).length,
  cpuSeconds:Math.round(runs.reduce((n,r)=>n+r.elapsedCpuMs,0)/100)/10
 };
-const result={simulation:'headless real 1/60s game loop',selectedFloors,diagnose,policy:policy==='orbit'?'Player approaches and circles a nearby enemy at about 55 cm; not human performance':'Player automatically approaches nearest moving enemy and stops at 36 cm; not human performance',seconds,seeds:samples,summary,runs};
+const result={simulation:'headless real 1/60s game loop',selectedFloors,diagnose,maxAllowedBodyOverlapCm,policy:policy==='orbit'?'Player approaches and circles a nearby enemy at about 55 cm; not human performance':'Player automatically approaches nearest moving enemy and stops at 36 cm; not human performance',seconds,seeds:samples,summary,runs};
 fs.mkdirSync(out.split('/').slice(0,-1).join('/')||'.',{recursive:true});
 fs.writeFileSync(out,JSON.stringify(result,null,2)+'\n');
 console.log('SUMMARY '+JSON.stringify(summary));
 console.log('REPORT '+out);
-if(summary.errors||summary.nonFinite||summary.initialPenetrations||summary.initialOverlaps)process.exitCode=1;
+if(summary.errors||summary.nonFinite||summary.initialPenetrations||summary.initialOverlaps||
+ summary.maxBodyOverlapCm>maxAllowedBodyOverlapCm)process.exitCode=1;
