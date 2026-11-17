@@ -3,6 +3,8 @@ import {bossName} from '../boss/names.js';
 import {setPaused} from '../ui/controls.js';
 import {hasBoss} from '../boss/config.js';
 import {bossFloorReward} from '../boss/encounter.js';
+import {selectedTowerFloor,selectTowerFloor} from './floors.js';
+import {towerEnemyProfile} from './profiles.js';
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {ctx} from '../game/state.js';
 import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount,buyTowerInsurance} from './model.js';
