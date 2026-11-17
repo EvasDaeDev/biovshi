@@ -1,10 +1,29 @@
-// Tower-only enemy profiles. The basic profile preserves the legacy appearance.
+// Tower-only enemy profiles. Use the existing movement/turning/critical hit
+// formulas; no new attack rules or AI paths are introduced by a profile.
+// Values are intentionally far enough from the 3/3/3 baseline to be legible.
+import {statMultiplier,critChance} from '../garage/model.js';
+
 export const TOWER_ENEMY_PROFILES=Object.freeze({
- basic:Object.freeze({name:'Обычный',stats:[3,3,3],skinKey:null,voice:null}),
- fast:Object.freeze({name:'Быстрый',stats:[5,2,3],skinKey:'robotEnemy1',voice:'male'}),
- strong:Object.freeze({name:'Силовой',stats:[2,5,3],skinKey:'robotEnemy2',voice:'male'}),
- agile:Object.freeze({name:'Маневренный',stats:[3,2,5],skinKey:'robotEnemy3',voice:'female'}),
- elite:Object.freeze({name:'Элитный',stats:[4,4,4],skinKey:'robotEnemy4',voice:'female'})
+ basic:Object.freeze({name:'Обычный',stats:[3,3,3],skinKey:null,voice:null,focus:'Стандартные характеристики'}),
+ fast:Object.freeze({name:'Быстрый',stats:[7,2,3],skinKey:'robotEnemy1',voice:'male',focus:'Быстро догоняет и меняет дистанцию'}),
+ strong:Object.freeze({name:'Силовой',stats:[2,7,3],skinKey:'robotEnemy2',voice:'male',focus:'Часто наносит критические удары'}),
+ agile:Object.freeze({name:'Маневренный',stats:[3,2,7],skinKey:'robotEnemy3',voice:'female',focus:'Быстрее разворачивается и меняет направление'}),
+ elite:Object.freeze({name:'Элитный',stats:[5,5,5],skinKey:'robotEnemy4',voice:'female',focus:'Сбалансированное усиление всех характеристик'})
 });
 export const towerEnemyProfile=id=>TOWER_ENEMY_PROFILES[id]??TOWER_ENEMY_PROFILES.basic;
 export const validTowerProfile=id=>typeof id==='string'&&Object.hasOwn(TOWER_ENEMY_PROFILES,id);
+
+export function towerProfileEffect(id){
+ const profile=towerEnemyProfile(id),[speed,strength,maneuver]=profile.stats;
+ return {speed:Math.round(statMultiplier(speed)*100),
+  critical:Math.round(critChance(strength)*100),
+  maneuver:Math.round(statMultiplier(maneuver)*100)};
+}
+export function towerProfileDifference(id){
+ const {speed,critical,maneuver}=towerProfileEffect(id);
+ if(id==='fast')return 'Скорость '+speed+'% вместо 100%';
+ if(id==='strong')return 'Критический удар '+critical+'% вместо 15%';
+ if(id==='agile')return 'Поворот '+maneuver+'% вместо 100%';
+ if(id==='elite')return 'Скорость '+speed+'% · крит '+critical+'% · поворот '+maneuver+'%';
+ return 'Обычный · скорость 100% · крит 15% · поворот 100%';
+}
