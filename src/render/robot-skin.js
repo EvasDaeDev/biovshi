@@ -86,6 +86,7 @@ export function createRobotSkin(robot) {
     const spriteUrl=replacement?assetUrl(replacement):
       android?assetUrl(ASSETS.textures.robotAndroid):url;
     const piece=createPiece(key,spriteUrl,/^(arm|leg)/.test(key)?limbs:body,parts[key]);
+    piece.image.parentNode.setAttribute('data-fallback-src',android?assetUrl(ASSETS.textures.robotAndroid):url);
     piece.image.addEventListener('load',()=>{
       if(gate)gate.loaded(key);else activate(true);
     },{once:true});
