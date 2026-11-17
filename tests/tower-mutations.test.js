@@ -82,6 +82,32 @@ test('pending mutation draft survives DMS checkpoint and must still be chosen',(
  assert.deepEqual(restored.mutations,[draft.options[1]]);
  assert.ok(validTower(restored));
 });
+test('a pending milestone offer is durable through storage, cannot be rerolled and rejects invalid drafts',()=>{
+ const dom=new JSDOM('',{url:'https://tower-mutation-pending.test/'});
+ const prior={storage:globalThis.localStorage,key:ctx.BET_STORAGE,session:ctx.betting};
+ globalThis.localStorage=dom.window.localStorage;ctx.BET_STORAGE='tower-mutation-pending';
+ try{
+  const s=betNewSession(['Сохранение'],1000),t=beatFirstBoss(s);
+  const draft=structuredClone(t.mutationDraft);
+  ctx.betting=s;bettingSave();
+  const restored=bettingLoad();
+  assert.ok(restored);
+  const run=towerFor(restored,0);
+  assert.deepEqual(run.mutationDraft,draft);
+  assert.equal(grantTowerMutationDraft(run,()=>.99),false);
+  assert.deepEqual(run.mutationDraft,draft);
+  assert.equal(validTowerMutationState({...run,mutations:['turbo','turbo']}),false);
+  assert.equal(validTowerMutationState({...run,mutationDraft:{...draft,floor:7}}),false);
+  assert.equal(validTowerMutationState({...run,mutationDraft:{...draft,options:[draft.options[0],draft.options[0]]}}),false);
+  assert.equal(chooseTowerMutation(run,draft.options[0]),true);
+  assert.equal(validTower(run),true);
+  ctx.betting=restored;bettingSave();
+  assert.deepEqual(towerFor(bettingLoad(),0).mutations,[draft.options[0]]);
+ }finally{
+  ctx.BET_STORAGE=prior.key;ctx.betting=prior.session;
+  globalThis.localStorage=prior.storage;dom.window.close();
+ }
+});
 test('old stored runs and policies without mutation fields still load correctly',()=>{
  const dom=new JSDOM('',{url:'https://tower-mutation-legacy.test/'});
  const previous={localStorage:globalThis.localStorage,store:ctx.BET_STORAGE};
