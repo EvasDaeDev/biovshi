@@ -6,6 +6,10 @@ import {ensureBossEncounter,validBossEncounter,bossFloorReward} from '../boss/en
 import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
 import {BASE_STATS,patientVictory,validStats,normalizeProsthetics} from '../garage/model.js';
 export const TOWER_REWARD=10;
+export const towerEnemyReward=(t,victim=1)=>{
+ const standard=bossFloorReward(t,victim);
+ return selectedTowerFloor(t)?.kind==='danger'?standard+5:standard;
+};
 export const floorEnemyCount=floor=>1+Math.floor(floor/2);
 export const towerEnemyCount=t=>t.legacyEnemyCount??towerFloorCount(t)??(hasBoss(t)?3:floorEnemyCount(t.level));
 export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
