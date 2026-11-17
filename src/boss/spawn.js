@@ -68,14 +68,42 @@ export function findBossSpawn(start,boundary,valid){
  }
  return null;
 }
+const solid=c=>c.segment==='head'||c.segment.startsWith('spine-');
+function neutralRigClear(capsules,peerSolids){
+ if(capsules.some(c=>staticContacts(c).some(hit=>hit.depth>(isLimb(c)?5:0)+1e-6)))return false;
+ return !capsules.filter(solid).some(c=>peerSolids.some(other=>
+  segmentDistance(c.a,c.b,other.a,other.b)<c.r+other.r+.15));
+}
+
+// Plan the ENTIRE encounter before constructing any robots or DOM elements.
+// Largest anatomy gets the first choice of space; return points in original
+// robot-ID order to keep identity, skins, rewards, and AI indices unchanged.
+export function planNeutralRigSpawns(layout,rigs){
+ if(layout.length!==rigs.length)return null;
+ const points=new Array(layout.length),occupied=[];
+ const order=layout.map((_,id)=>id).sort((a,b)=>
+  rigs[b].body.spineSegments*rigs[b].scaleMultiplier-
+  rigs[a].body.spineSegments*rigs[a].scaleMultiplier||a-b);
+ for(const id of order){
+  const {body,scaleMultiplier}=rigs[id];
+  let selected=null;
+  const valid=p=>{
+   const capsules=neutralCapsules(p,body,scaleMultiplier);
+   if(!neutralRigClear(capsules,occupied))return false;
+   selected=capsules;
+   return true;
+  };
+  const start=findBossSpawn(layout[id],ctx.arenaBoundary,valid);
+  if(!start)return null;
+  points[id]=start;
+  occupied.push(...selected.filter(solid));
+ }
+ return points;
+}
 export function bossSpawn(start,body,scaleMultiplier=BOSS_CONFIG.scale){
  const boundary=ctx.arenaBoundary;
- const valid=p=>{
-  const capsules=neutralCapsules(p,body,scaleMultiplier);
-  if(capsules.some(c=>staticContacts(c).some(hit=>hit.depth>(isLimb(c)?5:0)+1e-6)))return false;
-  const solid=c=>c.segment==='head'||c.segment.startsWith('spine-');
-  return !capsules.filter(solid).some(c=>ctx.robots.some(r=>r.capsules.filter(solid).some(other=>segmentDistance(c.a,c.b,other.a,other.b)<c.r+other.r+.15)));
- };
+ const peers=ctx.robots.flatMap(robot=>robot.capsules.filter(solid));
+ const valid=p=>neutralRigClear(neutralCapsules(p,body,scaleMultiplier),peers);
  const located=findBossSpawn(start,boundary,valid);
  if(located)return located;
  throw Error('Не удалось разместить босса без пересечения арены');
