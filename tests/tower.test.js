@@ -100,9 +100,10 @@ test('surgeon lets the player buy one body-specific operation and saves combat i
  try{
   const panel=document.querySelector('#tower-prep-surgery');
   assert.equal(panel.hidden,false);
-  const purchase=panel.querySelector('.tower-surgery-purchase');
-  assert.equal(purchase.disabled,true,'pending mutation choice blocks surgery');
+  assert.equal(panel.querySelector('.tower-surgery-purchase').disabled,true,
+   'pending mutation choice blocks surgery');
   document.querySelector('#tower-prep-mutations .tower-mutation-option').click();
+  const purchase=panel.querySelector('.tower-surgery-purchase');
   const type=panel.querySelector('[aria-label="Вид операции"]');
   type.value='impact';type.dispatchEvent(new Event('change'));
   const site=panel.querySelector('[aria-label="Сегмент для операции"]');
