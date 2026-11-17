@@ -56,6 +56,8 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  modsContainer.setAttribute('role','tabpanel');surgeryContainer.setAttribute('role','tabpanel');
  modsContainer.append(mutationPanel);surgeryContainer.append(surgeryPanel);
  content.append(modsContainer,surgeryContainer);paper.append(content);
+ const feedback=create('p','tower-upgrade-feedback');feedback.id='tower-upgrade-feedback';
+ feedback.setAttribute('role','status');paper.append(feedback);
  root.append(overlay);
 
  let activeTab='mutations',hoverMutation=null,site=null;
@@ -138,8 +140,14 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
    button.onmouseleave=()=>{hoverMutation=null;if(activeTab==='mutations')paint();};
   }
   const {proc,selected}=control();
-  proc?.addEventListener('change',()=>{site=selected?.value??null;if(activeTab==='surgery')paint();});
-  selected?.addEventListener('change',()=>{site=selected.value;if(activeTab==='surgery')paint();});
+  if(proc&&!proc.dataset.upgradeBound){
+   proc.dataset.upgradeBound='true';
+   proc.addEventListener('change',()=>{site=selected?.value??null;if(activeTab==='surgery')paint();});
+  }
+  if(selected&&!selected.dataset.upgradeBound){
+   selected.dataset.upgradeBound='true';
+   selected.addEventListener('change',()=>{site=selected.value;if(activeTab==='surgery')paint();});
+  }
   if(!overlay.hidden)paint();
  }
  function open(tab=run.mutationDraft?'mutations':activeTab){
