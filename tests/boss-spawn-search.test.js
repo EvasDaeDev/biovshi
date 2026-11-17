@@ -76,14 +76,14 @@ test('encounter planner gives an extended boss first choice of a contested spawn
 test('encounter planner fails explicitly rather than accepting overlapping bodies',()=>{
  const previous={boundary:ctx.arenaBoundary,planes:ctx.arenaPlanes,obstacles:ctx.obstacles};
  try{
-  ctx.arenaBoundary={left:0,right:70,top:0,bottom:70};
+  ctx.arenaBoundary={left:0,right:30,top:0,bottom:30};
   ctx.arenaPlanes=[
    {nx:-1,ny:0,c:0,length:1},{nx:0,ny:-1,c:0,length:1},
-   {nx:1,ny:0,c:70,length:1},{nx:0,ny:1,c:70,length:1}
+   {nx:1,ny:0,c:30,length:1},{nx:0,ny:1,c:30,length:1}
   ];
   ctx.obstacles=[];
   const normal={spineSegments:4,pelvisKey:'spine-3',limbs:standardLimbs()};
-  const starts=[{x:35,y:35,angle:0},{x:35,y:35,angle:0}];
+  const starts=[{x:15,y:15,angle:0},{x:15,y:15,angle:0}];
   assert.equal(planNeutralRigSpawns(starts,[{body:normal,scaleMultiplier:1},{body:normal,scaleMultiplier:1}]),null);
  }finally{
   ctx.arenaBoundary=previous.boundary;
