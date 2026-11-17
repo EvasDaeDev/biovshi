@@ -287,8 +287,10 @@ test('generated tower encounters start with complete rigs clear on every support
  for(const [arenaId,capacity] of Object.entries(TOWER_ARENA_CAPACITY)){
   const session=betNewSession(['Геометрия'],100);
   const tower=towerFor(session,0);
+  const profiles=Array.from({length:capacity-1},(_,i)=>i%2?'fast':'basic');
   tower.floorPlan={floor:1,selected:0,options:[
-   {arenaId,kind:'standard',profiles:Array.from({length:capacity-1},(_,i)=>i%2?'fast':'basic')}
+   {arenaId,kind:'standard',profiles},
+   {arenaId,kind:'danger',style:'mixed',profiles:[...profiles]}
   ]};
   assert.equal(validTowerFloorPlan(tower.floorPlan,1),true,arenaId+' plan is legal');
   const dom=setup(session,tower,arenaId);
