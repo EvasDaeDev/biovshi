@@ -16,6 +16,7 @@ import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
 import {segmentDistance,wrap} from '../src/utils/math.js';
 import {sightClear} from '../src/systems/collision.js';
 import {chargePlan} from '../src/boss/attacks.js';
+import {captureTowerBattleSample,diagnoseLongTowerFight} from './tower-battle-analysis.mjs';
 
 const args=Object.fromEntries(process.argv.slice(2).map(x=>x.replace(/^--/,'').split('=')));
 const samples=Number(args.seeds??1),seconds=Number(args.limit??35),offset=Number(args.offset??19274);
@@ -55,6 +56,7 @@ function runScenario(scenario,seed){
   completed:false,winner:null,duration:0,hits:0,strikes:0,
   charges:0,sweeps:0,unstucks:0,nonFinite:0,bodyPenetrations:0,bodyOverlaps:0,
   initialPenetrations:0,initialOverlaps:0,maxBodyOverlapCm:0,overlapSamples:[],chargeProbe:{},
+  combatSamples:[],longFight:null,
   errors:[],elapsedCpuMs:0};
  const began=Date.now();
  try{
@@ -163,7 +165,10 @@ function runScenario(scenario,seed){
    }
    if(diagnose&&tick%12===0&&scenario.kind==='boss')diagnoseCharge();
    step(1/60);
-   if(tick%60===59)inspect();
+   if(tick%60===59){
+    inspect();
+    row.combatSamples.push(captureTowerBattleSample(ctx));
+   }
   }
   row.completed=ctx.combat.finished;
   row.winner=ctx.combat.winner;
@@ -172,6 +177,7 @@ function runScenario(scenario,seed){
   row.aliveAtEnd=ctx.robots.filter(r=>r.mobile).length;
   row.coins=session.players[0].balance-1000;
   row.playerAlive=ctx.robots[0].mobile;
+  row.longFight=diagnoseLongTowerFight(row.combatSamples,row.completed);
  }catch(error){
   row.errors.push(String(error?.stack??error).slice(0,2000));
  }finally{
@@ -194,7 +200,8 @@ for(const scenario of scenarios.filter(s=>!selectedFloors||selectedFloors.includ
    nonFinite:row.nonFinite,bodyPenetrations:row.bodyPenetrations,bodyOverlaps:row.bodyOverlaps,
    initialPenetrations:row.initialPenetrations,initialOverlaps:row.initialOverlaps,
    maxBodyOverlapCm:row.maxBodyOverlapCm,chargeProbe:diagnose?row.chargeProbe:undefined,
-   playerAlive:row.playerAlive,error:row.errors[0]?.slice(0,230)??null
+   playerAlive:row.playerAlive,longFight:row.longFight,
+   error:row.errors[0]?.slice(0,230)??null
   }));
  }
 }
@@ -212,6 +219,8 @@ const summary={
  hits:runs.reduce((n,r)=>n+r.hits,0),
  charges:runs.reduce((n,r)=>n+r.charges,0),
  playerWins:runs.filter(r=>r.winner===0).length,
+ longFightReasons:Object.fromEntries([...new Set(runs.filter(r=>!r.completed).map(r=>r.longFight?.reason??'error'))].map(reason=>
+   [reason,runs.filter(r=>!r.completed&&(r.longFight?.reason??'error')===reason).length])),
  cpuSeconds:Math.round(runs.reduce((n,r)=>n+r.elapsedCpuMs,0)/100)/10
 };
 const result={simulation:'headless real 1/60s game loop',selectedFloors,diagnose,maxAllowedBodyOverlapCm,policy:policy==='orbit'?'Player approaches and circles a nearby enemy at about 55 cm; not human performance':'Player automatically approaches nearest moving enemy and stops at 36 cm; not human performance',seconds,seeds:samples,summary,runs};
