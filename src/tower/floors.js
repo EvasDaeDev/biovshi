@@ -26,7 +26,7 @@ function opponents(floor,count,danger,random,style=null){
   if(eliteEligible&&random()<(style==='trial' ? .28 : .18))return 'elite';
   // At least one specialist makes the higher risk perceptible.
   if(danger&&i===0)return pool[1+roll(random,3)];
-  const specialRate=style==='trial'?1:style==='crowd'?.30:danger?.80:Math.min(.55,.12+floor*.045);
+  const specialRate=style==='trial' ? 1 : style==='crowd' ? .30 : danger ? .80 : Math.min(.55,.12+floor*.045);
   return random()<specialRate?pool[1+roll(random,3)]:'basic';
  });
  if(style==='mixed'&&count>=2){
