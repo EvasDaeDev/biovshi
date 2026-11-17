@@ -194,7 +194,7 @@ export function installTowerUI(){
   ctx.towerSettled=false;ctx.towerFloorCoins=0;ctx.towerOutcome=null;ctx.towerFeedbackUntil=0;
   const off=onGameEvent(event=>{
     if(event.type==='robot-immobilized'&&!ctx.towerSettled&&rewardTower(ctx.betting,ctx.towerPlayer,event.robot,event.lastAttacker)){
-      const reward=bossFloorReward(ctx.towerRun,event.robot);ctx.towerFloorCoins+=reward;bettingSave();
+      const reward=towerEnemyReward(ctx.towerRun,event.robot);ctx.towerFloorCoins+=reward;bettingSave();
       const toast=ctx.root.querySelector('#tower-reward-toast');toast.innerHTML='+'+formatChips(reward);toast.hidden=false;ctx.towerFeedbackUntil=ctx.game.time+1.2;
     }
     if(event.type==='robot-immobilized')updateTowerHud();
