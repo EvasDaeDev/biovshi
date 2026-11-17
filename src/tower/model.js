@@ -32,7 +32,7 @@ export function normalizeTower(t){
 }
 export function towerFor(session,player){
  if(!session.players[player])throw Error('Игрок не найден.');
- session.towers??={};const t=normalizeTower(session.towers[player]??=newTower());ensureBossEncounter(t);return t;
+ session.towers??={};const t=normalizeTower(session.towers[player]??=newTower());ensureBossEncounter(t);ensureTowerFloorPlan(t);return t;
 }
 export function validTower(t){
  if(!t||typeof t!=='object')return false;
