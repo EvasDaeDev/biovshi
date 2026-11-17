@@ -36,16 +36,16 @@ function opponents(floor,count,danger,random,style=null){
  }
  return profiles;
 }
-function candidateArena(floor,danger,random,boss){
- const minimum=boss?6:floor>=20?7:floor>=10?6:floor>=5?4:2;
+function candidateArena(floor,random,boss,requiredCapacity=0){
+ const baseline=boss?6:floor>=20?7:floor>=10?6:floor>=5?4:2;
+ const minimum=Math.max(baseline,requiredCapacity);
  const ids=Object.keys(ARENAS).filter(id=>boss?(id==='ward'||id==='columns'):cap(id)>=minimum);
  // More enemies and long bosses are safest on the spacious presets.
  if(boss&&floor>=25&&Object.hasOwn(ARENAS,'columns'))return 'columns';
  return ids[roll(random,ids.length)]??'ward';
 }
-function option(t,danger,random,arenaOverride=null){
- const boss=hasBoss(t),arenaId=arenaOverride??candidateArena(t.level,danger,random,boss);
- const style=danger?DANGER_STYLE_IDS[roll(random,DANGER_STYLE_IDS.length)]:null;
+function option(t,danger,random,arenaId,style=null){
+ const boss=hasBoss(t);
  const max=cap(arenaId)-1,base=standardCount(t.level);
  const requested=base+(style==='trial'?-1:style==='crowd'?1:0);
  const count=boss?3:Math.min(max,Math.max(1,requested,style==='mixed'?2:1));
@@ -58,9 +58,14 @@ function option(t,danger,random,arenaOverride=null){
 export function ensureTowerFloorPlan(t,random=Math.random){
  if(t.floorPlan?.floor===t.level)return t.floorPlan;
  if(t.rewarded?.length||t.legacyEnemyCount!==undefined||t.legacyBossFloor)return null;
- const boss=hasBoss(t);
- const standard=option(t,false,random);
- t.floorPlan={floor:t.level,selected:0,options:boss?[standard]:[standard,option(t,true,random,standard.arenaId)]};
+ const boss=hasBoss(t),base=standardCount(t.level);
+ const style=boss?null:DANGER_STYLE_IDS[roll(random,DANGER_STYLE_IDS.length)];
+ // No arena can fit one more enemy once the ordinary floor already has 9.
+ const actualStyle=style==='crowd'&&base>=9?'mixed':style;
+ // Crowded challenges must offer a real extra opponent, not merely a label.
+ const arenaId=candidateArena(t.level,random,boss,actualStyle==='crowd'?base+2:0);
+ const standard=option(t,false,random,arenaId);
+ t.floorPlan={floor:t.level,selected:0,options:boss?[standard]:[standard,option(t,true,random,arenaId,actualStyle)]};
  return t.floorPlan;
 }
 export const selectedTowerFloor=t=>t.floorPlan?.floor===t.level?t.floorPlan.options[t.floorPlan.selected]:null;
