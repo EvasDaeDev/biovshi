@@ -30,7 +30,7 @@ function candidateArena(floor,danger,random,boss){
 function option(t,danger,random){
  const boss=hasBoss(t),arenaId=candidateArena(t.level,danger,random,boss);
  const max=cap(arenaId)-1;
- const count=boss?3:Math.min(max,Math.max(1,standardCount(t.level)+(danger?0:0)));
+ const count=boss?3:Math.min(max,Math.max(1,standardCount(t.level)));
  return {arenaId,kind:boss?'boss':danger?'danger':'standard',
   profiles:boss?['boss',...opponents(t.level,2,false,random)]:opponents(t.level,count,danger,random)};
 }
