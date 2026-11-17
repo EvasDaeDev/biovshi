@@ -63,6 +63,10 @@ test('risk floors offer saved selection, crowd and mixed compositions',()=>{
   if(style==='mixed')assert.ok(new Set(danger.profiles.filter(p=>p!=='basic')).size>=2);
   assert.equal(ensureTowerFloorPlan(t,()=>1),plan,'existing plan must not reroll');
  }
+ const late=newTower(0);late.level=19;late.wins=18;
+ const latePlan=ensureTowerFloorPlan(late,()=>.45);
+ assert.equal(latePlan.options[1].style,'mixed','overcrowding switches to mixed composition when room is full');
+ assert.ok(latePlan.options.every(o=>o.profiles.length<=9));
  const old=newTower(0);old.level=6;
  old.floorPlan={floor:6,selected:1,options:[
    {arenaId:'ward',kind:'standard',profiles:['basic']},
