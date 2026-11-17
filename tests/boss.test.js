@@ -28,6 +28,7 @@ import {bossPortraitBones} from '../src/boss/card.js';
 import {drawDetachedSkin} from '../src/render/robot-skin.js';
 import {limbKey} from '../src/robot/body.js';
 import {bossOpponentMemory,bossSideWeaponIntent} from '../src/boss/positioning.js';
+import {chargePlan} from '../src/boss/attacks.js';
 
 for(const variant of BOSS_VARIANTS)for(const arena of variant.spineSegments>6?['columns']:['ward','ring','annulus'])test(`${variant.id} boss has independent geometry, atlas, supports and unique attack sources in ${arena}`,()=>{
  const f=startBossScenario({variant:variant.id,arena});
@@ -135,6 +136,24 @@ test('extra limbs sever independently and retain boss atlas mapping in detached 
   // Severing the anchor also takes the secondary arm with it.
   ctx.game.time+=1;r.damage('spine-2',0,100);assert.equal(r.hp.get('arm-1-pair2-upper'),0);assert.equal(r.hp.get('spine-5'),0);
  }finally{f.close();}
+});
+
+test('charge rejection diagnostics leave the selected boss plan unchanged',()=>{
+ for(const variant of ['legs','long_legs','long_arms']){
+  const f=startBossScenario({variant,arena:'columns',floor:variant==='long_legs'?25:variant==='long_arms'?30:15});
+  try{
+   const boss=f.boss,targets=[
+    {...f.player.center},
+    {x:boss.x+120*Math.cos(boss.angle),y:boss.y+120*Math.sin(boss.angle)}
+   ];
+   for(const target of targets){
+    const clean=chargePlan(boss,target),reasons={};
+    const observed=chargePlan(boss,target,{diagnostics:reasons});
+    assert.deepEqual(observed,clean,'optional instrumentation must not change the charge plan');
+    assert.ok(Object.values(reasons).every(n=>Number.isInteger(n)&&n>0));
+   }
+  }finally{f.close();}
+ }
 });
 
 test('extended bosses use surviving rear limbs after both front arms are severed',()=>{
