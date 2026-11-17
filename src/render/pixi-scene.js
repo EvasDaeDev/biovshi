@@ -3,6 +3,7 @@ import { ctx } from '../game/state.js';
 import { CONFIG } from '../config.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { loadTextureImage } from '../assets/preload.js';
+import {arenaSpriteAtlasUrls,resolveArenaSpriteSource} from './pixi-sources.js';
 import { staticArenaImage,staticWallNodes } from './pixi-static.js';
 import { ArenaPostEffects } from './post-effects.js';
 import { victoryGold, goldMatrix } from './victory-glow.js';
@@ -33,7 +34,7 @@ export class PixiArena {
     this.owned.add(texture);return texture;
   }
   async prepareSources() {
-    const urls=[...Object.entries(ASSETS.textures).filter(([key])=>/^robot|liquids|hat|flashlight/.test(key)).map(([,file])=>assetUrl(file)),...(ctx.liquidAtlasSources??[]),...(ctx.coolantAtlasSources??[])];
+    const urls=[...arenaSpriteAtlasUrls(ASSETS.textures,assetUrl),...(ctx.liquidAtlasSources??[]),...(ctx.coolantAtlasSources??[])];
     await Promise.all([...new Set(urls.filter(Boolean))].map(async url=>{
       try{this.sources.set(url,this.texture(await loadTextureImage(url),url!==assetUrl(ASSETS.textures.flashlight)));}catch{/* Vector fallback is already prepared by the game. */}
     }));
@@ -238,7 +239,8 @@ export class PixiArena {
     if(node===ctx.sparksG){s.fill='none';s.stroke='#ff397b';s.width=1.2;}
     if(!visual)return;
     if(record.viewport){
-      const image=node.querySelector('image'),source=this.sources.get(image?.getAttribute('href'));
+      const image=node.querySelector('image'),source=resolveArenaSpriteSource(this.sources,
+        image?.getAttribute('href'),node.getAttribute('data-fallback-src'));
       if(source){
         const [x,y,width,height]=node.getAttribute('viewBox').split(/[\s,]+/).map(Number);
         visual.texture=this.cropped(source,x,y,width,height);
