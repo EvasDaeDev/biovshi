@@ -19,6 +19,7 @@ import {SKILLS,skillHintAttributes} from '../ui/patient.js';
 import {arenaDiagram} from '../game/arenas.js';
 import {artifactCollectionMarkup} from './artifact-ui.js';
 import {formatChips} from '../ui/currency.js';
+import {installTowerUpgradeWindow} from './upgrade-modal.js';
 import {playerBalanceMarkup} from '../ui/currency-animation.js';
 
 function renderTowerPlayerWallet(target){
@@ -55,6 +56,7 @@ export function openMenu(){
   ctx.clearTowerInput?.();ctx.clearTowerDestination?.();setPaused(true);
   ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;
   ctx.root.querySelector('#tower-preparation').hidden=true;
+  const upgrade=ctx.root.querySelector('#tower-upgrade-window');if(upgrade)upgrade.hidden=true;
   ctx.root.querySelector('#tower-controls').hidden=true;
   refreshMenu();ctx.root.querySelector('#launch-overlay').hidden=false;
   ctx.root.querySelector('#launch-tower').focus();
@@ -108,6 +110,12 @@ export function towerPreparation(){
     preview.appendChild(choices);
   }
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
+  let upgradeModal=null;
+  const upgradeMessage=message=>{
+    ctx.root.querySelector('#tower-prep-error').textContent=message;
+    const output=ctx.root.querySelector('#tower-upgrade-feedback');
+    if(output)output.textContent=message;
+  };
   function renderSkills(){
     const snapshot=towerMutationSnapshot(t),stats=snapshot.effective;
     const combatBonus=towerMutationCombatBonus(t.mutations);
@@ -117,10 +125,10 @@ export function towerPreparation(){
       <button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button>`;
     fields.querySelectorAll('select').forEach(select=>select.onchange=()=>{
       const index=Number(select.dataset.towerStat);
-      t.stats=redistributeStat(t,index,Number(select.value));ctx.towerGarage[0].stats=[...t.stats];bettingSave();renderSkills();
+      t.stats=redistributeStat(t,index,Number(select.value));ctx.towerGarage[0].stats=[...t.stats];bettingSave();renderSkills();upgradeModal?.refresh();
       fields.querySelector(`[data-tower-stat="${index}"]`).focus();
     });
-    fields.querySelector('[data-tower-base]').onclick=()=>{t.stats=earnedStats(t.wins);ctx.towerGarage[0].stats=[...t.stats];bettingSave();renderSkills();};
+    fields.querySelector('[data-tower-base]').onclick=()=>{t.stats=earnedStats(t.wins);ctx.towerGarage[0].stats=[...t.stats];bettingSave();renderSkills();upgradeModal?.refresh();};
   }
   renderSkills();
   // Boss milestone rewards must be chosen before entering the next floor.
@@ -134,12 +142,16 @@ export function towerPreparation(){
   const fightButton=ctx.root.querySelector('#tower-fight');
   function renderMutations(){
     mutationPanel.replaceChildren();
-    mutationPanel.hidden=!t.mutationDraft&&!(t.mutations?.length);
-    if(mutationPanel.hidden)return;
+    mutationPanel.hidden=false;
     const heading=document.createElement('strong');
     heading.className='tower-mutation-title';
     heading.textContent=t.mutationDraft?'ПОБЕДА НАД БОССОМ · ВЫБЕРИ МОДУЛЬ':'УСТАНОВЛЕННЫЕ МОДУЛИ';
     mutationPanel.append(heading);
+    if(!t.mutationDraft&&!t.mutations.length){
+      const empty=document.createElement('small');
+      empty.textContent='Первый модуль можно получить после победы над боссом пятого этажа.';
+      mutationPanel.append(empty);
+    }
     const progress=document.createElement('small');
     progress.className='tower-mutation-progress';
     progress.textContent=`КОМПЛЕКТ ${t.mutations.length}/${TOWER_MUTATION_IDS.length} · СИНЕРГИИ ${towerMutationSynergies(t.mutations).length}/${Object.keys(TOWER_MUTATION_SYNERGIES).length}`;
@@ -167,8 +179,8 @@ export function towerPreparation(){
         button.onclick=()=>{
           if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||!chooseTowerMutation(t,id))return;
           ctx.towerGarage[0].mutations=[...t.mutations];
-          bettingSave();renderSkills();renderMutations();syncFightLock();renderSurgery();
-          ctx.root.querySelector('#tower-prep-error').textContent='Модуль установлен: '+module.name;
+          bettingSave();renderSkills();renderMutations();syncFightLock();renderSurgery();upgradeModal?.refresh();
+          upgradeMessage('Модуль установлен: '+module.name);
         };
         choices.append(button);
       }
@@ -209,12 +221,16 @@ export function towerPreparation(){
   function renderSurgery(){
     surgeryPanel.replaceChildren();
     const slots=towerSurgeryCapacity(t.level);
-    surgeryPanel.hidden=t.level<TOWER_SURGERY_MIN_LEVEL;
-    if(surgeryPanel.hidden)return;
+    surgeryPanel.hidden=false;
     const heading=document.createElement('strong');
     heading.className='tower-surgery-title';
     heading.textContent='ХИРУРГИЯ · '+t.surgeries.length+'/'+slots;
     surgeryPanel.append(heading);
+    if(t.level<TOWER_SURGERY_MIN_LEVEL){
+      const soon=document.createElement('small');
+      soon.textContent='Операции откроются после прохождения пятого этажа и победы над боссом.';
+      surgeryPanel.append(soon);return;
+    }
     const installed=document.createElement('small');
     installed.textContent=t.surgeries.length
       ?'ИМПЛАНТИРОВАНО: '+t.surgeries.map(op=>TOWER_SURGERY_OPERATIONS[op.procedure].name+
@@ -265,16 +281,16 @@ export function towerPreparation(){
         const price=buyTowerSurgery(ctx.betting,ctx.towerPlayer,procedure,site);
         ctx.towerGarage[0].surgeries=structuredClone(t.surgeries);
         bettingSave();renderSkills();renderSurgery();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
-        renderInsurance();updateTowerHud();
-        ctx.root.querySelector('#tower-prep-error').textContent=
-          'Операция «'+TOWER_SURGERY_OPERATIONS[procedure].name+'» выполнена: −'+price+' монет.';
-      }catch(error){ctx.root.querySelector('#tower-prep-error').textContent=error.message;}
+        renderInsurance();updateTowerHud();upgradeModal?.refresh();
+        upgradeMessage('Операция «'+TOWER_SURGERY_OPERATIONS[procedure].name+'» выполнена: −'+price+' монет.');
+      }catch(error){upgradeMessage(error.message);}
     };
     controls.append(procedureSelect,siteSelect,purchase);
     surgeryPanel.append(controls);
     refreshSites();
   }
   renderSurgery();
+  upgradeModal=installTowerUpgradeWindow({root:ctx.root,run:t,statsPanel:fields,mutationPanel,surgeryPanel});
   ctx.root.querySelector('#tower-prep-artifacts').innerHTML=artifactCollectionMarkup(t.artifacts)+`<p class="artifact-bonus-note">ПОЛНЫЙ АРТЕФАКТ: +${formatChips(ARTIFACT_COMPLETION_REWARD)}</p>`;
   ctx.root.querySelector('#tower-prep-error').textContent='';
   const insuranceButton=ctx.root.querySelector('#tower-insurance');
@@ -299,7 +315,7 @@ export function towerPreparation(){
     if(t.mutationDraft){ctx.root.querySelector('#tower-prep-error').textContent='Сначала выбери модификацию после победы над боссом.';return;}
     const stats=[...fields.querySelectorAll('select')].map(n=>Number(n.value));
     if(!validStats(stats,t.wins)){ctx.root.querySelector('#tower-prep-error').textContent='Можно перенести одно очко между навыками, сохранив их сумму.';return;}
-    t.stats=stats;t.preparing=false;ctx.towerGarage[0].stats=[...stats];bettingSave();panel.hidden=true;
+    t.stats=stats;t.preparing=false;ctx.towerGarage[0].stats=[...stats];bettingSave();upgradeModal?.close();panel.hidden=true;
     ctx.root.querySelector('#tower-controls').hidden=false;startSpawnSequence();
   };
   (t.mutationDraft?mutationPanel.querySelector('.tower-mutation-option'):fightButton)?.focus();
@@ -360,6 +376,8 @@ export function installTowerUI(){
   };
   ctx.root.querySelector('#launch-totalizator').onclick=async()=>{ctx.audio?.unlock();await ctx.startTotalizator();};
   if(ctx.mode!=='tower'){
+    ctx.root.querySelector('#tower-upgrade-window')?.remove();
+    ctx.root.querySelector('#tower-upgrade-open')?.remove();
     ctx.root.querySelector('#tower-controls').hidden=true;ctx.root.querySelector('#tower-preparation').hidden=true;
     ctx.resultsProcedure.textContent='ПРОЦЕДУРНАЯ';ctx.resultsAgain.textContent='К СТАВКАМ СЛЕДУЮЩЕГО РАУНДА';ctx.resultsProcedure.hidden=false;
     return;
