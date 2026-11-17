@@ -203,8 +203,9 @@ test('modified live body skin uses exact replacement PNG and falls back only for
   const enemyPiece=ctx.robots[1].actor.querySelector('[data-skin-segment="arm-1-upper"] image');
   const opponent=enemyPiece?.getAttribute('href');
   piece.dispatchEvent(new dom.window.Event('error'));
-  assert.match(piece.getAttribute('href'),/r_01\.png$/,
-   'only the failed surgical texture reverts to original patient skin');
+  assert.ok(piece.getAttribute('href').endsWith(
+    ['r_01.png','r_02.png','r_03.png','r_04.png'][run.patient]),
+   'only the failed surgical texture reverts to the patient\'s own original skin');
   assert.equal(player.actor.querySelector('[data-skin-segment="head"] image').getAttribute('href'),unaffected);
   assert.equal(enemyPiece?.getAttribute('href'),opponent);
  }finally{close(dom);}
