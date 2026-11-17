@@ -7,7 +7,7 @@ import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,aw
 import {BASE_STATS,patientVictory,validStats,normalizeProsthetics} from '../garage/model.js';
 export const TOWER_REWARD=10;
 export const floorEnemyCount=floor=>1+Math.floor(floor/2);
-export const towerEnemyCount=t=>t.legacyEnemyCount??(hasBoss(t)?3:floorEnemyCount(t.level));
+export const towerEnemyCount=t=>t.legacyEnemyCount??towerFloorCount(t)??(hasBoss(t)?3:floorEnemyCount(t.level));
 export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
 export function normalizeTower(t){
  if(!t||typeof t!=='object'||Array.isArray(t))return t;
