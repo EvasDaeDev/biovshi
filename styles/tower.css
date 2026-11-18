@@ -161,8 +161,14 @@
 #robot-tag-hops-v22 .tower-upgrade-content #tower-prep-surgery{margin:0;padding:12px;border-top:0}
 #robot-tag-hops-v22 .tower-upgrade-feedback{font-size:12px;color:#e8ce8d;margin:8px 2px 0;min-height:1em}
 #robot-tag-hops-v22 .tower-upgrade-body-part.is-selectable{cursor:pointer}
-#robot-tag-hops-v22 .tower-upgrade-body-part.is-selectable:focus-visible{outline:none;filter:drop-shadow(0 0 6px #eed280)}
-#robot-tag-hops-v22 .tower-upgrade-body-part.is-selected{filter:drop-shadow(0 0 5px #f1be6c)}
+/* SVG part transforms must not get a browser outline around their full rotated viewport. */
+#robot-tag-hops-v22 .tower-upgrade-body-part,
+#robot-tag-hops-v22 .tower-upgrade-body-part:focus,
+#robot-tag-hops-v22 .tower-upgrade-body-part:focus-visible{outline:none!important;box-shadow:none}
+#robot-tag-hops-v22 .tower-upgrade-body-part.is-selected,
+#robot-tag-hops-v22 .tower-upgrade-body-part.is-selectable:focus-visible{filter:none}
+#robot-tag-hops-v22 .tower-upgrade-site-marker{pointer-events:none;fill:none;stroke:#f0c879;stroke-width:2.2;vector-effect:non-scaling-stroke}
+#robot-tag-hops-v22 .tower-upgrade-site-marker:where([data-focus="true"]){stroke:#fff4d9}
 #robot-tag-hops-v22 #tower-upgrade-window button:focus-visible,
 #robot-tag-hops-v22 #tower-upgrade-open:focus-visible{outline:2px solid #efd389;outline-offset:2px}
 @media(max-width:520px){
