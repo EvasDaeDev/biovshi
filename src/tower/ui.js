@@ -366,7 +366,8 @@ export function towerPreparation(){
         'Операция на выбранном сегменте; отменить покупку нельзя.';
     };
     procedureSelect.onchange=refreshSites;replaceSelect.onchange=refreshSites;
-    stockSelect.onchange=refreshSites;
+    // Route source selection through the same preview handler as an operation change.
+    stockSelect.onchange=()=>procedureSelect.dispatchEvent(new Event('change'));
     purchase.onclick=()=>{
       if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
       try{

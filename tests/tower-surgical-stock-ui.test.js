@@ -35,11 +35,16 @@ test('Shelter offers paid stock reinstallation and consumes one stored implant',
  try{
   const panel=document.querySelector('#tower-prep-surgery');
   assert.match(panel.textContent,/СКЛАД ИМПЛАНТОВ · 1/);
+  const modal=document.querySelector('#tower-upgrade-window');
+  document.querySelector('#tower-upgrade-open').click();
+  modal.querySelector('[data-upgrade-tab="surgery"]').click();
   const stock=panel.querySelector('[aria-label="Имплант со склада"]');
   assert.ok(stock&&!stock.hidden);
   assert.equal(stock.options.length,2);
   assert.match(stock.options[1].textContent,/Привод/);
   stock.value='s1';stock.dispatchEvent(new Event('change'));
+  assert.match(modal.querySelector('#tower-upgrade-stats').textContent,/ПРЕДПРОСМОТР: Привод/,
+    'selecting a stored implant updates the live preview before payment');
   const proc=panel.querySelector('[aria-label="Вид операции"]');
   assert.equal(proc.value,'drive');assert.equal(proc.disabled,true);
   const site=panel.querySelector('[aria-label="Сегмент для операции"]');
