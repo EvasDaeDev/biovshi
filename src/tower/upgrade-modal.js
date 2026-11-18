@@ -78,10 +78,15 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   else if(!surgeryOptions.includes(site))site=surgeryOptions[0]??null;
   if(selected&&site&&surgeryOptions.includes(site))selected.value=site;
   const editingSurgery=activeTab==='surgery';
-  const proposedSurgery=editingSurgery&&proc?.value&&site&&
-    (!TOWER_SURGERY_OPERATIONS[proc.value]?.donor||donor?.value)&&
+  const operation=TOWER_SURGERY_OPERATIONS[proc?.value];
+  const donorItem=operation?.donor?(run.donorTissues??[]).find(item=>
+    item.id===donor?.value&&item.kind===operation.site):null;
+  // An empty/stale donor selector is a valid intermediate UI state, not a
+  // hypothetical graft. Only preview a transplant backed by real tissue.
+  const proposedSurgery=editingSurgery&&operation&&site&&surgeryOptions.includes(site)&&
+    (!operation.donor||donorItem)&&
     run.surgeries.length<towerSurgeryCapacity(run.level)&&!run.mutationDraft?
-    {procedure:proc.value,site,...(!donor?.hidden&&donor?.value?{donorId:donor.value,donorProfile:run.donorTissues?.find(item=>item.id===donor.value)?.profile}:{})}:null;
+    {procedure:proc.value,site,...(donorItem?{donorId:donorItem.id,donorProfile:donorItem.profile}:{})}:null;
   const proposedMutation=!editingSurgery&&hoverMutation&&
     run.mutationDraft?.options.includes(hoverMutation)?hoverMutation:null;
   const before=towerMutationSnapshot(run).effective;
@@ -104,6 +109,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   stats.append(values);
   const detail=editingSurgery?
     proposedSurgery?'ПРЕДПРОСМОТР: '+TOWER_SURGERY_OPERATIONS[proposedSurgery.procedure].name:
+      operation?.donor&&!donorItem?'Для пересадки нужен доступный донор выбранного типа':
       'Уже установлено: '+run.surgeries.length+' / '+towerSurgeryCapacity(run.level)+' · следующая операция '+towerSurgeryPrice(run)+' монет':
     proposedMutation?'ПРЕДПРОСМОТР: '+TOWER_MUTATIONS[proposedMutation].name:
      'Установлено '+run.mutations.length+' модулей · активных синергий '+towerMutationSynergies(run.mutations).length;
