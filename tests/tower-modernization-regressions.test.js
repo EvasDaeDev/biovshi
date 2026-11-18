@@ -7,17 +7,17 @@ import {paintPatientPortrait,PORTRAIT_BONES} from '../src/ui/patient-portrait.js
 import {ctx} from '../src/game/state.js';
 
 test('surgery modal does not preview an implant with a missing or stale donor',()=>{
- const dom=new JSDOM('<div id="root"><div id="tower-preparation"></div><div id="stats"></div><div id="mutations"></div><div id="surgery"></div></div>',{url:'https://tower-modal.test/'});
+ const dom=new JSDOM('<div id="root"><div id="tower-preparation"></div><div id="stats"></div><div id="mutations"></div><div id="surgery"></div><div id="artifacts"></div></div>',{url:'https://tower-modal.test/'});
  const previous=globalThis.document;globalThis.document=dom.window.document;
  try{
   const root=document.querySelector('#root'),panel=document.querySelector('#surgery');
   panel.innerHTML='<select aria-label="Вид операции"><option value="transplant_arm">Донорская рука</option></select>'+
    '<select aria-label="Сегмент для операции"><option value="arm-1-upper">Правая рука</option></select>'+
    '<select aria-label="Донор для пересадки"><option value="5:1:arm">Старый донор</option></select>';
-  const run={level:6,patient:0,stats:[3,3,3],wins:5,
+  const run={level:11,patient:0,stats:[3,3,3],wins:10,
    mutations:[],surgeries:[],donorTissues:[],prosthetics:[],preparing:true};
   const modal=installTowerUpgradeWindow({root,run,statsPanel:document.querySelector('#stats'),
-   mutationPanel:document.querySelector('#mutations'),surgeryPanel:panel});
+   mutationPanel:document.querySelector('#mutations'),surgeryPanel:panel,artifactPanel:document.querySelector('#artifacts')});
   modal.open('surgery');
   assert.equal(root.querySelectorAll('[data-upgrade-site]').length,13,
    'a stale select must not create a phantom donor arm');

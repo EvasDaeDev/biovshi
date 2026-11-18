@@ -1,7 +1,7 @@
 // Dedicated Tower modernization dialog. Reuses the existing mutation and
 // surgical control panels so purchases and save validation stay authoritative.
 import {towerMutationSnapshot,towerMutationCombatBonus,towerMutationSynergies,towerInstalledItems,TOWER_MUTATIONS,TOWER_MUTATION_LIMIT} from './mutations.js';
-import {towerSurgeryAvailableSites,towerSurgerySiteLabel,towerSurgeryCapacity,
+import {towerSurgeryAvailableSites,towerSurgerySiteLabel,towerSurgeryCapacity,TOWER_SURGERY_MIN_LEVEL,
  towerSurgeryPrice,towerSurgeryReplacePrice,TOWER_SURGERY_OPERATIONS} from './surgery.js';
 import {renderTowerUpgradePatient} from './upgrade-preview.js';
 import {towerPatientAnatomy} from './anatomy.js';
@@ -15,7 +15,7 @@ const create=(tag,className,text)=>{
 const format=n=>(Math.round(n*100)/100).toLocaleString('ru-RU',{maximumFractionDigits:2});
 const statNames=['СКОРОСТЬ','СИЛА','МАНЁВРЕННОСТЬ'];
 
-export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,surgeryPanel,renderWallet=()=>{}}){
+export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,surgeryPanel,artifactPanel,renderWallet=()=>{}}){
  const previous=root.querySelector('#tower-upgrade-window');
  if(previous?.open&&typeof previous.close==='function')previous.close();
  previous?.remove();
@@ -35,9 +35,9 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  const paper=create('div','tower-upgrade-paper');
  overlay.append(paper);
  const top=create('div','tower-upgrade-heading');
- const heading=create('h2','', 'МОДЕРНИЗАЦИЯ ПАЦИЕНТА');heading.id='tower-upgrade-title';
+ const heading=create('h2','', 'УБЕЖИЩЕ');heading.id='tower-upgrade-title';
  const closeButton=create('button','tower-upgrade-close','×');closeButton.type='button';
- closeButton.setAttribute('aria-label','Закрыть модернизацию');
+ closeButton.setAttribute('aria-label','Закрыть убежище');
  top.append(heading,closeButton);paper.append(top);
  const wallet=create('div','tower-upgrade-wallet');paper.append(wallet);
  const table=create('div','tower-upgrade-table');
@@ -51,7 +51,9 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  const nav=create('div','tower-upgrade-tabs');nav.setAttribute('role','tablist');
  const mutationTab=create('button','tower-upgrade-tab','МОДИФИКАЦИИ');
  const surgeryTab=create('button','tower-upgrade-tab','ХИРУРГИЯ');
- for(const [tab,id] of [[mutationTab,'mutations'],[surgeryTab,'surgery']]){
+ const artifactTab=create('button','tower-upgrade-tab','АРТЕФАКТЫ');
+ const tabs=[[mutationTab,'mutations'],[surgeryTab,'surgery'],[artifactTab,'artifacts']];
+ for(const [tab,id] of tabs){
   tab.type='button';tab.dataset.upgradeTab=id;tab.setAttribute('role','tab');
   nav.append(tab);
  }
@@ -59,9 +61,11 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  const content=create('div','tower-upgrade-content');
  const modsContainer=create('div','tower-upgrade-page');modsContainer.id='tower-upgrade-mutation-page';
  const surgeryContainer=create('div','tower-upgrade-page');surgeryContainer.id='tower-upgrade-surgery-page';
- modsContainer.setAttribute('role','tabpanel');surgeryContainer.setAttribute('role','tabpanel');
+ const artifactsContainer=create('div','tower-upgrade-page');artifactsContainer.id='tower-upgrade-artifacts-page';
+ for(const container of [modsContainer,surgeryContainer,artifactsContainer])container.setAttribute('role','tabpanel');
  modsContainer.append(mutationPanel);surgeryContainer.append(surgeryPanel);
- content.append(modsContainer,surgeryContainer);paper.append(content);
+ artifactPanel.hidden=false;artifactsContainer.append(artifactPanel);
+ content.append(modsContainer,surgeryContainer,artifactsContainer);paper.append(content);
  const feedback=create('p','tower-upgrade-feedback');feedback.id='tower-upgrade-feedback';
  feedback.setAttribute('role','status');paper.append(feedback);
  root.append(overlay);
@@ -174,20 +178,28 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
    'Наведи курсор на модуль для предпросмотра его атласа и характеристик';
  }
  function setTab(next){
-  activeTab=next==='surgery'?'surgery':'mutations';hoverMutation=null;surgeryPreviewEnabled=false;
-  mutationTab.setAttribute('aria-selected',String(activeTab==='mutations'));
-  surgeryTab.setAttribute('aria-selected',String(activeTab==='surgery'));
-  mutationTab.classList.toggle('is-active',activeTab==='mutations');
-  surgeryTab.classList.toggle('is-active',activeTab==='surgery');
+  const surgeryUnlocked=run.level>=TOWER_SURGERY_MIN_LEVEL;
+  activeTab=next==='artifacts'?'artifacts':next==='surgery'&&surgeryUnlocked?'surgery':'mutations';
+  hoverMutation=null;surgeryPreviewEnabled=false;
+  for(const [button,id] of tabs){
+   button.setAttribute('aria-selected',String(activeTab===id));
+   button.classList.toggle('is-active',activeTab===id);
+  }
   modsContainer.hidden=activeTab!=='mutations';
   surgeryContainer.hidden=activeTab!=='surgery';
-  paint();
+  artifactsContainer.hidden=activeTab!=='artifacts';
+  const viewingArtifacts=activeTab==='artifacts';
+  table.hidden=viewingArtifacts;stats.hidden=viewingArtifacts;
+  if(!viewingArtifacts)paint();
  }
  function refresh(){
   renderWallet(wallet);
+  surgeryTab.disabled=run.level<TOWER_SURGERY_MIN_LEVEL;
+  surgeryTab.textContent=surgeryTab.disabled?'ХИРУРГИЯ 🔒':'ХИРУРГИЯ';
+  surgeryTab.title=surgeryTab.disabled?'Откроется после победы над вторым боссом на 10-м этаже':'Операции и пересадки';
   if(hoverMutation&&(![...mutationPanel.querySelectorAll('[data-mutation-type]')].some(button=>button.dataset.mutationType===hoverMutation.type)||(!run.mutationDraft&&!hoverMutation.id)))hoverMutation=null;
-  launch.textContent=run.mutationDraft?'ВЫБРАТЬ МОДИФИКАЦИЮ · МОДЕРНИЗАЦИЯ':
-   'МОДЕРНИЗАЦИЯ · МОДУЛИ '+run.mutations.length+
+  launch.textContent=run.mutationDraft?'УБЕЖИЩЕ · ВЫБРАТЬ НАГРАДУ':
+   'УБЕЖИЩЕ · МОДУЛИ '+run.mutations.length+
    ' · ОПЕРАЦИИ '+run.surgeries.length+'/'+towerSurgeryCapacity(run.level);
   launch.classList.toggle('has-reward',Boolean(run.mutationDraft));
   for(const [index,button] of [...mutationPanel.querySelectorAll('.tower-mutation-option')].entries()){
@@ -223,7 +235,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
    donor.dataset.upgradeBound='true';
    donor.addEventListener('change',()=>{surgeryPreviewEnabled=true;if(activeTab==='surgery')paint();});
   }
-  if(!overlay.hidden)paint();
+  if(!overlay.hidden&&activeTab!=='artifacts')paint();
  }
  function open(tab=run.mutationDraft?'mutations':activeTab){
   if(root.querySelector('#tower-preparation')?.hidden)return;
@@ -234,7 +246,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   else overlay.setAttribute('open','');
   setTab(tab);
   (run.mutationDraft?mutationPanel.querySelector('.tower-mutation-option'):null)?.focus();
-  if(!run.mutationDraft)(tab==='surgery'?surgeryTab:mutationTab).focus();
+  if(!run.mutationDraft)(activeTab==='artifacts'?artifactTab:activeTab==='surgery'?surgeryTab:mutationTab).focus();
  }
  function close(){
   if(overlay.hidden&&!overlay.open)return;
@@ -249,6 +261,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  closeButton.onclick=close;
  mutationTab.onclick=()=>setTab('mutations');
  surgeryTab.onclick=()=>setTab('surgery');
+ artifactTab.onclick=()=>setTab('artifacts');
  overlay.addEventListener('click',event=>{if(event.target===overlay)close();});
  overlay.addEventListener('cancel',event=>{event.preventDefault();close();});
  overlay.addEventListener('keydown',event=>{

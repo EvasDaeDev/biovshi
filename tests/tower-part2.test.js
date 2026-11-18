@@ -110,7 +110,7 @@ test('post-cycle income is preserved; no reroll of claimed rewards after reload'
  assert.equal(s.players[0].balance,coins);
 });
 test('replacement surgery is paid once and old donor tissue never returns',()=>{
- const s=session(),t=advance(s,6);
+ const s=session(),t=advance(s,11);
  chooseTowerMutation(t,t.mutationDraft.options[0]);
  awardTowerDonors(t,1,'strong');const donor=t.donorTissues.find(item=>item.kind==='arm');
  const first=purchaseTowerSurgery(s,0,t,'transplant_arm','arm-1-upper',donor.id);
@@ -125,7 +125,7 @@ test('replacement surgery is paid once and old donor tissue never returns',()=>{
  assert.ok(validTower(t));
 });
 test('replacement of ordinary implant goes back to surgical stock',()=>{
- const s=session(),t=advance(s,6);chooseTowerMutation(t,t.mutationDraft.options[0]);
+ const s=session(),t=advance(s,11);chooseTowerMutation(t,t.mutationDraft.options[0]);
  purchaseTowerSurgery(s,0,t,'impact','arm-1-upper');
  purchaseTowerSurgery(s,0,t,'reflex','arm-1-upper',null,'arm-1-upper');
  assert.equal(t.surgicalStock.length,1);assert.equal(t.surgicalStock[0].procedure,'impact');
@@ -185,4 +185,15 @@ test('every module description lists bonuses from the live gameplay model',()=>{
  assert.match(towerMutationEffectText('optic'),/манёвр \+0,4/);
  assert.match(towerMutationEffectText('optic'),/крит \+2,5%/);
  assert.match(towerMutationEffectText('synapse'),/откат атак −3%/);
+});
+
+test('old early-surgery runs remain valid but cannot buy more before second boss',()=>{
+ const s=session(500),t=advance(s,6);
+ chooseTowerMutation(t,t.mutationDraft.options[0]);
+ t.surgeries=[{site:'arm-1-upper',procedure:'impact'}];
+ assert.equal(validTower(t),true,'legacy paid implant remains on the patient');
+ const balance=s.players[0].balance;
+ assert.throws(()=>purchaseTowerSurgery(s,0,t,'brace','spine-1'),/недоступна/);
+ assert.equal(s.players[0].balance,balance);
+ assert.deepEqual(t.surgeries,[{site:'arm-1-upper',procedure:'impact'}]);
 });

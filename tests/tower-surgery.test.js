@@ -17,18 +17,26 @@ function advance(session,floor){
  }
  return towerFor(session,0);
 }
-test('tower surgery unlocks one real site every five completed floors, max three',()=>{
+test('tower surgery unlocks after second boss, with three slots by floor 21',()=>{
  assert.equal(towerSurgeryCapacity(1),0);
  assert.equal(towerSurgeryCapacity(5),0);
- assert.equal(towerSurgeryCapacity(6),1);
- assert.equal(towerSurgeryCapacity(11),2);
- assert.equal(towerSurgeryCapacity(16),3);
+ assert.equal(towerSurgeryCapacity(6),0);
+ assert.equal(towerSurgeryCapacity(10),0);
+ assert.equal(towerSurgeryCapacity(11),1);
+ assert.equal(towerSurgeryCapacity(16),2);
+ assert.equal(towerSurgeryCapacity(21),3);
  assert.equal(towerSurgeryCapacity(36),3);
  const session=betNewSession(['Оператор'],500),run=towerFor(session,0);
  assert.throws(()=>buyTowerSurgery(session,0,'drive','leg-1-upper'),/недоступна/);
  advance(session,6);
  assert.throws(()=>buyTowerSurgery(session,0,'drive','leg-1-upper'),/недоступна/,
-  'boss draft must be selected before performing surgery');
+  'boss floor five must NOT unlock surgery');
+ assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
+ assert.throws(()=>buyTowerSurgery(session,0,'drive','leg-1-upper'),/недоступна/,
+  'choosing first reward does not bypass floor-ten boss requirement');
+ advance(session,11);
+ assert.throws(()=>buyTowerSurgery(session,0,'drive','leg-1-upper'),/недоступна/,
+  'pending second boss reward still blocks paid operations');
  assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
  assert.equal(towerSurgeryPrice(run),60);
  assert.equal(buyTowerSurgery(session,0,'drive','leg-1-upper'),60);
@@ -38,7 +46,7 @@ test('tower surgery unlocks one real site every five completed floors, max three
  assert.equal(towerSurgeryPrice(run),100);
  assert.throws(()=>buyTowerSurgery(session,0,'drive','leg--1-upper'),/недоступна/,'cannot exceed available floor slot');
  assert.equal(validTower(run),true);
- advance(session,11);
+ advance(session,16);
  assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
  assert.equal(buyTowerSurgery(session,0,'impact','arm--1-lower'),100);
  assert.equal(session.surgerySpent,160);
@@ -76,7 +84,7 @@ test('operated limb bonus disappears when severed and returns when repaired',()=
  assert.deepEqual(towerSurgeryBonus(patient.surgeries,robot),[0,0,0]);
 });
 test('paid surgery cannot debit an insufficient bank or forge repeated site charges',()=>{
- const session=betNewSession(['Касса'],25),run=advance(session,6);
+ const session=betNewSession(['Касса'],25),run=advance(session,11);
  assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
  const before=structuredClone(session);
  assert.throws(()=>buyTowerSurgery(session,0,'drive','leg-1-lower'),/Недостаточно/);
@@ -92,7 +100,7 @@ test('surgery is stored as a monetary sink, DMS restores it and old saves still 
  const previous={storage:globalThis.localStorage,key:ctx.BET_STORAGE,betting:ctx.betting};
  globalThis.localStorage=dom.window.localStorage;ctx.BET_STORAGE='tower-surgery-test';
  try{
-  const s=betNewSession(['Пациент'],500),t=advance(s,6);
+  const s=betNewSession(['Пациент'],500),t=advance(s,11);
   assert.ok(chooseTowerMutation(t,t.mutationDraft.options[0]));
   assert.equal(buyTowerSurgery(s,0,'impact','arm-1-upper'),60);
   assert.equal(buyTowerInsurance(s,0),50);

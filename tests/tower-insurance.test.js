@@ -123,8 +123,31 @@ test('renewed policies and existing historical tariffs remain valid after saving
  }finally{dom.window.close();}
 });
 
+test('DMS never renews itself during wins, reentry or Shelter switching',()=>{
+ const f=startBossScenario({floor:5});
+ const previous=globalThis.confirm;globalThis.confirm=()=>false;
+ try{
+  towerPreparation();document.querySelector('#tower-insurance').click();
+  const paid=structuredClone(towerFor(f.session,0).insurance);
+  const bank=f.session.players[0].balance,spent=f.session.insuranceSpent;
+  reach(f.session,0,7);towerPreparation();
+  document.querySelector('#tower-upgrade-open').click();
+  document.querySelector('[data-upgrade-tab="artifacts"]').click();
+  document.querySelector('.tower-upgrade-close').click();
+  towerPreparation();
+  assert.deepEqual(towerFor(f.session,0).insurance,paid,'neither winning nor reopening Shelter buys a renewal');
+  assert.equal(f.session.players[0].balance,bank);
+  assert.equal(f.session.insuranceSpent,spent);
+  assert.match(document.querySelector('#tower-insurance-status').textContent,/только вручную/);
+  document.querySelector('#tower-insurance').click();
+  assert.deepEqual(towerFor(f.session,0).insurance,paid,'cancelled renewal is free');
+  assert.equal(f.session.insuranceSpent,spent);
+ }finally{globalThis.confirm=previous;f.close();}
+});
+
 test('preparation offers active-policy renewal on a higher floor and blocks accidental repeat charging',()=>{
  const f=startBossScenario({floor:5});
+ const previous=globalThis.confirm;let confirmations=0;globalThis.confirm=()=>{confirmations++;return true;};
  try{
   towerPreparation();const button=document.querySelector('#tower-insurance');button.click();
   reach(f.session,0,7);towerPreparation();
@@ -134,9 +157,9 @@ test('preparation offers active-policy renewal on a higher floor and blocks acci
   assert.equal(towerFor(f.session,0).insurance.checkpoint.level,7);
   assert.match(button.textContent,/ДМС.*ЭТАЖ 7/);assert.ok(button.disabled);
   assert.match(document.querySelector('#tower-prep-error').textContent,/ДМС продлена/);
-  button.click();towerPreparation();assert.equal(f.session.insuranceSpent,105);
+  button.click();towerPreparation();assert.equal(confirmations,1);assert.equal(f.session.insuranceSpent,105);
   assert.equal(bettingLoad().towers[0].insurance.checkpoint.level,7);
- }finally{f.close();}
+ }finally{globalThis.confirm=previous;f.close();}
 });
 
 test('purchased DMS and its monetary sink survive storage, and old saves receive a free empty policy',()=>{

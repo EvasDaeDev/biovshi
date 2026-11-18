@@ -109,9 +109,16 @@ test('post-boss module choices lock fight entry and update the actual player com
  }finally{close(dom);}
 });
 
+function unlockSurgeryForTest(session,run){
+ for(let i=0;i<10;i++){
+  if(run.mutationDraft)chooseTowerMutation(run,run.mutationDraft.options[0]);
+  completeTower(session,0,true,()=>.24);
+ }
+}
+
 test('surgeon lets the player buy one body-specific operation and saves combat impact',()=>{
  const s=betNewSession(['Хирург'],300),t=towerFor(s,0);
- for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ unlockSurgeryForTest(s,t);
  const dom=setup(s,t,'ward');
  try{
   const panel=document.querySelector('#tower-prep-surgery');
@@ -144,7 +151,7 @@ test('surgeon lets the player buy one body-specific operation and saves combat i
 
 test('purchases during preparation take effect on the SAME floor, including graft geometry and module atlas',()=>{
  const s=betNewSession(['Момент установки'],1000),run=towerFor(s,0);
- for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ unlockSurgeryForTest(s,run);
  const chosen=run.mutationDraft.options[0];
  const dom=setup(s,run,'ward');
  try{
@@ -224,7 +231,7 @@ test('real global modal guard allows mouse and touch events inside modernization
 });
 test('global capture guard allows auto-open boss reward choice and live surgery purchase',()=>{
  const s=betNewSession(['Награда и хирургия'],300),run=towerFor(s,0);
- for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ unlockSurgeryForTest(s,run);
  const dom=setup(s,run,'ward');
  try{
   document.querySelector('#launch-overlay').hidden=true;
@@ -297,7 +304,7 @@ test('Tower II upgrade screen displays coin art, real equipped bonuses and one r
 
 test('surgery implant texture survives a switch between modernization tabs and prices show coins',()=>{
  const s=betNewSession(['Хирургия UI'],1000),t=towerFor(s,0);
- for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ unlockSurgeryForTest(s,t);
  const dom=setup(s,t,'ward');
  try{
   const modal=document.querySelector('#tower-upgrade-window');
@@ -328,7 +335,7 @@ test('surgery implant texture survives a switch between modernization tabs and p
   assert.equal(after[2].classList.contains('is-positive'),true,'more maneuver is green');
  }finally{close(dom);}
 });
-test('modernization is a separate window with a horizontal patient and two real tabs',()=>{
+test('Shelter is a separate window with a horizontal patient and three real tabs',()=>{
  const s=betNewSession(['Модернизация'],250),t=towerFor(s,0),dom=setup(s,t,'ward');
  try{
   const launch=document.querySelector('#tower-upgrade-open');
@@ -341,13 +348,18 @@ test('modernization is a separate window with a horizontal patient and two real 
   launch.click();
   assert.equal(modal.hidden,false);
   assert.equal(modal.hasAttribute('open'),true,'a native dialog must be opened for hit testing');
-  assert.match(modal.textContent,/МОДЕРНИЗАЦИЯ ПАЦИЕНТА/);
-  assert.equal(modal.querySelectorAll('[role="tab"]').length,2);
+  assert.match(modal.textContent,/УБЕЖИЩЕ/);
+  assert.equal(modal.querySelectorAll('[role="tab"]').length,3);
   assert.equal(modal.querySelector('[data-tower-patient-pose]').getAttribute('data-tower-patient-pose'),'horizontal');
   assert.equal(modal.querySelectorAll('[data-upgrade-site]').length,13);
-  modal.querySelector('[data-upgrade-tab="surgery"]').click();
-  assert.equal(modal.querySelector('[data-upgrade-tab="surgery"]').getAttribute('aria-selected'),'true');
-  assert.match(modal.querySelector('#tower-prep-surgery').textContent,/откроются после прохождения пятого этажа/);
+  const surgeryTab=modal.querySelector('[data-upgrade-tab="surgery"]');
+  assert.equal(surgeryTab.disabled,true,'surgery is locked before beating second boss');
+  assert.match(surgeryTab.title,/вторым боссом/);
+  modal.querySelector('[data-upgrade-tab="artifacts"]').click();
+  assert.equal(modal.querySelector('[data-upgrade-tab="artifacts"]').getAttribute('aria-selected'),'true');
+  assert.equal(modal.querySelector('#tower-upgrade-artifacts-page').hidden,false);
+  assert.equal(modal.querySelectorAll('.artifact').length,4);
+  assert.equal(document.querySelector('#tower-artifact-view'),null,'no old collection under preparation');
   modal.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
   assert.equal(modal.hidden,true);
   assert.equal(modal.hasAttribute('open'),false,'closing exits the native top layer');
@@ -361,7 +373,7 @@ test('modernization is a separate window with a horizontal patient and two real 
 
 test('modernization selects surgical body parts from horizontal patient and previews atlas before purchase',()=>{
  const s=betNewSession(['Операция'],300),t=towerFor(s,0);
- for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ unlockSurgeryForTest(s,t);
  const dom=setup(s,t,'ward');
  try{
   const modal=document.querySelector('#tower-upgrade-window');
@@ -399,7 +411,7 @@ test('modernization selects surgical body parts from horizontal patient and prev
 
 test('modified live body skin uses exact replacement PNG and falls back only for a failed segment',()=>{
  const session=betNewSession(['Протезы'],300),run=towerFor(session,0);
- for(let i=0;i<5;i++)completeTower(session,0,true,()=>.24);
+ unlockSurgeryForTest(session,run);
  assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
  assert.equal(buyTowerSurgery(session,0,'impact','arm-1-upper'),60);
  const dom=setup(session,run,'ward');

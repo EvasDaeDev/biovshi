@@ -25,6 +25,11 @@ test('only personally credited kills award donor tissue',()=>{
 test('tissue consumption, credits, real anatomy and insurance',()=>{
  const {session,run}=reachSix();
  run.preparing=false;rewardTower(session,0,1,0);completeTower(session,0,true,()=>.2);
+ while(run.level<11){
+  if(run.mutationDraft)chooseTowerMutation(run,run.mutationDraft.options[0]);
+  completeTower(session,0,true,()=>.2);
+ }
+ assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
  const tissue=towerAvailableDonors(run,'transplant_arm')[0],before=session.players[0].balance;
  assert.equal(buyTowerSurgery(session,0,'transplant_arm','arm-1-upper',tissue.id),60);
  assert.equal(session.players[0].balance,before-60);

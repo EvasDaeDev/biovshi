@@ -46,7 +46,7 @@ test('F3 rejects lower-limb grafts and leaves other modes with ordinary rig',()=
 test('F3 graft purchase is charged once and anatomy persists through DMS restore',()=>{
  const session=betNewSession(['Хирург'],500);
  const run=towerFor(session,0);
- Object.assign(run,{level:6,wins:5,record:5,preparing:true});
+ Object.assign(run,{level:11,wins:10,record:10,preparing:true});
  const before=session.players[0].balance;
  assert.equal(buyTowerSurgery(session,0,'graft_arm','arm-1-upper'),60);
  assert.equal(session.players[0].balance,before-60);

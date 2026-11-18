@@ -300,7 +300,7 @@ export function towerPreparation(){
             ctx.towerGarage[0].mutations=[...t.mutations];
             ctx.towerGarage[0].mutationInventory=structuredClone(t.mutationInventory);
             ctx.towerGarage[0].equippedMutations=[...t.equippedMutations];
-            bettingSave();renderMutations();renderSkills();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
+            bettingSave();renderMutations();renderSkills();renderInsurance();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
             updateTowerHud();upgradeModal?.refresh();upgradeMessage('');
           }catch(error){upgradeMessage(error.message);}
         };
@@ -338,14 +338,14 @@ export function towerPreparation(){
     }
     if(t.level<TOWER_SURGERY_MIN_LEVEL){
       const soon=document.createElement('small');
-      soon.textContent='Операции откроются после прохождения пятого этажа и победы над боссом.';
+      soon.textContent='ХИРУРГИЯ ЗАКРЫТА. Победи второго босса на 10-м этаже первого восхождения.';
       surgeryPanel.append(soon);return;
     }
     const installed=document.createElement('small');
     installed.textContent=t.surgeries.length
       ?'ИМПЛАНТИРОВАНО: '+t.surgeries.map(op=>TOWER_SURGERY_OPERATIONS[op.procedure].name+
        ' ('+towerSurgerySiteLabel(op.site)+')').join(' · ')
-      :'Первый операционный слот открывается после босса пятого этажа.';
+      :'Первый операционный слот открывается после победы над боссом десятого этажа.';
     surgeryPanel.append(installed);
     if(t.surgeries.length>=slots){
       const note=document.createElement('small');
@@ -420,7 +420,7 @@ export function towerPreparation(){
   }
   renderSurgery();
   upgradeModal=installTowerUpgradeWindow({root:ctx.root,run:t,statsPanel:fields,mutationPanel,surgeryPanel,
-    renderWallet:target=>renderTowerPlayerWallet(target)});
+    artifactPanel:ctx.root.querySelector('#tower-prep-artifacts'),renderWallet:target=>renderTowerPlayerWallet(target)});
   function showCycleNotice(){
     if(!t.cycleNotice||t.mutationDraft)return;
     let dialog=ctx.root.querySelector('#tower-cycle-notice');
@@ -438,21 +438,27 @@ export function towerPreparation(){
     proceed.focus();
   }
   if(!t.mutationDraft)showCycleNotice();
-  ctx.root.querySelector('#tower-prep-artifacts').innerHTML=artifactCollectionMarkup(t.artifacts)+`<p class="artifact-bonus-note">ПОЛНЫЙ АРТЕФАКТ: +${formatChips(ARTIFACT_COMPLETION_REWARD)}</p>`;
+  ctx.root.querySelector('#tower-prep-artifacts').innerHTML=`<h3 class="tower-artifact-title">КОЛЛЕКЦИЯ АРТЕФАКТОВ · ${t.artifacts.pieces.length}/${ARTIFACT_PIECE_COUNT}</h3>`+artifactCollectionMarkup(t.artifacts)+`<p class="artifact-bonus-note">ПОЛНЫЙ АРТЕФАКТ: +${formatChips(ARTIFACT_COMPLETION_REWARD)}</p>`;
   ctx.root.querySelector('#tower-prep-error').textContent='';
   const insuranceButton=ctx.root.querySelector('#tower-insurance');
+  const insuranceStatus=ctx.root.querySelector('#tower-insurance-status');
   const renderInsurance=()=>{
     const c=t.insurance.checkpoint,renewal=Boolean(c&&t.level>c.level);
     insuranceButton.classList.toggle('is-active',Boolean(c));
     insuranceButton.innerHTML=renewal?`ПРОДЛИТЬ ДМС · ${formatChips(t.insurance.price)}`:c?`ДМС · ЭТАЖ ${c.level}`:`ДМС · ${formatChips(t.insurance.price)}`;
     insuranceButton.disabled=Boolean(c&&!renewal)||ctx.betting.players[ctx.towerPlayer].balance<t.insurance.price;
-    insuranceButton.title=renewal?`Перенести ДМС с этажа ${c.level} на этаж ${t.level} за ${t.insurance.price} монет и сохранить текущие навыки, протезы и модули. Старый полис заменяется. Следующий тариф дороже на 3%, с округлением вверх.`:c?`При поражении вернёт на этаж ${c.level} с сохранёнными навыками и модулями. Страховка одноразовая. На более высоком этаже её можно продлить.`:'Одноразовая страховка этажа, выбранных навыков и модулей. Следующая покупка дороже на 10%, с округлением вверх.';
+    insuranceButton.title=renewal?`ПРОДЛЕНИЕ ВРУЧНУЮ: перенести ДМС с этажа ${c.level} на этаж ${t.level} за ${t.insurance.price} монет. Новый полис заменяет прежнюю точку. Следующий тариф +3%.`:c?`Полис уже оплачен. Вернёт на этаж ${c.level}; автоматически не продлевается.`:'Одноразовая страховка. После покупки следующий тариф +10%; продление действующего полиса +3%.';
+    insuranceStatus.hidden=!c;
+    if(c)insuranceStatus.textContent=renewal?
+     `ДМС активна с этажа ${towerFloorLabel(c.level)}. Перенос на ${towerFloorLabel(t.level)} только вручную, за ${t.insurance.price} монет.`:
+     `ДМС активна: застрахован этаж ${towerFloorLabel(c.level)}. Повторного списания нет.`;
   };
   renderInsurance();
   insuranceButton.onclick=()=>{
     if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
     try{
-      const renewal=Boolean(t.insurance.checkpoint);
+      const checkpoint=t.insurance.checkpoint,renewal=Boolean(checkpoint);
+      if(renewal&&!confirm(`Продлить ДМС с этажа ${towerFloorLabel(checkpoint.level)} на ${towerFloorLabel(t.level)}?\nСписать ${t.insurance.price} монет?\nПрежняя точка возврата будет заменена.`))return;
       buyTowerInsurance(ctx.betting,ctx.towerPlayer);bettingSave();renderInsurance();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));updateTowerHud();
       ctx.root.querySelector('#tower-prep-error').textContent=renewal?`ДМС продлена: этаж ${t.level} и текущие навыки застрахованы.`:'ДМС оформлена: этаж и навыки застрахованы.';
     }

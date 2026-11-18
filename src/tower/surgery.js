@@ -5,7 +5,7 @@ import {PROSTHETIC_SEGMENTS} from '../garage/model.js';
 import {towerAvailableDonors,validTowerDonors} from './donors.js';
 import {normalizeTowerGraftProsthetics} from './anatomy.js';
 
-export const TOWER_SURGERY_MIN_LEVEL=6;
+export const TOWER_SURGERY_MIN_LEVEL=11;
 export const TOWER_SURGERY_MAX=3;
 export const TOWER_SURGERY_OPERATIONS=Object.freeze({
  brace:Object.freeze({name:'Скоба',description:'Укрепление позвоночника: сила +0,35 · манёвр +0,1',
@@ -33,10 +33,15 @@ const siteKind=site=>typeof site==='string'&&site.startsWith('spine-')?'spine':
 // Interim economic pricing; modelled independently of the betting wallet.
 export const towerSurgeryPrice=run=>[60,100,150][Math.min(2,run?.surgeries?.length??0)];
 export const towerSurgeryReplacePrice=run=>Math.max(60,Math.ceil(towerSurgeryPrice(run)*.85));
+// Surgical slots first open after defeating the second boss (floor 10).
+// Subsequent slots open after floors 15 and 20; never more than three.
 export const towerSurgeryCapacity=level=>Math.min(TOWER_SURGERY_MAX,
- Math.max(0,Math.floor((level-1)/5)));
+ Math.max(0,Math.floor((level-6)/5)));
 export function validTowerSurgeries(surgeries,level){
- if(!Array.isArray(surgeries)||surgeries.length>towerSurgeryCapacity(level))return false;
+ // Pre-existing experimental saves could have surgery after floors 5/10/15.
+ // Keep those paid procedures valid while preventing NEW early operations.
+ const legacyCapacity=Math.min(TOWER_SURGERY_MAX,Math.max(0,Math.floor((level-1)/5)));
+ if(!Array.isArray(surgeries)||surgeries.length>Math.max(towerSurgeryCapacity(level),legacyCapacity))return false;
  const sites=new Set(),donors=new Set();
  for(const item of surgeries){
   if(!item||typeof item!=='object'||Array.isArray(item)
@@ -77,7 +82,7 @@ export function towerSurgeryAvailableSites(run,procedure,replaceSite=null){
 }
 export function purchaseTowerSurgery(session,player,run,procedure,site,donorId=null,replaceSite=null){
  const operation=TOWER_SURGERY_OPERATIONS[procedure];
- if(!operation||!run?.preparing||run.mutationDraft||run.rewarded?.length
+ if(!operation||!run?.preparing||run.level<TOWER_SURGERY_MIN_LEVEL||run.mutationDraft||run.rewarded?.length
    ||!validTowerSurgeries(run.surgeries,run.level)||!validTowerDonors(run.donorTissues??[])
    ||(run.surgeries.length>=towerSurgeryCapacity(run.level)&&replaceSite===null)
    ||(replaceSite!==null&&!run.surgeries.some(item=>item.site===replaceSite))
