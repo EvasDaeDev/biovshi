@@ -43,10 +43,27 @@ test('defeat restores the insured floor, patient and chosen build with intact pr
  const second=completeTower(s,0,false);assert.equal(second.level,1);assert.deepEqual(second.stats,[3,3,3]);assert.equal(second.insurance.price,55);
 });
 
-test('policies are independent per player and survive victories, menu restarts and voluntary run reset',()=>{
- const s=betNewSession(['Первый','Второй'],1000);reach(s,0,5);buyTowerInsurance(s,0);const insured=structuredClone(towerFor(s,0).insurance);
- completeTower(s,0,true,()=>0);assert.deepEqual(towerFor(s,0).insurance,insured);assert.equal(towerFor(s,1).insurance.checkpoint,null);
- resetTower(s,0);assert.deepEqual(towerFor(s,0).insurance,insured);assert.equal(completeTower(s,0,false).level,5);assert.ok(validTower(towerFor(s,0)));
+test('voluntary Tower reset cancels the active DMS without refunding coins or resetting tariff',()=>{
+ const s=betNewSession(['Первый','Второй'],1000);
+ reach(s,0,5);buyTowerInsurance(s,0);
+ const insured=structuredClone(towerFor(s,0).insurance);
+ const balance=s.players[0].balance,spent=s.insuranceSpent;
+ completeTower(s,0,true,()=>0);
+ assert.deepEqual(towerFor(s,0).insurance,insured,'victory keeps the checkpoint');
+ assert.equal(towerFor(s,1).insurance.checkpoint,null,'other player is unaffected');
+ const artifacts=structuredClone(towerFor(s,0).artifacts),record=towerFor(s,0).record;
+ const reset=resetTower(s,0);
+ assert.equal(reset.level,1);
+ assert.equal(reset.insurance.checkpoint,null,'manual reset cancels the policy');
+ assert.equal(reset.insurance.price,insured.price,'next DMS tariff remains escalated');
+ assert.equal(s.players[0].balance,balance,'manual reset never refunds insurance');
+ assert.equal(s.insuranceSpent,spent,'spent funds stay in the currency ledger');
+ assert.equal(reset.record,record);
+ assert.deepEqual(reset.artifacts,artifacts);
+ assert.ok(validTower(reset));
+ assert.equal(completeTower(s,0,false).level,1,'defeat after reset cannot return to the old insured floor');
+ assert.equal(buyTowerInsurance(s,0),insured.price,'new DMS purchase uses existing tariff');
+ assert.ok(validTower(towerFor(s,0)));
 });
 
 test('insufficient funds do not change price, policy or bank',()=>{
