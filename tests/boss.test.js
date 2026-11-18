@@ -255,9 +255,9 @@ test('named boss announcement, card, arena label and combat identity survive sav
    assert.equal(f.boss.bossName,'Потрошитель 2');assert.equal(fighterLabel(1),'Босс · Потрошитель 2');
    const encounter=JSON.parse(JSON.stringify(f.tower));assert.equal(bossName(ensureBossEncounter(encounter,()=>.99).floor),'Потрошитель 2');
    towerPreparation();const title=document.querySelector('#tower-prep-title');
-   assert.equal(title.textContent,'Потрошитель 2\nЭТАЖ №65');assert.ok(title.classList.contains('boss-floor-title'));
+   assert.equal(title.textContent,'Потрошитель 2\nЭТАЖ №B-05');assert.ok(title.classList.contains('boss-floor-title'));
    document.querySelector('#tower-fight').click();updateTowerHud();paint();
-   assert.match(ctx.status.textContent,/Потрошитель 2 · ЭТАЖ №65/);assert.ok(ctx.status.classList.contains('boss-floor-badge'));
+   assert.match(ctx.status.textContent,/Потрошитель 2 · ЭТАЖ №B-05/);assert.ok(ctx.status.classList.contains('boss-floor-badge'));
    assert.match(ctx.cardNodes[1].card.textContent,/Потрошитель 2/);assert.equal(f.boss.label.textContent,'Потрошитель 2');
    assert.doesNotMatch(document.querySelector('#tower-wallet').textContent,/Потрошитель/);
   }finally{f.close();}

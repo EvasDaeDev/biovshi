@@ -153,13 +153,16 @@ test('purchases during preparation take effect on the SAME floor, including graf
   surgery.querySelector('.tower-surgery-purchase').click();
   assert.equal(run.surgeries[0].procedure,'graft_arm');
   assert.equal(run.mutationInventory[0].type,chosen);
-  assert.deepEqual(run.mutations,[]);
+  assert.deepEqual(run.mutations,[],'claimed item is not active before paid installation');
+  document.querySelector('.tower-mutation-install').click();
+  assert.deepEqual(run.mutations,[chosen],'paid installation activates the module');
+  assert.equal(s.mutationSpent,100);
   assert.equal(ctx.towerRun.surgeries.length,0,'preparation started from a detached snapshot');
   document.querySelector('.tower-upgrade-close').click();
   document.querySelector('#tower-fight').click();
   assert.equal(ctx.startup.phase,'spawning');
   assert.equal(ctx.towerRun.surgeries[0].procedure,'graft_arm');
-  assert.deepEqual(ctx.towerRun.mutations,[]);
+  assert.deepEqual(ctx.towerRun.mutations,[chosen]);
   assert.notEqual(ctx.robots[0],initial,'fighter is rebuilt after purchases');
   assert.equal(ctx.robots[0].body.limbs.length,5);
   const piece=ctx.robots[0].actor.querySelector('[data-skin-segment="arm-1-graft-upper"] image');
