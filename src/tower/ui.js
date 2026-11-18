@@ -458,7 +458,7 @@ export function installTowerUI(){
   ctx.root.querySelector('#tower-wallet').hidden=ctx.mode!=='tower';
   const menu=ctx.root.querySelector('#launch-overlay');
   ctx.root.querySelector('#menu-player').onchange=e=>{ctx.betting.towerPlayerId=Number(e.target.value);bettingSave();refreshMenu();};
-  ctx.root.querySelector('#tower-reset').onclick=()=>{if(confirm('Сбросить башню выбранного игрока? Банк монет и личный рекорд сохранятся.')){resetTower(ctx.betting,ctx.menuPlayer);bettingSave();refreshMenu();}};
+  ctx.root.querySelector('#tower-reset').onclick=()=>{if(confirm('Сбросить башню выбранного игрока? Действующая ДМС будет аннулирована без возврата монет. Банк, личный рекорд и артефакты сохранятся. Тариф следующей ДМС не изменится.')){resetTower(ctx.betting,ctx.menuPlayer);bettingSave();refreshMenu();}};
   ctx.root.querySelector('#launch-tower').onclick=()=>{
     ctx.audio?.unlock();
     if(!ctx.betting){menu.hidden=true;ctx.afterSetup='menu';bettingSetup();return;}
