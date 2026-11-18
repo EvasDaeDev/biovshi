@@ -82,6 +82,7 @@ export function towerPreparation(){
   renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
   renderTowerFloorChoices({container:ctx.root.querySelector('#tower-floor-preview'),
     session:ctx.betting,player:ctx.towerPlayer,run:t,onSave:bettingSave,
+    fallbackArenaId:ctx.arenaDefinition?.id??'ward',
     onChange:()=>{renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));renderSkills();renderInsurance();upgradeModal?.refresh();},
     onError:message=>{ctx.root.querySelector('#tower-prep-error').textContent=message;}});
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();

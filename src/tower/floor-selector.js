@@ -5,24 +5,30 @@ import {selectedTowerFloor,selectTowerFloor,TOWER_DANGER_STYLES} from './floors.
 import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
 import {TOWER_RELATION_NAMES} from './relations.js';
 import {purchaseTowerArenaReroll,towerRerollCandidates,towerRerollPrice} from './economy.js';
-import {towerEnemyReward} from './model.js';
+import {towerEnemyReward,towerEnemyCount} from './model.js';
+import {artifactDropChance,ARTIFACT_PIECE_COUNT} from './artifacts.js';
+import {hasBoss} from '../boss/config.js';
 import {formatChips} from '../ui/currency.js';
 
-export function renderTowerFloorChoices({container,session,player,run,onSave,onChange=()=>{},onError=()=>{}}){
+export function renderTowerFloorChoices({container,session,player,run,fallbackArenaId='ward',onSave,onChange=()=>{},onError=()=>{}}){
  function render(){
   const selected=selectedTowerFloor(run);
-  if(!selected)return;
-  const definition=arenaDefinition(selected.arenaId);
+  const definition=arenaDefinition(selected?.arenaId??fallbackArenaId);
   const map=document.createElement('div');map.className='tower-arena-overview';
   const overview=document.createElement('div');overview.className='tower-arena-map';
   const diagram=document.createElement('span');diagram.className='tower-arena-diagram';diagram.innerHTML=arenaDiagram(definition);
   const meta=document.createElement('div');
   const name=document.createElement('strong');name.textContent=definition.name;
-  const count=document.createElement('span');count.textContent=`ПРОТИВНИКОВ: ${selected.profiles.length} · РЕКОРД: ${run.record}`;
+  const count=document.createElement('span');count.textContent=`ПРОТИВНИКОВ: ${selected?.profiles.length??towerEnemyCount(run)} · РЕКОРД: ${run.record}`;
   const reward=document.createElement('span');reward.innerHTML=`${formatChips(towerEnemyReward(run))} ЗА ЛИЧНОЕ ВЫБИВАНИЕ`;
   meta.append(name,count);
   if(run.preparing){const recovered=document.createElement('b');recovered.textContent='+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН';meta.append(recovered);}
-  meta.append(reward);overview.append(diagram,meta);
+  meta.append(reward);
+  if(hasBoss(run)){const chance=document.createElement('span');chance.dataset.artifactChance='';
+   chance.textContent=run.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':
+    'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(run.artifacts,run.level)*100)+'%';
+   meta.append(chance);}
+  overview.append(diagram,meta);
   const dice=document.createElement('div');dice.className='tower-arena-dice';
   const reroll=document.createElement('button');reroll.type='button';reroll.className='tower-reroll-button';
   reroll.setAttribute('aria-label','Другая арена');
@@ -33,6 +39,7 @@ export function renderTowerFloorChoices({container,session,player,run,onSave,onC
   const cost=document.createElement('span');cost.className='tower-reroll-price';cost.innerHTML=Number.isFinite(price)?formatChips(price):'—';
   const caption=document.createElement('small');caption.className='tower-reroll-caption';caption.textContent='ДРУГАЯ АРЕНА';
   dice.append(reroll,cost,caption);map.append(overview,dice);
+  if(!selected||!run.floorPlan?.options){container.replaceChildren(map);return;}
   const choices=document.createElement('div');choices.className='tower-challenge-options';
   run.floorPlan.options.forEach((option,index)=>{
    const button=document.createElement('button');button.type='button';
