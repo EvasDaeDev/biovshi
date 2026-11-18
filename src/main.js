@@ -96,16 +96,31 @@ async function boot(){
  ctx.enterTowerArena=async()=>{
    if(!ctx.deferTowerArena)return ctx.towerTransition;
    const current=ctx.betting,run=towerFor(current,ctx.towerPlayer);
-   // The Shelter moves the artifact collection into its own dialog: return
-   // it to preparation before tearing down the old UI.
+   // The artifact collection is physically inside the Shelter dialog. Hide
+   // it before returning it to its parking place in the preparation sheet;
+   // otherwise it flashes in the old sheet while the arena loads.
    const artifacts=root.querySelector('#tower-prep-artifacts');
-   if(artifacts)root.querySelector('#tower-prep-error')?.before(artifacts);
+   if(artifacts){
+     artifacts.hidden=true;
+     root.querySelector('#tower-prep-error')?.before(artifacts);
+   }
    const shelter=root.querySelector('#tower-upgrade-window');
    if(shelter?.open&&typeof shelter.close==='function')shelter.close();
    shelter?.remove();root.querySelector('#tower-upgrade-open')?.remove();
    ctx.deferTowerArena=false;
-   ctx.towerTransition=transition({session:current,entry:'tower',tower:structuredClone(run),
-     arenaId:selectedTowerFloor(run)?.arenaId??randomArenaId(),enterFight:true});
+   // initializeGame changes data-game-mode before its async texture/renderer
+   // work finishes. Cover the old canvas until the new scene is ready.
+   const progress=document.createElement('div');
+   progress.id='texture-loading';
+   progress.textContent='Подготовка арены…';
+   progress.setAttribute('role','status');
+   document.body.prepend(progress);
+   ctx.towerTransition=(async()=>{
+     try{
+       await transition({session:current,entry:'tower',tower:structuredClone(run),
+         arenaId:selectedTowerFloor(run)?.arenaId??randomArenaId(),enterFight:true});
+     }finally{progress.remove();}
+   })();
    return ctx.towerTransition;
  };
  ctx.startTotalizator=()=>{bettingCancel();return transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId});};

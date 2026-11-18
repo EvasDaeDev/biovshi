@@ -31,8 +31,18 @@ async function enterTower(){
  assert.equal(document.querySelector('#tower-controls').hidden,true,'joystick container stays hidden during preparation');
 }
 async function launchTower(){
+ const sheet=document.querySelector('#tower-preparation');
+ const artifacts=document.querySelector('#tower-prep-artifacts');
+ assert.ok(artifacts.closest('#tower-upgrade-artifacts-page'),
+   'the collection starts inside the Shelter, not the preparation sheet');
+ assert.equal(artifacts.hidden,false);
  document.querySelector('#tower-fight').click();
+ assert.equal(sheet.hidden,true,'preparation is hidden synchronously, before the world loads');
+ assert.equal(artifacts.hidden,true,'returning artifacts to their parking place cannot display the old screen');
+ assert.ok(document.querySelector('#texture-loading'),
+   'a full-screen loading cover hides the previous world during asynchronous initialization');
  await ctx.towerTransition;
+ assert.equal(document.querySelector('#texture-loading'),null,'loading cover is cleared after arena is ready');
  assert.equal(ctx.mode,'tower');
  assert.equal(ctx.startup.phase,'spawning');
  assert.equal(document.querySelector('#tower-preparation').hidden,true);

@@ -447,6 +447,9 @@ export function towerPreparation(){
     t.preparing=false;t.arenaRerollLocked=true;
     if(ctx.deferTowerArena){
       fightButton.disabled=true;bettingSave();upgradeModal?.close();
+      // Hide the sheet immediately, before moving its artifacts back from
+      // the Shelter and before the asynchronous world initialization.
+      panel.hidden=true;
       try{await ctx.enterTowerArena();}
       catch(error){
         console.error('Tower arena loading:',error);
