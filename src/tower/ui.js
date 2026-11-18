@@ -525,7 +525,12 @@ export function installTowerUI({enterFight=false}={}){
   ctx.resetButton.hidden=true;
   ctx.speedButton.disabled=true;ctx.svg.onclick=null;ctx.svg.style.cursor='default';
   installTowerInput();
-  if(enterFight){ctx.root.querySelector('#tower-preparation').hidden=true;}
-  else towerPreparation();
+  if(enterFight){
+    // The pre-arena preparation intentionally hides touch controls. After the
+    // deferred world build, reveal the container before spawning fighters.
+    // installTowerInput already hides the stick for the 'direction' mode.
+    ctx.root.querySelector('#tower-preparation').hidden=true;
+    ctx.root.querySelector('#tower-controls').hidden=false;
+  }else towerPreparation();
 }
 

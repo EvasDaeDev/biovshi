@@ -28,6 +28,7 @@ async function enterTower(){
  assert.equal(ctx.root.dataset.gameMode,'tower-preparing','preparation uses the dark backdrop');
  assert.equal(ctx.robots,oldRobots,'preparation did not load a new arena or patients');
  assert.ok(document.querySelector('#tower-floor-preview .tower-challenge-option'));
+ assert.equal(document.querySelector('#tower-controls').hidden,true,'joystick container stays hidden during preparation');
 }
 async function launchTower(){
  document.querySelector('#tower-fight').click();
@@ -35,6 +36,9 @@ async function launchTower(){
  assert.equal(ctx.mode,'tower');
  assert.equal(ctx.startup.phase,'spawning');
  assert.equal(document.querySelector('#tower-preparation').hidden,true);
+ assert.equal(document.querySelector('#tower-controls').hidden,false,'arena launch restores joystick container after deferred initialization');
+ assert.equal(document.querySelector('#tower-stick').hidden,ctx.towerControlMode==='direction',
+   'only explicit direction control hides the physical stick');
 }
 test('boot menu creates shared players, switches modes and restarts a saved floor with no duplicate rewards',async()=>{
  const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://menu.test/',pretendToBeVisual:true});
@@ -50,7 +54,13 @@ test('boot menu creates shared players, switches modes and restarts a saved floo
   document.querySelector('#launch-tower').click();document.querySelector('#bet-count').value='1';document.querySelector('#bet-count').dispatchEvent(new Event('input'));
   document.querySelector('#bet-names input').value='Общий игрок';document.querySelector('#bet-setup-form').dispatchEvent(new Event('submit',{cancelable:true}));
   assert.equal(document.querySelector('#launch-overlay').hidden,false);assert.equal(ctx.betting.players[0].name,'Общий игрок');assert.equal(document.querySelector('#launch-setup').classList.contains('is-new-game'),true);
-  await enterTower();assert.equal(document.querySelector('#launch-overlay').hidden,true);await launchTower();assert.equal(ctx.robots.length,2);advanceStartup(10);ctx.robots[1].damage('head',0,100);assert.equal(ctx.betting.players[0].balance,210);
+  await enterTower();assert.equal(document.querySelector('#launch-overlay').hidden,true);await launchTower();assert.equal(ctx.robots.length,2);
+  const controlMode=document.querySelector('#tower-control-mode'),stick=document.querySelector('#tower-stick');
+  controlMode.value='direction';controlMode.dispatchEvent(new Event('change'));
+  assert.equal(stick.hidden,true,'direction mode deliberately hides the joystick');
+  controlMode.value='control';controlMode.dispatchEvent(new Event('change'));
+  assert.equal(stick.hidden,false,'switching back restores joystick without rebuilding arena');
+  advanceStartup(10);ctx.robots[1].damage('head',0,100);assert.equal(ctx.betting.players[0].balance,210);
   document.querySelector('#arena-settings-button').click();document.querySelector('#settings-main-menu').click();await ctx.startTotalizator();assert.equal(ctx.mode,'spectator');assert.equal(ctx.robots.length,4);assert.equal(ctx.betting.players[0].balance,210);assert.ok(document.querySelector('#bet-stakes-form'));
   await enterTower();await launchTower();assert.equal(ctx.robots[1].hasHead,true);advanceStartup(10);ctx.robots[1].damage('head',0,100);assert.equal(ctx.betting.players[0].balance,210,'no duplicate payout after mode switch');
   assert.equal(bettingLoad().players[0].balance,210);
