@@ -33,6 +33,8 @@ jobs:
         run: npm test
       - name: Simulate Tower-only economy
         run: node scripts/simulate-tower-economy.mjs
+      - name: Analyze multi-cycle economy and 8-10-12 rarity hypotheses offline
+        run: node scripts/simulate-tower-progression.mjs --seeds=160 --max-fights=420
       - name: Build playable game
         run: npm run build
       - name: Verify standalone HTML embeds upgrade textures
