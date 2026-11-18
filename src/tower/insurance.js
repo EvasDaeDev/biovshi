@@ -18,7 +18,7 @@ export function validInsurance(policy,record){
   &&validTowerMutationState({level:c.level,mutations:c.mutations??[],mutationDraft:c.mutationDraft,
    ...(c.mutationInventory?{mutationInventory:c.mutationInventory,equippedMutations:c.equippedMutations,
    nextMutationId:c.nextMutationId,modInstallations:c.modInstallations}:{})})
-  &&validTowerSurgeries(c.surgeries??[],c.level)&&validTowerSurgicalStock({...c,surgicalStock:c.surgicalStock??[],consumedDonorIds:c.consumedDonorIds??[]})
+  &&validTowerSurgeries(c.surgeries??[],c.level)&&validTowerSurgicalStock({...c,surgeries:c.surgeries??[],surgicalStock:c.surgicalStock??[],consumedDonorIds:c.consumedDonorIds??[]})
   &&validTowerRerolls({...c,arenaRerolls:c.arenaRerolls??0})
   &&(c.arenaRerollLocked===undefined||typeof c.arenaRerollLocked==='boolean')
   &&validTowerDonorState({...c,donorTissues:c.donorTissues??[],surgeries:c.surgeries??[]})
@@ -36,7 +36,8 @@ export function purchaseInsurance(session,player,tower){
   equippedMutations:[...(tower.equippedMutations??[])],nextMutationId:tower.nextMutationId??1,
   modInstallations:tower.modInstallations??0,
   surgeries:structuredClone(tower.surgeries??[]),
-  surgicalStock:structuredClone(tower.surgicalStock??[]),consumedDonorIds:[...(tower.consumedDonorIds??[])],
+  surgicalStock:structuredClone(tower.surgicalStock??[]),nextSurgicalStockId:tower.nextSurgicalStockId??1,
+  consumedDonorIds:[...(tower.consumedDonorIds??[])],
   graftProsthetics:[...(tower.graftProsthetics??[])],
   donorTissues:structuredClone(tower.donorTissues??[]),arenaRerolls:tower.arenaRerolls??0,arenaRerollLocked:tower.arenaRerollLocked??false,
   ...(tower.mutationDraft?{mutationDraft:structuredClone(tower.mutationDraft)}:{}),

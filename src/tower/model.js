@@ -1,6 +1,6 @@
 import {newInsurance,validInsurance,purchaseInsurance} from './insurance.js';
 import {validTowerMutationState,grantTowerMutationDraft,normalizeTowerMutationInventory} from './mutations.js';
-import {validTowerSurgeries,validTowerSurgicalStock,purchaseTowerSurgery} from './surgery.js';
+import {validTowerSurgeries,validTowerSurgicalStock,normalizeTowerSurgicalStock,purchaseTowerSurgery} from './surgery.js';
 import {normalizeTowerGraftProsthetics} from './anatomy.js';
 import {validTowerDonorState,awardTowerDonors} from './donors.js';
 import {selectedTowerFloor,towerFloorCount,validTowerFloorPlan} from './floors.js';
@@ -18,7 +18,7 @@ export const towerEnemyReward=(t,victim=1)=>{
 };
 export const floorEnemyCount=floor=>1+Math.floor(floor/2);
 export const towerEnemyCount=t=>t.legacyEnemyCount??towerFloorCount(t)??(hasBoss(t)?3:floorEnemyCount(t.level));
-export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],graftProsthetics:[],donorTissues:[],mutations:[],mutationInventory:[],equippedMutations:[],nextMutationId:1,modInstallations:0,surgeries:[],surgicalStock:[],consumedDonorIds:[],arenaRerolls:0,arenaRerollLocked:false,rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
+export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],graftProsthetics:[],donorTissues:[],mutations:[],mutationInventory:[],equippedMutations:[],nextMutationId:1,modInstallations:0,surgeries:[],surgicalStock:[],nextSurgicalStockId:1,consumedDonorIds:[],arenaRerolls:0,arenaRerollLocked:false,rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
 export function normalizeTower(t){
  if(!t||typeof t!=='object'||Array.isArray(t))return t;
  const previousBossInterval=t.artifacts?.bossEvery??(TEST_BUILD?2:5);
@@ -26,7 +26,12 @@ export function normalizeTower(t){
  t.mutations??=[];
  normalizeTowerMutationInventory(t);
  t.surgeries??=[];
- t.surgicalStock??=[];t.consumedDonorIds??=t.surgeries.map(op=>op.donorId).filter(Boolean);
+ normalizeTowerSurgicalStock(t);
+ if(t.insurance?.checkpoint){
+  const checkpoint=t.insurance.checkpoint;
+  checkpoint.surgeries??=[];
+  normalizeTowerSurgicalStock(checkpoint);
+ }
  t.graftProsthetics=normalizeTowerGraftProsthetics(t.graftProsthetics,t);
  t.donorTissues??=[];
  t.arenaRerolls??=0;
@@ -118,8 +123,8 @@ export function resetTower(session,player){
  return session.towers[player]=newTower(undefined,t.record,t.artifacts,{price:t.insurance.price,checkpoint:null});
 }
 
-export function buyTowerSurgery(session,player,procedure,site,donorId=null,replaceSite=null){
+export function buyTowerSurgery(session,player,procedure,site,donorId=null,replaceSite=null,stockId=null){
  const t=towerFor(session,player);
- return purchaseTowerSurgery(session,player,t,procedure,site,donorId,replaceSite);
+ return purchaseTowerSurgery(session,player,t,procedure,site,donorId,replaceSite,stockId);
 }
 export function buyTowerInsurance(session,player){const t=towerFor(session,player);return purchaseInsurance(session,player,t);}

@@ -293,6 +293,13 @@ export function towerPreparation(){
        ' ('+towerSurgerySiteLabel(op.site)+')').join(' · ')
       :'Первый операционный слот открывается после победы над боссом десятого этажа.';
     surgeryPanel.append(installed);
+    const stock=t.surgicalStock??[];
+    const stockSummary=document.createElement('small');
+    stockSummary.className='tower-surgical-stock-summary';
+    stockSummary.textContent='СКЛАД ИМПЛАНТОВ · '+stock.length+(stock.length?
+      ' · '+stock.map(item=>TOWER_SURGERY_OPERATIONS[item.procedure].name).join(', '):
+      ' · снятые обычные импланты появятся здесь');
+    surgeryPanel.append(stockSummary);
     if(t.surgeries.length>=slots){
       const note=document.createElement('small');
       note.textContent='Все операционные места заняты. Можно платно заменить ранее проведённую операцию.';
@@ -315,6 +322,17 @@ export function towerPreparation(){
       option.textContent=TOWER_SURGERY_OPERATIONS[id].name+' · '+TOWER_SURGERY_OPERATIONS[id].description;
       procedureSelect.append(option);
     }
+    const stockSelect=document.createElement('select');
+    stockSelect.setAttribute('aria-label','Имплант со склада');
+    const fresh=document.createElement('option');fresh.value='';fresh.textContent='НОВЫЙ ИМПЛАНТ';
+    stockSelect.append(fresh);
+    for(const item of stock){
+      const option=document.createElement('option');option.value=item.id;
+      option.textContent='СО СКЛАДА: '+TOWER_SURGERY_OPERATIONS[item.procedure].name+
+        ' · снят с '+towerSurgerySiteLabel(item.fromSite);
+      stockSelect.append(option);
+    }
+    stockSelect.hidden=stock.length===0;
     const siteSelect=document.createElement('select');
     siteSelect.setAttribute('aria-label','Сегмент для операции');
     const donorSelect=document.createElement('select');
@@ -322,6 +340,9 @@ export function towerPreparation(){
     const purchase=document.createElement('button');purchase.type='button';
     purchase.className='tower-surgery-purchase';
     const refreshSites=()=>{
+      const stored=stock.find(item=>item.id===stockSelect.value);
+      if(stored)procedureSelect.value=stored.procedure;
+      procedureSelect.disabled=Boolean(stored);
       siteSelect.replaceChildren();
       for(const site of towerSurgeryAvailableSites(t,procedureSelect.value,replaceSelect.value||null)){
         const option=document.createElement('option');option.value=site;
@@ -336,23 +357,29 @@ export function towerPreparation(){
         donorSelect.append(option);
       }
       const price=replaceSelect.value?towerSurgeryReplacePrice(t):towerSurgeryPrice(t);
-      purchase.innerHTML=(replaceSelect.value?'ЗАМЕНИТЬ ОПЕРАЦИЮ':'ПРОВЕСТИ ОПЕРАЦИЮ')+' · '+formatChips(price);
+      purchase.innerHTML=(stored?'УСТАНОВИТЬ СО СКЛАДА':replaceSelect.value?'ЗАМЕНИТЬ ОПЕРАЦИЮ':'ПРОВЕСТИ ОПЕРАЦИЮ')+' · '+formatChips(price);
       purchase.disabled=Boolean(t.mutationDraft)||!siteSelect.options.length
         ||(!donorSelect.hidden&&!donorSelect.options.length)
         ||ctx.betting.players[ctx.towerPlayer].balance<price;
       purchase.title=t.mutationDraft?'Сначала выбери награду за босса':
+        stored?'Повторная установка собственного импланта платная. Сам предмет со склада не покупается.':
         'Операция на выбранном сегменте; отменить покупку нельзя.';
     };
     procedureSelect.onchange=refreshSites;replaceSelect.onchange=refreshSites;
+    stockSelect.onchange=refreshSites;
     purchase.onclick=()=>{
       if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
       try{
         const procedure=procedureSelect.value,site=siteSelect.value;
         const old=t.surgeries.find(op=>op.site===replaceSelect.value);
         const price=replaceSelect.value?towerSurgeryReplacePrice(t):towerSurgeryPrice(t);
+        const stockItem=stock.find(item=>item.id===stockSelect.value);
         if(!confirm((old?'ЗАМЕНИТЬ '+TOWER_SURGERY_OPERATIONS[old.procedure].name+' на ':'ПРОВЕСТИ ')+
-          TOWER_SURGERY_OPERATIONS[procedure].name+'\nУчасток: '+towerSurgerySiteLabel(site)+'\nСписать '+price+' монет?'))return;
-        const charged=buyTowerSurgery(ctx.betting,ctx.towerPlayer,procedure,site,donorSelect.hidden?null:donorSelect.value,replaceSelect.value||null);
+          TOWER_SURGERY_OPERATIONS[procedure].name+
+          (stockItem?'\nИМПЛАНТ ИЗ СОБСТВЕННОГО СКЛАДА':'')+
+          '\nУчасток: '+towerSurgerySiteLabel(site)+'\nСписать '+price+' монет?'))return;
+        const charged=buyTowerSurgery(ctx.betting,ctx.towerPlayer,procedure,site,
+          donorSelect.hidden?null:donorSelect.value,replaceSelect.value||null,stockItem?.id??null);
         ctx.towerGarage[0].surgeries=structuredClone(t.surgeries);
         lastSurgeryReceipt='Операция «'+TOWER_SURGERY_OPERATIONS[procedure].name+'» выполнена на '+towerSurgerySiteLabel(site)+' · −'+charged+' монет';
         bettingSave();renderSkills();renderSurgery();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
@@ -360,7 +387,7 @@ export function towerPreparation(){
         upgradeMessage('');
       }catch(error){upgradeMessage(error.message);}
     };
-    controls.append(replaceSelect,procedureSelect,siteSelect,donorSelect,purchase);
+    controls.append(replaceSelect,stockSelect,procedureSelect,siteSelect,donorSelect,purchase);
     surgeryPanel.append(controls);
     refreshSites();
   }

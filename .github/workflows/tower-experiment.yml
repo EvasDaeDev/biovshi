@@ -28,7 +28,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Test ownership, equipment, DMS, surgery and infinite cycles
-        run: node --test tests/tower-part2.test.js
+        run: node --test tests/tower-part2.test.js tests/tower-surgical-stock.test.js tests/tower-surgical-stock-ui.test.js
       - name: Run current game regression suite
         run: npm test
       - name: Simulate Tower-only economy
