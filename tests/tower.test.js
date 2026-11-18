@@ -19,7 +19,7 @@ import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 import {initializeGame} from '../src/game/initialize.js';
 import {ctx} from '../src/game/state.js';
 import {installTowerUI,openMenu,settleTower} from '../src/tower/ui.js';
-import {openTowerFloorSelector} from '../src/tower/floor-selector.js';
+import {renderTowerFloorChoices} from '../src/tower/floor-selector.js';
 import {initializeModalFocus} from '../src/ui/modal-focus.js';
 import {controlledIntent} from '../src/tower/input.js';
 import {advanceStartup} from '../src/game/session.js';
@@ -58,9 +58,7 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
   assert.equal(ctx.robots[2].body.skinKey,'robotEnemy3');
   assert.equal(ctx.cardNodes[1].card.dataset.enemyProfile,'fast');
   assert.match(ctx.cardNodes[1].card.textContent,/Быстрый/);
-  const selector=openTowerFloorSelector({root:ctx.root,session,player:0,run:t,
-    onSave:()=>{},onConfirm:()=>{},onCancel:()=>{}});
-  const buttons=[...selector.element.querySelectorAll('.tower-challenge-option')];
+  const buttons=[...document.querySelectorAll('#tower-floor-preview .tower-challenge-option')];
   assert.equal(buttons.length,2);
   assert.equal(buttons[0].getAttribute('aria-pressed'),'true');
   assert.match(buttons[1].textContent,/ОПАСНО/);
@@ -643,12 +641,16 @@ test('arena reroll before loading preserves the same challenge without rebuildin
  ]};
  const dom=setup(session,run);let builds=0;
  try{
-  const popup=openTowerFloorSelector({root:ctx.root,session,player:0,run,
-    onSave:bettingSave,onConfirm:()=>{builds++;},onCancel:()=>{}});
-  const button=popup.element.querySelector('.tower-floor-selector-reroll');
+  const oldRobots=ctx.robots;
+  // The choices and reroll exist inside preparation, not a second dialog.
+  assert.equal(document.querySelector('#tower-floor-selector'),null);
+  renderTowerFloorChoices({container:document.querySelector('#tower-floor-preview'),session,player:0,run,
+    onSave:bettingSave});
+  const button=document.querySelector('#tower-floor-preview .tower-reroll-button');
   assert.equal(button.disabled,false);
-  assert.match(button.textContent,/50/);
+  assert.match(document.querySelector('.tower-reroll-price').textContent,/50/);
   button.click();button.click();
+  assert.equal(ctx.robots,oldRobots,'no world rebuild during arena rerolls');
   assert.equal(builds,0,'no level load during arena rerolls');
   assert.equal(session.players[0].balance,150);
   assert.equal(session.towerEconomySpent,50);
@@ -658,8 +660,6 @@ test('arena reroll before loading preserves the same challenge without rebuildin
   assert.deepEqual(run.floorPlan.options.map(o=>o.profiles),[['basic'],['fast','strong']]);
   assert.equal(run.floorPlan.selected,1);
   assert.equal(bettingLoad().towerEconomySpent,50);
-  popup.element.querySelector('#tower-floor-selector-confirm').click();
-  assert.equal(builds,1);
  }finally{close(dom);}
 });
 test('standing manual patient never rotates toward another patient',()=>{

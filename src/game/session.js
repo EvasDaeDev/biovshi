@@ -127,7 +127,13 @@ export function advanceStartup(dt) {
   if(ctx.mode==='tower'){
     const timer=ctx.root?.querySelector('#tower-start-countdown');
     const text=towerCountdownText(ctx.startup.readyAt,ctx.startup.elapsed);
-    if(timer&&timer.textContent!==text)timer.textContent=text;
+    if(timer&&timer.textContent!==text){
+      timer.textContent=text;
+      timer.classList.remove('is-changing');
+      // Restart a short animation every second, not just on first appearance.
+      void timer.offsetWidth;
+      timer.classList.add('is-changing');
+    }
   }
   while (ctx.startup.nextIndex < ctx.startup.order.length && ctx.startup.elapsed + 1e-9 >= ctx.startup.nextIndex * CONFIG.startup.spawnIntervalSec) {
     const index = ctx.startup.nextIndex++;
@@ -159,6 +165,7 @@ export function startSpawnSequence() {
       countdown.setAttribute('role','status');countdown.setAttribute('aria-live','polite');stage.append(countdown);}
     ctx.startup.readyAt=towerCountdownDuration(ctx.robots.length,CONFIG.startup);
     countdown.textContent=towerCountdownText(ctx.startup.readyAt,0);countdown.hidden=false;
+    countdown.classList.add('is-changing');
   }else if(countdown)countdown.hidden=true;
   ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = true;
   advanceStartup(0);

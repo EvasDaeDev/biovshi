@@ -23,7 +23,7 @@ import {rebuildRobots} from '../game/arena.js';
 import {onGameEvent} from '../game/event-bus.js';
 import {installTowerInput} from './input.js';
 import {SKILLS,skillHintAttributes} from '../ui/patient.js';
-import {arenaDiagram} from '../game/arenas.js';
+import {renderTowerFloorChoices} from './floor-selector.js';
 import {artifactCollectionMarkup} from './artifact-ui.js';
 import {formatChips} from '../ui/currency.js';
 import {purchaseTowerStatChange,TOWER_STAT_CHANGE_PRICE} from './economy.js';
@@ -68,6 +68,7 @@ export function openMenu(){
   const upgrade=ctx.root.querySelector('#tower-upgrade-window');
   if(upgrade){if(upgrade.open&&typeof upgrade.close==='function')upgrade.close();upgrade.removeAttribute('open');upgrade.hidden=true;}
   ctx.root.querySelector('#tower-controls').hidden=true;
+  ctx.root.dataset.gameMode='menu';ctx.deferTowerArena=false;
   refreshMenu();ctx.root.querySelector('#launch-overlay').hidden=false;
   ctx.root.querySelector('#launch-tower').focus();
   return true;
@@ -79,12 +80,10 @@ export function towerPreparation(){
   title.classList.toggle('boss-floor-title',hasBoss(t));
   title.textContent=hasBoss(t)?`${bossName(t.level)}\nЭТАЖ №${towerFloorLabel(t.level)}`:`БАШНЯ · ЭТАЖ ${towerFloorLabel(t.level)}`;
   renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
-  ctx.root.querySelector('#tower-floor-preview').innerHTML=`<div class="tower-arena-overview"><div class="tower-arena-map">${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${selectedTowerFloor(t)?.relations?' · '+TOWER_RELATION_NAMES[selectedTowerFloor(t).relations.type]:''}${formatChips(towerEnemyReward(t))} ${hasBoss(t)?'ЗА БОССА · '+formatChips(10)+' ЗА ПАЦИЕНТА · ВСЕ ПРОТИВ ВСЕХ':'ЗА ЛИЧНОЕ ВЫБИВАНИЕ'}</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div></div></div>`;
-  const selected=selectedTowerFloor(t);
-  const challengeName=selected?.kind==='danger'?'ОПАСНО':selected?.kind==='boss'?'БОСС':'СТАНДАРТ';
-  const summary=document.createElement('p');summary.className='tower-challenge-locked';
-  summary.textContent='ВЫБРАНО ДО ЗАГРУЗКИ: '+challengeName+' · АРЕНА ЗАКРЕПЛЕНА';
-  ctx.root.querySelector('#tower-floor-preview').append(summary);
+  renderTowerFloorChoices({container:ctx.root.querySelector('#tower-floor-preview'),
+    session:ctx.betting,player:ctx.towerPlayer,run:t,onSave:bettingSave,
+    onChange:()=>{renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));renderSkills();renderInsurance();upgradeModal?.refresh();},
+    onError:message=>{ctx.root.querySelector('#tower-prep-error').textContent=message;}});
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   let upgradeModal=null;
   let lastSurgeryReceipt=null,lastMutationReceipt=null,lastStatReceipt=null;
@@ -410,10 +409,27 @@ export function towerPreparation(){
     }
     catch(error){ctx.root.querySelector('#tower-prep-error').textContent=error.message;}
   };
-  fightButton.onclick=()=>{
-    if(t.mutationDraft){ctx.root.querySelector('#tower-prep-error').textContent='Сначала выбери модификацию после победы над боссом.';return;}
+  fightButton.onclick=async()=>{
+    if(fightButton.disabled||t.mutationDraft){ctx.root.querySelector('#tower-prep-error').textContent='Сначала выбери модификацию после победы над боссом.';return;}
+    if(ctx.startup.phase!=='tower-ready')return;
     // An unpaid preview never changes the saved fighter.
-    draftStats=[...t.stats];t.preparing=false;t.arenaRerollLocked=true;
+    draftStats=[...t.stats];
+    const wasPreparing=t.preparing;
+    t.preparing=false;t.arenaRerollLocked=true;
+    if(ctx.deferTowerArena){
+      fightButton.disabled=true;bettingSave();upgradeModal?.close();
+      try{await ctx.enterTowerArena();}
+      catch(error){
+        console.error('Tower arena loading:',error);
+        t.preparing=wasPreparing;t.arenaRerollLocked=false;
+        ctx.deferTowerArena=true;ctx.startup.phase='tower-ready';
+        ctx.root.dataset.gameMode='tower-preparing';panel.hidden=false;
+        fightButton.disabled=false;
+        ctx.root.querySelector('#tower-prep-error').textContent='Не удалось открыть арену. Повтори попытку.';
+        bettingSave();
+      }
+      return;
+    }
     // Preparing the floor edits the canonical saved run, while initializeGame
     // originally created a detached snapshot and its robot BEFORE purchases.
     // Refresh both sources before the first frame of this very floor.
@@ -473,7 +489,7 @@ export function towerResults(){
   ctx.resultsProcedure.hidden=false;ctx.resultsProcedure.textContent='В МЕНЮ';ctx.resultsProcedure.onclick=openMenu;
   ctx.root.querySelector('#tower-controls').hidden=true;ctx.resultsPanel.hidden=false;ctx.resultsAgain.focus();
 }
-export function installTowerUI(){
+export function installTowerUI({enterFight=false}={}){
   refreshMenu();
   ctx.resetButton.hidden=false;
   ctx.root.querySelector('#tower-wallet').hidden=ctx.mode!=='tower';
@@ -507,6 +523,8 @@ export function installTowerUI(){
   updateTowerHud();
   ctx.resetButton.hidden=true;
   ctx.speedButton.disabled=true;ctx.svg.onclick=null;ctx.svg.style.cursor='default';
-  installTowerInput();towerPreparation();
+  installTowerInput();
+  if(enterFight){ctx.root.querySelector('#tower-preparation').hidden=true;}
+  else towerPreparation();
 }
 

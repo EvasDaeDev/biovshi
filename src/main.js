@@ -1,10 +1,9 @@
 import {SESSION_STORAGE} from './build-channel.js';
 import {setPaused} from './ui/controls.js';
-import {randomArenaId} from './game/arenas.js';
-import {installTowerUI,openMenu} from './tower/ui.js';
+import {arenaDefinition,randomArenaId} from './game/arenas.js';
+import {installTowerUI,openMenu,towerPreparation} from './tower/ui.js';
 import {towerFor} from './tower/model.js';
 import {ensureTowerFloorPlan,selectedTowerFloor} from './tower/floors.js';
-import {openTowerFloorSelector} from './tower/floor-selector.js';
 import {bettingSetup,bettingCancel} from './betting/ui.js';
 import {initializeFloor} from './render/floor-history.js';
 import {initializeModalFocus} from './ui/modal-focus.js';
@@ -24,7 +23,7 @@ import {startSpawnSequence} from './game/session.js';
 let cancelled=false;
 // Only a full page load requires the explicit sound/simulation gesture.
 let launchAccepted=false;
-async function prepare({textures,session,entry='auto',arenaId='ward',tower=null}){
+async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,enterFight=false}){
  initializeGame({textures,session,entry,arenaId,tower});
  await applyTextures();if(cancelled||ctx.disposed)return;
  await preparePatientPortraits();if(cancelled||ctx.disposed)return;
@@ -38,7 +37,7 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null}
  const gate=ctx.root.querySelector('#launch-overlay');
  const launchButton=ctx.root.querySelector('#launch-game');
  gate.hidden=launchAccepted;
- installTowerUI();
+ installTowerUI({enterFight});
  initializeModalFocus();
  initializeTutorial();
  launchButton.onclick=()=>{
@@ -51,6 +50,7 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null}
  };
  ctx.root.querySelector('#launch-setup').onclick=()=>{audio.unlock();launchAccepted=true;ctx.startSetup();};
  if(launchAccepted&&ctx.startup.phase==='demo')startSpawnSequence();
+ if(enterFight)startSpawnSequence();
  ctx.platform?.ready();
 }
 async function boot(){
@@ -74,21 +74,39 @@ async function boot(){
  };
  ctx.openMainMenu=openMenu;
  ctx.startTower=async player=>{
-   const current=ctx.betting;bettingCancel();ctx.towerPlayer=player;
-   const run=towerFor(current,player);ensureTowerFloorPlan(run);
-   current.towerPlayerId=player;bettingSave();
-   // Difficulty and arena are selected without loading any fighters or WebGL.
-   // A single full transition happens only after the player confirms the plan.
-   ctx.startup.phase='tower-select';setPaused(true);
-   ctx.resultsPanel.hidden=true;root.querySelector('#launch-overlay').hidden=true;
-   root.querySelector('#tower-preparation').hidden=true;
-   openTowerFloorSelector({root,session:current,player,run,onSave:bettingSave,
-     onCancel:openMenu,onConfirm:()=>{
-       const tower=structuredClone(run);
-       ctx.towerTransition=transition({session:current,entry:'tower',tower,
-         arenaId:selectedTowerFloor(tower)?.arenaId??randomArenaId()});
-       return ctx.towerTransition;
-     }});
+   const current=ctx.betting;
+   bettingCancel();
+   const run=towerFor(current,player);
+   ensureTowerFloorPlan(run);current.towerPlayerId=player;bettingSave();
+   // The original preparation sheet is shown BEFORE any Tower world build.
+   // Only lightweight floor metadata is read while the old canvas is hidden.
+   ctx.towerPlayer=player;ctx.towerRun=run;ctx.mode='tower';ctx.deferTowerArena=true;
+   ctx.root.dataset.gameMode='tower-preparing';
+   ctx.arenaDefinition=arenaDefinition(selectedTowerFloor(run)?.arenaId??'ward');
+   ctx.towerGarage=[{stats:[...run.stats],mutations:[...run.mutations],
+     mutationInventory:structuredClone(run.mutationInventory??[]),
+     equippedMutations:[...(run.equippedMutations??[])],
+     prosthetics:[...(run.prosthetics??[]),...(run.graftProsthetics??[])],
+     surgeries:structuredClone(run.surgeries??[])}];
+   setPaused(true);ctx.resultsPanel.hidden=true;
+   root.querySelector('#launch-overlay').hidden=true;
+   root.querySelector('#tower-controls').hidden=true;
+   towerPreparation();
+ };
+ ctx.enterTowerArena=async()=>{
+   if(!ctx.deferTowerArena)return ctx.towerTransition;
+   const current=ctx.betting,run=towerFor(current,ctx.towerPlayer);
+   // The Shelter moves the artifact collection into its own dialog: return
+   // it to preparation before tearing down the old UI.
+   const artifacts=root.querySelector('#tower-prep-artifacts');
+   if(artifacts)root.querySelector('#tower-prep-error')?.before(artifacts);
+   const shelter=root.querySelector('#tower-upgrade-window');
+   if(shelter?.open&&typeof shelter.close==='function')shelter.close();
+   shelter?.remove();root.querySelector('#tower-upgrade-open')?.remove();
+   ctx.deferTowerArena=false;
+   ctx.towerTransition=transition({session:current,entry:'tower',tower:structuredClone(run),
+     arenaId:selectedTowerFloor(run)?.arenaId??randomArenaId(),enterFight:true});
+   return ctx.towerTransition;
  };
  ctx.startTotalizator=()=>{bettingCancel();return transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId});};
  ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});setPaused(true);ctx.afterSetup='menu';bettingSetup();};
