@@ -73,7 +73,8 @@ function portraitReplacement(url,card){
    entry.atlas=atlas;
   }).catch(()=>{}).finally(()=>{
    entry.loading=false;
-   if(card){card.portraitPaintKey=null;ctx.telemetryDirty=true;ctx.lastTelemetryAt=-Infinity;}
+   for(const current of ctx.cardNodes??[])current.portraitPaintKey=null;
+   ctx.telemetryDirty=true;ctx.lastTelemetryAt=-Infinity;
   });
  }
  return entry.atlas;
