@@ -99,7 +99,12 @@ export function completeTower(session,player,won,random=Math.random){
  }
  return session.towers[player];
 }
-export function resetTower(session,player){const t=towerFor(session,player);return session.towers[player]=newTower(undefined,t.record,t.artifacts,t.insurance);}
+export function resetTower(session,player){
+ const t=towerFor(session,player);
+ // A voluntary run reset abandons the insured checkpoint as well as the build.
+ // Retain the earned artifact collection, personal record and escalated DMS tariff.
+ return session.towers[player]=newTower(undefined,t.record,t.artifacts,{price:t.insurance.price,checkpoint:null});
+}
 
 export function buyTowerSurgery(session,player,procedure,site,donorId=null){
  const t=towerFor(session,player);
