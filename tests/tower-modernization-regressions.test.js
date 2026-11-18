@@ -23,6 +23,7 @@ test('surgery modal does not preview an implant with a missing or stale donor',(
    'a stale select must not create a phantom donor arm');
   assert.match(root.querySelector('#tower-upgrade-stats').textContent,/нужен доступный донор/);
   run.donorTissues=[{id:'5:1:arm',profile:'boss',kind:'arm'}];
+  panel.querySelector('[aria-label="Донор для пересадки"]').dispatchEvent(new dom.window.Event('change'));
   modal.refresh();
   assert.equal(root.querySelectorAll('[data-upgrade-site]').length,15,
    'a verified available donor previews its extra two segments');

@@ -1,6 +1,6 @@
 // Dedicated Tower modernization dialog. Reuses the existing mutation and
 // surgical control panels so purchases and save validation stay authoritative.
-import {towerMutationSnapshot,towerMutationSynergies,TOWER_MUTATIONS} from './mutations.js';
+import {towerMutationSnapshot,towerMutationCombatBonus,towerMutationSynergies,towerInstalledItems,TOWER_MUTATIONS,TOWER_MUTATION_LIMIT} from './mutations.js';
 import {towerSurgeryAvailableSites,towerSurgerySiteLabel,towerSurgeryCapacity,
  towerSurgeryPrice,towerSurgeryReplacePrice,TOWER_SURGERY_OPERATIONS} from './surgery.js';
 import {renderTowerUpgradePatient} from './upgrade-preview.js';
@@ -15,7 +15,7 @@ const create=(tag,className,text)=>{
 const format=n=>(Math.round(n*100)/100).toLocaleString('ru-RU',{maximumFractionDigits:2});
 const statNames=['СКОРОСТЬ','СИЛА','МАНЁВРЕННОСТЬ'];
 
-export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,surgeryPanel}){
+export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,surgeryPanel,renderWallet=()=>{}}){
  const previous=root.querySelector('#tower-upgrade-window');
  if(previous?.open&&typeof previous.close==='function')previous.close();
  previous?.remove();
@@ -39,6 +39,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  const closeButton=create('button','tower-upgrade-close','×');closeButton.type='button';
  closeButton.setAttribute('aria-label','Закрыть модернизацию');
  top.append(heading,closeButton);paper.append(top);
+ const wallet=create('div','tower-upgrade-wallet');paper.append(wallet);
  const table=create('div','tower-upgrade-table');
  const drawing=create('div','tower-upgrade-drawing');
  drawing.id='tower-upgrade-patient';
@@ -65,7 +66,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  feedback.setAttribute('role','status');paper.append(feedback);
  root.append(overlay);
 
- let activeTab='mutations',hoverMutation=null,site=null;
+ let activeTab='mutations',hoverMutation=null,site=null,surgeryPreviewEnabled=false;
  const control=()=>({
   proc:surgeryPanel.querySelector('[aria-label="Вид операции"]'),
   selected:surgeryPanel.querySelector('[aria-label="Сегмент для операции"]'),
@@ -84,15 +85,27 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
     item.id===donor?.value&&item.kind===operation.site):null;
   // An empty/stale donor selector is a valid intermediate UI state, not a
   // hypothetical graft. Only preview a transplant backed by real tissue.
-  const proposedSurgery=editingSurgery&&operation&&site&&surgeryOptions.includes(site)&&
+  const proposedSurgery=editingSurgery&&surgeryPreviewEnabled&&operation&&site&&surgeryOptions.includes(site)&&
     (!operation.donor||donorItem)&&
     (run.surgeries.length<towerSurgeryCapacity(run.level)||surgeryReplace)&&!run.mutationDraft?
     {procedure:proc.value,site,...(donorItem?{donorId:donorItem.id,donorProfile:donorItem.profile}:{})}:null;
-  const proposedMutation=!editingSurgery&&hoverMutation&&
-    run.mutationDraft?.options.includes(hoverMutation)?hoverMutation:null;
+  // Both unclaimed rewards and already owned modules preview their *actual*
+  // equipped stats.  The inventory item is not an active bonus until paid.
+  const selectedCard=mutationPanel.querySelector('.tower-inventory-item.is-selected, .tower-mutation-option.is-selected');
+  const candidate=!editingSurgery&&(hoverMutation??(selectedCard?{
+    type:selectedCard.dataset.mutationType,
+    id:selectedCard.dataset.mutationId??null,
+    rarity:Number(selectedCard.dataset.mutationRarity??0)
+  }:null));
+  const equipped=run.equippedMutations?.includes(candidate?.id);
+  const installed=towerInstalledItems(run);
+  const conflict=installed.find(item=>item.type===candidate?.type);
+  const canPreview=Boolean(candidate&&!equipped&&(installed.length<TOWER_MUTATION_LIMIT||conflict));
+  const proposedMutation=canPreview?candidate.type:null;
+  const nextMutations=proposedMutation?[...run.mutations.filter(type=>type!==candidate.type),candidate.type]:run.mutations;
   const before=towerMutationSnapshot(run).effective;
   const draft=proposedSurgery?{...run,surgeries:[...run.surgeries.filter(op=>op.site!==surgeryReplace),proposedSurgery]}:
-   proposedMutation?{...run,mutations:[...run.mutations,proposedMutation]}:run;
+   proposedMutation?{...run,mutations:nextMutations}:run;
   const after=towerMutationSnapshot(draft).effective;
   stats.replaceChildren();
   const title=create('div','tower-upgrade-stats-head');
@@ -103,9 +116,12 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   for(let i=0;i<3;i++){
    const cell=create('div','tower-upgrade-stat');
    cell.append(create('span','',statNames[i]));
-   const value=create('b','',format(before[i])+' → '+format(after[i]));
-   if(after[i]>before[i]+.0001)value.classList.add('is-improved');
-   cell.append(value);values.append(cell);
+   const value=create('b','');
+   value.append(create('span','tower-stat-before',format(before[i])),document.createTextNode(' → '));
+   const next=create('span','tower-stat-after',format(after[i]));
+   if(after[i]>before[i]+.0001)next.classList.add('is-positive');
+   else if(after[i]<before[i]-.0001)next.classList.add('is-negative');
+   value.append(next);cell.append(value);values.append(cell);
   }
   stats.append(values);
   const detail=editingSurgery?
@@ -113,8 +129,21 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
       operation?.donor&&!donorItem?'Для пересадки нужен доступный донор выбранного типа':
       'Установлено: '+run.surgeries.length+' / '+towerSurgeryCapacity(run.level)+' · цена '+(surgeryReplace?towerSurgeryReplacePrice(run):towerSurgeryPrice(run))+' монет':
     proposedMutation?'ПРЕДПРОСМОТР: '+TOWER_MUTATIONS[proposedMutation].name:
-     'Установлено '+run.mutations.length+' модулей · активных синергий '+towerMutationSynergies(run.mutations).length;
+      candidate&&!equipped&&installed.length>=TOWER_MUTATION_LIMIT&&!conflict?
+       'Шесть мест заняты: сначала выбери модуль для замены':
+       'Установлено '+run.mutations.length+' модулей · активных синергий '+towerMutationSynergies(run.mutations).length;
   stats.append(create('small','tower-upgrade-stats-note',detail));
+  const currentCombat=towerMutationCombatBonus(run.mutations),nextCombat=towerMutationCombatBonus(draft.mutations);
+  const combatLine=create('small','tower-upgrade-stats-note tower-combat-preview');
+  combatLine.append(document.createTextNode('КРИТ: '+format(currentCombat.crit*100)+'% → '));
+  const critAfter=create('strong','',format(nextCombat.crit*100)+'%');
+  if(nextCombat.crit>currentCombat.crit+.0001)critAfter.classList.add('is-positive');
+  else if(nextCombat.crit<currentCombat.crit-.0001)critAfter.classList.add('is-negative');
+  combatLine.append(critAfter,document.createTextNode(' · ОТКАТ АТАК: '+format(currentCombat.cooldownMultiplier*100)+'% → '));
+  const cooldownAfter=create('strong','',format(nextCombat.cooldownMultiplier*100)+'%');
+  if(nextCombat.cooldownMultiplier<currentCombat.cooldownMultiplier-.0001)cooldownAfter.classList.add('is-positive');
+  else if(nextCombat.cooldownMultiplier>currentCombat.cooldownMultiplier+.0001)cooldownAfter.classList.add('is-negative');
+  combatLine.append(cooldownAfter);stats.append(combatLine);
   const anatomySummary=run=>{
    const body=towerPatientAnatomy(run);
    return {segments:body?.segments.length??13,
@@ -131,10 +160,10 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   renderTowerUpgradePatient(drawing,run,{
    selectedSite:editingSurgery?site:null,
    availableSites:editingSurgery?surgeryOptions:null,
-   previewSurgery:proposedSurgery,previewReplaceSite:surgeryReplace,previewMutation:proposedMutation,
+   previewSurgery:proposedSurgery,previewReplaceSite:surgeryReplace,previewMutation:proposedMutation,previewRarity:candidate?.rarity??0,
    onSelect:editingSurgery?chosen=>{
     if(!surgeryOptions.includes(chosen))return;
-    site=chosen;if(selected)selected.value=chosen;
+    site=chosen;surgeryPreviewEnabled=true;if(selected)selected.value=chosen;
     paint();
    }:null
   });
@@ -145,7 +174,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
    'Наведи курсор на модуль для предпросмотра его атласа и характеристик';
  }
  function setTab(next){
-  activeTab=next==='surgery'?'surgery':'mutations';hoverMutation=null;
+  activeTab=next==='surgery'?'surgery':'mutations';hoverMutation=null;surgeryPreviewEnabled=false;
   mutationTab.setAttribute('aria-selected',String(activeTab==='mutations'));
   surgeryTab.setAttribute('aria-selected',String(activeTab==='surgery'));
   mutationTab.classList.toggle('is-active',activeTab==='mutations');
@@ -155,29 +184,44 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   paint();
  }
  function refresh(){
+  renderWallet(wallet);
+  if(hoverMutation&&(![...mutationPanel.querySelectorAll('[data-mutation-type]')].some(button=>button.dataset.mutationType===hoverMutation.type)||(!run.mutationDraft&&!hoverMutation.id)))hoverMutation=null;
   launch.textContent=run.mutationDraft?'ВЫБРАТЬ МОДИФИКАЦИЮ · МОДЕРНИЗАЦИЯ':
    'МОДЕРНИЗАЦИЯ · МОДУЛИ '+run.mutations.length+
    ' · ОПЕРАЦИИ '+run.surgeries.length+'/'+towerSurgeryCapacity(run.level);
   launch.classList.toggle('has-reward',Boolean(run.mutationDraft));
   for(const [index,button] of [...mutationPanel.querySelectorAll('.tower-mutation-option')].entries()){
    const id=run.mutationDraft?.options[index];
-   button.onmouseenter=()=>{hoverMutation=id??null;if(activeTab==='mutations')paint();};
-   button.onfocus=()=>{hoverMutation=id??null;if(activeTab==='mutations')paint();};
+   const value=id?{type:id,rarity:run.mutationDraft?.rarity??0}:null;
+   button.onmouseenter=()=>{hoverMutation=value;if(activeTab==='mutations')paint();};
+   button.onfocus=()=>{hoverMutation=value;if(activeTab==='mutations')paint();};
+   button.onmouseleave=()=>{hoverMutation=null;if(activeTab==='mutations')paint();};
+  }
+  for(const button of mutationPanel.querySelectorAll('.tower-inventory-item')){
+   const item=run.mutationInventory?.find(item=>item.id===button.dataset.mutationId);
+   const value=item?{type:item.type,id:item.id,rarity:item.rarity}:null;
+   button.onmouseenter=()=>{hoverMutation=value;if(activeTab==='mutations')paint();};
+   button.onfocus=()=>{hoverMutation=value;if(activeTab==='mutations')paint();};
    button.onmouseleave=()=>{hoverMutation=null;if(activeTab==='mutations')paint();};
   }
   const {proc,selected}=control();
   if(proc&&!proc.dataset.upgradeBound){
    proc.dataset.upgradeBound='true';
-   proc.addEventListener('change',()=>{site=selected?.value??null;if(activeTab==='surgery')paint();});
+   proc.addEventListener('change',()=>{site=selected?.value??null;surgeryPreviewEnabled=true;if(activeTab==='surgery')paint();});
   }
   if(selected&&!selected.dataset.upgradeBound){
    selected.dataset.upgradeBound='true';
-   selected.addEventListener('change',()=>{site=selected.value;if(activeTab==='surgery')paint();});
+   selected.addEventListener('change',()=>{site=selected.value;surgeryPreviewEnabled=true;if(activeTab==='surgery')paint();});
+  }
+  const replace=surgeryPanel.querySelector('[aria-label="Заменяемая операция"]');
+  if(replace&&!replace.dataset.upgradeBound){
+   replace.dataset.upgradeBound='true';
+   replace.addEventListener('change',()=>{surgeryPreviewEnabled=true;if(activeTab==='surgery')paint();});
   }
   const {donor}=control();
   if(donor&&!donor.dataset.upgradeBound){
    donor.dataset.upgradeBound='true';
-   donor.addEventListener('change',()=>{if(activeTab==='surgery')paint();});
+   donor.addEventListener('change',()=>{surgeryPreviewEnabled=true;if(activeTab==='surgery')paint();});
   }
   if(!overlay.hidden)paint();
  }
@@ -219,5 +263,5 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  });
  refresh();
  if(run.mutationDraft)open('mutations');
- return {open,close,refresh,setTab,element:overlay};
+ return {open,close,refresh,setTab,resetSurgeryPreview(){surgeryPreviewEnabled=false;site=null;},element:overlay};
 }

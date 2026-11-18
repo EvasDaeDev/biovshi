@@ -24,6 +24,16 @@ export const TOWER_MUTATIONS=Object.freeze({
  alarm:Object.freeze({name:'Сигнал тревоги',family:'neural',description:'Быстрое возбуждение: атаки на 3% чаще',bonus:[.2,.25,0],combat:{cooldown:.03}}),
  quiet:Object.freeze({name:'Тихий импульс',family:'neural',description:'Точный контроль: +2,5% шанса крита',bonus:[0,.15,.35],combat:{crit:.025}})
 });
+// Game UI reads the same numeric bonuses as combat; prose alone is not a stat sheet.
+export function towerMutationEffectText(id){
+ const mod=TOWER_MUTATIONS[id];if(!mod)return '';
+ const names=['скорость','сила','манёвр'];
+ const format=n=>Number(n.toFixed(2)).toLocaleString('ru-RU',{maximumFractionDigits:2});
+ const effects=mod.bonus.flatMap((amount,i)=>amount?[names[i]+' +'+format(amount)]:[]);
+ if(mod.combat?.crit)effects.push('крит +'+format(mod.combat.crit*100)+'%');
+ if(mod.combat?.cooldown)effects.push('откат атак −'+format(mod.combat.cooldown*100)+'%');
+ return effects.join(' · ');
+}
 export const TOWER_MUTATION_IDS=Object.freeze(Object.keys(TOWER_MUTATIONS));
 export const TOWER_MUTATION_LIMIT=6;
 export const TOWER_RARITIES=Object.freeze([

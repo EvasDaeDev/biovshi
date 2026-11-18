@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {newTower,towerFor,rewardTower,completeTower,resetTower,validTower,floorEnemyCount,towerEnemyCount,normalizeTower,buyTowerSurgery} from '../src/tower/model.js';
-import {chooseTowerMutation} from '../src/tower/mutations.js';
+import {chooseTowerMutation,towerMutationEffectText,TOWER_MUTATIONS,towerMutationSnapshot} from '../src/tower/mutations.js';
 import {towerUpgradeApplies} from '../src/tower/upgrade-appearance.js';
 import {betNewSession,betCommit,betResolve,betAddPlayer} from '../src/betting/ledger.js';
 import {bettingSave,bettingLoad} from '../src/betting/storage.js';
@@ -62,9 +62,16 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
   assert.equal(buttons[0].getAttribute('aria-pressed'),'true');
   assert.match(buttons[1].textContent,/ОПАСНО/);
   assert.match(buttons[1].textContent,/ПЕРЕПОЛНЕНИЕ/);
-  assert.match(buttons[0].textContent,/Скорость 160%/);
-  assert.match(buttons[0].textContent,/Поворот 160%/);
-  assert.match(buttons[1].textContent,/Критический удар 50%/);
+  assert.match(buttons[0].dataset.hint,/Скорость 160%/);
+  assert.match(buttons[0].dataset.hint,/Поворот 160%/);
+  assert.match(buttons[1].dataset.hint,/Критический удар 50%/);
+  assert.doesNotMatch(buttons[0].textContent,/Скорость 160%/,'long profile descriptions move to the hint');
+  assert.equal(buttons[0].classList.contains('is-standard'),true);
+  assert.equal(buttons[1].classList.contains('is-danger'),true);
+  assert.equal(buttons[0].classList.contains('is-selected'),true);
+  assert.ok(buttons.every(b=>b.hasAttribute('data-hint-tap')));
+  const css=fs.readFileSync(new URL('../styles/tower.css',import.meta.url),'utf8');
+  assert.match(css,/\.tower-challenge-option\.is-selected\{border:2px solid #62cf7d/);
  }finally{close(dom);}
 });
 
@@ -245,6 +252,82 @@ test('global capture guard allows auto-open boss reward choice and live surgery 
  }finally{close(dom);}
 });
 
+
+test('Tower II upgrade screen displays coin art, real equipped bonuses and one receipt',()=>{
+ const s=betNewSession(['Баланс UI'],1000),t=towerFor(s,0);
+ for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ const choice=t.mutationDraft.options[0],bonuses=TOWER_MUTATIONS[choice].bonus;
+ const dom=setup(s,t,'ward');
+ try{
+  const modal=document.querySelector('#tower-upgrade-window');
+  const stats=modal.querySelector('#tower-upgrade-stats');
+  assert.ok(document.querySelector('[data-tower-apply] img.chip-icon'),'skill transfer button shows real coin asset');
+  assert.match(modal.querySelector('.tower-upgrade-wallet').textContent,/БАНК:/);
+  assert.ok(modal.querySelector('.tower-upgrade-wallet img.chip-icon'));
+  const options=[...modal.querySelectorAll('.tower-mutation-option')];
+  assert.ok(options[0].textContent.includes(towerMutationEffectText(choice).split(' · ')[0]));
+  options[0].click();
+  const predicted=[...stats.querySelectorAll('.tower-upgrade-stat .tower-stat-after')];
+  bonuses.forEach((value,index)=>assert.equal(predicted[index].classList.contains('is-positive'),value>0));
+  const balance=s.players[0].balance;
+  modal.querySelector('.tower-mutation-claim').click();
+  assert.equal(s.players[0].balance,balance,'claim is free');
+  assert.ok(modal.querySelector('.tower-mutation-install img.chip-icon'),'installation button shows coin art');
+  assert.equal(modal.querySelector('#tower-upgrade-feedback').textContent,'','claim message is not duplicated at the bottom');
+  assert.equal(modal.querySelectorAll('.tower-operation-receipt').length,1);
+  const selected=modal.querySelector('.tower-inventory-item.is-selected');
+  assert.ok(selected,'just claimed module remains selected in inventory');
+  assert.deepEqual(t.mutations,[],'selection still does not apply the module');
+  assert.ok([...stats.querySelectorAll('.tower-stat-after')].some(el=>el.classList.contains('is-positive')),
+   'owned module previews its bonus before purchase');
+  modal.querySelector('.tower-mutation-install').click();
+  assert.deepEqual(t.mutations,[choice]);
+  assert.equal(s.players[0].balance,balance-100);
+  assert.equal(modal.querySelector('#tower-upgrade-feedback').textContent,'');
+  assert.equal(modal.querySelectorAll('.tower-operation-receipt').length,1);
+  assert.match(modal.querySelector('.tower-operation-receipt').textContent,/установлен/);
+  const actual=towerMutationSnapshot(t).effective;
+  const formatted=n=>(Math.round(n*100)/100).toLocaleString('ru-RU',{maximumFractionDigits:2});
+  const current=[...modal.querySelectorAll('.tower-upgrade-stat .tower-stat-before')].map(e=>e.textContent);
+  assert.deepEqual(current,actual.map(formatted),'modal re-reads paid, actually active bonuses');
+  assert.equal(modal.querySelector('.tower-upgrade-wallet [data-balance-target]').dataset.balanceTarget,'900');
+  assert.ok(modal.querySelector('.tower-inventory-item.is-equipped'));
+ }finally{close(dom);}
+});
+
+test('surgery implant texture survives a switch between modernization tabs and prices show coins',()=>{
+ const s=betNewSession(['Хирургия UI'],1000),t=towerFor(s,0);
+ for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ const dom=setup(s,t,'ward');
+ try{
+  const modal=document.querySelector('#tower-upgrade-window');
+  modal.querySelector('.tower-mutation-option').click();
+  modal.querySelector('.tower-mutation-claim').click();
+  modal.querySelector('[data-upgrade-tab="surgery"]').click();
+  const procedure=modal.querySelector('[aria-label="Вид операции"]');
+  procedure.value='impact';procedure.dispatchEvent(new Event('change'));
+  const site=modal.querySelector('[aria-label="Сегмент для операции"]');
+  site.value='arm-1-upper';site.dispatchEvent(new Event('change'));
+  const purchase=modal.querySelector('.tower-surgery-purchase');
+  assert.ok(purchase.querySelector('img.chip-icon'),'surgery price must render a coin, not its HTML');
+  assert.doesNotMatch(purchase.textContent,/<img/);
+  purchase.click();
+  assert.equal(t.surgeries[0].site,'arm-1-upper');
+  const sprite=()=>modal.querySelector('[data-upgrade-site="arm-1-upper"] image');
+  assert.match(sprite()?.getAttribute('href')??'',/ar_surg_impact\.png/);
+  modal.querySelector('[data-upgrade-tab="mutations"]').click();
+  modal.querySelector('[data-upgrade-tab="surgery"]').click();
+  assert.match(sprite()?.getAttribute('href')??'',/ar_surg_impact\.png/,
+   'default surgery controls must not replace an already implanted texture in the preview');
+  assert.equal(modal.querySelector('#tower-upgrade-feedback').textContent,'');
+  assert.equal(modal.querySelectorAll('#tower-prep-surgery .tower-operation-receipt').length,1);
+  const replacement=modal.querySelector('[aria-label="Вид операции"]');
+  replacement.value='reflex';replacement.dispatchEvent(new Event('change'));
+  const after=[...modal.querySelectorAll('.tower-upgrade-stat .tower-stat-after')];
+  assert.equal(after[1].classList.contains('is-negative'),true,'less strength is red');
+  assert.equal(after[2].classList.contains('is-positive'),true,'more maneuver is green');
+ }finally{close(dom);}
+});
 test('modernization is a separate window with a horizontal patient and two real tabs',()=>{
  const s=betNewSession(['Модернизация'],250),t=towerFor(s,0),dom=setup(s,t,'ward');
  try{

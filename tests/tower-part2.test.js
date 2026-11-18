@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {betNewSession} from '../src/betting/ledger.js';
 import {towerFor,completeTower,validTower,buyTowerInsurance,normalizeTower} from '../src/tower/model.js';
 import {chooseTowerMutation,equipTowerMutation,removeTowerMutation,towerMutationInstallPrice,
- towerInstalledItems,towerRarityMultiplier,validTowerMutationState} from '../src/tower/mutations.js';
+ towerInstalledItems,towerRarityMultiplier,validTowerMutationState,towerMutationEffectText,TOWER_MUTATIONS} from '../src/tower/mutations.js';
 import {towerCycleInfo,towerFloorLabel} from '../src/tower/cycles.js';
 import {towerRelationPlan,towerAllies,validTowerRelations} from '../src/tower/relations.js';
 import {towerUpgradeRarity,towerRarityMatrix} from '../src/tower/upgrade-appearance.js';
@@ -169,4 +169,20 @@ test('paid module survives real balance-audited save and reload',async()=>{
   cache.set(ctx.BET_STORAGE,JSON.stringify(forged));
   assert.equal(bettingLoad(),null,'erasing a paid installation must not mint money');
  }finally{globalThis.localStorage=previous.storage;ctx.betting=previous.session;ctx.BET_STORAGE=previous.key;ctx.root=previous.root;}
+});
+
+test('every module description lists bonuses from the live gameplay model',()=>{
+ for(const id of Object.keys(TOWER_MUTATIONS)){
+  const text=towerMutationEffectText(id);
+  assert.ok(text,'module '+id+' needs a readable numeric summary');
+  for(const [index,value] of TOWER_MUTATIONS[id].bonus.entries()){
+   if(value<=0)continue;
+   const name=['скорость','сила','манёвр'][index];
+   assert.ok(text.includes(name+' +'+Number(value.toFixed(2)).toLocaleString('ru-RU')),
+    id+' must show its '+name+' stat increase');
+  }
+ }
+ assert.match(towerMutationEffectText('optic'),/манёвр \+0,4/);
+ assert.match(towerMutationEffectText('optic'),/крит \+2,5%/);
+ assert.match(towerMutationEffectText('synapse'),/откат атак −3%/);
 });

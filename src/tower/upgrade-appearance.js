@@ -52,8 +52,12 @@ export function towerUpgradeAtlas(patient,site,{previewSurgery=null,previewMutat
   (patient?.surgeries??[]).find(op=>op.site===site);
  if(surgery&&TOWER_SURGERY_ATLAS[surgery.procedure])
   return TOWER_SURGERY_ATLAS[surgery.procedure];
- for(const id of patient?.mutations??[])
-  if(towerUpgradeApplies(id,site))return TOWER_MUTATION_ATLAS[id]??null;
+ // A newly owned version of the same module uses its prospective rarity,
+ // while other already installed modules retain their original sprite priority.
+ const installed=(patient?.mutations??[]).find(id=>towerUpgradeApplies(id,site));
+ if(previewMutation&&towerUpgradeApplies(previewMutation,site)&&(!installed||installed===previewMutation))
+  return TOWER_MUTATION_ATLAS[previewMutation]??null;
+ if(installed)return TOWER_MUTATION_ATLAS[installed]??null;
  // A hovered/pending module only fills free sprite slots; it does not
  // hide an earlier installed module that will remain visible after purchase.
  if(previewMutation&&towerUpgradeApplies(previewMutation,site))
@@ -63,12 +67,13 @@ export function towerUpgradeAtlas(patient,site,{previewSurgery=null,previewMutat
 
 // Visual-only rarity tint: 80% of the original RGB + 20% of rarity colour.
 // Combat skills retain their existing values until the balance model is approved.
-export function towerUpgradeRarity(patient,site,{previewMutation=null,previewSurgery=null}={}){
+export function towerUpgradeRarity(patient,site,{previewMutation=null,previewRarity=null,previewSurgery=null}={}){
  if(previewSurgery?.site===site&&TOWER_SURGERY_ATLAS[previewSurgery.procedure]||
   (patient?.surgeries??[]).some(op=>op.site===site&&TOWER_SURGERY_ATLAS[op.procedure]))return 0;
  const module=towerInstalledItems(patient).find(item=>towerUpgradeApplies(item.type,site));
+ if(previewMutation&&towerUpgradeApplies(previewMutation,site)&&(!module||module.type===previewMutation))
+  return previewRarity??patient?.mutationDraft?.rarity??0;
  if(module)return module.rarity;
- if(previewMutation&&towerUpgradeApplies(previewMutation,site))return patient?.mutationDraft?.rarity??0;
  return 0;
 }
 const filters=new WeakMap();let serial=0;

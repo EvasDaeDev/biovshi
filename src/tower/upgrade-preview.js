@@ -19,7 +19,7 @@ export const TOWER_PATIENT_POSE=Object.freeze(towerUpgradePose(null));
 const labelFor=site=>site==='head'?'Голова':
  site==='spine-0'?'Грудной сегмент':towerSurgerySiteLabel(site);
 export function renderTowerUpgradePatient(target,patient,{
- selectedSite=null,availableSites=null,previewMutation=null,previewSurgery=null,previewReplaceSite=null,onSelect=null
+ selectedSite=null,availableSites=null,previewMutation=null,previewRarity=null,previewSurgery=null,previewReplaceSite=null,onSelect=null
 }={}){
  target.replaceChildren();
  const svg=make('svg',{
@@ -56,7 +56,7 @@ export function renderTowerUpgradePatient(target,patient,{
    overflow:'hidden',preserveAspectRatio:'none','aria-hidden':'true'
   },g);
   const replaced=towerUpgradeAtlas(patient,site,{previewSurgery,previewMutation});
-  const rarity=replaced?towerUpgradeRarity(patient,site,{previewSurgery,previewMutation}):0;
+  const rarity=replaced?towerUpgradeRarity(patient,site,{previewSurgery,previewMutation,previewRarity}):0;
   if(rarity)g.setAttribute('filter',towerRaritySvgFilter(svg,rarity));
   const path=replaced??(prosthetics.has(site)?ASSETS.textures.robotAndroid:original);
   make('image',{

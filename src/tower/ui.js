@@ -6,7 +6,7 @@ import {bossFloorReward} from '../boss/encounter.js';
 import {selectedTowerFloor,selectTowerFloor,TOWER_DANGER_STYLES} from './floors.js';
 import {TOWER_RELATION_NAMES} from './relations.js';
 import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
-import {towerMutationSnapshot,towerMutationCombatBonus,TOWER_MUTATIONS,TOWER_MUTATION_IDS,TOWER_MUTATION_FAMILIES,TOWER_MUTATION_SYNERGIES,towerMutationSynergies,chooseTowerMutation,
+import {towerMutationSnapshot,towerMutationCombatBonus,TOWER_MUTATIONS,TOWER_MUTATION_IDS,TOWER_MUTATION_FAMILIES,TOWER_MUTATION_SYNERGIES,towerMutationSynergies,towerMutationEffectText,chooseTowerMutation,
  equipTowerMutation,removeTowerMutation,towerInstalledItems,towerMutationInstallPrice,TOWER_MUTATION_LIMIT,TOWER_RARITIES} from './mutations.js';
 import {towerCycleWins,towerCycleInfo,towerCycleTitle,towerFloorLabel} from './cycles.js';
 import {TOWER_MUTATION_ATLAS,towerUpgradeApplies} from './upgrade-appearance.js';
@@ -109,7 +109,7 @@ export function towerPreparation(){
     const choices=document.createElement('div');choices.className='tower-challenge-options';
     encounter.options.forEach((option,index)=>{
       const button=document.createElement('button');button.type='button';
-      button.className='tower-challenge-option'+(index===encounter.selected?' is-selected':'');
+      button.className='tower-challenge-option '+(option.kind==='danger'?'is-danger':'is-standard')+(index===encounter.selected?' is-selected':'');
       button.setAttribute('aria-pressed',String(index===encounter.selected));
       const profileCounts=new Map();
       for(const id of option.profiles)profileCounts.set(id,(profileCounts.get(id)??0)+1);
@@ -120,20 +120,15 @@ export function towerPreparation(){
       button.appendChild(heading);
       if(option.relations){const tag=document.createElement('strong');tag.className='tower-relation-banner';
         tag.textContent='ОСОБОЕ ИСПЫТАНИЕ · '+TOWER_RELATION_NAMES[option.relations.type];button.append(tag);} 
-      if(style){
-        const detail=document.createElement('small');
-        detail.className='tower-challenge-detail';
-        detail.textContent=style.description;
-        button.appendChild(detail);
-      }
+      const hint=[style?.description,...[...profileCounts].map(([id,count])=>
+        towerEnemyProfile(id).name+(count>1?' ×'+count:'')+': '+towerProfileDifference(id))].filter(Boolean);
+      if(option.relations)hint.push('ОТНОШЕНИЯ: '+TOWER_RELATION_NAMES[option.relations.type]);
+      button.dataset.hint=hint.join(' · ');
+      button.setAttribute('data-hint-tap','');
       for(const [id,count] of profileCounts){
         const line=document.createElement('span');line.className='tower-enemy-line';
         const label=document.createElement('b');label.textContent=towerEnemyProfile(id).name+(count>1?' ×'+count:'');
         line.appendChild(label);
-        if(id!=='basic'){
-          const effect=document.createElement('small');effect.textContent=towerProfileDifference(id);
-          line.appendChild(effect);
-        }
         button.appendChild(line);
       }
       button.onclick=()=>{
@@ -159,7 +154,7 @@ export function towerPreparation(){
     fields.innerHTML=`<div class="garage-stat-list"><small>Побед: ${t.wins} · очков в текущем цикле: ${9+towerCycleWins(t.level)}</small>
       ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)}><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select data-tower-stat="${i}" aria-label="${skill.name}">${[earnedStats(towerCycleWins(t.level))[i]-1,earnedStats(towerCycleWins(t.level))[i],earnedStats(towerCycleWins(t.level))[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===draftStats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
       <small class="garage-stat-effects">Скор. ${Math.round(statMultiplier(stats[0])*100)}% Мобиль. ${Math.round(statMultiplier(stats[2])*100)}% Крит. ${Math.round(Math.min(.75,critChance(stats[1])+combatBonus.crit)*100)}% · откат ударов ${Math.round(combatBonus.cooldownMultiplier*100)}%</small>
-      <div class="tower-stat-confirm"><button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button><button type="button" data-tower-apply>ПРИМЕНИТЬ · 50 🪙</button></div><small class="tower-stat-message" role="status"></small>`;
+      <div class="tower-stat-confirm"><button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button><button type="button" data-tower-apply>ПРИМЕНИТЬ · ${formatChips(TOWER_STAT_CHANGE_PRICE)}</button></div><small class="tower-stat-message" role="status"></small>`;
     const changed=draftStats.some((v,i)=>v!==t.stats[i]);
     const transfer=draftStats.reduce((sum,v,i)=>sum+Math.max(0,v-t.stats[i]),0);
     const apply=fields.querySelector('[data-tower-apply]');
@@ -229,10 +224,11 @@ export function towerPreparation(){
       for(const id of t.mutationDraft.options){
         const mod=TOWER_MUTATIONS[id],button=document.createElement('button');button.type='button';
         button.className='tower-mutation-option'+(selectedReward===id?' is-selected':'');
+        button.dataset.mutationType=id;button.dataset.mutationRarity=String(t.mutationDraft.rarity??0);
         button.setAttribute('aria-pressed',String(selectedReward===id));
         button.append(mutationIcon(id));
         const label=document.createElement('b');label.textContent=mod.name;
-        const effect=document.createElement('small');effect.textContent=mod.description;
+        const effect=document.createElement('small');effect.textContent=mod.description+' · '+towerMutationEffectText(id);
         const family=document.createElement('small');family.textContent=TOWER_MUTATION_FAMILIES[mod.family]+' · '+TOWER_RARITIES[t.mutationDraft.rarity??0].name;
         button.append(label,effect,family);
         button.onclick=()=>{selectedReward=id;renderMutations();upgradeModal?.refresh();};
@@ -247,7 +243,7 @@ export function towerPreparation(){
         const item=chooseTowerMutation(t,selectedReward);if(!item)return;
         selectedOwned=item.id;lastMutationReceipt='ПОЛУЧЕНО: '+TOWER_MUTATIONS[item.type].name+'. УСТАНОВКА ОПЛАЧИВАЕТСЯ ОТДЕЛЬНО.';
         selectedReward=null;bettingSave();renderMutations();renderSkills();syncFightLock();renderSurgery();upgradeModal?.refresh();
-        upgradeMessage(lastMutationReceipt);showCycleNotice();
+        upgradeMessage('');showCycleNotice();
       };
       mutationPanel.append(claim);
     }
@@ -259,8 +255,9 @@ export function towerPreparation(){
         const equipped=t.equippedMutations.includes(item.id),mod=TOWER_MUTATIONS[item.type];
         const button=document.createElement('button');button.type='button';
         button.className='tower-inventory-item'+(equipped?' is-equipped':'')+(selectedOwned===item.id?' is-selected':'');
+        button.dataset.mutationType=item.type;button.dataset.mutationId=item.id;button.dataset.mutationRarity=String(item.rarity);
         button.setAttribute('aria-pressed',String(selectedOwned===item.id));
-        button.title=[mod.name,mod.description,TOWER_RARITIES[item.rarity].name,
+        button.title=[mod.name,mod.description,towerMutationEffectText(item.type),TOWER_RARITIES[item.rarity].name,
           equipped?'Установлен · снять бесплатно':'На складе · установка '+towerMutationInstallPrice(t)+' монет'].join(' · ');
         button.append(mutationIcon(item.type));
         const label=document.createElement('strong');label.textContent=mod.name;
@@ -274,13 +271,13 @@ export function towerPreparation(){
       if(selected){
         const mod=TOWER_MUTATIONS[selected.type],equipped=t.equippedMutations.includes(selected.id);
         const details=document.createElement('small');details.className='tower-mutation-detail';
-        details.textContent=mod.name+' · '+mod.description+' · '+TOWER_MUTATION_FAMILIES[mod.family]+' · '+
-          mod.bonus.map((n,i)=>['скорость','сила','манёвр'][i]+' '+(n>=0?'+':'')+n).join(', ');
+         details.textContent=mod.name+' · '+mod.description+' · '+TOWER_MUTATION_FAMILIES[mod.family]+' · '+
+           towerMutationEffectText(selected.type);
         mutationPanel.append(details);
         const action=document.createElement('button');action.type='button';action.className='tower-mutation-install';
         const replacement=towerInstalledItems(t).find(item=>item.type===selected.type&&item.id!==selected.id);
         const full=t.equippedMutations.length>=TOWER_MUTATION_LIMIT;
-        action.textContent=equipped?'СНЯТЬ · БЕСПЛАТНО':'УСТАНОВИТЬ · '+towerMutationInstallPrice(t)+' 🪙';
+        action.innerHTML=equipped?'СНЯТЬ · БЕСПЛАТНО':'УСТАНОВИТЬ · '+formatChips(towerMutationInstallPrice(t));
         action.disabled=Boolean(t.mutationDraft)||(!equipped&&ctx.betting.players[ctx.towerPlayer].balance<towerMutationInstallPrice(t));
         action.onclick=()=>{
           if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
@@ -298,13 +295,13 @@ export function towerPreparation(){
               const price=towerMutationInstallPrice(t);
               if(!confirm((replaceId?'Заменить установленный модуль?':'Установить '+mod.name+'?')+'\nСтоимость: '+price+' монет.'))return;
               const charged=equipTowerMutation(ctx.betting,ctx.towerPlayer,t,selected.id,replaceId);
-              lastMutationReceipt=mod.name+' установлен · −'+charged+' монет';
+              lastMutationReceipt=mod.name+' установлен · −'+charged+' монет · '+towerMutationEffectText(selected.type);
             }
             ctx.towerGarage[0].mutations=[...t.mutations];
             ctx.towerGarage[0].mutationInventory=structuredClone(t.mutationInventory);
             ctx.towerGarage[0].equippedMutations=[...t.equippedMutations];
             bettingSave();renderMutations();renderSkills();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
-            updateTowerHud();upgradeModal?.refresh();upgradeMessage(lastMutationReceipt);
+            updateTowerHud();upgradeModal?.refresh();upgradeMessage('');
           }catch(error){upgradeMessage(error.message);}
         };
         mutationPanel.append(action);
@@ -393,7 +390,7 @@ export function towerPreparation(){
         donorSelect.append(option);
       }
       const price=replaceSelect.value?towerSurgeryReplacePrice(t):towerSurgeryPrice(t);
-      purchase.textContent=(replaceSelect.value?'ЗАМЕНИТЬ ОПЕРАЦИЮ':'ПРОВЕСТИ ОПЕРАЦИЮ')+' · '+formatChips(price);
+      purchase.innerHTML=(replaceSelect.value?'ЗАМЕНИТЬ ОПЕРАЦИЮ':'ПРОВЕСТИ ОПЕРАЦИЮ')+' · '+formatChips(price);
       purchase.disabled=Boolean(t.mutationDraft)||!siteSelect.options.length
         ||(!donorSelect.hidden&&!donorSelect.options.length)
         ||ctx.betting.players[ctx.towerPlayer].balance<price;
@@ -413,8 +410,8 @@ export function towerPreparation(){
         ctx.towerGarage[0].surgeries=structuredClone(t.surgeries);
         lastSurgeryReceipt='Операция «'+TOWER_SURGERY_OPERATIONS[procedure].name+'» выполнена на '+towerSurgerySiteLabel(site)+' · −'+charged+' монет';
         bettingSave();renderSkills();renderSurgery();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
-        renderInsurance();updateTowerHud();upgradeModal?.refresh();
-        upgradeMessage(lastSurgeryReceipt);
+        renderInsurance();updateTowerHud();upgradeModal?.resetSurgeryPreview();upgradeModal?.refresh();
+        upgradeMessage('');
       }catch(error){upgradeMessage(error.message);}
     };
     controls.append(replaceSelect,procedureSelect,siteSelect,donorSelect,purchase);
@@ -422,7 +419,8 @@ export function towerPreparation(){
     refreshSites();
   }
   renderSurgery();
-  upgradeModal=installTowerUpgradeWindow({root:ctx.root,run:t,statsPanel:fields,mutationPanel,surgeryPanel});
+  upgradeModal=installTowerUpgradeWindow({root:ctx.root,run:t,statsPanel:fields,mutationPanel,surgeryPanel,
+    renderWallet:target=>renderTowerPlayerWallet(target)});
   function showCycleNotice(){
     if(!t.cycleNotice||t.mutationDraft)return;
     let dialog=ctx.root.querySelector('#tower-cycle-notice');

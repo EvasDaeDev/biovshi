@@ -30,7 +30,10 @@
 #robot-tag-hops-v22 #tower-floor-preview{display:flex;align-items:center;flex-wrap:wrap;gap:14px;padding:12px;margin:8px 0 14px;border:1px solid #8c7954;background:#bba67b33}
 #robot-tag-hops-v22 #tower-floor-preview .tower-challenge-options{flex-basis:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
 #robot-tag-hops-v22 .tower-challenge-option{white-space:pre-line;text-align:left;font:inherit;line-height:1.35;min-height:66px;padding:9px;border:1px solid #806f52;background:#ded1b2;color:#2c2a21;cursor:pointer;overflow-wrap:anywhere}
-#robot-tag-hops-v22 .tower-challenge-option.is-selected{border-color:#80332b;background:#5d382e;color:#fff0db;box-shadow:inset 0 0 0 1px #b48865}
+#robot-tag-hops-v22 .tower-challenge-option.is-standard{background:#464331;color:#f1e4c6;border-color:#786a4b}
+#robot-tag-hops-v22 .tower-challenge-option.is-danger{background:#713930;color:#fff0db;border-color:#9a6253}
+#robot-tag-hops-v22 .tower-challenge-option.is-selected{border:2px solid #62cf7d;box-shadow:inset 0 0 0 1px #236738,0 0 0 1px #236738}
+#robot-tag-hops-v22 .tower-challenge-option.is-selected:focus-visible{outline:2px solid #9bf1a5;outline-offset:2px}
 #robot-tag-hops-v22 .tower-challenge-option{display:flex;flex-direction:column;align-items:stretch;gap:4px}
 #robot-tag-hops-v22 .tower-challenge-option>strong{font-size:12px;letter-spacing:.02em}
 #robot-tag-hops-v22 .tower-challenge-option .tower-challenge-detail{font-size:11px;line-height:1.3;opacity:.8;margin-bottom:4px}
@@ -151,7 +154,13 @@
 #robot-tag-hops-v22 .tower-upgrade-stat{display:grid;gap:3px}
 #robot-tag-hops-v22 .tower-upgrade-stat span{font-size:10px;color:#cec5ad;letter-spacing:.02em}
 #robot-tag-hops-v22 .tower-upgrade-stat b{font-size:13px;font-variant-numeric:tabular-nums}
-#robot-tag-hops-v22 .tower-upgrade-stat b.is-improved{color:#e4c16a}
+#robot-tag-hops-v22 :is(.tower-upgrade-stat .is-positive,.tower-combat-preview .is-positive){color:#79db8a}
+#robot-tag-hops-v22 :is(.tower-upgrade-stat .is-negative,.tower-combat-preview .is-negative){color:#f08075}
+#robot-tag-hops-v22 .tower-upgrade-wallet{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:10px 0 4px;padding:10px 12px;border:1px solid #766e50;background:#30352a;color:#f0e5cc;font-size:13px;font-weight:800}
+#robot-tag-hops-v22 .tower-upgrade-wallet .tower-player-bank{margin-left:auto}
+#robot-tag-hops-v22 .tower-upgrade-wallet .chip-icon{vertical-align:middle}
+#robot-tag-hops-v22 .tower-upgrade-wallet .currency-counter{white-space:nowrap}
+#robot-tag-hops-v22 .tower-challenge-option .tower-enemy-line{font-weight:700}
 #robot-tag-hops-v22 .tower-upgrade-stats-note{display:block;margin-top:8px}
 #robot-tag-hops-v22 .tower-upgrade-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:12px}
 #robot-tag-hops-v22 .tower-upgrade-tab{min-height:43px;padding:10px;background:#292d25;border:1px solid #635842;color:#cabda3;font-weight:bold;cursor:pointer}
@@ -229,3 +238,5 @@
 #robot-tag-hops-v22 .tower-cycle-dialog::backdrop{background:#080c0ccc}
 #robot-tag-hops-v22 .tower-cycle-dialog button{padding:12px;margin-top:10px;border:1px solid #bba66a;background:#4b543b;color:#fff3d5}
 @media(max-width:420px){#robot-tag-hops-v22 .tower-inventory-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+#robot-tag-hops-v22 .tower-upgrade-feedback:empty{display:none}
