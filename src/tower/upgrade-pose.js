@@ -3,7 +3,7 @@ import {CONFIG} from '../config.js';
 import {towerPatientAnatomy} from './anatomy.js';
 const scale=CONFIG.robot.scale*3.2;
 const stride=CONFIG.robot.vertebraBaseCm*scale;
-const add=(p,dx,dy,len)=>[p[0]+dx*len,p[1]+dy*len];
+const add=(p,dx,dy,len=1)=>[p[0]+dx*len,p[1]+dy*len];
 export function towerUpgradePose(patient){
  const anatomy=towerPatientAnatomy(patient);
  const count=anatomy?.spineSegments??4;
