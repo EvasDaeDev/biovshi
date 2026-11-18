@@ -1,6 +1,7 @@
 // Stage G: two explicit, paid Tower decisions. All writes go through the
 // canonical persisted session; UI drafts never modify run or money.
 import {validStats} from '../garage/model.js';
+import {towerCycleWins} from './cycles.js';
 import {ARENAS} from '../game/arenas.js';
 import {hasBoss} from '../boss/config.js';
 import {TOWER_ARENA_CAPACITY,validTowerFloorPlan} from './floors.js';
@@ -21,7 +22,7 @@ function charge(session,player,price){
  buyer.balance-=price;session.towerEconomySpent=spent+price;
 }
 export function purchaseTowerStatChange(session,player,run,stats){
- if(!run||run.arenaRerollLocked||run.rewarded?.length||!validStats(run.stats,run.wins)||!validStats(stats,run.wins)
+ if(!run||run.arenaRerollLocked||run.rewarded?.length||!validStats(run.stats,towerCycleWins(run.level))||!validStats(stats,towerCycleWins(run.level))
   ||run.stats.every((v,i)=>v===stats[i])
   ||stats.reduce((sum,v,i)=>sum+Math.max(0,v-run.stats[i]),0)!==1)
   throw Error('Выбери допустимый перенос одного очка для подтверждения.');

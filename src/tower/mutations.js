@@ -25,6 +25,53 @@ export const TOWER_MUTATIONS=Object.freeze({
  quiet:Object.freeze({name:'Тихий импульс',family:'neural',description:'Точный контроль: +2,5% шанса крита',bonus:[0,.15,.35],combat:{crit:.025}})
 });
 export const TOWER_MUTATION_IDS=Object.freeze(Object.keys(TOWER_MUTATIONS));
+export const TOWER_MUTATION_LIMIT=6;
+export const TOWER_RARITIES=Object.freeze([
+ {name:'ОБЫЧНАЯ',colour:null},{name:'ЗЕЛЁНАЯ',colour:'#60a95b'},
+ {name:'СИНЯЯ',colour:'#4b94d2'},{name:'ФИОЛЕТОВАЯ',colour:'#9b6acd'},
+ {name:'ОРАНЖЕВАЯ',colour:'#e5a44b'},{name:'КРАСНАЯ',colour:'#d84a3e'}
+]);
+export const towerMutationRarity=clearedFloor=>Math.min(5,Math.max(0,Math.floor((clearedFloor-1)/30)));
+// Simulation-only; does not modify active combat bonuses until balancing is approved.
+export const towerRarityMultiplier=(rarity,step=.12)=>1+Math.min(5,Math.max(0,rarity))*step;
+export const towerMutationInstallPrice=run=>Math.ceil(100*Math.pow(1.55,run?.modInstallations??0));
+// Old saves used `mutations` for both ownership and equipment. These are
+// grandfathered as equipped, without retroactive installation fees.
+export function normalizeTowerMutationInventory(run){
+ if(!Array.isArray(run.mutations))run.mutations=[];
+ if(!Array.isArray(run.mutationInventory)){
+  run.mutationInventory=run.mutations.map((type,i)=>({id:'m'+(i+1),type,rarity:0,obtainedAt:1}));
+  run.equippedMutations=run.mutationInventory.slice(0,TOWER_MUTATION_LIMIT).map(item=>item.id);
+  run.nextMutationId=run.mutationInventory.length+1;
+  run.modInstallations=run.modInstallations??0;
+ }else{
+  run.equippedMutations??=[];
+  run.nextMutationId??=1+run.mutationInventory.reduce((max,item)=>Math.max(max,Number(item.id?.slice(1))||0),0);
+  run.modInstallations??=0;
+ }
+ run.mutations=run.equippedMutations.map(id=>run.mutationInventory.find(item=>item.id===id)?.type).filter(Boolean);
+ return run;
+}
+export function towerInstalledItems(run){
+ return (run?.equippedMutations??[]).map(id=>(run?.mutationInventory??[]).find(item=>item.id===id)).filter(Boolean);
+}
+export function validTowerInventory(run){
+ const inventory=run?.mutationInventory,equipped=run?.equippedMutations;
+ if(!Array.isArray(inventory)||!Array.isArray(equipped)||equipped.length>TOWER_MUTATION_LIMIT
+  ||!Number.isSafeInteger(run.nextMutationId)||run.nextMutationId<1
+  ||!Number.isSafeInteger(run.modInstallations)||run.modInstallations<0)return false;
+ const ids=new Set();
+ for(const item of inventory){
+  if(!item||!/^m[1-9]\d*$/.test(item.id)||ids.has(item.id)||!Object.hasOwn(TOWER_MUTATIONS,item.type)
+   ||!Number.isInteger(item.rarity)||item.rarity<0||item.rarity>5
+   ||!Number.isSafeInteger(item.obtainedAt)||item.obtainedAt<1||Number(item.id.slice(1))>=run.nextMutationId)return false;
+  ids.add(item.id);
+ }
+ if(new Set(equipped).size!==equipped.length||equipped.some(id=>!ids.has(id)))return false;
+ const types=towerInstalledItems(run).map(item=>item.type);
+ return new Set(types).size===types.length&&JSON.stringify(types)===JSON.stringify(run.mutations);
+}
+
 export const TOWER_MUTATION_SYNERGIES=Object.freeze({
  mechanical:Object.freeze({name:'Механический комплект',description:'2 механических модуля: +0,2 скорости и манёвра',bonus:[.2,0,.2]}),
  organic:Object.freeze({name:'Живой комплект',description:'2 биологических модуля: +0,2 силы и манёвра',bonus:[0,.2,.2]}),
@@ -50,9 +97,21 @@ export function validTowerMutationDraft(draft,mutations,level){
   &&draft.options.every(id=>Object.hasOwn(TOWER_MUTATIONS,id)&&!mutations.includes(id));
 }
 export function validTowerMutationState(run){
+ const owned=run.mutationInventory?.map(item=>item.type)??run.mutations;
+ const legacy=!Array.isArray(run.mutationInventory);
  return validTowerMutations(run.mutations)
-  &&validTowerMutationDraft(run.mutationDraft,run.mutations,run.level);
+  &&(legacy||validTowerInventory(run))
+  &&(legacy?validTowerMutationDraft(run.mutationDraft,run.mutations,run.level):
+    (run.mutationDraft===undefined||validTowerMutationDraft(run.mutationDraft,owned.filter((id,i)=>owned.indexOf(id)===i),run.level)
+    ||validStoredMutationDraft(run.mutationDraft,run.level)));
 }
+function validStoredMutationDraft(draft,level){
+ return draft&&draft.floor===level&&level>=6&&(level-1)%5===0
+  &&Array.isArray(draft.options)&&draft.options.length>=1&&draft.options.length<=3
+  &&distinct(draft.options)&&draft.options.every(id=>Object.hasOwn(TOWER_MUTATIONS,id))
+  &&(draft.rarity===undefined||Number.isInteger(draft.rarity)&&draft.rarity>=0&&draft.rarity<=5);
+}
+
 export function towerMutationBonus(mutations=[]){
  const result=[0,0,0],groups={mechanical:0,organic:0,neural:0};
  for(const id of mutations){
@@ -93,8 +152,11 @@ export function towerMutationSnapshot(patient,robot=null){
 export function grantTowerMutationDraft(run,random=Math.random){
  if(!validTowerMutations(run.mutations)||run.mutationDraft)return false;
  if(run.level<6||(run.level-1)%5!==0)return false;
- const candidates=TOWER_MUTATION_IDS.filter(id=>!run.mutations.includes(id));
- if(!candidates.length)return false;
+ // Prefer unseen kinds, but after collecting all eighteen allow copies with
+ // new rarity so cycles D+ never stop producing boss rewards.
+ const owned=run.mutationInventory?.map(item=>item.type)??run.mutations;
+ const candidates=TOWER_MUTATION_IDS.filter(id=>!owned.includes(id));
+ if(!candidates.length)candidates.push(...TOWER_MUTATION_IDS);
  const options=[];
  const pick=pool=>{
   const index=Math.min(pool.length-1,Math.max(0,Math.floor(random()*pool.length)));
@@ -109,13 +171,46 @@ export function grantTowerMutationDraft(run,random=Math.random){
  const matching=candidates.filter(id=>families.includes(TOWER_MUTATIONS[id].family));
  if(matching.length)pick(matching);
  while(candidates.length&&options.length<3)pick([...candidates]);
- run.mutationDraft={floor:run.level,options};
+ run.mutationDraft={floor:run.level,options,rarity:towerMutationRarity(run.level-1)};
  return true;
 }
 export function chooseTowerMutation(run,id){
+ // Confirmation transfers property only; no balance or combat bonus changes.
  if(!validTowerMutationState(run)||!run.mutationDraft?.options.includes(id)
    ||!run.preparing||run.rewarded?.length)return false;
- run.mutations.push(id);
+ normalizeTowerMutationInventory(run);
+ const item={id:'m'+run.nextMutationId++,type:id,
+  rarity:run.mutationDraft.rarity??towerMutationRarity(run.level-1),obtainedAt:run.level-1};
+ run.mutationInventory.push(item);
+ run.lastClaimedMutation=item.id;
  delete run.mutationDraft;
+ return item;
+}
+export function equipTowerMutation(session,player,run,id,replaceId=null){
+ normalizeTowerMutationInventory(run);
+ const item=run.mutationInventory.find(item=>item.id===id);
+ const active=towerInstalledItems(run);
+ if(!item||!run.preparing||run.mutationDraft||run.rewarded?.length||run.equippedMutations.includes(id))
+  throw Error('Модификация недоступна для установки.');
+ const conflict=active.find(installed=>installed.type===item.type);
+ if(conflict&&replaceId!==conflict.id)throw Error('Выбери установленную версию для замены.');
+ if(replaceId!==null&&!run.equippedMutations.includes(replaceId))throw Error('Неверная заменяемая модификация.');
+ if(active.length>=TOWER_MUTATION_LIMIT&&replaceId===null)
+  throw Error('Все шесть слотов заняты. Сначала выбери замену или сними модуль.');
+ const buyer=session.players?.[player],price=towerMutationInstallPrice(run),spent=session.mutationSpent??0;
+ if(!buyer||buyer.balance<price)throw Error('Недостаточно монет для установки. Награда остаётся на складе.');
+ if(!Number.isSafeInteger(spent)||spent+price>16000000||!Number.isSafeInteger(price))throw Error('Недопустимая стоимость.');
+ // One transaction: validate everything before changing ownership, cash or bonuses.
+ if(replaceId!==null)run.equippedMutations=run.equippedMutations.filter(existing=>existing!==replaceId);
+ run.equippedMutations.push(id);run.modInstallations++;
+ run.mutations=towerInstalledItems(run).map(item=>item.type);
+ buyer.balance-=price;session.mutationSpent=spent+price;
+ return price;
+}
+export function removeTowerMutation(run,id){
+ normalizeTowerMutationInventory(run);
+ if(!run.preparing||run.mutationDraft||!run.equippedMutations.includes(id))return false;
+ run.equippedMutations=run.equippedMutations.filter(existing=>existing!==id);
+ run.mutations=towerInstalledItems(run).map(item=>item.type);
  return true;
 }

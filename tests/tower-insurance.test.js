@@ -15,7 +15,7 @@ import {ctx} from '../src/game/state.js';
 function reach(s,player,floor){
  while(towerFor(s,player).level<floor){
   const run=towerFor(s,player);
-  if(run.mutationDraft)assert.equal(chooseTowerMutation(run,run.mutationDraft.options[0]),true);
+  if(run.mutationDraft)assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
   completeTower(s,player,true,()=>.99);
  }
  const t=towerFor(s,player);t.preparing=false;return t;

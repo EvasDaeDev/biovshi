@@ -16,7 +16,7 @@ export function validTowerDonors(items){
 export function validTowerDonorState(run){
  if(!validTowerDonors(run?.donorTissues))return false;
  if(!Number.isSafeInteger(run?.level)||run.level<1)return false;
- const spent=new Set((run.surgeries??[]).map(s=>s?.donorId).filter(Boolean));
+ const spent=new Set([...(run.consumedDonorIds??[]),...(run.surgeries??[]).map(s=>s?.donorId).filter(Boolean)]);
  const sourceValid=id=>{
   const match=/^([1-9]\d*):([1-9]\d*):(arm|leg)$/.exec(id);
   return match&&Number(match[1])<=run.level;
@@ -30,13 +30,13 @@ export function awardTowerDonors(run,victim,profile){
  const available=Array.isArray(run.donorTissues)?run.donorTissues:[];
  for(const kind of ['arm','leg']){
   const id=`${run.level}:${victim}:${kind}`;
-  if(!available.some(item=>item.id===id))available.push({id,kind,profile});
+  if(!(run.consumedDonorIds??[]).includes(id)&&!available.some(item=>item.id===id))available.push({id,kind,profile});
  }
  run.donorTissues=available.slice(-24);
 }
 export function towerAvailableDonors(run,procedure){
  const kind=procedure==='transplant_arm'?'arm':procedure==='transplant_leg'?'leg':null;
- return kind?(run?.donorTissues??[]).filter(item=>item.kind===kind):[];
+ return kind?(run?.donorTissues??[]).filter(item=>item.kind===kind&&!(run.consumedDonorIds??[]).includes(item.id)):[];
 }
 export function donorLengthScale(profile,kind){
  if(profile==='boss')return 1.25;

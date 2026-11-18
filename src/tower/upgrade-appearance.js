@@ -1,7 +1,9 @@
 // Per-segment replacement atlases for Tower upgrades. PNGs are artistic
 // placeholders copied from ar_01.png. Replacing them changes BOTH the arena
 // patient and the horizontal preparation preview, with no save-format changes.
-import {TOWER_MUTATIONS} from './mutations.js';
+import {towerInstalledItems} from './mutations.js';
+import {towerRarityMatrix} from './rarity-tint.js';
+export {towerRarityMatrix} from './rarity-tint.js';
 
 const ROOT='assets/textures/robots/upgrades/';
 export const TOWER_UPGRADE_PARTS=Object.freeze({
@@ -28,7 +30,7 @@ export const TOWER_SURGERY_ATLAS=Object.freeze(Object.fromEntries(
  ['brace','alignment','drive','impact','reflex'].map(id=>[id,ROOT+'ar_surg_'+id+'.png'])
 ));
 export const TOWER_MUTATION_ATLAS=Object.freeze(Object.fromEntries(
- Object.keys(TOWER_MUTATIONS).map(id=>[id,ROOT+'ar_mod_'+id+'.png'])
+ Object.keys(TOWER_UPGRADE_PARTS).map(id=>[id,ROOT+'ar_mod_'+id+'.png'])
 ));
 export function towerUpgradeApplies(id,site){
  const patterns=TOWER_UPGRADE_PARTS[id];
@@ -57,4 +59,28 @@ export function towerUpgradeAtlas(patient,site,{previewSurgery=null,previewMutat
  if(previewMutation&&towerUpgradeApplies(previewMutation,site))
   return TOWER_MUTATION_ATLAS[previewMutation]??null;
  return null;
+}
+
+// Visual-only rarity tint: 80% of the original RGB + 20% of rarity colour.
+// Combat skills retain their existing values until the balance model is approved.
+export function towerUpgradeRarity(patient,site,{previewMutation=null,previewSurgery=null}={}){
+ if(previewSurgery?.site===site&&TOWER_SURGERY_ATLAS[previewSurgery.procedure]||
+  (patient?.surgeries??[]).some(op=>op.site===site&&TOWER_SURGERY_ATLAS[op.procedure]))return 0;
+ const module=towerInstalledItems(patient).find(item=>towerUpgradeApplies(item.type,site));
+ if(module)return module.rarity;
+ if(previewMutation&&towerUpgradeApplies(previewMutation,site))return patient?.mutationDraft?.rarity??0;
+ return 0;
+}
+const filters=new WeakMap();let serial=0;
+export function towerRaritySvgFilter(root,rank){
+ const matrix=towerRarityMatrix(rank);if(!matrix)return null;
+ let perRoot=filters.get(root);
+ if(!perRoot){perRoot=new Map();filters.set(root,perRoot);}
+ if(perRoot.has(rank))return 'url(#'+perRoot.get(rank)+')';
+ const ns='http://www.w3.org/2000/svg',defs=root.querySelector(':scope > defs')??root.insertBefore(root.ownerDocument.createElementNS(ns,'defs'),root.firstChild);
+ const node=root.ownerDocument.createElementNS(ns,'filter');const id='tower-rarity-'+(++serial);
+ node.setAttribute('id',id);node.setAttribute('color-interpolation-filters','sRGB');
+ const tint=root.ownerDocument.createElementNS(ns,'feColorMatrix');
+ tint.setAttribute('type','matrix');tint.setAttribute('values',matrix.join(' '));
+ node.append(tint);defs.append(node);perRoot.set(rank,id);return 'url(#'+id+')';
 }

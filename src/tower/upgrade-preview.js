@@ -2,7 +2,7 @@
 // Same 4x4 atlas cells and transforms as the real rig; no special 3-D skin.
 import {ROBOT_PARTS,skinMatrix} from '../render/robot-skin.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
-import {towerUpgradeAtlas} from './upgrade-appearance.js';
+import {towerUpgradeAtlas,towerUpgradeRarity,towerRaritySvgFilter} from './upgrade-appearance.js';
 import {towerSurgerySiteLabel} from './surgery.js';
 import {towerUpgradePose,towerPoseFit} from './upgrade-pose.js';
 import {towerPatientAnatomy} from './anatomy.js';
@@ -19,7 +19,7 @@ export const TOWER_PATIENT_POSE=Object.freeze(towerUpgradePose(null));
 const labelFor=site=>site==='head'?'Голова':
  site==='spine-0'?'Грудной сегмент':towerSurgerySiteLabel(site);
 export function renderTowerUpgradePatient(target,patient,{
- selectedSite=null,availableSites=null,previewMutation=null,previewSurgery=null,onSelect=null
+ selectedSite=null,availableSites=null,previewMutation=null,previewSurgery=null,previewReplaceSite=null,onSelect=null
 }={}){
  target.replaceChildren();
  const svg=make('svg',{
@@ -33,7 +33,7 @@ export function renderTowerUpgradePatient(target,patient,{
  // A subdued shadow holds the body against the table, not a spotlight.
  make('ellipse',{cx:248,cy:103,rx:168,ry:31,fill:'#0b0c0a',opacity:.42},svg);
  const original=ASSETS.textures[['robotA','robotB','robotC','robotD'][(patient?.patient??0)%4]];
- const draft=previewSurgery?{...patient,surgeries:[...(patient?.surgeries??[]),previewSurgery]}:patient;
+ const draft=previewSurgery?{...patient,surgeries:[...(patient?.surgeries??[]).filter(s=>s.site!==previewReplaceSite),previewSurgery]}:patient;
  const pose=towerUpgradePose(draft);
  const body=towerPatientAnatomy(draft);
  const prosthetics=new Set([...(patient?.prosthetics??[]),...(patient?.graftProsthetics??[])]);
@@ -56,6 +56,8 @@ export function renderTowerUpgradePatient(target,patient,{
    overflow:'hidden',preserveAspectRatio:'none','aria-hidden':'true'
   },g);
   const replaced=towerUpgradeAtlas(patient,site,{previewSurgery,previewMutation});
+  const rarity=replaced?towerUpgradeRarity(patient,site,{previewSurgery,previewMutation}):0;
+  if(rarity)g.setAttribute('filter',towerRaritySvgFilter(svg,rarity));
   const path=replaced??(prosthetics.has(site)?ASSETS.textures.robotAndroid:original);
   make('image',{
    href:assetUrl(path),x:0,y:0,width:256,height:256,

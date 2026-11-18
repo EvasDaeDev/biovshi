@@ -3,6 +3,7 @@
 // if patientRecovery repairs the part after a successful floor.
 import {PROSTHETIC_SEGMENTS} from '../garage/model.js';
 import {towerAvailableDonors,validTowerDonors} from './donors.js';
+import {normalizeTowerGraftProsthetics} from './anatomy.js';
 
 export const TOWER_SURGERY_MIN_LEVEL=6;
 export const TOWER_SURGERY_MAX=3;
@@ -29,7 +30,9 @@ export const TOWER_SURGERY_IDS=Object.freeze(Object.keys(TOWER_SURGERY_OPERATION
 const siteKind=site=>typeof site==='string'&&site.startsWith('spine-')?'spine':
  typeof site==='string'&&site.startsWith('arm-')?'arm':
  typeof site==='string'&&site.startsWith('leg-')?'leg':null;
-export const towerSurgeryPrice=run=>30+15*(run?.surgeries?.length??0);
+// Interim economic pricing; modelled independently of the betting wallet.
+export const towerSurgeryPrice=run=>[60,100,150][Math.min(2,run?.surgeries?.length??0)];
+export const towerSurgeryReplacePrice=run=>Math.max(60,Math.ceil(towerSurgeryPrice(run)*.85));
 export const towerSurgeryCapacity=level=>Math.min(TOWER_SURGERY_MAX,
  Math.max(0,Math.floor((level-1)/5)));
 export function validTowerSurgeries(surgeries,level){
@@ -65,31 +68,50 @@ export function towerSurgeryBonus(surgeries=[],robot=null){
  }
  return total.map(n=>Math.round(n*100)/100);
 }
-export function towerSurgeryAvailableSites(run,procedure){
+export function towerSurgeryAvailableSites(run,procedure,replaceSite=null){
  const operation=TOWER_SURGERY_OPERATIONS[procedure];
  if(!operation)return [];
  const installed=new Set(run?.surgeries?.map(s=>s.site));
  return PROSTHETIC_SEGMENTS.filter(site=>siteKind(site)===operation.site
-  &&(!operation.requiresUpper||site.endsWith('-upper'))&&!installed.has(site));
+  &&(!operation.requiresUpper||site.endsWith('-upper'))&&(!installed.has(site)||site===replaceSite));
 }
-export function purchaseTowerSurgery(session,player,run,procedure,site,donorId=null){
+export function purchaseTowerSurgery(session,player,run,procedure,site,donorId=null,replaceSite=null){
  const operation=TOWER_SURGERY_OPERATIONS[procedure];
  if(!operation||!run?.preparing||run.mutationDraft||run.rewarded?.length
    ||!validTowerSurgeries(run.surgeries,run.level)||!validTowerDonors(run.donorTissues??[])
-   ||run.surgeries.length>=towerSurgeryCapacity(run.level)
-   ||!towerSurgeryAvailableSites(run,procedure).includes(site))
+   ||(run.surgeries.length>=towerSurgeryCapacity(run.level)&&replaceSite===null)
+   ||(replaceSite!==null&&!run.surgeries.some(item=>item.site===replaceSite))
+   ||!towerSurgeryAvailableSites(run,procedure,replaceSite).includes(site))
   throw Error('Операция недоступна на этом этаже или для выбранного сегмента.');
  const donor=operation.donor?towerAvailableDonors(run,procedure).find(item=>item.id===donorId):null;
  if(operation.donor&&!donor)throw Error('Для пересадки требуется подходящий донор, полученный в бою.');
- const buyer=session.players?.[player],price=towerSurgeryPrice(run);
+ const old=replaceSite!==null?run.surgeries.find(item=>item.site===replaceSite):null;
+ const buyer=session.players?.[player],price=old?towerSurgeryReplacePrice(run):towerSurgeryPrice(run);
  if(!buyer||buyer.balance<price)throw Error('Недостаточно монет для операции.');
  const spent=session.surgerySpent??0;
  if(!Number.isSafeInteger(spent)||spent+price>16000000)throw Error('Недопустимая стоимость операции.');
+ if(old){
+  run.surgeries=run.surgeries.filter(item=>item!==old);
+  if(!TOWER_SURGERY_OPERATIONS[old.procedure].donor){
+   run.surgicalStock??=[];
+   run.surgicalStock.push({procedure:old.procedure,fromSite:old.site});
+  }
+  // Old donor grafts are permanently consumed; never create donor inventory.
+ }
  run.surgeries.push({site,procedure,...(donor?{donorId:donor.id,donorProfile:donor.profile}:{})});
+ run.graftProsthetics=normalizeTowerGraftProsthetics(run.graftProsthetics??[],run);
+ if(donor){run.consumedDonorIds??=[];run.consumedDonorIds.push(donor.id);}
  if(donor)run.donorTissues=run.donorTissues.filter(item=>item.id!==donor.id);
  buyer.balance-=price;
  session.surgerySpent=spent+price;
  return price;
+}
+export function validTowerSurgicalStock(run){
+ return Array.isArray(run?.surgicalStock)&&run.surgicalStock.every(item=>item&&
+  Object.hasOwn(TOWER_SURGERY_OPERATIONS,item.procedure)&&!TOWER_SURGERY_OPERATIONS[item.procedure].donor&&
+  typeof item.fromSite==='string'&&PROSTHETIC_SEGMENTS.includes(item.fromSite))&&
+  Array.isArray(run?.consumedDonorIds)&&new Set(run.consumedDonorIds).size===run.consumedDonorIds.length&&
+  run.consumedDonorIds.every(id=>typeof id==='string'&&/^\d+:[1-9]\d*:(arm|leg)$/.test(id));
 }
 export function towerSurgerySiteLabel(site){
  if(site.startsWith('spine-'))return 'Позвонок '+site.slice(6);

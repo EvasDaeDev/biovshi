@@ -8,6 +8,7 @@ import { staticArenaImage,staticWallNodes } from './pixi-static.js';
 import { ArenaPostEffects } from './post-effects.js';
 import { victoryGold, goldMatrix } from './victory-glow.js';
 import { transformMatrix } from './pixi-math.js';
+import {towerRarityMatrix} from '../tower/rarity-tint.js';
 
 // The hidden SVG is a scene description for the existing animation code, not a
 // second renderer. Only changed nodes are synchronized; atlases become native
@@ -190,7 +191,7 @@ export class PixiArena {
     if(record){
       for(const child of [...record.children])this.release(child.node);
       this.dirty.delete(record);this.records.delete(node);
-      record.object.destroy({children:true});
+      record.rarityFilter?.destroy();record.object.destroy({children:true});
     }else for(const child of [...node.children])this.release(child);
   }
   cropped(source,x,y,width,height) {
@@ -226,6 +227,13 @@ export class PixiArena {
     const number=(name,fallback=0)=>Number(node.getAttribute(name)??fallback);
     object.visible=node.getAttribute('display')!=='none'&&node.style.display!=='none';
     object.alpha=number('opacity',1);
+    const rarity=number('data-tower-rarity');
+    if(rarity>0){
+      record.rarityFilter??=new this.p.ColorMatrixFilter();
+      record.rarityFilter.matrix=towerRarityMatrix(rarity);
+      object.filters=[record.rarityFilter];
+    }else if(record.rarityFilter){object.filters=null;record.rarityFilter.destroy();record.rarityFilter=null;}
+
     object.setFromMatrix(new this.p.Matrix(...transformMatrix(node.getAttribute('transform')??'')));
     const s=record.style;
     s.fill=this.colour(node.style.fill||node.getAttribute('fill'),record.parent?.style.fill??'#26312b');

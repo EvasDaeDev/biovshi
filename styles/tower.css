@@ -214,3 +214,18 @@
 #robot-tag-hops-v22 .tower-stat-message{display:block;font-weight:700;font-size:12px;line-height:1.4}
 @media(max-width:450px){#robot-tag-hops-v22 #tower-floor-preview .tower-arena-overview{grid-template-columns:minmax(0,1fr) 94px;gap:8px}#robot-tag-hops-v22 #tower-floor-preview .tower-arena-map{gap:6px}#robot-tag-hops-v22 #tower-floor-preview .tower-arena-map>svg{width:62px;height:62px}#robot-tag-hops-v22 .tower-reroll-button{width:80px;height:80px}#robot-tag-hops-v22 #tower-floor-preview .tower-reroll-button svg{width:65px;height:65px}}
 @media(prefers-reduced-motion:reduce){#robot-tag-hops-v22 .tower-reroll-button{transition:none}}
+
+/* Tower II: ownership and installed state are independent. */
+#robot-tag-hops-v22 .tower-inventory-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:9px 0}
+#robot-tag-hops-v22 .tower-inventory-item{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;white-space:normal;background:#292b23;color:#e7daba;border:1px solid #86754e;padding:7px;cursor:pointer}
+#robot-tag-hops-v22 .tower-inventory-item.is-equipped{border:2px solid #57ae67;box-shadow:inset 0 0 0 1px #274b30}
+#robot-tag-hops-v22 .tower-inventory-item.is-selected,#robot-tag-hops-v22 .tower-mutation-option.is-selected{outline:2px solid #d4b36d;outline-offset:1px}
+#robot-tag-hops-v22 .tower-inventory-item small{font-size:10px;color:#cbbb9d}
+#robot-tag-hops-v22 .tower-mod-icon{display:block;flex:0 0 auto;width:56px;height:56px;background-repeat:no-repeat;image-rendering:pixelated}
+#robot-tag-hops-v22 .tower-mutation-claim,#robot-tag-hops-v22 .tower-mutation-install{padding:10px 12px;margin:5px 0;background:#445137;border:1px solid #a89b64;color:#ffefbe;cursor:pointer;max-width:100%;white-space:normal}
+#robot-tag-hops-v22 .tower-mutation-claim:disabled,#robot-tag-hops-v22 .tower-mutation-install:disabled{opacity:.5;cursor:default}
+#robot-tag-hops-v22 .tower-reward-options .tower-mutation-option{min-height:134px}
+#robot-tag-hops-v22 .tower-cycle-dialog{max-width:min(90vw,560px);border:2px solid #ae9b6a;background:#292d24;color:#fff0cb;padding:22px;box-shadow:0 18px 65px #000c}
+#robot-tag-hops-v22 .tower-cycle-dialog::backdrop{background:#080c0ccc}
+#robot-tag-hops-v22 .tower-cycle-dialog button{padding:12px;margin-top:10px;border:1px solid #bba66a;background:#4b543b;color:#fff3d5}
+@media(max-width:420px){#robot-tag-hops-v22 .tower-inventory-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -6,7 +6,8 @@ import {ROBOT_PARTS,skinMatrix} from '../render/robot-skin.js';
 import {transformPoint} from '../render/pixi-math.js';
 import {ik} from '../utils/math.js';
 import {TELEMETRY_COLOURS} from './telemetry-colours.js';
-import {towerUpgradeAtlas} from '../tower/upgrade-appearance.js';
+import {towerUpgradeAtlas,towerUpgradeRarity} from '../tower/upgrade-appearance.js';
+import {TOWER_RARITIES} from '../tower/mutations.js';
 
 export const PORTRAIT_WIDTH=260,PORTRAIT_HEIGHT=112;
 // Same neutral kinematics, atlas anchors and spine width as the arena. No second
@@ -64,6 +65,26 @@ let androidAtlas=null;
 // This cache is independent of the base skin palette and paints while the
 // texture is loading, then invalidates the portrait exactly once on arrival.
 const replacementAtlases=new Map();
+const rarityPortraitAtlases=new WeakMap();
+function rarityPortraitAtlas(atlas,rarity){
+ if(!rarity||!atlas)return atlas;
+ let variants=rarityPortraitAtlases.get(atlas);
+ if(!variants){variants=new Map();rarityPortraitAtlases.set(atlas,variants);}
+ if(variants.has(rarity))return variants.get(rarity);
+ const shade=TOWER_RARITIES[rarity].colour,colour=[1,3,5].map(p=>parseInt(shade.slice(p,p+2),16));
+ const canvases={};
+ for(const [status,source] of Object.entries(atlas)){
+  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
+  const draw=canvas.getContext('2d',{willReadFrequently:true});draw.drawImage(source,0,0,256,256);
+  const pixels=draw.getImageData(0,0,256,256);
+  for(let i=0;i<pixels.data.length;i+=4){
+   if(!pixels.data[i+3])continue;
+   for(let c=0;c<3;c++)pixels.data[i+c]=Math.round(.8*pixels.data[i+c]+.2*colour[c]);
+  }
+  draw.putImageData(pixels,0,0);canvases[status]=canvas;
+ }
+ variants.set(rarity,canvases);return canvases;
+}
 function portraitReplacement(url,card){
  let entry=replacementAtlases.get(url);
  if(!entry){
@@ -128,7 +149,8 @@ export function paintPatientPortrait(card,id,states,bones=PORTRAIT_BONES) {
   const upgrades=ctx.mode==='tower'&&id===0?
    new Map(bones.map(b=>[b.key,towerUpgradeAtlas(patientGarage()?.[0],b.key)])
     .filter(([,url])=>Boolean(url)).map(([part,url])=>[part,assetUrl(url)])):new Map();
-  const key=states.map(s=>s.key+':'+s.state+':'+s.opacity).join('|')+'|'+prosthetics.join(',')+'|'+hat+'|'+card.portrait.width+'x'+card.portrait.height+'|'+bones.map(b=>b.key+':'+b.matrix.join(',')).join(';')+'|'+[...upgrades].map(([part,url])=>part+':'+url).join(',');
+  const rarity=ctx.mode==='tower'&&id===0?new Map(bones.map(b=>[b.key,towerUpgradeRarity(patientGarage()?.[0],b.key)])):new Map();
+  const key=states.map(s=>s.key+':'+s.state+':'+s.opacity).join('|')+'|'+prosthetics.join(',')+'|'+hat+'|'+card.portrait.width+'x'+card.portrait.height+'|'+bones.map(b=>b.key+':'+b.matrix.join(',')).join(';')+'|'+[...upgrades].map(([part,url])=>part+':'+url+':'+(rarity.get(part)??0)).join(',');
   if(card.portraitStateKey!==key){
     card.portraitStateKey=key;card.portraitStates=Object.fromEntries(states.map(s=>[s.key,s.state]));
     const counts=states.reduce((counts,s)=>(counts[s.state]=(counts[s.state]??0)+1,counts),{});
@@ -146,7 +168,8 @@ export function paintPatientPortrait(card,id,states,bones=PORTRAIT_BONES) {
     const bone=bones[i],state=states[i];draw.save();draw.globalAlpha=Number(state.opacity);
     const replacementUrl=upgrades.get(bone.key);
     const replacement=replacementUrl?portraitReplacement(replacementUrl,card):null;
-    const atlas=replacement??(prosthetics.includes(bone.key)&&androidAtlas?androidAtlas:card.portraitAtlas);
+    const atlas=replacement?rarityPortraitAtlas(replacement,rarity.get(bone.key)??0):
+      (prosthetics.includes(bone.key)&&androidAtlas?androidAtlas:card.portraitAtlas);
     if(atlas){
       draw.transform(...bone.matrix);
       draw.drawImage(atlas[state.state],bone.part.col*64,bone.part.row*64,64,64,0,0,64,64);

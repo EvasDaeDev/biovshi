@@ -31,11 +31,12 @@ test('winning the first boss offers three saved and distinct mutations',()=>{
  assert.equal(grantTowerMutationDraft(run,()=>.99),false,'cannot reroll an existing draft');
  assert.deepEqual(run.mutationDraft,saved);
  assert.equal(chooseTowerMutation(run,'nonexistent'),false);
- assert.equal(chooseTowerMutation(run,run.mutationDraft.options[0]),true);
- assert.equal(run.mutations.length,1);
+ assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
+ assert.equal(run.mutationInventory.length,1);
+ assert.equal(run.mutations.length,0,'claim is not installation');
  assert.equal(run.mutationDraft,undefined);
  assert.equal(validTower(run),true);
- assert.equal(chooseTowerMutation(run,run.mutations[0]),false,'cannot acquire twice');
+ assert.equal(chooseTowerMutation(run,run.mutationInventory[0].type),false,'cannot claim without a pending reward');
 });
 test('mechanical and biological sets grant actual fractional skill points',()=>{
  assert.deepEqual(towerMutationBonus([]),[0,0,0]);
@@ -79,7 +80,7 @@ test('neural combat perks affect only the controlled Tower patient',()=>{
 test('new boss drafts include a chance to complete an existing one-piece synergy',()=>{
  const s=betNewSession(['Улучшения'],1000);
  const t=towerFor(s,0);
- t.level=11;t.wins=10;t.mutations=['turbo'];
+ t.level=11;t.wins=10;t.mutations=['turbo'];t.mutationInventory=[{id:'m1',type:'turbo',rarity:0,obtainedAt:5}];t.equippedMutations=['m1'];t.nextMutationId=2;
  const rolled=grantTowerMutationDraft(t,()=>0);
  assert.equal(rolled,true);
  assert.equal(t.mutationDraft.options.length,3);
@@ -98,12 +99,14 @@ test('legacy one- or two-option boss offers survive catalogue expansion intact',
 test('mutations survive insured defeat and do not survive an uninsured reset',()=>{
  const s=betNewSession(['ДМС'],1000);
  const t=beatFirstBoss(s),chosen=t.mutationDraft.options[0];
- assert.equal(chooseTowerMutation(t,chosen),true);
+ assert.ok(chooseTowerMutation(t,chosen));
  assert.equal(buyTowerInsurance(s,0),50);
- assert.deepEqual(t.insurance.checkpoint.mutations,[chosen]);
+ assert.deepEqual(t.insurance.checkpoint.mutations,[]);
+ assert.equal(t.insurance.checkpoint.mutationInventory[0].type,chosen);
  const restored=completeTower(s,0,false);
  assert.equal(restored.level,6);
- assert.deepEqual(restored.mutations,[chosen]);
+ assert.deepEqual(restored.mutations,[]);
+ assert.equal(restored.mutationInventory[0].type,chosen);
  assert.equal(restored.mutationDraft,undefined);
  assert.equal(restored.insurance.checkpoint,null);
  assert.ok(validTower(restored));
@@ -117,14 +120,15 @@ test('pending mutation draft survives DMS checkpoint and must still be chosen',(
  const run=beatFirstBoss(session),draft=structuredClone(run.mutationDraft);
  buyTowerInsurance(session,0);
  assert.deepEqual(run.insurance.checkpoint.mutationDraft,draft);
- assert.equal(chooseTowerMutation(run,draft.options[0]),true);
+ assert.ok(chooseTowerMutation(run,draft.options[0]));
  assert.deepEqual(run.insurance.checkpoint.mutationDraft,draft,'checkpoint is independent of subsequent choices');
  const restored=completeTower(session,0,false);
  assert.equal(restored.level,6);
  assert.deepEqual(restored.mutations,[]);
  assert.deepEqual(restored.mutationDraft,draft);
- assert.equal(chooseTowerMutation(restored,draft.options[1]),true);
- assert.deepEqual(restored.mutations,[draft.options[1]]);
+ assert.ok(chooseTowerMutation(restored,draft.options[1]));
+ assert.deepEqual(restored.mutations,[]);
+ assert.equal(restored.mutationInventory[0].type,draft.options[1]);
  assert.ok(validTower(restored));
 });
 test('a pending milestone offer is durable through storage, cannot be rerolled and rejects invalid drafts',()=>{
@@ -144,10 +148,10 @@ test('a pending milestone offer is durable through storage, cannot be rerolled a
   assert.equal(validTowerMutationState({...run,mutations:['turbo','turbo']}),false);
   assert.equal(validTowerMutationState({...run,mutationDraft:{...draft,floor:7}}),false);
   assert.equal(validTowerMutationState({...run,mutationDraft:{...draft,options:[draft.options[0],draft.options[0]]}}),false);
-  assert.equal(chooseTowerMutation(run,draft.options[0]),true);
+  assert.ok(chooseTowerMutation(run,draft.options[0]));
   assert.equal(validTower(run),true);
   ctx.betting=restored;bettingSave();
-  assert.deepEqual(towerFor(bettingLoad(),0).mutations,[draft.options[0]]);
+  assert.equal(towerFor(bettingLoad(),0).mutationInventory[0].type,draft.options[0]);
  }finally{
   ctx.BET_STORAGE=prior.key;ctx.betting=prior.session;
   globalThis.localStorage=prior.storage;dom.window.close();

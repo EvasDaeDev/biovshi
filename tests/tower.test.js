@@ -76,14 +76,19 @@ test('post-boss module choices lock fight entry and update the actual player com
  try{
   const panel=document.querySelector('#tower-prep-mutations');
   assert.equal(panel.hidden,false);
-  assert.match(panel.textContent,/ПОБЕДА НАД БОССОМ/);
+  assert.match(panel.textContent,/БОСС СПИСАН/);
   const buttons=[...panel.querySelectorAll('.tower-mutation-option')];
   assert.equal(buttons.length,3);
   const fight=document.querySelector('#tower-fight');
   assert.equal(fight.disabled,true,'must select a module before entering next fight');
   const before=patientCombatStats(0,ctx.robots[0]).effective;
   buttons[0].click();
+  assert.ok(t.mutationDraft,'selecting a card never claims or installs');
+  document.querySelector('.tower-mutation-claim').click();
   assert.equal(t.mutationDraft,undefined);
+  assert.equal(t.mutationInventory[0].type,draft[0]);
+  assert.deepEqual(t.mutations,[],'unpaid module does not change combat');
+  document.querySelector('.tower-mutation-install').click();
   assert.deepEqual(t.mutations,[draft[0]]);
   assert.deepEqual(ctx.towerGarage[0].mutations,t.mutations);
   assert.equal(fight.disabled,false);
@@ -107,6 +112,7 @@ test('surgeon lets the player buy one body-specific operation and saves combat i
   assert.equal(panel.querySelector('.tower-surgery-purchase').disabled,true,
    'pending mutation choice blocks surgery');
   document.querySelector('#tower-prep-mutations .tower-mutation-option').click();
+  document.querySelector('.tower-mutation-claim').click();
   const purchase=panel.querySelector('.tower-surgery-purchase');
   const type=panel.querySelector('[aria-label="Вид операции"]');
   type.value='impact';type.dispatchEvent(new Event('change'));
@@ -115,16 +121,16 @@ test('surgeon lets the player buy one body-specific operation and saves combat i
   assert.equal(purchase.disabled,false);
   const base=patientCombatStats(0,ctx.robots[0]).effective[1];
   purchase.click();
-  assert.equal(s.players[0].balance,270);
-  assert.equal(s.surgerySpent,30);
+  assert.equal(s.players[0].balance,240);
+  assert.equal(s.surgerySpent,60);
   assert.deepEqual(t.surgeries,[{site:'arm-1-upper',procedure:'impact'}]);
   assert.deepEqual(ctx.towerGarage[0].surgeries,t.surgeries);
   assert.ok(patientCombatStats(0,ctx.robots[0]).effective[1]>=base+.45-1e-6);
   assert.match(panel.textContent,/ХИРУРГИЯ · 1\/1/);
-  assert.equal(bettingLoad().surgerySpent,30);
+  assert.equal(bettingLoad().surgerySpent,60);
   const insured=document.querySelector('#tower-insurance');insured.click();
   assert.deepEqual(t.insurance.checkpoint.surgeries,t.surgeries);
-  assert.equal(s.players[0].balance,220);
+  assert.equal(s.players[0].balance,190);
   assert.ok(validTower(t));
  }finally{close(dom);}
 });
@@ -138,6 +144,7 @@ test('purchases during preparation take effect on the SAME floor, including graf
   const initial=ctx.robots[0];
   assert.equal(initial.body.limbs?.length??4,4,'normal preoperative fighter has four limbs');
   document.querySelector('#tower-prep-mutations .tower-mutation-option').click();
+  document.querySelector('.tower-mutation-claim').click();
   const surgery=document.querySelector('#tower-prep-surgery');
   const procedure=surgery.querySelector('[aria-label="Вид операции"]');
   procedure.value='graft_arm';procedure.dispatchEvent(new Event('change'));
@@ -145,13 +152,14 @@ test('purchases during preparation take effect on the SAME floor, including graf
   site.value='arm-1-upper';
   surgery.querySelector('.tower-surgery-purchase').click();
   assert.equal(run.surgeries[0].procedure,'graft_arm');
-  assert.deepEqual(run.mutations,[chosen]);
+  assert.equal(run.mutationInventory[0].type,chosen);
+  assert.deepEqual(run.mutations,[]);
   assert.equal(ctx.towerRun.surgeries.length,0,'preparation started from a detached snapshot');
   document.querySelector('.tower-upgrade-close').click();
   document.querySelector('#tower-fight').click();
   assert.equal(ctx.startup.phase,'spawning');
   assert.equal(ctx.towerRun.surgeries[0].procedure,'graft_arm');
-  assert.deepEqual(ctx.towerRun.mutations,[chosen]);
+  assert.deepEqual(ctx.towerRun.mutations,[]);
   assert.notEqual(ctx.robots[0],initial,'fighter is rebuilt after purchases');
   assert.equal(ctx.robots[0].body.limbs.length,5);
   const piece=ctx.robots[0].actor.querySelector('[data-skin-segment="arm-1-graft-upper"] image');
@@ -215,7 +223,9 @@ test('global capture guard allows auto-open boss reward choice and live surgery 
   initializeModalFocus();
   const module=modal.querySelector('.tower-mutation-option');
   module.click();
-  assert.equal(run.mutationDraft,undefined,'module selection must not be swallowed by capture guard');
+  assert.ok(run.mutationDraft,'selection has no side effects');
+  modal.querySelector('.tower-mutation-claim').click();
+  assert.equal(run.mutationDraft,undefined,'claim must not be swallowed by capture guard');
   const tab=modal.querySelector('[data-upgrade-tab="surgery"]');
   tab.click();
   assert.equal(tab.getAttribute('aria-selected'),'true');
@@ -276,6 +286,7 @@ test('modernization selects surgical body parts from horizontal patient and prev
   draftButton.dispatchEvent(new dom.window.MouseEvent('mouseenter',{bubbles:true}));
   assert.match(modal.querySelector('#tower-upgrade-stats').textContent,/ПРЕДПРОСМОТР/);
   draftButton.click();
+  modal.querySelector('.tower-mutation-claim').click();
   assert.equal(t.mutationDraft,undefined);
   assert.equal(modal.querySelector('#tower-upgrade-open'),null);
   modal.querySelector('[data-upgrade-tab="surgery"]').click();
@@ -302,8 +313,8 @@ test('modernization selects surgical body parts from horizontal patient and prev
 test('modified live body skin uses exact replacement PNG and falls back only for a failed segment',()=>{
  const session=betNewSession(['Протезы'],300),run=towerFor(session,0);
  for(let i=0;i<5;i++)completeTower(session,0,true,()=>.24);
- assert.equal(chooseTowerMutation(run,run.mutationDraft.options[0]),true);
- assert.equal(buyTowerSurgery(session,0,'impact','arm-1-upper'),30);
+ assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
+ assert.equal(buyTowerSurgery(session,0,'impact','arm-1-upper'),60);
  const dom=setup(session,run,'ward');
  try{
   const player=ctx.robots[0];

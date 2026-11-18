@@ -48,9 +48,9 @@ test('F3 graft purchase is charged once and anatomy persists through DMS restore
  const run=towerFor(session,0);
  Object.assign(run,{level:6,wins:5,record:5,preparing:true});
  const before=session.players[0].balance;
- assert.equal(buyTowerSurgery(session,0,'graft_arm','arm-1-upper'),30);
- assert.equal(session.players[0].balance,before-30);
- assert.equal(session.surgerySpent,30);
+ assert.equal(buyTowerSurgery(session,0,'graft_arm','arm-1-upper'),60);
+ assert.equal(session.players[0].balance,before-60);
+ assert.equal(session.surgerySpent,60);
  assert.equal(towerPatientAnatomy(run).limbs.length,5);
  assert.throws(()=>buyTowerSurgery(session,0,'graft_arm','arm-1-upper'),/недоступна/);
  assert.equal(buyTowerInsurance(session,0),50);

@@ -8,7 +8,7 @@ import {towerPatientAnatomy} from '../src/tower/anatomy.js';
 function reachSix(){
  const session=betNewSession(['Игрок'],600),run=towerFor(session,0);
  while(run.level<6)completeTower(session,0,true,()=>.2);
- assert.equal(chooseTowerMutation(run,run.mutationDraft.options[0]),true);
+ assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
  return {session,run};
 }
 test('only personally credited kills award donor tissue',()=>{
@@ -26,8 +26,8 @@ test('tissue consumption, credits, real anatomy and insurance',()=>{
  const {session,run}=reachSix();
  run.preparing=false;rewardTower(session,0,1,0);completeTower(session,0,true,()=>.2);
  const tissue=towerAvailableDonors(run,'transplant_arm')[0],before=session.players[0].balance;
- assert.equal(buyTowerSurgery(session,0,'transplant_arm','arm-1-upper',tissue.id),30);
- assert.equal(session.players[0].balance,before-30);
+ assert.equal(buyTowerSurgery(session,0,'transplant_arm','arm-1-upper',tissue.id),60);
+ assert.equal(session.players[0].balance,before-60);
  assert.ok(!run.donorTissues.some(d=>d.id===tissue.id));
  assert.deepEqual(run.surgeries[0],{site:'arm-1-upper',procedure:'transplant_arm',donorId:tissue.id,donorProfile:tissue.profile});
  assert.equal(towerPatientAnatomy(run).limbs.length,5);

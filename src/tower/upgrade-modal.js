@@ -2,7 +2,7 @@
 // surgical control panels so purchases and save validation stay authoritative.
 import {towerMutationSnapshot,towerMutationSynergies,TOWER_MUTATIONS} from './mutations.js';
 import {towerSurgeryAvailableSites,towerSurgerySiteLabel,towerSurgeryCapacity,
- towerSurgeryPrice,TOWER_SURGERY_OPERATIONS} from './surgery.js';
+ towerSurgeryPrice,towerSurgeryReplacePrice,TOWER_SURGERY_OPERATIONS} from './surgery.js';
 import {renderTowerUpgradePatient} from './upgrade-preview.js';
 import {towerPatientAnatomy} from './anatomy.js';
 
@@ -73,7 +73,8 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  });
  function paint(){
   const {proc,selected,donor}=control();
-  const surgeryOptions=proc?.value?towerSurgeryAvailableSites(run,proc.value):[];
+  const surgeryReplace=surgeryPanel.querySelector('[aria-label="Заменяемая операция"]')?.value||null;
+  const surgeryOptions=proc?.value?towerSurgeryAvailableSites(run,proc.value,surgeryReplace):[];
   if(selected?.value&&surgeryOptions.includes(selected.value))site=selected.value;
   else if(!surgeryOptions.includes(site))site=surgeryOptions[0]??null;
   if(selected&&site&&surgeryOptions.includes(site))selected.value=site;
@@ -85,12 +86,12 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   // hypothetical graft. Only preview a transplant backed by real tissue.
   const proposedSurgery=editingSurgery&&operation&&site&&surgeryOptions.includes(site)&&
     (!operation.donor||donorItem)&&
-    run.surgeries.length<towerSurgeryCapacity(run.level)&&!run.mutationDraft?
+    (run.surgeries.length<towerSurgeryCapacity(run.level)||surgeryReplace)&&!run.mutationDraft?
     {procedure:proc.value,site,...(donorItem?{donorId:donorItem.id,donorProfile:donorItem.profile}:{})}:null;
   const proposedMutation=!editingSurgery&&hoverMutation&&
     run.mutationDraft?.options.includes(hoverMutation)?hoverMutation:null;
   const before=towerMutationSnapshot(run).effective;
-  const draft=proposedSurgery?{...run,surgeries:[...run.surgeries,proposedSurgery]}:
+  const draft=proposedSurgery?{...run,surgeries:[...run.surgeries.filter(op=>op.site!==surgeryReplace),proposedSurgery]}:
    proposedMutation?{...run,mutations:[...run.mutations,proposedMutation]}:run;
   const after=towerMutationSnapshot(draft).effective;
   stats.replaceChildren();
@@ -110,7 +111,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   const detail=editingSurgery?
     proposedSurgery?'ПРЕДПРОСМОТР: '+TOWER_SURGERY_OPERATIONS[proposedSurgery.procedure].name:
       operation?.donor&&!donorItem?'Для пересадки нужен доступный донор выбранного типа':
-      'Уже установлено: '+run.surgeries.length+' / '+towerSurgeryCapacity(run.level)+' · следующая операция '+towerSurgeryPrice(run)+' монет':
+      'Установлено: '+run.surgeries.length+' / '+towerSurgeryCapacity(run.level)+' · цена '+(surgeryReplace?towerSurgeryReplacePrice(run):towerSurgeryPrice(run))+' монет':
     proposedMutation?'ПРЕДПРОСМОТР: '+TOWER_MUTATIONS[proposedMutation].name:
      'Установлено '+run.mutations.length+' модулей · активных синергий '+towerMutationSynergies(run.mutations).length;
   stats.append(create('small','tower-upgrade-stats-note',detail));
@@ -130,7 +131,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   renderTowerUpgradePatient(drawing,run,{
    selectedSite:editingSurgery?site:null,
    availableSites:editingSurgery?surgeryOptions:null,
-   previewSurgery:proposedSurgery,previewMutation:proposedMutation,
+   previewSurgery:proposedSurgery,previewReplaceSite:surgeryReplace,previewMutation:proposedMutation,
    onSelect:editingSurgery?chosen=>{
     if(!surgeryOptions.includes(chosen))return;
     site=chosen;if(selected)selected.value=chosen;

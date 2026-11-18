@@ -3,6 +3,7 @@
 import {ARENAS} from '../game/arenas.js';
 import {hasBoss} from '../boss/config.js';
 import {validTowerProfile} from './profiles.js';
+import {towerRelationPlan,validTowerRelations} from './relations.js';
 
 export const TOWER_ARENA_CAPACITY=Object.freeze({
  ward:8, ring:3, annulus:4, sluice:5, zigzag:7, columns:10, throat:6
@@ -51,7 +52,7 @@ function option(t,danger,random,arenaId,style=null){
  const count=boss?3:Math.min(max,Math.max(1,requested,style==='mixed'?2:1));
  return {arenaId,kind:boss?'boss':danger?'danger':'standard',
   ...(style?{style}:{}),
-  profiles:boss?['boss',...opponents(t.level,2,false,random)]:opponents(t.level,count,danger,random,style)};
+  profiles:boss?['boss','basic','basic']:opponents(t.level,count,danger,random,style)};
 }
 // Plans are used only for newly prepared floors. An ongoing legacy battle with
 // credited kills keeps its old enemy count until the next floor.
@@ -65,7 +66,12 @@ export function ensureTowerFloorPlan(t,random=Math.random){
  // Crowded challenges must offer a real extra opponent, not merely a label.
  const arenaId=candidateArena(t.level,random,boss,actualStyle==='crowd'?base+2:0);
  const standard=option(t,false,random,arenaId);
- t.floorPlan={floor:t.level,selected:0,options:boss?[standard]:[standard,option(t,true,random,arenaId,actualStyle)]};
+ const options=boss?[standard]:[standard,option(t,true,random,arenaId,actualStyle)];
+ for(const choice of options){
+  const relations=towerRelationPlan(t.level,choice.profiles,random);
+  if(relations)choice.relations=relations;
+ }
+ t.floorPlan={floor:t.level,selected:0,options};
  return t.floorPlan;
 }
 export const selectedTowerFloor=t=>t.floorPlan?.floor===t.level?t.floorPlan.options[t.floorPlan.selected]:null;
@@ -85,6 +91,6 @@ export function validTowerFloorPlan(p,level){
  return p.options.every(o=>o&&Object.hasOwn(ARENAS,o.arenaId)&&['standard','danger','boss'].includes(o.kind)
   &&(o.style===undefined||(o.kind==='danger'&&Object.hasOwn(TOWER_DANGER_STYLES,o.style)))
   &&Array.isArray(o.profiles)&&o.profiles.length>=1&&o.profiles.length<=cap(o.arenaId)-1
-  &&o.profiles.every(id=>id==='boss'||validTowerProfile(id))
+  &&o.profiles.every(id=>id==='boss'||validTowerProfile(id))&&validTowerRelations(o.relations,o.profiles)
   &&(o.kind==='boss'?o.profiles.length===3&&o.profiles[0]==='boss'&&o.profiles.slice(1).every(validTowerProfile):o.profiles.every(id=>id!=='boss')));
 }

@@ -2,6 +2,7 @@ import {pendingStrikes,setPendingStrikes} from './strikes.js';
 import {settleTower} from '../tower/ui.js';
 import {patientCombatStats,patientGarage} from '../game/patients.js';
 import {towerMutationCombatBonus} from '../tower/mutations.js';
+import {towerAllies} from '../tower/relations.js';
 import {critChance} from '../garage/model.js';
 import {random} from '../utils/random.js';
 import { clamp, wrap, smooth } from '../utils/math.js';
@@ -63,6 +64,7 @@ export function kickPathClear(attacker, pending) {
   return true;
 }
 export function strikeCandidates(attacker, victim, source) {
+  if(ctx.mode==='tower'&&towerAllies(ctx.towerRun,attacker.id,victim.id))return [];
   if (!attacker.attackSources.some(s => s.key === source.key)) return [];
   const facing = attacker.angle;
   if (!sightClear(attacker.center, victim.center)) return [];
@@ -269,7 +271,8 @@ export function combatAttacks() {
         pending.resolved = true;
         const victim = ctx.robots[pending.victim];
         const src = attacker.attackSources.find(s => s.key === pending.source);
-        if (attacker.visible && attacker.mobile && src && victim?.visible && victim.hasHead && victim.segmentCount > 0) {
+        if (attacker.visible && attacker.mobile && src && victim?.visible && victim.hasHead && victim.segmentCount > 0
+          &&(ctx.mode!=='tower'||!towerAllies(ctx.towerRun,id,victim.id))) {
           const touched = struckSegment(attacker, victim, pending);
           const damage=touched&&random()<Math.min(.75,critChance(patientCombatStats(id,attacker).effective[1])+towerFighterCombatBonus(id).crit)?2:1;
           if (touched && victim.damage(touched, id, damage)) {

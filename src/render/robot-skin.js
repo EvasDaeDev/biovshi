@@ -4,7 +4,7 @@ import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 import { attr, el } from './svg.js';
-import {towerUpgradeAtlas} from '../tower/upgrade-appearance.js';
+import {towerUpgradeAtlas,towerUpgradeRarity,towerRaritySvgFilter} from '../tower/upgrade-appearance.js';
 import {createSkinReadiness} from './skin-readiness.js';
 
 // r_01..r_04: 256×256, 4×4 cells. All joint axes use y=32.
@@ -38,9 +38,10 @@ export function skinMatrix(a,b,part) {
   return [A,B,C,D,a.x-A*from-C*32,a.y-B*from-D*32];
 }
 
-function createPiece(key,url,parent,part=ROBOT_PARTS[key]) {
+function createPiece(key,url,parent,part=ROBOT_PARTS[key],rarity=0) {
   if (!part) return null;
-  const group=el('g',{'data-skin-segment':key,stroke:'none'},parent);
+  const group=el('g',{'data-skin-segment':key,stroke:'none',...(rarity?{'data-tower-rarity':rarity}:{}),
+    ...(rarity?{filter:towerRaritySvgFilter(ctx.svg,rarity)}:{})},parent);
   const viewport=el('svg',{
     x:0,y:0,width:64,height:64,
     viewBox:`${part.col*64} ${part.row*64} 64 64`,
@@ -50,7 +51,7 @@ function createPiece(key,url,parent,part=ROBOT_PARTS[key]) {
     href:url,x:0,y:0,width:256,height:256,preserveAspectRatio:'none',
     style:CONFIG.rendering.texturePixelated?'image-rendering:crisp-edges;image-rendering:pixelated':'',
   },viewport);
-  return {group,image,part,url};
+  return {group,image,part,url,rarity};
 }
 
 export function createRobotSkin(robot) {
@@ -85,7 +86,8 @@ export function createRobotSkin(robot) {
       towerUpgradeAtlas(patientGarage()?.[0],key):null;
     const spriteUrl=replacement?assetUrl(replacement):
       android?assetUrl(ASSETS.textures.robotAndroid):url;
-    const piece=createPiece(key,spriteUrl,/^(arm|leg)/.test(key)?limbs:body,parts[key]);
+    const rarity=replacement?towerUpgradeRarity(patientGarage()?.[0],key):0;
+    const piece=createPiece(key,spriteUrl,/^(arm|leg)/.test(key)?limbs:body,parts[key],rarity);
     piece.image.parentNode.setAttribute('data-fallback-src',android?assetUrl(ASSETS.textures.robotAndroid):url);
     piece.image.addEventListener('load',()=>{
       if(gate)gate.loaded(key);else activate(true);
@@ -152,11 +154,11 @@ export function snapshotRobotSkin(robot,key) {
     const transform=node.getAttribute?.('transform');
     if (transform)transforms.unshift(transform);
   }
-  return {key,part:piece.part,url:piece.url,transform:transforms.join(' '),hat:key==='head'?patientGarage()?.[robot.id]?.head?.hat:null};
+  return {key,part:piece.part,url:piece.url,rarity:piece.rarity,transform:transforms.join(' '),hat:key==='head'?patientGarage()?.[robot.id]?.head?.hat:null};
 }
 
 export function drawDetachedSkin(snapshot,parent) {
-  const piece=createPiece(snapshot.key,snapshot.url,parent,snapshot.part);
+  const piece=createPiece(snapshot.key,snapshot.url,parent,snapshot.part,snapshot.rarity??0);
   if (!piece) return false;
   attr(piece.group,'transform',snapshot.transform);
   if(snapshot.hat){const hat=createHat(snapshot.hat,parent);attr(hat,'transform',snapshot.transform);}

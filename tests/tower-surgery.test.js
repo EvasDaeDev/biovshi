@@ -12,7 +12,7 @@ import {ctx} from '../src/game/state.js';
 function advance(session,floor){
  while(towerFor(session,0).level<floor){
   const run=towerFor(session,0);
-  if(run.mutationDraft)assert.equal(chooseTowerMutation(run,run.mutationDraft.options[0]),true);
+  if(run.mutationDraft)assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
   completeTower(session,0,true,()=>.1);
  }
  return towerFor(session,0);
@@ -29,19 +29,19 @@ test('tower surgery unlocks one real site every five completed floors, max three
  advance(session,6);
  assert.throws(()=>buyTowerSurgery(session,0,'drive','leg-1-upper'),/недоступна/,
   'boss draft must be selected before performing surgery');
- assert.equal(chooseTowerMutation(run,run.mutationDraft.options[0]),true);
- assert.equal(towerSurgeryPrice(run),30);
- assert.equal(buyTowerSurgery(session,0,'drive','leg-1-upper'),30);
+ assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
+ assert.equal(towerSurgeryPrice(run),60);
+ assert.equal(buyTowerSurgery(session,0,'drive','leg-1-upper'),60);
  assert.deepEqual(run.surgeries,[{site:'leg-1-upper',procedure:'drive'}]);
- assert.equal(session.surgerySpent,30);
- assert.equal(session.players[0].balance,470);
- assert.equal(towerSurgeryPrice(run),45);
+ assert.equal(session.surgerySpent,60);
+ assert.equal(session.players[0].balance,440);
+ assert.equal(towerSurgeryPrice(run),100);
  assert.throws(()=>buyTowerSurgery(session,0,'drive','leg--1-upper'),/недоступна/,'cannot exceed available floor slot');
  assert.equal(validTower(run),true);
  advance(session,11);
- assert.equal(chooseTowerMutation(run,run.mutationDraft.options[0]),true);
- assert.equal(buyTowerSurgery(session,0,'impact','arm--1-lower'),45);
- assert.equal(session.surgerySpent,75);
+ assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
+ assert.equal(buyTowerSurgery(session,0,'impact','arm--1-lower'),100);
+ assert.equal(session.surgerySpent,160);
  assert.equal(validTower(run),true);
 });
 test('specific surgery sites are unique and procedure restrictions cannot be bypassed',()=>{
@@ -77,12 +77,12 @@ test('operated limb bonus disappears when severed and returns when repaired',()=
 });
 test('paid surgery cannot debit an insufficient bank or forge repeated site charges',()=>{
  const session=betNewSession(['Касса'],25),run=advance(session,6);
- assert.equal(chooseTowerMutation(run,run.mutationDraft.options[0]),true);
+ assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
  const before=structuredClone(session);
  assert.throws(()=>buyTowerSurgery(session,0,'drive','leg-1-lower'),/Недостаточно/);
  assert.deepEqual(session,before);
  session.players[0].balance=100;session.topUps=75;
- assert.equal(buyTowerSurgery(session,0,'drive','leg-1-lower'),30);
+ assert.equal(buyTowerSurgery(session,0,'drive','leg-1-lower'),60);
  const paid=structuredClone(session);
  assert.throws(()=>buyTowerSurgery(session,0,'drive','leg-1-lower'),/недоступна/);
  assert.deepEqual(session,paid);
@@ -93,14 +93,14 @@ test('surgery is stored as a monetary sink, DMS restores it and old saves still 
  globalThis.localStorage=dom.window.localStorage;ctx.BET_STORAGE='tower-surgery-test';
  try{
   const s=betNewSession(['Пациент'],500),t=advance(s,6);
-  assert.equal(chooseTowerMutation(t,t.mutationDraft.options[0]),true);
-  assert.equal(buyTowerSurgery(s,0,'impact','arm-1-upper'),30);
+  assert.ok(chooseTowerMutation(t,t.mutationDraft.options[0]));
+  assert.equal(buyTowerSurgery(s,0,'impact','arm-1-upper'),60);
   assert.equal(buyTowerInsurance(s,0),50);
   assert.deepEqual(t.insurance.checkpoint.surgeries,t.surgeries);
   ctx.betting=s;bettingSave();
   const loaded=bettingLoad();assert.ok(loaded);
-  assert.equal(loaded.surgerySpent,30);
-  assert.equal(loaded.players[0].balance,420);
+  assert.equal(loaded.surgerySpent,60);
+  assert.equal(loaded.players[0].balance,390);
   const insured=completeTower(loaded,0,false);
   assert.deepEqual(insured.surgeries,[{site:'arm-1-upper',procedure:'impact'}]);
   assert.equal(insured.insurance.checkpoint,null);

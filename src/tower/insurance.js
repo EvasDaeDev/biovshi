@@ -2,7 +2,8 @@ import {validStats,normalizeProsthetics} from '../garage/model.js';
 import {validBossEncounter} from '../boss/encounter.js';
 import {validTowerFloorPlan} from './floors.js';
 import {validTowerMutationState} from './mutations.js';
-import {validTowerSurgeries} from './surgery.js';
+import {towerCycleWins} from './cycles.js';
+import {validTowerSurgeries,validTowerSurgicalStock} from './surgery.js';
 import {normalizeTowerGraftProsthetics} from './anatomy.js';
 import {validTowerDonorState} from './donors.js';
 import {validTowerRerolls} from './economy.js';
@@ -11,11 +12,13 @@ export function validInsurance(policy,record){
  if(!policy||!Number.isSafeInteger(policy.price)||policy.price<50)return false;
  const c=policy.checkpoint;if(c===null)return true;
  return c&&Number.isSafeInteger(c.level)&&c.level>=1&&c.level<=record+1&&c.wins===c.level-1
-  &&Number.isInteger(c.patient)&&c.patient>=0&&c.patient<4&&validStats(c.stats,c.wins)
+  &&Number.isInteger(c.patient)&&c.patient>=0&&c.patient<4&&validStats(c.stats,towerCycleWins(c.level))
   &&Array.isArray(c.prosthetics)&&JSON.stringify(c.prosthetics)===JSON.stringify(normalizeProsthetics(c.prosthetics))
   &&validBossEncounter(c.bossEncounter,c.level)&&validTowerFloorPlan(c.floorPlan,c.level)
-  &&validTowerMutationState({level:c.level,mutations:c.mutations??[],mutationDraft:c.mutationDraft})
-  &&validTowerSurgeries(c.surgeries??[],c.level)
+  &&validTowerMutationState({level:c.level,mutations:c.mutations??[],mutationDraft:c.mutationDraft,
+   ...(c.mutationInventory?{mutationInventory:c.mutationInventory,equippedMutations:c.equippedMutations,
+   nextMutationId:c.nextMutationId,modInstallations:c.modInstallations}:{})})
+  &&validTowerSurgeries(c.surgeries??[],c.level)&&validTowerSurgicalStock({...c,surgicalStock:c.surgicalStock??[],consumedDonorIds:c.consumedDonorIds??[]})
   &&validTowerRerolls({...c,arenaRerolls:c.arenaRerolls??0})
   &&(c.arenaRerollLocked===undefined||typeof c.arenaRerollLocked==='boolean')
   &&validTowerDonorState({...c,donorTissues:c.donorTissues??[],surgeries:c.surgeries??[]})
@@ -29,8 +32,11 @@ export function purchaseInsurance(session,player,tower){
  if(!buyer||buyer.balance<policy.price)throw Error('Недостаточно монет для ДМС.');
  const price=policy.price;
  policy.checkpoint={level:tower.level,wins:tower.wins,patient:tower.patient,stats:[...tower.stats],prosthetics:[...tower.prosthetics],
-  mutations:[...(tower.mutations??[])],
+  mutations:[...(tower.mutations??[])],mutationInventory:structuredClone(tower.mutationInventory??[]),
+  equippedMutations:[...(tower.equippedMutations??[])],nextMutationId:tower.nextMutationId??1,
+  modInstallations:tower.modInstallations??0,
   surgeries:structuredClone(tower.surgeries??[]),
+  surgicalStock:structuredClone(tower.surgicalStock??[]),consumedDonorIds:[...(tower.consumedDonorIds??[])],
   graftProsthetics:[...(tower.graftProsthetics??[])],
   donorTissues:structuredClone(tower.donorTissues??[]),arenaRerolls:tower.arenaRerolls??0,arenaRerollLocked:tower.arenaRerollLocked??false,
   ...(tower.mutationDraft?{mutationDraft:structuredClone(tower.mutationDraft)}:{}),
