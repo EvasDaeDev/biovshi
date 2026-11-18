@@ -388,7 +388,8 @@ test('modernization selects surgical body parts from horizontal patient and prev
   modal.querySelector('.tower-surgery-purchase').click();
   assert.deepEqual(t.surgeries,[{site:'arm--1-lower',procedure:'impact'}]);
   assert.ok(patientCombatStats(0,ctx.robots[0]).effective[1]>before);
-  assert.match(modal.querySelector('#tower-upgrade-feedback').textContent,/Операция/);
+  assert.equal(modal.querySelector('#tower-upgrade-feedback').textContent,'','successful operation must not duplicate receipt');
+  assert.match(modal.querySelector('#tower-prep-surgery .tower-operation-receipt').textContent,/Операция/);
   modal.querySelector('.tower-upgrade-close').click();
   assert.equal(modal.hidden,true);
   assert.equal(modal.hasAttribute('open'),false);
