@@ -166,7 +166,7 @@ test('purchases during preparation take effect on the SAME floor, including graf
   site.value='arm-1-upper';
   surgery.querySelector('.tower-surgery-purchase').click();
   assert.equal(run.surgeries[0].procedure,'graft_arm');
-  assert.equal(run.mutationInventory[0].type,chosen);
+  assert.equal(run.mutationInventory.at(-1).type,chosen);
   assert.deepEqual(run.mutations,[],'claimed item is not active before paid installation');
   document.querySelector('.tower-mutation-install').click();
   assert.deepEqual(run.mutations,[chosen],'paid installation activates the module');
@@ -195,6 +195,8 @@ test('purchases during preparation take effect on the SAME floor, including graf
 
 test('real global modal guard allows mouse and touch events inside modernization but blocks the background',()=>{
  const s=betNewSession(['Защита кликов'],300),run=towerFor(s,0);
+ unlockSurgeryForTest(s,run);
+ if(run.mutationDraft)chooseTowerMutation(run,run.mutationDraft.options[0]);
  const dom=setup(s,run,'ward');
  try{
   document.querySelector('#launch-overlay').hidden=true;

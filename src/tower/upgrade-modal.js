@@ -64,7 +64,12 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  const artifactsContainer=create('div','tower-upgrade-page');artifactsContainer.id='tower-upgrade-artifacts-page';
  for(const container of [modsContainer,surgeryContainer,artifactsContainer])container.setAttribute('role','tabpanel');
  modsContainer.append(mutationPanel);surgeryContainer.append(surgeryPanel);
- artifactPanel.hidden=false;artifactsContainer.append(artifactPanel);
+ // The Shelter moves its artifact collection into the dialog. When switching
+ // modes an old dialog may have been removed with that DOM node; recreate
+ // the view from persistent run.artifacts rather than leaving the modal broken.
+ const collection=artifactPanel??create('div','');
+ collection.id='tower-prep-artifacts';collection.hidden=false;
+ artifactsContainer.append(collection);
  content.append(modsContainer,surgeryContainer,artifactsContainer);paper.append(content);
  const feedback=create('p','tower-upgrade-feedback');feedback.id='tower-upgrade-feedback';
  feedback.setAttribute('role','status');paper.append(feedback);
