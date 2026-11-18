@@ -3,9 +3,8 @@ import {bossName} from '../boss/names.js';
 import {setPaused} from '../ui/controls.js';
 import {hasBoss} from '../boss/config.js';
 import {bossFloorReward} from '../boss/encounter.js';
-import {selectedTowerFloor,selectTowerFloor,TOWER_DANGER_STYLES} from './floors.js';
+import {selectedTowerFloor} from './floors.js';
 import {TOWER_RELATION_NAMES} from './relations.js';
-import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
 import {towerMutationSnapshot,towerMutationCombatBonus,TOWER_MUTATIONS,TOWER_MUTATION_IDS,TOWER_MUTATION_FAMILIES,TOWER_MUTATION_SYNERGIES,towerMutationSynergies,towerMutationEffectText,chooseTowerMutation,
  equipTowerMutation,removeTowerMutation,towerInstalledItems,towerMutationInstallPrice,TOWER_MUTATION_LIMIT,TOWER_RARITIES} from './mutations.js';
 import {towerCycleWins,towerCycleInfo,towerCycleTitle,towerFloorLabel} from './cycles.js';
@@ -27,7 +26,7 @@ import {SKILLS,skillHintAttributes} from '../ui/patient.js';
 import {arenaDiagram} from '../game/arenas.js';
 import {artifactCollectionMarkup} from './artifact-ui.js';
 import {formatChips} from '../ui/currency.js';
-import {purchaseTowerArenaReroll,purchaseTowerStatChange,towerRerollPrice,towerRerollCandidates,TOWER_STAT_CHANGE_PRICE} from './economy.js';
+import {purchaseTowerStatChange,TOWER_STAT_CHANGE_PRICE} from './economy.js';
 import {installTowerUpgradeWindow} from './upgrade-modal.js';
 import {playerBalanceMarkup} from '../ui/currency-animation.js';
 
@@ -61,6 +60,7 @@ export function openMenu(){
   if(!ctx.betOverlay.hidden&&ctx.betContent.querySelector('#bet-stakes-form')){
     ctx.betDraft={session:ctx.betting,round:ctx.betting.round,bets:bettingReadDraft(),arenaId:ctx.selectedArenaId};
   }
+  ctx.root.querySelector('#tower-start-countdown')?.setAttribute('hidden','');
   ctx.startup.phase='menu';
   ctx.clearTowerInput?.();ctx.clearTowerDestination?.();setPaused(true);
   ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;
@@ -80,65 +80,11 @@ export function towerPreparation(){
   title.textContent=hasBoss(t)?`${bossName(t.level)}\nЭТАЖ №${towerFloorLabel(t.level)}`:`БАШНЯ · ЭТАЖ ${towerFloorLabel(t.level)}`;
   renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
   ctx.root.querySelector('#tower-floor-preview').innerHTML=`<div class="tower-arena-overview"><div class="tower-arena-map">${arenaDiagram(ctx.arenaDefinition)}<div><strong>${ctx.arenaDefinition.name}</strong><span>ПРОТИВНИКОВ: ${towerEnemyCount(t)} · РЕКОРД: ${t.record}</span>${t.preparing?'<b>+1 ОЧКО НАВЫКОВ · ПАЦИЕНТ ВОССТАНОВЛЕН</b>':''}<span>${hasBoss(t)?bossName(t.level)+' · ':''}${selectedTowerFloor(t)?.relations?' · '+TOWER_RELATION_NAMES[selectedTowerFloor(t).relations.type]:''}${formatChips(towerEnemyReward(t))} ${hasBoss(t)?'ЗА БОССА · '+formatChips(10)+' ЗА ПАЦИЕНТА · ВСЕ ПРОТИВ ВСЕХ':'ЗА ЛИЧНОЕ ВЫБИВАНИЕ'}</span>${hasBoss(t)?`<span data-artifact-chance>${t.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(t.artifacts,t.level)*100)+'%'}</span>`:''}</div></div></div>`;
-  const encounter=t.floorPlan;
-  const preview=ctx.root.querySelector('#tower-floor-preview');
-  if(encounter?.floor===t.level){
-    const dice=document.createElement('div');dice.className='tower-arena-dice';
-    const button=document.createElement('button');button.type='button';
-    button.className='tower-reroll-button';button.setAttribute('aria-label','Случайно сменить арену');
-    button.innerHTML='<svg viewBox="0 0 100 100" aria-hidden="true"><rect x="9" y="9" width="82" height="82" rx="16"/><circle cx="28" cy="28" r="7"/><circle cx="72" cy="28" r="7"/><circle cx="50" cy="50" r="7"/><circle cx="28" cy="72" r="7"/><circle cx="72" cy="72" r="7"/></svg>';
-    const price=document.createElement('strong');price.className='tower-reroll-price';
-    const notice=document.createElement('small');notice.className='tower-reroll-caption';notice.textContent='ДРУГАЯ АРЕНА';
-    const cost=towerRerollPrice(t.arenaRerolls);
-    price.innerHTML=Number.isFinite(cost)?formatChips(cost):'—';
-    button.disabled=!towerRerollCandidates(t).length||ctx.betting.players[ctx.towerPlayer].balance<cost;
-    button.title=button.disabled?'Реролл недоступен: нужна другая подходящая арена и достаточно монет':
-      'Случайно выбрать другую арену за '+cost+' монет. Враги и награды не изменятся.';
-    button.onclick=()=>{
-      if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||button.disabled)return;
-      button.disabled=true;
-      try{
-        purchaseTowerArenaReroll(ctx.betting,ctx.towerPlayer,t);
-        bettingSave();ctx.startTower(ctx.towerPlayer);
-      }catch(error){button.disabled=false;ctx.root.querySelector('#tower-prep-error').textContent=error.message;}
-    };
-    dice.append(button,price,notice);
-    preview.querySelector('.tower-arena-overview').append(dice);
-  }
-  if(encounter?.options.length>1){
-    const choices=document.createElement('div');choices.className='tower-challenge-options';
-    encounter.options.forEach((option,index)=>{
-      const button=document.createElement('button');button.type='button';
-      button.className='tower-challenge-option '+(option.kind==='danger'?'is-danger':'is-standard')+(index===encounter.selected?' is-selected':'');
-      button.setAttribute('aria-pressed',String(index===encounter.selected));
-      const profileCounts=new Map();
-      for(const id of option.profiles)profileCounts.set(id,(profileCounts.get(id)??0)+1);
-      const heading=document.createElement('strong');
-      const style=TOWER_DANGER_STYLES[option.style];
-      const challenge=option.kind==='danger'?'ОПАСНО'+(style?' · '+style.name.toUpperCase():'')+' · 15 ЗА ВЫБИВАНИЕ':'СТАНДАРТ · 10 ЗА ВЫБИВАНИЕ';
-      heading.textContent=challenge+' · '+option.profiles.length+' ВРАГ.';
-      button.appendChild(heading);
-      if(option.relations){const tag=document.createElement('strong');tag.className='tower-relation-banner';
-        tag.textContent='ОСОБОЕ ИСПЫТАНИЕ · '+TOWER_RELATION_NAMES[option.relations.type];button.append(tag);} 
-      const hint=[style?.description,...[...profileCounts].map(([id,count])=>
-        towerEnemyProfile(id).name+(count>1?' ×'+count:'')+': '+towerProfileDifference(id))].filter(Boolean);
-      if(option.relations)hint.push('ОТНОШЕНИЯ: '+TOWER_RELATION_NAMES[option.relations.type]);
-      button.dataset.hint=hint.join(' · ');
-      button.setAttribute('data-hint-tap','');
-      for(const [id,count] of profileCounts){
-        const line=document.createElement('span');line.className='tower-enemy-line';
-        const label=document.createElement('b');label.textContent=towerEnemyProfile(id).name+(count>1?' ×'+count:'');
-        line.appendChild(label);
-        button.appendChild(line);
-      }
-      button.onclick=()=>{
-        if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||index===encounter.selected)return;
-        if(selectTowerFloor(t,index)){bettingSave();ctx.startTower(ctx.towerPlayer);}
-      };
-      choices.appendChild(button);
-    });
-    preview.appendChild(choices);
-  }
+  const selected=selectedTowerFloor(t);
+  const challengeName=selected?.kind==='danger'?'ОПАСНО':selected?.kind==='boss'?'БОСС':'СТАНДАРТ';
+  const summary=document.createElement('p');summary.className='tower-challenge-locked';
+  summary.textContent='ВЫБРАНО ДО ЗАГРУЗКИ: '+challengeName+' · АРЕНА ЗАКРЕПЛЕНА';
+  ctx.root.querySelector('#tower-floor-preview').append(summary);
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   let upgradeModal=null;
   let lastSurgeryReceipt=null,lastMutationReceipt=null,lastStatReceipt=null;

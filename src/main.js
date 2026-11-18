@@ -4,6 +4,7 @@ import {randomArenaId} from './game/arenas.js';
 import {installTowerUI,openMenu} from './tower/ui.js';
 import {towerFor} from './tower/model.js';
 import {ensureTowerFloorPlan,selectedTowerFloor} from './tower/floors.js';
+import {openTowerFloorSelector} from './tower/floor-selector.js';
 import {bettingSetup,bettingCancel} from './betting/ui.js';
 import {initializeFloor} from './render/floor-history.js';
 import {initializeModalFocus} from './ui/modal-focus.js';
@@ -75,8 +76,19 @@ async function boot(){
  ctx.startTower=async player=>{
    const current=ctx.betting;bettingCancel();ctx.towerPlayer=player;
    const run=towerFor(current,player);ensureTowerFloorPlan(run);
-   const tower=structuredClone(run);current.towerPlayerId=player;bettingSave();
-   await transition({session:current,entry:'tower',tower,arenaId:selectedTowerFloor(tower)?.arenaId??randomArenaId()});
+   current.towerPlayerId=player;bettingSave();
+   // Difficulty and arena are selected without loading any fighters or WebGL.
+   // A single full transition happens only after the player confirms the plan.
+   ctx.startup.phase='tower-select';setPaused(true);
+   ctx.resultsPanel.hidden=true;root.querySelector('#launch-overlay').hidden=true;
+   root.querySelector('#tower-preparation').hidden=true;
+   openTowerFloorSelector({root,session:current,player,run,onSave:bettingSave,
+     onCancel:openMenu,onConfirm:()=>{
+       const tower=structuredClone(run);
+       ctx.towerTransition=transition({session:current,entry:'tower',tower,
+         arenaId:selectedTowerFloor(tower)?.arenaId??randomArenaId()});
+       return ctx.towerTransition;
+     }});
  };
  ctx.startTotalizator=()=>{bettingCancel();return transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId});};
  ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});setPaused(true);ctx.afterSetup='menu';bettingSetup();};

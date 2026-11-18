@@ -19,6 +19,7 @@ import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 import {initializeGame} from '../src/game/initialize.js';
 import {ctx} from '../src/game/state.js';
 import {installTowerUI,openMenu,settleTower} from '../src/tower/ui.js';
+import {openTowerFloorSelector} from '../src/tower/floor-selector.js';
 import {initializeModalFocus} from '../src/ui/modal-focus.js';
 import {controlledIntent} from '../src/tower/input.js';
 import {advanceStartup} from '../src/game/session.js';
@@ -57,7 +58,9 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
   assert.equal(ctx.robots[2].body.skinKey,'robotEnemy3');
   assert.equal(ctx.cardNodes[1].card.dataset.enemyProfile,'fast');
   assert.match(ctx.cardNodes[1].card.textContent,/Быстрый/);
-  const buttons=[...document.querySelectorAll('.tower-challenge-option')];
+  const selector=openTowerFloorSelector({root:ctx.root,session,player:0,run:t,
+    onSave:()=>{},onConfirm:()=>{},onCancel:()=>{}});
+  const buttons=[...selector.element.querySelectorAll('.tower-challenge-option')];
   assert.equal(buttons.length,2);
   assert.equal(buttons[0].getAttribute('aria-pressed'),'true');
   assert.match(buttons[1].textContent,/ОПАСНО/);
@@ -70,6 +73,8 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
   assert.equal(buttons[1].classList.contains('is-danger'),true);
   assert.equal(buttons[0].classList.contains('is-selected'),true);
   assert.ok(buttons.every(b=>b.hasAttribute('data-hint-tap')));
+  buttons[1].click();assert.equal(t.floorPlan.selected,1);
+  assert.equal(ctx.robots.length,3,'switching choices does not rebuild fighters');
   const css=fs.readFileSync(new URL('../styles/tower.css',import.meta.url),'utf8');
   assert.match(css,/\.tower-challenge-option\.is-selected\{border:2px solid #62cf7d/);
  }finally{close(dom);}
@@ -630,22 +635,21 @@ test('tower skill selection is a nonpaying preview until explicit 50-coin confir
  }finally{close(dom);}
 });
 
-test('arena dice shows the price below the icon and rerolls the same challenge without changing profiles',()=>{
+test('arena reroll before loading preserves the same challenge without rebuilding fighters',()=>{
  const session=betNewSession(['Кубик'],200),run=towerFor(session,0);
  run.floorPlan={floor:1,selected:1,options:[
   {arenaId:'ward',kind:'standard',profiles:['basic']},
   {arenaId:'ward',kind:'danger',style:'mixed',profiles:['fast','strong']}
  ]};
- const dom=setup(session,run);
- const previous=ctx.startTower;let triggered=0;
+ const dom=setup(session,run);let builds=0;
  try{
-  ctx.startTower=()=>{triggered++;};
-  const dice=document.querySelector('.tower-arena-overview .tower-arena-dice');
-  assert.ok(dice);assert.equal(dice.previousElementSibling.className,'tower-arena-map');
-  assert.equal(dice.querySelector('.tower-reroll-price').textContent.includes('50'),true);
-  const button=dice.querySelector('.tower-reroll-button');assert.equal(button.disabled,false);
+  const popup=openTowerFloorSelector({root:ctx.root,session,player:0,run,
+    onSave:bettingSave,onConfirm:()=>{builds++;},onCancel:()=>{}});
+  const button=popup.element.querySelector('.tower-floor-selector-reroll');
+  assert.equal(button.disabled,false);
+  assert.match(button.textContent,/50/);
   button.click();button.click();
-  assert.equal(triggered,1);
+  assert.equal(builds,0,'no level load during arena rerolls');
   assert.equal(session.players[0].balance,150);
   assert.equal(session.towerEconomySpent,50);
   assert.equal(run.arenaRerolls,1);
@@ -654,7 +658,9 @@ test('arena dice shows the price below the icon and rerolls the same challenge w
   assert.deepEqual(run.floorPlan.options.map(o=>o.profiles),[['basic'],['fast','strong']]);
   assert.equal(run.floorPlan.selected,1);
   assert.equal(bettingLoad().towerEconomySpent,50);
- }finally{ctx.startTower=previous;close(dom);}
+  popup.element.querySelector('#tower-floor-selector-confirm').click();
+  assert.equal(builds,1);
+ }finally{close(dom);}
 });
 test('standing manual patient never rotates toward another patient',()=>{
  const {dom,r}=manualFixture();const foe=ctx.robots[1];foe.setVisible(true);
