@@ -65,6 +65,13 @@ export function renderTowerUpgradePatient(target,patient,{
    fill:'transparent',stroke:'none','pointer-events':selectable?'all':'none'
   },g);
   make('title',{},g).textContent=site.includes('-graft-')?'Пересаженная '+(site.startsWith('arm-')?'рука':'нога'):labelFor(site);
+  // A compact marker at the joint replaces the browser's huge transformed
+  // SVG focus rectangle. The sprite itself stays unframed.
+  if(selected){
+   const [x,y]=points[0];
+   make('circle',{cx:x,cy:y,r:6.5,class:'tower-upgrade-site-marker',
+    'aria-hidden':'true','pointer-events':'none'},anatomyLayer);
+  }
   if(selectable&&onSelect){
    g.addEventListener('click',()=>onSelect(site));
    g.addEventListener('keydown',e=>{
