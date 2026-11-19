@@ -74,6 +74,16 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
   assert.match(buttons[0].dataset.hint,/Поворот 160%/);
   assert.match(buttons[1].dataset.hint,/Критический удар 50%/);
   assert.doesNotMatch(buttons[0].textContent,/Скорость 160%/,'long profile descriptions move to the hint');
+  for(const b of buttons){
+    const rows=[...b.querySelectorAll('.tower-challenge-detail-row')];
+    assert.equal(rows.length,4,'difficulty cards have four labeled rows');
+    assert.deepEqual(rows.map(row=>row.querySelector('strong').textContent),
+      ['Сложность:','Тип:','Награда за голову:','Количество врагов:']);
+    assert.match(rows[3].textContent,/\d+ \(.+\)/,'enemy count includes a type breakdown');
+  }
+  assert.match(buttons[0].textContent,/ОБЫЧНЫЙ/);
+  assert.match(buttons[1].textContent,/ПЕРЕПОЛНЕНИЕ/);
+  assert.doesNotMatch(buttons[0].textContent,/ПАЦИЕНТ ВОССТАНОВЛЕН/);
   assert.equal(buttons[0].classList.contains('is-standard'),true);
   assert.equal(buttons[1].classList.contains('is-danger'),true);
   assert.equal(buttons[0].classList.contains('is-selected'),true);
@@ -747,6 +757,35 @@ function manualFixture(arenaId='ring'){
  ctx.robots=[];const r=createRobot(0,{x:arenaId==='annulus'?170:350,y:350,angle:0}),foe=createRobot(1,{x:450,y:450,angle:0});ctx.robots=[r,foe];r.setVisible(true);foe.setVisible(false);
  return {s,dom,r};
 }
+test('Tower preparation uses compact icon-only controls, fixed preview slot and clean action labels',()=>{
+ const session=betNewSession(['Оформление Башни'],200),run=towerFor(session,0);
+ const dom=setup(session,run);
+ try{
+  const root=document.querySelector('#tower-preparation');
+  assert.equal(root.querySelector('#tower-fight').textContent,'НА ЭТАЖ');
+  assert.equal(root.querySelectorAll('.tower-skill-icon .ui-icon').length,3);
+  assert.equal(root.querySelectorAll('#tower-stats .garage-stat-list label').length,3);
+  assert.equal(root.querySelectorAll('#tower-stats select[data-tower-stat]').length,3);
+  const labels=[...root.querySelectorAll('#tower-stats .garage-stat-list label')];
+  assert.ok(labels.every(label=>!label.textContent.includes('Скорость')&&!label.textContent.includes('Сила')&&!label.textContent.includes('Манёвр.')));
+  assert.ok(labels.every(label=>label.querySelector('select')?.getAttribute('aria-label')),
+    'parameter names stay available to screen readers');
+  const preview=()=>root.querySelector('.tower-preview-label');
+  assert.ok(preview());
+  assert.equal(preview().classList.contains('is-active'),false);
+  assert.equal(root.querySelector('.tower-stat-message').textContent,'');
+  const speed=root.querySelector('[data-tower-stat="0"]');speed.value='4';speed.dispatchEvent(new Event('change'));
+  assert.equal(preview().classList.contains('is-active'),true);
+  assert.equal(root.querySelector('.tower-stat-message').textContent,'');
+  assert.equal(root.querySelectorAll('.tower-stat-preview').length,4);
+  const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
+  assert.match(css,/\.tower-challenge-option\.is-selected\.is-danger\s*\{[\s\S]*?border-color:#ff6c68/);
+  assert.match(css,/\.tower-challenge-option\.is-selected\.is-standard\s*\{[\s\S]*?border-color:#63e780/);
+  assert.match(css,/#tower-stats \.tower-preview-label\s*\{[\s\S]*?visibility:hidden/);
+  assert.match(css,/#tower-stats \.tower-skill-icon \.ui-icon\s*\{[\s\S]*?width:36px/);
+ }finally{close(dom);}
+});
+
 test('tower skill selection is a nonpaying preview until explicit 50-coin confirmation',()=>{
  const session=betNewSession(['Игрок'],200),run=towerFor(session,0);
  const dom=setup(session,run);
