@@ -128,6 +128,9 @@ test('rules are removed, graphics and display options live in Settings and the r
   const dom=setup();assert.equal(document.getElementById('tag7hop-info'),null);
   assert.equal(document.querySelectorAll('.render-diagnostics').length,1);
   assert.ok(document.querySelector('#arena-settings-content .render-diagnostics'));
+  assert.equal(document.querySelectorAll('#arena-settings-content input[type="checkbox"]').length,1);
+  assert.equal(document.querySelector('#arena-settings-content .post-effects-control')!==null,true);
+  assert.equal(document.querySelector('#arena-settings').textContent.includes('Карточки пациентов'),false);
   const main=ctx.root.querySelector('.tag7hop-main');main.getBoundingClientRect=()=>({width:1220});
   const boundary=JSON.stringify(ctx.arenaBoundary.points);
   fitField();assert.equal(ctx.fieldWidth,1220);assert.equal(ctx.stage.style.width,'1220px');
@@ -217,15 +220,15 @@ test('expand fills the available viewport without pausing, changing time scale o
   ctx.arenaRenderer=null;ctx.root.__disposeTag();dom.window.close();
 });
 
-test('Escape closes Settings before collapsing the arena and preserves a manual pause and telemetry preference',()=>{
+test('Escape closes Settings before collapsing the arena and preserves manual pause and visible patient cards',()=>{
   const dom=setup();togglePause();
-  const toggle=document.querySelector('.render-diagnostics input');toggle.checked=false;toggle.dispatchEvent(new Event('change'));
   document.getElementById('arena-expand-button').click();open();
   document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
   assert.equal(ctx.settingsOpen,false);assert.equal(ctx.arenaExpanded,true);assert.equal(ctx.paused,true);
   document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
-  assert.equal(ctx.arenaExpanded,false);assert.equal(ctx.paused,true);assert.equal(ctx.telemetryEnabled,false);
-  assert.equal(toggle.checked,false);assert.equal(ctx.root.querySelector('.tag7hop-sidebar-wrap').style.visibility,'hidden');
+  assert.equal(ctx.arenaExpanded,false);assert.equal(ctx.paused,true);assert.equal(ctx.telemetryEnabled,true);
+  assert.equal(ctx.root.classList.contains('cards-hidden'),false);
+  assert.equal(ctx.root.querySelector('.tag7hop-sidebar-wrap').style.visibility,'');
   assert.equal(ctx.betHud.hidden,false,'layout mode does not overwrite ledger visibility');
   ctx.root.__disposeTag();dom.window.close();
 });
