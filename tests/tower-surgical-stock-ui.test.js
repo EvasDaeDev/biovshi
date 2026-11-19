@@ -56,7 +56,9 @@ test('Shelter offers paid stock reinstallation and consumes one stored implant',
   install.click();
   const confirmation=document.querySelector('#game-action-confirm');
   assert.ok(confirmation,'stock reinstallation requires explicit confirmation');
-  assert.match(confirmation.textContent,/85 монет/);
+  assert.match(confirmation.textContent,/−85/);
+  assert.ok(confirmation.querySelector('.game-action-confirm-submit .chip-icon'),
+    'purchase confirmation renders the shared coin icon instead of a text label');
   assert.equal(session.players[0].balance,before,'no coins are charged before confirmation');
   confirmation.querySelector('.game-action-confirm-submit').click();
   assert.equal(document.querySelector('#game-action-confirm'),null);
