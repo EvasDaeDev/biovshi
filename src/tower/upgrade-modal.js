@@ -106,7 +106,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   // Both unclaimed rewards and already owned modules preview their *actual*
   // equipped stats.  The inventory item is not an active bonus until paid.
   const selectedCard=mutationPanel.querySelector('.tower-inventory-item.is-selected, .tower-mutation-option.is-selected');
-  const candidate=!editingSurgery&&(hoverMutation??(selectedCard?{
+  const candidate=activeTab==='mutations'&&(hoverMutation??(selectedCard?{
     type:selectedCard.dataset.mutationType,
     id:selectedCard.dataset.mutationId??null,
     rarity:Number(selectedCard.dataset.mutationRarity??0)
