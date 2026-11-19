@@ -360,7 +360,7 @@ test('Shelter shows one value when equipped and compares only genuinely changing
   const cells=[...stats.querySelectorAll('.tower-upgrade-stat')];
   assert.equal(cells.length,3);
   assert.ok(cells.every(cell=>cell.querySelector('.tower-stat-after').hidden),
-    'without a preview, each stat has exactly one visible value');
+    'without a preview, each stat has exactly one visible value: '+JSON.stringify(cells.map(cell=>({text:cell.textContent,after:cell.querySelector('.tower-stat-after')?.hidden}))));
   assert.doesNotMatch(stats.textContent,/СЕЙЧАС\s*→\s*ПОСЛЕ/);
   assert.doesNotMatch(modal.textContent,/ПАЦИЕНТ ЛЕЖИТ ГОРИЗОНТАЛЬНО|Наведи курсор на модуль/);
   const options=modal.querySelectorAll('.tower-mutation-option');
