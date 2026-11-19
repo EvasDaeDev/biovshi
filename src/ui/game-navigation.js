@@ -39,7 +39,7 @@ export function initializeGameNavigation(){
  };
  back.onclick=()=>{
   if(ctx.settingsOpen||back.hidden)return;
-  if(root.querySelector('#tower-module-replacement[open],#tower-upgrade-window[open],.betting-input-dialog[open]'))return;
+  if(root.querySelector('#game-action-confirm[open],#tower-module-replacement[open],#tower-upgrade-window[open],.betting-input-dialog[open],#tower-cycle-notice[open]'))return;
   const current=resolve();
   const previous=previousScreens.pop();
   const destination=current==='garage'&&previous==='betting'?'betting':
