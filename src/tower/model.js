@@ -1,4 +1,5 @@
 import {newInsurance,validInsurance,purchaseInsurance} from './insurance.js';
+import {awardTowerSegments,normalizeTowerSegmentInventory,validTowerSegmentInventory} from './segments.js';
 import {validTowerMutationState,grantTowerMutationDraft,normalizeTowerMutationInventory} from './mutations.js';
 import {validTowerSurgeries,validTowerSurgicalStock,normalizeTowerSurgicalStock,purchaseTowerSurgery} from './surgery.js';
 import {normalizeTowerGraftProsthetics} from './anatomy.js';
@@ -18,13 +19,14 @@ export const towerEnemyReward=(t,victim=1)=>{
 };
 export const floorEnemyCount=floor=>1+Math.floor(floor/2);
 export const towerEnemyCount=t=>t.legacyEnemyCount??towerFloorCount(t)??(hasBoss(t)?3:floorEnemyCount(t.level));
-export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],graftProsthetics:[],donorTissues:[],mutations:[],mutationInventory:[],equippedMutations:[],nextMutationId:1,modInstallations:0,surgeries:[],surgicalStock:[],nextSurgicalStockId:1,consumedDonorIds:[],arenaRerolls:0,arenaRerollLocked:false,rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
+export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],graftProsthetics:[],donorTissues:[],mutations:[],mutationInventory:[],equippedMutations:[],nextMutationId:1,modInstallations:0,segmentInventory:[],equippedSegments:[],nextSegmentId:1,surgeries:[],surgicalStock:[],nextSurgicalStockId:1,consumedDonorIds:[],arenaRerolls:0,arenaRerollLocked:false,rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
 export function normalizeTower(t){
  if(!t||typeof t!=='object'||Array.isArray(t))return t;
  const previousBossInterval=t.artifacts?.bossEvery??(TEST_BUILD?2:5);
  t.prosthetics=normalizeProsthetics(t.prosthetics);
  t.mutations??=[];
  normalizeTowerMutationInventory(t);
+ normalizeTowerSegmentInventory(t);
  t.surgeries??=[];
  normalizeTowerSurgicalStock(t);
  if(t.insurance?.checkpoint){
@@ -63,7 +65,7 @@ export function validTower(t){
  return validBossEncounter(t.bossEncounter,t.level)&&validTowerFloorPlan(t.floorPlan,t.level)&&t&&t.version===2&&Number.isSafeInteger(t.level)&&t.level>=1&&Number.isSafeInteger(t.wins)&&t.wins===t.level-1
   &&Number.isInteger(t.patient)&&t.patient>=0&&t.patient<4&&validStats(t.stats,towerCycleWins(t.level))
   &&(t.cycleNotice===undefined||t.cycleNotice===t.level&&t.level>30&&(t.level-1)%30===0)
-  &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&validArtifactCollection(t.artifacts,t.record)&&optionalCount(t.runKills)&&optionalCount(t.runCoins)&&validInsurance(t.insurance,t.record)&&validTowerMutationState(t)&&validTowerSurgeries(t.surgeries,t.level)&&validTowerSurgicalStock(t)&&validTowerDonorState(t)&&validTowerRerolls(t)&&typeof t.arenaRerollLocked==='boolean'
+  &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&validArtifactCollection(t.artifacts,t.record)&&optionalCount(t.runKills)&&optionalCount(t.runCoins)&&validInsurance(t.insurance,t.record)&&validTowerMutationState(t)&&validTowerSegmentInventory(t)&&validTowerSurgeries(t.surgeries,t.level)&&validTowerSurgicalStock(t)&&validTowerDonorState(t)&&validTowerRerolls(t)&&typeof t.arenaRerollLocked==='boolean'
   &&Array.isArray(t.graftProsthetics)&&JSON.stringify(t.graftProsthetics)===JSON.stringify(normalizeTowerGraftProsthetics(t.graftProsthetics,t))
   &&(t.legacyEnemyCount===undefined||(t.legacyEnemyCount===t.level||t.legacyEnemyCount===1))
   &&(t.legacyBossFloor===undefined||t.legacyBossFloor===true&&isBossFloor(t.level)&&t.bossEncounter===undefined)
@@ -104,13 +106,25 @@ export function completeTower(session,player,won,random=Math.random){
    t.stats=[...BASE_STATS];t.insurance=newInsurance();t.cycleNotice=t.level;
   }
   t.arenaRerolls=0;t.arenaRerollLocked=false;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;delete t.floorPlan;
-  if(bossWon)grantTowerMutationDraft(t,random);}
+  if(bossWon){
+   awardTowerSegments(t,t.level-1,random);
+   // Whole-kit selection is retired in the new segmented reward flow.
+   delete t.mutationDraft;
+  }}
  else {
   const c=t.insurance.checkpoint,next=newTower(undefined,t.record,t.artifacts,t.insurance);
   if(c){
    Object.assign(next,structuredClone(c),{runKills:t.runKills,runCoins:t.runCoins,preparing:Boolean(c.mutationDraft)});
    next.insurance.checkpoint=null;
   }
+  // The warehouse survives uninsured death; only the installed parts are lost.
+  // A DMS checkpoint restores the patient build, but the latest warehouse
+  // remains current even if its snapshot was taken earlier.
+  next.segmentInventory=structuredClone(t.segmentInventory).filter(item=>
+   c||!t.equippedSegments.includes(item.id));
+  next.equippedSegments=c?[...t.equippedSegments]:[];
+  next.nextSegmentId=t.nextSegmentId;
+  delete next.lastBossSegments;
   normalizeTowerMutationInventory(next);
   session.towers[player]=next;
  }
