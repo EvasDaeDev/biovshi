@@ -325,7 +325,8 @@ test('Tower II upgrade screen displays coin art, real equipped bonuses and one r
  try{
   const modal=document.querySelector('#tower-upgrade-window');
   const stats=modal.querySelector('#tower-upgrade-stats');
-  assert.ok(document.querySelector('[data-tower-apply] img.chip-icon'),'skill transfer button shows real coin asset');
+  assert.match(document.querySelector('[data-tower-apply]').textContent,/БЕСПЛАТНО/,'first skill transfer is free');
+   assert.equal(document.querySelector('[data-tower-apply] img.chip-icon'),null);
   assert.match(modal.querySelector('.tower-upgrade-wallet').textContent,/БАНК:/);
   assert.ok(modal.querySelector('.tower-upgrade-wallet img.chip-icon'));
   const options=[...modal.querySelectorAll('.tower-mutation-option')];
