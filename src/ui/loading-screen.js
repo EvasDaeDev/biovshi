@@ -14,7 +14,7 @@ export const LOADING_TIPS=Object.freeze([
 ]);
 export const LOADING_TIP_MS=1500;
 
-export function createLoadingScreen({document:doc=globalThis.document,random=Math.random}={}){
+export function createLoadingScreen({document:doc=globalThis.document,random=Math.random,staged=false}={}){
  const node=doc.getElementById('texture-loading')??doc.createElement('div');
  if(!node.isConnected)doc.body.prepend(node);
  node.id='texture-loading';node.replaceChildren();node.setAttribute('role','status');
@@ -28,9 +28,10 @@ export function createLoadingScreen({document:doc=globalThis.document,random=Mat
  const host=doc.createElement('div');host.className='loading-streamer';
  const canvas=doc.createElement('canvas');canvas.width=280;canvas.height=288;
  const tip=doc.createElement('p');tip.className='loading-tip';host.append(canvas,tip);
- const center=doc.createElement('div');center.className='loading-center';center.append(title,sub,status,meter,percent);
+ const dismissButton=doc.createElement('button');dismissButton.type='button';dismissButton.className='loading-dismiss';dismissButton.textContent='ЗАКРЫТЬ';dismissButton.hidden=true;
+ const center=doc.createElement('div');center.className='loading-center';center.append(title,sub,status,meter,percent,dismissButton);
  node.append(center,host);
- let closed=false,started=0,raf=0,timer=null,lastTip=-1,atlas=null;
+ let closed=false,failed=false,started=0,raf=0,timer=null,lastTip=-1,atlas=null,highestProgress=0;
  const tips=[...LOADING_TIPS];
  const chooseTip=()=>{
   if(closed)return;
@@ -68,26 +69,36 @@ export function createLoadingScreen({document:doc=globalThis.document,random=Mat
   raf=win.requestAnimationFrame(draw);
  };
  if(paint&&typeof win.requestAnimationFrame==='function')raf=win.requestAnimationFrame(draw);
- return {
+ dismissButton.onclick=()=>api.close();
+ const api={
   element:node,
-  update(message,{done=null,total=null}={}){
-   if(closed)return;
+  update(message,{done=null,total=null,phase='game'}={}){
+   if(closed||failed)return;
    status.textContent=message;
    if(Number.isFinite(done)&&Number.isFinite(total)&&total>0){
-    const value=Math.max(0,Math.min(100,Math.round(100*done/total)));
-    fill.style.width=value+'%';percent.textContent=value+'%';
+    const fraction=Math.max(0,Math.min(1,done/total));
+    // Initial launch uses one continuous bar across textures and arena setup.
+    // Every subsequent arena transition uses the complete 0-100% game phase.
+    const progress=staged?(phase==='textures'?.45*fraction:.45+.55*fraction):fraction;
+    highestProgress=Math.max(highestProgress,Math.round(100*progress));
+    fill.style.width=highestProgress+'%';percent.textContent=highestProgress+'%';
    }
   },
   fail(message){
    if(closed)return;
-   status.textContent=message;node.setAttribute('aria-busy','false');
+   failed=true;status.textContent=message;node.setAttribute('aria-busy','false');
+   node.setAttribute('role','alert');
    if(timer!==null){win.clearInterval(timer);timer=null;}
+   if(raf)win.cancelAnimationFrame?.(raf);
+   dismissButton.hidden=false;
+   dismissButton.focus();
   },
   close(){
    if(closed)return;
    closed=true;if(timer!==null)win.clearInterval(timer);
    if(raf)win.cancelAnimationFrame?.(raf);
-   image.onload=image.onerror=null;node.remove();
+   image.onload=image.onerror=null;dismissButton.onclick=null;node.remove();
   }
  };
+ return api;
 }
