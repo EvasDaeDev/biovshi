@@ -83,7 +83,7 @@ export function initializeGameNavigation(){
  const telegramBack=()=>{
   // The loading overlay belongs to document.body, outside the scaled root.
   // Never let native Back navigate the game under a pending loading screen.
-  const loading=doc.querySelector('#texture-loading');
+  const loading=doc.querySelector('#texture-loading[aria-busy]');
   if(loading){loading.querySelector('.loading-dismiss:not([hidden])')?.click();return;}
   if(root.querySelector('#landscape-required[open],#tower-cycle-notice[open]'))return;
   if(root.querySelector('#game-tutorial[open]')){root.querySelector('#game-tutorial .tutorial-skip')?.click();return;}
