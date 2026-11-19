@@ -85,6 +85,40 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
  }finally{close(dom);}
 });
 
+test('module installation and free removal require confirmation; closing either leaves equipment unchanged',()=>{
+ const s=betNewSession(['Отмена модуля'],1000),t=towerFor(s,0);
+ for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
+ const dom=setup(s,t,'ward');
+ try{
+  document.querySelector('.tower-mutation-option').click();
+  document.querySelector('.tower-mutation-claim').click();
+  const balance=s.players[0].balance;
+  document.querySelector('.tower-mutation-install').click();
+  let popup=document.querySelector('#game-action-confirm');
+  assert.ok(popup);
+  assert.match(popup.textContent,/100 монет/);
+  assert.deepEqual(t.mutations,[]);
+  popup.querySelector('.game-action-confirm-close').click();
+  assert.equal(s.players[0].balance,balance);
+  assert.deepEqual(t.mutations,[]);
+  document.querySelector('.tower-mutation-install').click();
+  confirmPaidAction();
+  assert.equal(s.players[0].balance,balance-100);
+  assert.equal(t.equippedMutations.length,1);
+  document.querySelector('.tower-mutation-install').click();
+  popup=document.querySelector('#game-action-confirm');
+  assert.ok(popup);
+  assert.match(popup.textContent,/Повторная установка будет платной/);
+  popup.querySelector('.game-action-confirm-close').click();
+  assert.equal(t.equippedMutations.length,1);
+  document.querySelector('.tower-mutation-install').click();
+  confirmPaidAction();
+  assert.equal(t.equippedMutations.length,0);
+  assert.equal(s.players[0].balance,balance-100,'free removal never charges or refunds coins');
+  assert.equal(t.mutationInventory.length,1,'removed item remains owned');
+ }finally{close(dom);}
+});
+
 test('post-boss module choices lock fight entry and update the actual player combat stats',()=>{
  const s=betNewSession(['Выбор'],1000),t=towerFor(s,0);
  for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
@@ -105,7 +139,7 @@ test('post-boss module choices lock fight entry and update the actual player com
   assert.equal(t.mutationDraft,undefined);
   assert.equal(t.mutationInventory[0].type,draft[0]);
   assert.deepEqual(t.mutations,[],'unpaid module does not change combat');
-  document.querySelector('.tower-mutation-install').click();
+  document.querySelector('.tower-mutation-install').click();confirmPaidAction();
   assert.deepEqual(t.mutations,[draft[0]]);
   assert.deepEqual(ctx.towerGarage[0].mutations,t.mutations);
   assert.equal(fight.disabled,false);
@@ -178,7 +212,7 @@ test('purchases during preparation take effect on the SAME floor, including graf
   assert.equal(run.surgeries[0].procedure,'graft_arm');
   assert.equal(run.mutationInventory.at(-1).type,chosen);
   assert.deepEqual(run.mutations,[],'claimed item is not active before paid installation');
-  document.querySelector('.tower-mutation-install').click();
+  document.querySelector('.tower-mutation-install').click();confirmPaidAction();
   assert.deepEqual(run.mutations,[chosen],'paid installation activates the module');
   assert.equal(s.mutationSpent,100);
   assert.equal(ctx.towerRun.surgeries.length,0,'preparation started from a detached snapshot');
@@ -299,7 +333,7 @@ test('Tower II upgrade screen displays coin art, real equipped bonuses and one r
   assert.deepEqual(t.mutations,[],'selection still does not apply the module');
   assert.ok([...stats.querySelectorAll('.tower-stat-after')].some(el=>el.classList.contains('is-positive')),
    'owned module previews its bonus before purchase');
-  modal.querySelector('.tower-mutation-install').click();
+  modal.querySelector('.tower-mutation-install').click();confirmPaidAction();
   assert.deepEqual(t.mutations,[choice]);
   assert.equal(s.players[0].balance,balance-100);
   assert.equal(modal.querySelector('#tower-upgrade-feedback').textContent,'');
