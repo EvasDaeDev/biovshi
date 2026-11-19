@@ -26,3 +26,6 @@
  pointer-events:none;
 }
 #robot-tag-hops-v22 .streamer-quip[hidden] {display:none}
+
+/* Warm, high-contrast pre-fight numbers; ordinary commentary is unchanged. */
+#robot-tag-hops-v22 .streamer-quip.is-countdown{color:#ffc34e;font-size:clamp(21px,3vw,31px);font-weight:1000;text-shadow:0 2px 2px #2b1400,0 0 9px #f29a2455}
