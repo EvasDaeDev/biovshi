@@ -145,14 +145,27 @@ export function towerPreparation(){
       draftStats=earnedStats(towerCycleWins(t.level));lastStatReceipt=null;renderSkills();
     };
     apply.onclick=()=>{
-      if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
-      try{
-        purchaseTowerStatChange(ctx.betting,ctx.towerPlayer,t,draftStats);
-        ctx.towerGarage[0].stats=[...t.stats];
-        lastStatReceipt='Перераспределение подтверждено · −50 монет';
-        bettingSave();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
-        renderInsurance();renderSkills();upgradeModal?.refresh();upgradeMessage(lastStatReceipt);
-      }catch(error){upgradeMessage(error.message);renderSkills();}
+      if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||apply.disabled)return;
+      const proposed=[...draftStats],prior=[...t.stats];
+      const changed=SKILLS.map((skill,i)=>proposed[i]===prior[i]?null:
+        skill.name+': '+prior[i]+' → '+proposed[i]).filter(Boolean);
+      confirmGameAction({
+        root:ctx.root,
+        title:'ПЕРЕРАСПРЕДЕЛЕНИЕ НАВЫКОВ',
+        details:[...changed,'Изменения вступят в силу после списания монет.'],
+        cost:TOWER_STAT_CHANGE_PRICE,
+        confirmLabel:'ПРИМЕНИТЬ',
+        onConfirm:()=>{
+          if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
+          try{
+            purchaseTowerStatChange(ctx.betting,ctx.towerPlayer,t,proposed);
+            ctx.towerGarage[0].stats=[...t.stats];
+            lastStatReceipt='Перераспределение подтверждено · −50 монет';
+            bettingSave();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
+            renderInsurance();renderSkills();upgradeModal?.refresh();upgradeMessage(lastStatReceipt);
+          }catch(error){upgradeMessage(error.message);renderSkills();}
+        }
+      });
     };
   }
   renderSkills();
