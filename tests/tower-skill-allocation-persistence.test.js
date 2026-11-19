@@ -43,3 +43,19 @@ test('uninsured death and explicit Tower reset return the allocation to defaults
  resetTower(session,0);
  assert.deepEqual(towerFor(session,0).stats,BASE_STATS);
 });
+
+test('preferred mobility stays +1 above earned baseline on every newly earned stat point',()=>{
+ const session=betNewSession(['Тестер'],2000);
+ const run=towerFor(session,0);
+ const favored=[0,-1,1]; // extra mobility is paid for by reducing strength
+ run.stats=earnedStats(0).map((n,i)=>n+favored[i]);
+ assert.ok(validStats(run.stats,0));
+ for(let won=1;won<=12;won++){
+  if(run.mutationDraft)chooseTowerMutation(run,run.mutationDraft.options[0]);
+  completeTower(session,0,true,()=>.37);
+  const current=towerFor(session,0);
+  assert.deepEqual(current.stats,earnedStats(won).map((n,i)=>n+favored[i]),
+   'mobility offset was lost after victory '+won);
+  assert.ok(validStats(current.stats,won));
+ }
+});
