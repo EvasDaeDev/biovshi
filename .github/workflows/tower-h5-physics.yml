@@ -1,0 +1,70 @@
+name: Tower H5 - observed physical fight economy
+
+on:
+  push:
+    branches:
+      - experiment/tower-bosses
+    paths:
+      - .github/workflows/tower-h5-physics.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  physical:
+    name: Real fight evidence - ${{ matrix.policy }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        policy: [approach, orbit, evade]
+    steps:
+      - name: Checkout experimental branch
+        uses: actions/checkout@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Test 8 first-cycle battle layouts at 2 seeds
+        run: node scripts/experiment-tower-fights.mjs --seeds=2 --limit=70 --offset=72364011 --policy=${{ matrix.policy }} --floors=3,7,12,19,5,10,20,30 --out=artifacts/h5-${{ matrix.policy }}-first.json
+      - name: Test 7 cycle A-F combinations at 2 seeds
+        run: node scripts/experiment-tower-fights.mjs --cycleTactics=true --seeds=2 --limit=60 --offset=92364011 --policy=${{ matrix.policy }} --out=artifacts/h5-${{ matrix.policy }}-later.json
+      - name: Upload physical fights
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tower-h5-${{ matrix.policy }}
+          path: artifacts/h5-${{ matrix.policy }}-*.json
+          if-no-files-found: warn
+
+  report:
+    name: Compare real kills, coins and outcomes
+    needs: physical
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout reporting code
+        uses: actions/checkout@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download all policy evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tower-h5-*
+          merge-multiple: true
+          path: artifacts
+      - name: Verify policy comparisons and compile data
+        run: node scripts/report-tower-physical-economy.mjs
+      - name: Upload combined physical economic evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: tower-h5-physical-economy
+          path: artifacts/h5-*
+          if-no-files-found: error
