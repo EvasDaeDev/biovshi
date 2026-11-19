@@ -48,9 +48,9 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
    button.setAttribute('aria-pressed',String(index===run.floorPlan.selected));
    const style=TOWER_DANGER_STYLES[option.style];
    const counts=new Map();for(const id of option.profiles)counts.set(id,(counts.get(id)??0)+1);
-   const difficulty=option.kind==='danger'?'Опасно':option.kind==='boss'?'Босс':'Стандарт';
-   const type=option.kind==='danger'?(style?.name??'Испытание'):
-    option.kind==='boss'?'Босс':'Обычный';
+   const difficulty=option.kind==='danger'?'ОПАСНО':option.kind==='boss'?'БОСС':'СТАНДАРТ';
+   const type=option.kind==='danger'?(style?.name.toUpperCase()??'ИСПЫТАНИЕ'):
+    option.kind==='boss'?'БОСС':'ОБЫЧНЫЙ';
    const rewardPerHead=option.kind==='danger'?15:10;
    const enemyNames=[...counts].map(([id,n])=>(id==='boss'?'Босс':towerEnemyProfile(id).name)+(n>1?' ×'+n:''));
    const rows=[
