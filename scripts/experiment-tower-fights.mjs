@@ -298,6 +298,8 @@ function runScenario(scenario,seed){
   row.winner=ctx.combat.winner;
   row.duration=Math.round(ctx.round.elapsedSec*10)/10;
   row.hits=ctx.combat.hits;row.strikes=ctx.combat.strikes;
+  row.playerHits=ctx.combat.fighterHits[0]??0;
+  row.playerSwings=ctx.combat.fighterSwings[0]??0;
   row.aliveAtEnd=ctx.robots.filter(r=>r.mobile).length;
   row.coins=session.players[0].balance-1000;
   row.playerAlive=ctx.robots[0].mobile;
