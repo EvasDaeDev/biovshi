@@ -96,6 +96,27 @@ test('risk floors offer saved selection, crowd and mixed compositions',()=>{
  assert.equal(ensureTowerFloorPlan(old).options[1].style,undefined);
 });
 
+test('saved unstarted trials are normalized without changing arena, selection or a running fight',()=>{
+ const run=newTower(0);run.level=6;run.wins=5;run.preparing=true;
+ const floorPlan={floor:6,selected:1,options:[
+  {arenaId:'ward',kind:'standard',profiles:['basic','fast','basic','basic']},
+  {arenaId:'ward',kind:'danger',style:'trial',profiles:['fast','strong','agile']}
+ ]};
+ run.floorPlan=floorPlan;
+ assert.equal(ensureTowerFloorPlan(run,()=>.5),floorPlan);
+ assert.equal(floorPlan.selected,1);
+ assert.equal(floorPlan.options[1].arenaId,'ward');
+ assert.equal(floorPlan.options[1].profiles.length,4);
+ assert.ok(floorPlan.options[1].profiles.every(id=>id!=='basic'));
+ assert.equal(validTowerFloorPlan(floorPlan,6),true);
+ const running=newTower(0);running.level=6;running.wins=5;running.preparing=false;
+ running.floorPlan={floor:6,selected:1,options:[
+  {arenaId:'ward',kind:'standard',profiles:['basic','fast','basic','basic']},
+  {arenaId:'ward',kind:'danger',style:'trial',profiles:['fast','strong','agile']}
+ ]};
+ assert.equal(ensureTowerFloorPlan(running).options[1].profiles.length,3,'never change an active encounter');
+});
+
 test('every enemy profile description is safe during robot card creation',()=>{
  for(const id of ['basic','fast','strong','agile','elite']){
   const description=towerProfileDifference(id);
