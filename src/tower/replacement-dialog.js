@@ -4,8 +4,11 @@ import {TOWER_MUTATIONS,TOWER_RARITIES} from './mutations.js';
 
 export function chooseTowerModuleReplacement({root,installed,installName,price,onConfirm}){
   if(!installed.length)return;
-  root.querySelector('#tower-module-replacement')?.remove();
+  const old=root.querySelector('#tower-module-replacement');
+  if(old?.open&&typeof old.close==='function')old.close();
+  old?.remove();
   const doc=root.ownerDocument;
+  const opener=doc.activeElement;
   const dialog=doc.createElement('dialog');
   dialog.id='tower-module-replacement';
   dialog.className='tower-replacement-dialog';
@@ -31,11 +34,15 @@ export function chooseTowerModuleReplacement({root,installed,installName,price,o
   apply.disabled=true;
   footer.append(cancel,apply);
   dialog.append(heading,note,grid,status,footer);
-  let selected=null;
+  let selected=null,finished=false;
   const dispose=()=>{
+    if(finished)return;
+    finished=true;
     if(dialog.open&&typeof dialog.close==='function')dialog.close();
     dialog.removeAttribute('open');dialog.remove();
-    if(doc.activeElement===doc.body||doc.activeElement===dialog)root.querySelector('.tower-mutation-install')?.focus({preventScroll:true});
+    // A popup closes to its actual opener, not a similarly named button in
+    // another patient card. This also supports re-rendered Shelter controls.
+    if(opener?.isConnected&&!opener.closest('[hidden]'))opener.focus({preventScroll:true});
   };
   const renderSelection=()=>{
     apply.disabled=!selected;
@@ -59,15 +66,16 @@ export function chooseTowerModuleReplacement({root,installed,installName,price,o
     grid.append(button);
   }
   const finish=()=>{
-    if(!selected)return;
+    if(finished||!selected)return;
     const id=selected;
-    // Close the modal first: errors are shown by the established Shelter feedback.
+    // No equipment, funds or slots change while this popup is still open.
     dispose();onConfirm(id);
   };
   close.onclick=cancel.onclick=dispose;
   apply.onclick=finish;
   dialog.addEventListener('cancel',event=>{event.preventDefault();dispose();});
   dialog.addEventListener('click',event=>{if(event.target===dialog)dispose();});
+  dialog.addEventListener('close',dispose,{once:true});
   dialog.addEventListener('keydown',event=>{
     if(event.key==='Escape'){event.preventDefault();dispose();return;}
     if(event.key!=='Tab')return;
