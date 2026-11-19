@@ -83,6 +83,11 @@ export function towerUpgradeVisual(patient,site,{previewSurgery=null,previewMuta
   candidates.push({key:'mutation:'+previewMutation,atlas:TOWER_MUTATION_ATLAS[previewMutation],
    rarity:previewRarity??installed.find(item=>item.type===previewMutation)?.rarity??patient?.mutationDraft?.rarity??0});
  }
+ // An operation modifies one actual anatomical segment. Keep its own
+ // implant visible; distribute competing mutations over the other cells.
+ // This prevents a surgery from becoming visually invisible.
+ const operated=candidates.find(item=>item.key.startsWith('surgery:'));
+ if(operated)return {atlas:operated.atlas,rarity:0};
  if(!candidates.length)return {atlas:null,rarity:0};
  candidates.sort((a,b)=>a.key.localeCompare(b.key,'en'));
  const identity=candidates.map(item=>item.key).join('|');
