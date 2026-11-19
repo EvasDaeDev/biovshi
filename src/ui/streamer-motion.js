@@ -4,7 +4,7 @@ const clamp=value=>Math.max(0,Math.min(1,value));
 
 // Cosmetic state follows recent activity without consuming simulation randomness.
 export function createStreamerMotion(){
- let drive=0,intensity=0,phase=0;
+ let drive=0,intensity=0,phase=0,attention=0;
  return {
   offer(event){
    const impulse=event.type==='hit'?(event.damage===2?.3:.18)
@@ -12,13 +12,15 @@ export function createStreamerMotion(){
     :event.type==='combat-end'?.45:event.type==='combat-windup'?.06:0;
    drive=clamp(drive+impulse);
   },
+  attention(){attention=0.55;},
   tick(dt,{celebrating=false}={}){
    const delta=Math.min(Math.max(dt,0),.1);
-   const target=celebrating?1:drive;
+   attention=Math.max(0,attention-delta);
+   const target=celebrating?1:attention>0?1:drive;
    intensity+=(target-intensity)*(1-Math.exp(-7*delta));
    drive*=Math.exp(-delta/1.7);
    // About 0.35 Hz at rest, 1.9 Hz in a busy fight, 2.9 Hz during victory.
-   const speed=2.2+(celebrating?15.8:10)*intensity;
+   const speed=2.2+(celebrating?15.8:attention>0?15:10)*intensity;
    phase=(phase+delta*speed)%(Math.PI*2);
    // Idle: 12 degrees down. Busy fight: centred swings through up to +/-25 degrees.
    // Rest + amplitude never exceeds 25 degrees, including during transitions.
@@ -26,6 +28,6 @@ export function createStreamerMotion(){
    return {intensity,left:-rest+Math.sin(phase)*amplitude,
     right:rest+Math.sin(phase+.8)*amplitude};
   },
-  reset(){drive=intensity=phase=0;}
+  reset(){drive=intensity=phase=attention=0;}
  };
 }
