@@ -145,3 +145,148 @@
   #robot-tag-hops-v22 #tower-preparation .tower-prep-workspace{gap:8px}
   #robot-tag-hops-v22 #tower-preparation #tower-stats{padding:8px}
 }
+
+/* Shelter: keep the native top-layer dialog, rearrange only its contents. */
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-paper{
+  display:grid;
+  grid-template-columns:minmax(0,.95fr) minmax(0,1.1fr);
+  grid-template-rows:auto auto auto minmax(0,1fr) auto;
+  grid-template-areas:
+    "heading heading"
+    "wallet wallet"
+    "patient tabs"
+    "patient content"
+    "stats content"
+    "feedback feedback";
+  column-gap:14px;
+  row-gap:9px;
+  width:min(1100px,100%);
+  max-height:calc(var(--game-height,100dvh) - 20px);
+  max-height:calc(100dvh - 20px);
+  overflow:hidden;
+  padding:14px;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-heading{
+  grid-area:heading;
+  min-width:0;
+  position:relative;
+  z-index:1;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-wallet{
+  grid-area:wallet;
+  min-width:0;
+  margin:0;
+  padding:8px 10px;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-table{
+  grid-area:patient;
+  min-width:0;
+  min-height:0;
+  padding:5px;
+  align-self:start;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-drawing{
+  width:100%;
+  min-width:0;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-drawing>svg{
+  width:100%;
+  max-height:min(30dvh,235px);
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-stats{
+  grid-area:stats;
+  min-width:0;
+  min-height:0;
+  align-self:start;
+  padding:10px;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-tabs{
+  grid-area:tabs;
+  margin:0;
+  min-width:0;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-content{
+  grid-area:content;
+  min-width:0;
+  min-height:0;
+  height:100%;
+  overflow:auto;
+  overscroll-behavior:contain;
+  border:1px solid #625b46;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-feedback{
+  grid-area:feedback;
+  min-width:0;
+  margin:0;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-tab.is-active{
+  border:2px solid var(--ui-selected);
+  box-shadow:inset 0 0 0 1px #27412f;
+  color:#fff4d7;
+}
+#robot-tag-hops-v22 .tower-inventory-item.is-selected,
+#robot-tag-hops-v22 .tower-mutation-option.is-selected{
+  outline:2px solid var(--ui-selected);
+  outline-offset:2px;
+}
+#robot-tag-hops-v22 .tower-inventory-item.is-equipped{
+  border-color:#5eb777;
+}
+#robot-tag-hops-v22 .tower-upgrade-stat .tower-stat-after.is-positive,
+#robot-tag-hops-v22 .tower-combat-preview .is-positive{
+  color:var(--ui-positive)!important;
+}
+#robot-tag-hops-v22 .tower-upgrade-stat .tower-stat-after.is-negative,
+#robot-tag-hops-v22 .tower-combat-preview .is-negative{
+  color:var(--ui-negative)!important;
+}
+/* The selected patient is interactive: keep click targets crisp, not luminous. */
+#robot-tag-hops-v22 .tower-upgrade-site-marker{
+  stroke:var(--ui-selected);
+  stroke-width:2.5;
+}
+#robot-tag-hops-v22 .tower-upgrade-heading .tower-upgrade-close{
+  flex:none;
+  position:sticky;
+  right:0;
+  min-width:44px;
+  min-height:44px;
+}
+#robot-tag-hops-v22 #tower-preparation .tower-nav-button:focus-visible,
+#robot-tag-hops-v22 #tower-upgrade-window :is(button,select):focus-visible{
+  outline:2px solid var(--ui-selected);
+  outline-offset:2px;
+}
+@media(max-width:720px){
+  #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-paper{
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+    overflow:auto;
+    padding:10px;
+    max-height:calc(100dvh - 12px);
+  }
+  #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-drawing>svg{
+    max-height:180px;
+  }
+  #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-content{
+    overflow:visible;
+    height:auto;
+    flex:none;
+  }
+  #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-table{
+    align-self:stretch;
+  }
+  #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-tabs{
+    position:sticky;
+    top:0;
+    z-index:2;
+    background:#20241e;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #robot-tag-hops-v22 .tower-upgrade-tab,
+  #robot-tag-hops-v22 .tower-inventory-item{
+    transition:none;
+  }
+}
