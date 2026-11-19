@@ -26,12 +26,13 @@ export function renderTowerUpgradePatient(target,patient,{
   viewBox:'0 0 470 200',role:'group','aria-label':'Пациент на операционном столе, головой вправо',
   'data-tower-patient-pose':'horizontal',preserveAspectRatio:'xMidYMid meet'
  },target);
- make('rect',{x:5,y:5,width:460,height:190,rx:18,fill:'#25281f',stroke:'#80745a','stroke-width':1.5},svg);
- make('rect',{x:18,y:16,width:434,height:168,rx:12,fill:'#34382d',stroke:'#505645','stroke-width':1},svg);
- for(const x of [83,190,310,415])
-  make('path',{d:`M${x} 18v164`,stroke:'#5f5c49','stroke-opacity':'.24','stroke-width':1},svg);
- // A subdued shadow holds the body against the table, not a spotlight.
- make('ellipse',{cx:248,cy:103,rx:168,ry:31,fill:'#0b0c0a',opacity:.42},svg);
+ // The artist-provided operating table replaces the vector plate, stripes and oval shadow.
+ make('image',{
+  href:assetUrl(ASSETS.textures.uiTable),
+  x:5,y:5,width:460,height:190,
+  preserveAspectRatio:'xMidYMid meet','aria-hidden':'true',
+  'pointer-events':'none'
+ },svg);
  const original=ASSETS.textures[['robotA','robotB','robotC','robotD'][(patient?.patient??0)%4]];
  const draft=previewSurgery?{...patient,surgeries:[...(patient?.surgeries??[]).filter(s=>s.site!==previewReplaceSite),previewSurgery]}:patient;
  const pose=towerUpgradePose(draft);
