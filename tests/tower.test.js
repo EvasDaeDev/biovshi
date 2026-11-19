@@ -40,6 +40,13 @@ function setup(s,tower,arenaId='ward'){
  installTowerUI();return dom;
 }
 function close(dom){ctx.root.__disposeTag();dom.window.close();ctx.mode='spectator';}
+function confirmPaidAction(){
+ const dialog=document.querySelector('#game-action-confirm');
+ assert.ok(dialog,'paid action opens native confirmation popup');
+ dialog.querySelector('.game-action-confirm-submit').click();
+ assert.equal(document.querySelector('#game-action-confirm'),null);
+}
+
 
 test('saved floor profiles reach live robots, texture keys, voices and preparation choices',()=>{
  const session=betNewSession(['Проверка'],100),t=towerFor(session,0);
@@ -137,7 +144,7 @@ test('surgeon lets the player buy one body-specific operation and saves combat i
   site.value='arm-1-upper';
   assert.equal(purchase.disabled,false);
   const base=patientCombatStats(0,ctx.robots[0]).effective[1];
-  purchase.click();
+  purchase.click();confirmPaidAction();
   assert.equal(s.players[0].balance,240);
   assert.equal(s.surgerySpent,60);
   assert.deepEqual(t.surgeries,[{site:'arm-1-upper',procedure:'impact'}]);
@@ -145,7 +152,7 @@ test('surgeon lets the player buy one body-specific operation and saves combat i
   assert.ok(patientCombatStats(0,ctx.robots[0]).effective[1]>=base+.45-1e-6);
   assert.match(panel.textContent,/ХИРУРГИЯ · 1\/1/);
   assert.equal(bettingLoad().surgerySpent,60);
-  const insured=document.querySelector('#tower-insurance');insured.click();
+  const insured=document.querySelector('#tower-insurance');insured.click();confirmPaidAction();
   assert.deepEqual(t.insurance.checkpoint.surgeries,t.surgeries);
   assert.equal(s.players[0].balance,190);
   assert.ok(validTower(t));
@@ -167,7 +174,7 @@ test('purchases during preparation take effect on the SAME floor, including graf
   procedure.value='graft_arm';procedure.dispatchEvent(new Event('change'));
   const site=surgery.querySelector('[aria-label="Сегмент для операции"]');
   site.value='arm-1-upper';
-  surgery.querySelector('.tower-surgery-purchase').click();
+  surgery.querySelector('.tower-surgery-purchase').click();confirmPaidAction();
   assert.equal(run.surgeries[0].procedure,'graft_arm');
   assert.equal(run.mutationInventory.at(-1).type,chosen);
   assert.deepEqual(run.mutations,[],'claimed item is not active before paid installation');
@@ -256,7 +263,7 @@ test('global capture guard allows auto-open boss reward choice and live surgery 
   const segment=modal.querySelector('[data-upgrade-site="arm-1-upper"]');
   segment.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true,cancelable:true}));
   assert.equal(modal.querySelector('[aria-label="Сегмент для операции"]').value,'arm-1-upper');
-  modal.querySelector('.tower-surgery-purchase').click();
+  modal.querySelector('.tower-surgery-purchase').click();confirmPaidAction();
   assert.deepEqual(run.surgeries,[{site:'arm-1-upper',procedure:'impact'}],
    'surgery purchase must receive bubbling click through modal focus');
   modal.querySelector('.tower-upgrade-close').click();
@@ -323,7 +330,7 @@ test('surgery implant texture survives a switch between modernization tabs and p
   const purchase=modal.querySelector('.tower-surgery-purchase');
   assert.ok(purchase.querySelector('img.chip-icon'),'surgery price must render a coin, not its HTML');
   assert.doesNotMatch(purchase.textContent,/<img/);
-  purchase.click();
+  purchase.click();confirmPaidAction();
   assert.equal(t.surgeries[0].site,'arm-1-upper');
   const sprite=()=>modal.querySelector('[data-upgrade-site="arm-1-upper"] image');
   assert.match(sprite()?.getAttribute('href')??'',/ar_surg_impact\.png/);
@@ -402,7 +409,7 @@ test('modernization selects surgical body parts from horizontal patient and prev
   assert.match(modal.querySelector('#tower-upgrade-stats').textContent,/ПРЕДПРОСМОТР: Боек/);
   assert.match(modal.querySelector('[data-upgrade-site="arm--1-lower"] image').getAttribute('href'),/ar_surg_impact\.png$/);
   const before=patientCombatStats(0,ctx.robots[0]).effective[1];
-  modal.querySelector('.tower-surgery-purchase').click();
+  modal.querySelector('.tower-surgery-purchase').click();confirmPaidAction();
   assert.deepEqual(t.surgeries,[{site:'arm--1-lower',procedure:'impact'}]);
   assert.ok(patientCombatStats(0,ctx.robots[0]).effective[1]>before);
   assert.equal(modal.querySelector('#tower-upgrade-feedback').textContent,'','successful operation must not duplicate receipt');
@@ -851,4 +858,32 @@ test('tower enemy letters persist generations across floors, saves and resets wi
  assert.match(patientName(1),/>B-1</);
  assert.match(patientName(0),/Первый/);
  close(next);
+});
+
+test('cancel surgery and DMS confirmation without charge or state change',()=>{
+ const s=betNewSession(['Отмена'],500),t=towerFor(s,0);
+ unlockSurgeryForTest(s,t);
+ const dom=setup(s,t,'ward');
+ try{
+  document.querySelector('#tower-prep-mutations .tower-mutation-option').click();
+  document.querySelector('.tower-mutation-claim').click();
+  const surgery=document.querySelector('#tower-prep-surgery');
+  const procedure=surgery.querySelector('[aria-label="Вид операции"]');
+  procedure.value='impact';procedure.dispatchEvent(new Event('change'));
+  const initial=s.players[0].balance,prior=structuredClone(t.surgeries);
+  surgery.querySelector('.tower-surgery-purchase').click();
+  const dialog=document.querySelector('#game-action-confirm');
+  assert.ok(dialog);assert.match(dialog.textContent,/60 монет/);
+  assert.equal(s.players[0].balance,initial);
+  dialog.querySelector('.game-action-confirm-close').click();
+  assert.equal(document.querySelector('#game-action-confirm'),null);
+  assert.deepEqual(t.surgeries,prior);
+  assert.equal(s.players[0].balance,initial);
+  document.querySelector('#tower-insurance').click();
+  const insurance=document.querySelector('#game-action-confirm');
+  assert.ok(insurance);assert.match(insurance.textContent,/50 монет/);
+  insurance.querySelector('footer button').click();
+  assert.equal(Boolean(t.insurance.checkpoint),false);
+  assert.equal(s.players[0].balance,initial);
+ }finally{close(dom);}
 });
