@@ -135,11 +135,17 @@ test('surgically attached hand is a real attacking limb with a complete thrust p
   const extra=patient.attackSources.find(s=>s.key==='arm-1-graft-lower');
   assert.ok(extra,'fifth anatomical limb exposes a real attack source');
   let foe=null;
+  // Position an immobile test capsule at the hand's *physical* fully
+  // extended tip, rather than a marginal 2.2–3.5 cm preflight near miss.
   for(const dx of [8,14,20,26,32])for(const dy of [-8,0,8]){
-   const v=target(1,{x:extra.point.x+dx,y:extra.point.y+dy});
-   if(strikeCandidates(patient,v,extra).length){foe=v;break;}
+   const aim={x:extra.point.x+dx,y:extra.point.y+dy};
+   const preview=patient.attackPose({source:extra.key,aim,preview:true,started:ctx.game.time});
+   if(!preview)continue;
+   const v=target(1,{...preview.tip});
+   const hits=strikeCandidates(patient,v,extra);
+   if(hits.length&&hits[0].gap<=0){foe=v;break;}
   }
-  assert.ok(foe,'grafted arm can reach a real collision capsule with its own shoulder');
+  assert.ok(foe,'grafted arm can physically overlap a stationary collision capsule');
   ctx.robots.push(foe);
   ctx.agentAI[0].lastAttackSource='arm-1-lower';
   combatAttacks();
