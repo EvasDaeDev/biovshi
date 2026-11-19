@@ -22,7 +22,7 @@ import {preloadTextures} from './assets/preload.js';
 import {createLoadingScreen} from './ui/loading-screen.js';
 import {bettingLoad,bettingSave} from './betting/storage.js';
 import {startSpawnSequence} from './game/session.js';
-let cancelled=false;
+let cancelled=false,initialLoading=null;
 // Only a full page load requires the explicit sound/simulation gesture.
 let launchAccepted=false;
 async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,enterFight=false,loading=null}){
@@ -65,10 +65,10 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,
 }
 async function boot(){
  const root=document.getElementById('robot-tag-hops-v22');
- const loading=createLoadingScreen();
+ const loading=createLoadingScreen({staged:true});initialLoading=loading;
  root.inert=true;
  const textures=await preloadTextures({onProgress:(done,total)=>
-  loading.update('Загружаем текстуры пациентов и арены…',{done,total})});
+  loading.update('Загружаем текстуры пациентов и арены…',{done,total,phase:'textures'})});
  if(cancelled){loading.close();return;}
  loading.update('Текстуры загружены. Запускаем игру…',{done:0,total:6});
  ctx.BET_STORAGE=SESSION_STORAGE;const session=bettingLoad();
@@ -78,16 +78,18 @@ async function boot(){
    session.arenaId=arenaId;bettingSave();root.inert=true;
    const progress=createLoadingScreen();
    ctx.keepArenaRenderer=true;
-   try{await prepare({textures,session,entry:'betting',arenaId,loading:progress});ctx.setArenaExpanded?.(expanded);}
+   let succeeded=false;
+   try{await prepare({textures,session,entry:'betting',arenaId,loading:progress});ctx.setArenaExpanded?.(expanded);succeeded=true;}
    catch(error){progress.fail('Ошибка загрузки арены. Повторите действие.');throw error;}
-   finally{ctx.keepArenaRenderer=false;root.inert=false;progress.close();}
+   finally{ctx.keepArenaRenderer=false;root.inert=false;if(succeeded)progress.close();}
  };
  const transition=async options=>{
    const owned=!options.loading,progress=options.loading??createLoadingScreen();
    root.inert=true;ctx.audio?.unlock();launchAccepted=true;ctx.keepArenaRenderer=true;
-   try{await prepare({textures,...options,loading:progress});}
+   let succeeded=false;
+   try{await prepare({textures,...options,loading:progress});succeeded=true;}
    catch(error){progress.fail('Не удалось подготовить арену.');throw error;}
-   finally{ctx.keepArenaRenderer=false;root.inert=false;if(owned)progress.close();}
+   finally{ctx.keepArenaRenderer=false;root.inert=false;if(owned&&succeeded)progress.close();}
  };
  ctx.openMainMenu=openMenu;
  ctx.startTower=async player=>{
@@ -129,11 +131,13 @@ async function boot(){
    // work finishes. Cover the old canvas until the new scene is ready.
    const progress=createLoadingScreen();
    ctx.towerTransition=(async()=>{
+     let succeeded=false;
      try{
        await transition({session:current,entry:'tower',tower:structuredClone(run),
          arenaId:selectedTowerFloor(run)?.arenaId??randomArenaId(),enterFight:true,loading:progress});
+       succeeded=true;
      }catch(error){progress.fail('Не удалось подготовить арену.');throw error;}
-     finally{progress.close();}
+     finally{if(succeeded)progress.close();}
    })();
    return ctx.towerTransition;
  };
@@ -145,6 +149,6 @@ async function boot(){
 }
 boot().catch(error=>{
  console.error('Game startup:',error);
- const loading=document.getElementById('texture-loading');if(loading){const status=loading.querySelector('.loading-status');if(status)status.textContent='Не удалось подготовить арену. Обновите страницу.';else loading.textContent='Не удалось подготовить арену. Обновите страницу.';loading.setAttribute('aria-busy','false');}
+ if(initialLoading)initialLoading.fail('Не удалось подготовить арену. Обновите страницу.');
 });
 if(import.meta.hot)import.meta.hot.dispose(()=>{cancelled=true;ctx.root?.__disposeTag?.();});
