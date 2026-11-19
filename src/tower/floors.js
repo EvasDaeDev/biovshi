@@ -57,7 +57,22 @@ function option(t,danger,random,arenaId,style=null){
 // Plans are used only for newly prepared floors. An ongoing legacy battle with
 // credited kills keeps its old enemy count until the next floor.
 export function ensureTowerFloorPlan(t,random=Math.random){
- if(t.floorPlan?.floor===t.level)return t.floorPlan;
+ if(t.floorPlan?.floor===t.level){
+  // Repair older unstarted trial offers without rerolling the selected arena
+  // or changing an encounter that has already begun.
+  const [standard,danger]=t.floorPlan.options??[];
+  if(t.preparing&&!t.arenaRerollLocked&&!t.rewarded?.length&&
+    standard?.kind==='standard'&&danger?.kind==='danger'&&
+    danger.profiles?.length<standard.profiles?.length){
+   const specialist=danger.profiles.find(id=>id!=='basic')??'fast';
+   while(danger.profiles.length<standard.profiles.length)danger.profiles.push(specialist);
+   if(danger.relations!==undefined){
+    const relations=towerRelationPlan(t.level,danger.profiles,random);
+    if(relations)danger.relations=relations;else delete danger.relations;
+   }
+  }
+  return t.floorPlan;
+ }
  if(t.rewarded?.length||t.legacyEnemyCount!==undefined||t.legacyBossFloor)return null;
  const boss=hasBoss(t),base=standardCount(t.level);
  const style=boss?null:DANGER_STYLE_IDS[roll(random,DANGER_STYLE_IDS.length)];
