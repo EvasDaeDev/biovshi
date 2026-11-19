@@ -1121,3 +1121,98 @@
 #robot-tag-hops-v22 #arena-settings .settings-panel .settings-copyright{
   color:#a99d85;
 }
+
+/* Small physical landscape viewports are often presented as a much larger
+   logical CSS canvas by fitInterface(). Restore physical touch target size
+   without changing the grid or hiding any gameplay metrics. */
+@media (pointer:coarse) and (orientation:landscape) and (max-width:950px){
+  #robot-tag-hops-v22.mobile-layout{
+    --ui-touch-target:calc(44px / var(--interface-scale,1));
+    --ui-touch-type:clamp(13px,calc(14px / var(--interface-scale,1)),24px);
+    --ui-touch-note:clamp(12px,calc(12px / var(--interface-scale,1)),21px);
+  }
+  /* Global coordinates stay the same in screen pixels on all game screens. */
+  #robot-tag-hops-v22.mobile-layout #game-navigation>button{
+    top:calc(10px / var(--interface-scale,1));
+    min-height:var(--ui-touch-target);
+    font-size:var(--ui-touch-type);
+  }
+  #robot-tag-hops-v22.mobile-layout #game-nav-back{
+    left:calc(10px / var(--interface-scale,1));
+    min-width:calc(84px / var(--interface-scale,1));
+    padding:calc(6px / var(--interface-scale,1)) calc(10px / var(--interface-scale,1));
+  }
+  #robot-tag-hops-v22.mobile-layout #game-nav-settings{
+    right:calc(10px / var(--interface-scale,1));
+    width:var(--ui-touch-target);
+    padding:calc(9px / var(--interface-scale,1));
+  }
+  #robot-tag-hops-v22.mobile-layout #game-nav-settings svg{
+    width:100%;
+    height:100%;
+  }
+  /* The Shelter lives in the top layer, but its gear has the same physical
+     corner position and size as global Settings. */
+  #robot-tag-hops-v22.mobile-layout #tower-upgrade-window .tower-upgrade-heading-actions .tower-upgrade-settings{
+    top:calc(10px / var(--interface-scale,1));
+    right:calc(10px / var(--interface-scale,1));
+    width:var(--ui-touch-target);
+    height:var(--ui-touch-target);
+    min-height:var(--ui-touch-target);
+    padding:calc(9px / var(--interface-scale,1));
+  }
+  #robot-tag-hops-v22.mobile-layout :is(
+    #launch-overlay #launch-game,
+    #launch-overlay #launch-tower,
+    #launch-overlay #launch-setup,
+    #launch-overlay #launch-totalizator,
+    #launch-overlay #tower-reset,
+    #tower-preparation #tower-fight,
+    #tower-preparation #tower-insurance,
+    #bet-overlay[data-view="betting"] .bet-actions>button,
+    #bet-overlay[data-view="garage"] .garage-actions>button,
+    #gladiator-results .results-actions>button
+  ){
+    min-height:var(--ui-touch-target);
+    font-size:var(--ui-touch-type);
+  }
+  #robot-tag-hops-v22.mobile-layout :is(
+    #launch-overlay .tower-menu-player select,
+    #bet-overlay[data-view="garage"] #procedure-editor,
+    #bet-overlay[data-view="garage"] .garage-hats button,
+    #arena-settings .settings-panel #arena-settings-close,
+    #arena-settings .settings-panel #graphics-quality,
+    #arena-settings .settings-panel #tower-control-mode,
+    #tower-upgrade-window .tower-upgrade-tab,
+    #tower-upgrade-window .tower-upgrade-close,
+    #tower-module-replacement .tower-replacement-option
+  ){
+    min-height:var(--ui-touch-target);
+  }
+  #robot-tag-hops-v22.mobile-layout #launch-overlay :is(
+    .tower-menu-player label,#menu-tower-progress
+  ){
+    font-size:var(--ui-touch-note);
+  }
+  #robot-tag-hops-v22.mobile-layout #arena-settings .settings-panel :is(
+    .graphics-control,.tower-control-setting,.audio-controls label,#tower-control-hint
+  ){
+    font-size:var(--ui-touch-note);
+  }
+  #robot-tag-hops-v22.mobile-layout #tower-preparation .tower-stat-preview{
+    font-size:var(--ui-touch-note);
+  }
+  /* Give short landscape phones a scrollable content region with permanently
+     accessible confirmation actions; do not squash or hide HUD cards. */
+  #robot-tag-hops-v22.mobile-layout #tower-preparation .tower-prep-workspace,
+  #robot-tag-hops-v22.mobile-layout #bet-overlay[data-view="garage"] .garage-grid{
+    overscroll-behavior:contain;
+    min-height:0;
+  }
+  #robot-tag-hops-v22.mobile-layout #tower-preparation .bet-actions,
+  #robot-tag-hops-v22.mobile-layout #gladiator-results .results-actions{
+    padding-bottom:calc(8px + var(--telegram-layout-bottom,0px));
+  }
+}
+/* Plainly keep the complete combat telemetry; changing these selectors to
+   display:none or hiding rows would violate the HUD information contract. */
