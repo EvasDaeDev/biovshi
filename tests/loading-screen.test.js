@@ -47,6 +47,52 @@ test('loader can report an error and stops rotating tips',()=>{
  dom.window.close();
 });
 
+test('initial loading progress never resets between textures and scene preparation',()=>{
+ const dom=new JSDOM('<body></body>',{url:'https://loading.test/'});
+ const win=dom.window;
+ win.setInterval=()=>1;win.clearInterval=()=>{};
+ win.HTMLCanvasElement.prototype.getContext=()=>null;
+ win.Image=class{set src(url){}};
+ const loader=createLoadingScreen({document:win.document,staged:true});
+ try{
+  loader.update('Текстуры',{done:8,total:10,phase:'textures'});
+  assert.equal(loader.element.querySelector('.loading-percent').textContent,'36%');
+  loader.update('Текстуры загружены',{done:10,total:10,phase:'textures'});
+  assert.equal(loader.element.querySelector('.loading-percent').textContent,'45%');
+  loader.update('Готовим арену',{done:0,total:6});
+  assert.equal(loader.element.querySelector('.loading-percent').textContent,'45%');
+  loader.update('Сцена',{done:3,total:6});
+  assert.equal(loader.element.querySelector('.loading-percent').textContent,'73%');
+  loader.update('Старая асинхронная операция',{done:1,total:6});
+  assert.equal(loader.element.querySelector('.loading-percent').textContent,'73%');
+  loader.update('Готово',{done:6,total:6});
+  assert.equal(loader.element.querySelector('.loading-percent').textContent,'100%');
+ }finally{loader.close();dom.window.close();}
+});
+
+test('failed loading screen remains visible until its own close action',()=>{
+ const dom=new JSDOM('<body></body>',{url:'https://loading.test/'});
+ const win=dom.window;
+ let cleared=0;
+ win.setInterval=()=>1;win.clearInterval=()=>{cleared++;};
+ win.HTMLCanvasElement.prototype.getContext=()=>null;
+ win.Image=class{set src(url){}};
+ const loader=createLoadingScreen({document:win.document});
+ try{
+  loader.update('Подготовка',{done:2,total:6});
+  loader.fail('Ошибка загрузки арены. Повторите действие.');
+  assert.equal(loader.element.isConnected,true);
+  assert.equal(loader.element.getAttribute('role'),'alert');
+  assert.equal(loader.element.getAttribute('aria-busy'),'false');
+  assert.equal(loader.element.querySelector('.loading-dismiss').hidden,false);
+  assert.equal(cleared,1);
+  loader.update('Поздняя загрузка',{done:6,total:6});
+  assert.match(loader.element.querySelector('.loading-status').textContent,/Ошибка загрузки/);
+  loader.element.querySelector('.loading-dismiss').click();
+  assert.equal(loader.element.isConnected,false);
+ }finally{loader.close();dom.window.close();}
+});
+
 test('loading status uses measured phases and texture completions',()=>{
  const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  const preload=fs.readFileSync(new URL('../src/assets/preload.js',import.meta.url),'utf8');
