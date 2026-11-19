@@ -6,7 +6,7 @@ import {TOWER_SURGERY_IDS} from '../src/tower/surgery.js';
 import {ASSETS} from '../src/assets/manifest.js';
 import {ROBOT_PARTS} from '../src/render/robot-skin.js';
 import {TOWER_PATIENT_POSE,renderTowerUpgradePatient} from '../src/tower/upgrade-preview.js';
-import {TOWER_MUTATION_ATLAS,TOWER_SURGERY_ATLAS,towerUpgradeAtlas,
+import {TOWER_MUTATION_ATLAS,TOWER_SURGERY_ATLAS,towerUpgradeAtlas,towerUpgradeRarity,
  towerUpgradeApplies} from '../src/tower/upgrade-appearance.js';
 
 test('every one of the twenty-three upgrade PNG placeholders is registered for standalone builds',()=>{
@@ -23,16 +23,33 @@ test('every one of the twenty-three upgrade PNG placeholders is registered for s
  assert.equal(Object.keys(TOWER_PATIENT_POSE).length,13);
  assert.deepEqual(Object.keys(TOWER_PATIENT_POSE).sort(),Object.keys(ROBOT_PARTS).sort());
 });
-test('exact segment surgery wins, installed mutations have stable order, previews do not hide them',()=>{
- const patient={mutations:['servo','piston','optic'],surgeries:[{site:'arm-1-upper',procedure:'impact'}]};
- assert.match(towerUpgradeAtlas(patient,'arm-1-upper'),/ar_surg_impact\.png$/);
- assert.match(towerUpgradeAtlas(patient,'arm--1-lower'),/ar_mod_servo\.png$/);
- assert.match(towerUpgradeAtlas(patient,'head'),/ar_mod_optic\.png$/);
- assert.equal(towerUpgradeAtlas(patient,'leg-1-upper',{previewMutation:'turbo'}),TOWER_MUTATION_ATLAS.servo);
- assert.equal(towerUpgradeAtlas(patient,'leg-1-upper',{previewSurgery:{site:'leg-1-upper',procedure:'drive'}}),TOWER_SURGERY_ATLAS.drive);
+test('overlapping mutation atlases create a stable mixed appearance for both arms',()=>{
+ const patient={mutations:['servo','piston','optic'],surgeries:[]};
+ const sites=['arm--1-upper','arm--1-lower','arm-1-upper','arm-1-lower'];
+ const atlases=sites.map(site=>towerUpgradeAtlas(patient,site));
+ assert.deepEqual(new Set(atlases),new Set([TOWER_MUTATION_ATLAS.servo,TOWER_MUTATION_ATLAS.piston]));
+ assert.deepEqual(sites.map(site=>towerUpgradeAtlas(patient,site)),atlases,'no random visual flicker');
+ assert.deepEqual(sites.map(site=>towerUpgradeAtlas({...patient,mutations:['optic','piston','servo']},site)),atlases,
+  'equipping order does not change the mosaic');
+ assert.match(towerUpgradeAtlas(patient,'head'),/ar_mod_optic\\.png$/);
+ assert.equal(towerUpgradeAtlas(patient,'leg-1-upper'),TOWER_MUTATION_ATLAS.servo);
  assert.equal(towerUpgradeAtlas({mutations:['piston']},'head'),null);
  assert.equal(towerUpgradeApplies('optic','arm-1-upper'),false);
  assert.equal(towerUpgradeApplies('servo','leg--1-upper'),true);
+});
+test('surgery joins segment atlas choices and rarity follows the chosen mutation',()=>{
+ const patient={mutations:['servo','piston'],surgeries:[{site:'arm-1-upper',procedure:'impact'}],
+  mutationInventory:[{id:'m1',type:'servo',rarity:3},{id:'m2',type:'piston',rarity:5}],
+  equippedMutations:['m1','m2']};
+ const selected=towerUpgradeAtlas(patient,'arm-1-upper');
+ assert.ok([TOWER_SURGERY_ATLAS.impact,TOWER_MUTATION_ATLAS.servo,TOWER_MUTATION_ATLAS.piston].includes(selected));
+ const expected=selected===TOWER_MUTATION_ATLAS.servo?3:selected===TOWER_MUTATION_ATLAS.piston?5:0;
+ assert.equal(towerUpgradeRarity(patient,'arm-1-upper'),expected);
+ assert.equal(towerUpgradeAtlas(patient,'arm-1-upper'),selected);
+ assert.equal(towerUpgradeAtlas({surgeries:[]},'leg-1-upper',{
+  previewSurgery:{site:'leg-1-upper',procedure:'drive'}}),TOWER_SURGERY_ATLAS.drive);
+ assert.equal(towerUpgradeAtlas({mutations:[]},'leg-1-upper',{
+  previewMutation:'turbo'}),TOWER_MUTATION_ATLAS.turbo);
 });
 test('horizontal atlas preview makes the thirteen cells selectable with specific surgery highlighting',()=>{
  const dom=new JSDOM('<div id="table"></div>',{url:'https://tower-preview.test/'});
