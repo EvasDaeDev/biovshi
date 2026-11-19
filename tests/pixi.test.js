@@ -230,14 +230,16 @@ test('liquid expiry and repeated round resets release native display objects wit
 
 test('patient telemetry is always visible, independent of settings, and limited by real time',()=>{
   const dom=setup();initializeDiagnostics();
-  const side=ctx.fieldSide,seed=ctx.seed;
+  const side=ctx.fieldSide;
   assert.equal(document.querySelectorAll('.render-diagnostics input').length,1,'only post-effects has a switch');
   assert.equal(ctx.telemetryEnabled,true);
   assert.equal(ctx.root.querySelector('.tag7hop-sidebar-wrap').style.visibility,'');
   const before=ctx.roles.innerHTML;
-  ctx.robots[0].damage('arm--1-lower',1,ctx.robots[0].maxHp('arm--1-lower'));paintTelemetry();
+  ctx.robots[0].damage('arm--1-lower',1,ctx.robots[0].maxHp('arm--1-lower'));
+  const seedAfterDamage=ctx.seed;
+  paintTelemetry();
   assert.notEqual(ctx.roles.innerHTML,before,'damage updates visible patient cards');
-  assert.equal(ctx.fieldSide,side);assert.equal(ctx.seed,seed);
+  assert.equal(ctx.fieldSide,side);assert.equal(ctx.seed,seedAfterDamage,'painting does not consume simulation RNG');
   let time=10;ctx.telemetryNow=()=>time;ctx.telemetryDirty=true;paintTelemetry();
   const last=ctx.lastTelemetryAt;ctx.game.time+=20;paintTelemetry();assert.equal(ctx.lastTelemetryAt,last);
   time+=.11;paintTelemetry();assert.equal(ctx.lastTelemetryAt,time);delete ctx.telemetryNow;
