@@ -417,6 +417,34 @@ test('Shelter is a separate window with a horizontal patient and three real tabs
  }finally{close(dom);}
 });
 
+test('Shelter settings uses the global corner gear and restores the previous tab without losing the floor',()=>{
+ const session=betNewSession(['Настройки убежища'],300),run=towerFor(session,0),dom=setup(session,run,'ward');
+ try{
+  const modal=document.querySelector('#tower-upgrade-window');
+  const launch=document.querySelector('#tower-upgrade-open');
+  const gear=document.querySelector('#game-nav-settings');
+  launch.click();
+  modal.querySelector('[data-upgrade-tab="artifacts"]').click();
+  assert.equal(modal.querySelector('[data-upgrade-tab="artifacts"]').getAttribute('aria-selected'),'true');
+  const floor=run.level,balance=session.players[0].balance;
+  modal.querySelector('.tower-upgrade-settings').click();
+  assert.equal(modal.open,false,'Shelter releases the native top layer');
+  assert.equal(ctx.settingsOpen,true,'global Settings opens from Shelter');
+  assert.equal(document.querySelector('#arena-settings').hidden,false);
+  assert.equal(gear.getAttribute('aria-expanded'),'true','the fixed gear is the real Settings opener');
+  document.querySelector('#arena-settings-close').click();
+  assert.equal(ctx.settingsOpen,false);
+  assert.equal(modal.open,true,'closing Settings reopens Shelter');
+  assert.equal(modal.querySelector('[data-upgrade-tab="artifacts"]').getAttribute('aria-selected'),'true');
+  assert.equal(document.activeElement,modal.querySelector('[data-upgrade-tab="artifacts"]'));
+  assert.equal(run.level,floor);
+  assert.equal(session.players[0].balance,balance);
+  modal.querySelector('.tower-upgrade-close').click();
+  assert.equal(modal.open,false);
+  assert.equal(document.activeElement,launch);
+ }finally{close(dom);}
+});
+
 test('modernization selects surgical body parts from horizontal patient and previews atlas before purchase',()=>{
  const s=betNewSession(['Операция'],300),t=towerFor(s,0);
  unlockSurgeryForTest(s,t);
