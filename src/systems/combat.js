@@ -2,6 +2,7 @@ import {pendingStrikes,setPendingStrikes} from './strikes.js';
 import {settleTower} from '../tower/ui.js';
 import {patientCombatStats,patientGarage} from '../game/patients.js';
 import {towerMutationCombatBonus} from '../tower/mutations.js';
+import {towerInstalledSegments} from '../tower/segments.js';
 import {towerAllies} from '../tower/relations.js';
 import {critChance} from '../garage/model.js';
 import {random} from '../utils/random.js';
@@ -288,7 +289,7 @@ export function towerFighterCombatBonus(id){
  // garage entry. Production loads never set this field; defaults are intact.
  const offline=patient?.rarityPhysics;
  return offline?{crit:offline.crit,cooldownMultiplier:offline.cooldownMultiplier}:
-  towerMutationCombatBonus(patient?.mutations);
+  towerMutationCombatBonus([...(patient?.mutations??[]),...towerInstalledSegments(patient).map(item=>item.type)]);
 }
 export function combatAttacks() {
   if (ctx.combat.finished) return;
