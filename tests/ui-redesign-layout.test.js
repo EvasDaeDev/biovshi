@@ -49,3 +49,17 @@ test('dark settings preserve volume, quality and controls without text loss',()=
   assert.match(css,/#robot-tag-hops-v22 #arena-settings \.settings-panel :is\(button,select,input,summary\):focus-visible/);
  }finally{dom.window.close();}
 });
+
+test('small landscape touch devices keep global controls fixed and full combat telemetry visible',async()=>{
+ const {viewportLayout}=await import('../src/ui/viewport.js');
+ const small=viewportLayout(844,390,12);
+ assert.ok(small.scale<.7,'small landscape devices have a downscaled logical layout');
+ assert.ok(small.width>=1000,'original landscape HUD still fits logically');
+ const rootCss=css.slice(css.indexOf('/* Small physical landscape viewports'));
+ assert.match(rootCss,/@media \(pointer:coarse\) and \(orientation:landscape\) and \(max-width:950px\)/);
+ assert.match(rootCss,/--ui-touch-target:calc\(44px \/ var\(--interface-scale,1\)\)/);
+ assert.match(rootCss,/#robot-tag-hops-v22\.mobile-layout #game-nav-back\s*\{\s*left:calc\(10px \/ var\(--interface-scale,1\)\)/);
+ assert.match(rootCss,/#robot-tag-hops-v22\.mobile-layout #game-nav-settings\s*\{\s*right:calc\(10px \/ var\(--interface-scale,1\)\)/);
+ assert.match(rootCss,/#robot-tag-hops-v22\.mobile-layout #tower-upgrade-window \.tower-upgrade-heading-actions \.tower-upgrade-settings\s*\{\s*top:calc\(10px \/ var\(--interface-scale,1\)\);\s*right:calc\(10px \/ var\(--interface-scale,1\)\)/);
+ assert.doesNotMatch(rootCss,/(?:\.robot-card|\.robot-card-metrics|\.patient-skills)\s*\{[^}]*display:none/);
+});
