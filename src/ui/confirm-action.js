@@ -1,3 +1,4 @@
+import {formatChips} from './currency.js';
 // Shared explicit confirmation for paid Tower actions. A native dialog stays in
 // the top layer even when a Shelter dialog is already open.
 export function confirmGameAction({root,title,details=[],cost,confirmLabel='ПОДТВЕРДИТЬ',onConfirm}){
@@ -25,7 +26,8 @@ export function confirmGameAction({root,title,details=[],cost,confirmLabel='ПО
  const footer=doc.createElement('footer');
  const cancel=doc.createElement('button');cancel.type='button';cancel.textContent='ОТМЕНА';
  const ok=doc.createElement('button');ok.type='button';ok.className='game-action-confirm-submit';
- ok.textContent=confirmLabel+(Number.isFinite(cost)?' · −'+cost+' монет':'');
+ ok.textContent=confirmLabel;
+ if(Number.isFinite(cost))ok.insertAdjacentHTML('beforeend',' · −'+formatChips(cost));
  footer.append(cancel,ok);dialog.append(header,body,footer);
  const previous=doc.activeElement;
  let finished=false;
