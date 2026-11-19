@@ -296,3 +296,71 @@
     transition:none;
   }
 }
+
+/* Module replacement is a true popup above the native Shelter dialog. */
+#robot-tag-hops-v22 .tower-replacement-dialog{
+  box-sizing:border-box;
+  width:min(92vw,650px);
+  max-height:min(90dvh,650px);
+  margin:auto;
+  padding:18px;
+  overflow:auto;
+  color:var(--ui-text);
+  background:var(--ui-surface);
+  border:1px solid #96815a;
+  box-shadow:0 18px 60px #000c;
+}
+#robot-tag-hops-v22 .tower-replacement-dialog:not([open]){display:none!important}
+#robot-tag-hops-v22 .tower-replacement-dialog::backdrop{background:#080a08c9}
+#robot-tag-hops-v22 .tower-replacement-dialog>header{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin:0 0 10px;padding-bottom:10px;border-bottom:1px solid var(--ui-edge);
+}
+#robot-tag-hops-v22 .tower-replacement-dialog h2{
+  margin:0;font-size:20px;line-height:1.2;color:var(--ui-text);
+}
+#robot-tag-hops-v22 .tower-replacement-close{
+  flex:none;min-height:42px;min-width:42px;padding:5px;
+  background:var(--ui-surface-raised);border:1px solid var(--ui-edge);
+  color:var(--ui-text);font-size:24px;cursor:pointer;
+}
+#robot-tag-hops-v22 .tower-replacement-explanation{
+  margin:0 0 12px;font-size:13px;line-height:1.5;color:var(--ui-muted);
+}
+#robot-tag-hops-v22 .tower-replacement-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+}
+#robot-tag-hops-v22 .tower-replacement-option{
+  display:flex;flex-direction:column;justify-content:center;align-items:flex-start;
+  gap:5px;min-height:75px;min-width:0;padding:10px;
+  background:#32382d;color:var(--ui-text);border:1px solid var(--ui-edge);
+  text-align:left;white-space:normal;overflow-wrap:anywhere;cursor:pointer;
+}
+#robot-tag-hops-v22 .tower-replacement-option small{color:#c1b597}
+#robot-tag-hops-v22 .tower-replacement-option.is-selected{
+  border:2px solid var(--ui-selected);
+  background:#344d37;
+}
+#robot-tag-hops-v22 .tower-replacement-dialog button:focus-visible{
+  outline:2px solid var(--ui-selected);outline-offset:2px;
+}
+#robot-tag-hops-v22 .tower-replacement-status{
+  min-height:1.4em;margin:12px 0;color:#dbc69e;font-size:13px;line-height:1.4;
+}
+#robot-tag-hops-v22 .tower-replacement-dialog>footer{
+  display:flex;justify-content:flex-end;gap:8px;
+}
+#robot-tag-hops-v22 .tower-replacement-dialog>footer button{
+  min-height:44px;padding:10px 14px;
+  border:1px solid var(--ui-edge);
+  background:#35392d;color:var(--ui-text);font-weight:bold;cursor:pointer;
+}
+#robot-tag-hops-v22 .tower-replacement-dialog>footer .tower-replacement-apply{
+  background:#655137;border-color:#a68a56;color:#fff0c7;
+}
+#robot-tag-hops-v22 .tower-replacement-dialog button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:580px){
+  #robot-tag-hops-v22 .tower-replacement-dialog{padding:10px;width:min(96vw,650px)}
+  #robot-tag-hops-v22 .tower-replacement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #robot-tag-hops-v22 .tower-replacement-dialog>footer{flex-wrap:wrap}
+}
