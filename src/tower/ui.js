@@ -716,7 +716,15 @@ export function towerResults(){
     for(const id of t.lastBossSegments){
       const item=t.segmentInventory.find(candidate=>candidate.id===id);
       if(!item)continue;
-      const card=document.createElement('div');card.className='tower-inventory-item';
+      const card=document.createElement('button');card.type='button';
+      card.className='tower-inventory-item tower-segment-reward';
+      // Shared hint system supports hover, keyboard focus and touch tap.
+      const mutation=TOWER_MUTATIONS[item.type];
+      const hint=[mutation.name,towerSurgerySiteLabel(item.site)+' · '+TOWER_RARITIES[item.rarity].name,
+        mutation.description,towerMutationEffectText(item.type)].filter(Boolean).join('\n');
+      card.dataset.hint=hint;
+      card.setAttribute('data-hint-tap','');
+      card.setAttribute('aria-label',mutation.name+'. '+towerSurgerySiteLabel(item.site)+'. '+towerMutationEffectText(item.type));
       const part=towerPatientAnatomy(t)?.skinParts?.[item.site]??ROBOT_PARTS[item.site];
       const icon=document.createElement('span');
       icon.className='tower-mod-icon';
