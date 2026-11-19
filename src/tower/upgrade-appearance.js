@@ -63,6 +63,13 @@ const segmentIndex=site=>{
  return (graft?Number(graft)*4:0)+(side==='1'?2:0)+(part==='lower'?1:0);
 };
 export function towerUpgradeVisual(patient,site,{previewSurgery=null,previewMutation=null,previewRarity=null}={}){
+ // Segmented equipment owns its exact cell. The old mosaic is retained only
+ // for pre-migration whole-kit equipment and unoccupied atlas previews.
+ const equipped=(patient?.segmentInventory??[]).find(item=>item.site===site&&
+  (patient?.equippedSegments??[]).includes(item.id));
+ if(equipped&&previewSurgery?.site!==site){
+  return {atlas:TOWER_MUTATION_ATLAS[equipped.type]??null,rarity:equipped.rarity};
+ }
  const candidates=[];
  for(const op of patient?.surgeries??[]){
   if(op.site===site&&TOWER_SURGERY_ATLAS[op.procedure]&&op.site!==previewSurgery?.site)
