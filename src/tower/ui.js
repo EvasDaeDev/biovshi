@@ -28,6 +28,7 @@ import {artifactCollectionMarkup} from './artifact-ui.js';
 import {formatChips} from '../ui/currency.js';
 import {purchaseTowerStatChange,TOWER_STAT_CHANGE_PRICE} from './economy.js';
 import {installTowerUpgradeWindow} from './upgrade-modal.js';
+import {chooseTowerModuleReplacement} from './replacement-dialog.js';
 import {playerBalanceMarkup} from '../ui/currency-animation.js';
 
 function renderTowerPlayerWallet(target){
@@ -60,6 +61,9 @@ export function openMenu(){
   if(!ctx.betOverlay.hidden&&ctx.betContent.querySelector('#bet-stakes-form')){
     ctx.betDraft={session:ctx.betting,round:ctx.betting.round,bets:bettingReadDraft(),arenaId:ctx.selectedArenaId};
   }
+  const replacementDialog=ctx.root.querySelector('#tower-module-replacement');
+  if(replacementDialog?.open&&typeof replacementDialog.close==='function')replacementDialog.close();
+  replacementDialog?.remove();
   ctx.root.querySelector('#tower-start-countdown')?.setAttribute('hidden','');
   ctx.startup.phase='menu';
   ctx.clearTowerInput?.();ctx.clearTowerDestination?.();setPaused(true);
@@ -245,28 +249,39 @@ export function towerPreparation(){
         action.disabled=Boolean(t.mutationDraft)||(!equipped&&ctx.betting.players[ctx.towerPlayer].balance<towerMutationInstallPrice(t));
         action.onclick=()=>{
           if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
-          try{
-            if(equipped){if(!confirm('Снять «'+mod.name+'»? При повторной установке потребуется оплата.'))return;
-              if(!removeTowerMutation(t,selected.id))return;lastMutationReceipt=mod.name+' снят и возвращён на склад';
-            }else{
-              let replaceId=replacement?.id??null;
-              if(full&&!replaceId){
-                const active=towerInstalledItems(t);
-                const names=active.map((entry,i)=>(i+1)+'. '+TOWER_MUTATIONS[entry.type].name).join('\n');
-                const choice=prompt('Все шесть слотов заняты. Номер заменяемого модуля:\n'+names);
-                const n=Number(choice);if(!Number.isInteger(n)||n<1||n>active.length)return;replaceId=active[n-1].id;
+          const finish=(replaceId=null)=>{
+            if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
+            try{
+              if(equipped){
+                if(!confirm('Снять «'+mod.name+'»? При повторной установке потребуется оплата.'))return;
+                if(!removeTowerMutation(t,selected.id))return;
+                lastMutationReceipt=mod.name+' снят и возвращён на склад';
+              }else{
+                const price=towerMutationInstallPrice(t);
+                // A replacement selected in our native dialog has already
+                // been explicitly confirmed with the exact price.
+                if(!replaceId&&!confirm('Установить '+mod.name+'?\\nСтоимость: '+price+' монет.'))return;
+                const charged=equipTowerMutation(ctx.betting,ctx.towerPlayer,t,selected.id,replaceId);
+                lastMutationReceipt=mod.name+' установлен · −'+charged+' монет · '+towerMutationEffectText(selected.type);
               }
-              const price=towerMutationInstallPrice(t);
-              if(!confirm((replaceId?'Заменить установленный модуль?':'Установить '+mod.name+'?')+'\nСтоимость: '+price+' монет.'))return;
-              const charged=equipTowerMutation(ctx.betting,ctx.towerPlayer,t,selected.id,replaceId);
-              lastMutationReceipt=mod.name+' установлен · −'+charged+' монет · '+towerMutationEffectText(selected.type);
-            }
-            ctx.towerGarage[0].mutations=[...t.mutations];
-            ctx.towerGarage[0].mutationInventory=structuredClone(t.mutationInventory);
-            ctx.towerGarage[0].equippedMutations=[...t.equippedMutations];
-            bettingSave();renderMutations();renderSkills();renderInsurance();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
-            updateTowerHud();upgradeModal?.refresh();upgradeMessage('');
-          }catch(error){upgradeMessage(error.message);}
+              ctx.towerGarage[0].mutations=[...t.mutations];
+              ctx.towerGarage[0].mutationInventory=structuredClone(t.mutationInventory);
+              ctx.towerGarage[0].equippedMutations=[...t.equippedMutations];
+              bettingSave();renderMutations();renderSkills();renderInsurance();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
+              updateTowerHud();upgradeModal?.refresh();upgradeMessage('');
+            }catch(error){upgradeMessage(error.message);}
+          };
+          if(!equipped&&full&&!replacement){
+            chooseTowerModuleReplacement({
+              root:ctx.root,
+              installed:towerInstalledItems(t),
+              installName:mod.name,
+              price:towerMutationInstallPrice(t),
+              onConfirm:finish
+            });
+            return;
+          }
+          finish(replacement?.id??null);
         };
         mutationPanel.append(action);
       }
