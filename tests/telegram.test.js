@@ -75,11 +75,11 @@ test('Telegram system Back closes confirmation first and then Settings without l
   f.mock.emit('backButtonClicked');
   assert.equal(ctx.settingsOpen,false);
   assert.equal(tower.hidden,false);
-  const loader=f.doc.createElement('div');
-  loader.id='texture-loading';
+  const loader=f.doc.querySelector('#texture-loading');
+  loader.setAttribute('aria-busy','false');
   const dismiss=f.doc.createElement('button');
   dismiss.className='loading-dismiss';
-  loader.append(dismiss);f.doc.body.append(loader);
+  loader.append(dismiss);
   dismiss.onclick=()=>loader.remove();
   f.mock.emit('backButtonClicked');
   assert.equal(loader.isConnected,false,'native Back dismisses failed loading overlay');
