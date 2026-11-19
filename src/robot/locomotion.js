@@ -309,7 +309,7 @@ export function contacts(robotState, dt, previous) {
   }).sort((a, b) => (b.urgent ? 1000 : 0) + b.error - ((a.urgent ? 1000 : 0) + a.error));
   for (const p of pending) {
     const nearFood = robotState.hasGoal() && robotState.currentTargetVisible() && Math.hypot(robotState.target.x - robotState.x, robotState.target.y - robotState.y) < 50 * (robotState.scale??ctx.scale),
-      normal = robotState.mode !== 'eat' && (robotState.behavior === 'follow' || robotState.behavior === 'wander' || robotState.behavior === 'search') && !nearFood && p.error > 12 && p.cycle < .4;
+      normal = robotState.mode !== 'eat' && (robotState.behavior === 'follow' || robotState.behavior === 'wander' || robotState.behavior === 'search') && !nearFood && p.error > CONFIG.movement.stepReplantErrorCm && p.cycle < .4;
     if (airborne < 2 && (p.urgent || normal)) {
       p.l.from = {
         ...p.l.foot
@@ -350,7 +350,7 @@ export function contacts(robotState, dt, previous) {
         ...l.foot
       },
       oldPhase = l.phase;
-    l.phase = Math.min(1, l.phase + dt * 5 / (robotState.scale??ctx.scale));
+    l.phase = Math.min(1, l.phase + dt * CONFIG.movement.stepSwingRate / (robotState.scale??ctx.scale));
     const q = smooth(l.phase),
       arc = Math.sin(l.phase * Math.PI) * (l.kind === 'leg' ? 5 : 3) * (robotState.scale??ctx.scale),
       frame = robotState.limbFrame(l);
@@ -624,7 +624,7 @@ export function robotTick(robotState, dt, intent) {
   if (!flinching && robotState.hitReaction) robotState.hitReaction = null;
   robotState.x += robotState.vx * dt;
   robotState.y += robotState.vy * dt;
-  robotState.gait += Math.hypot(robotState.vx, robotState.vy) * dt / (7 * (robotState.scale??ctx.scale));
+  robotState.gait += Math.hypot(robotState.vx, robotState.vy) * dt / (CONFIG.movement.stepCycleDistanceCm * (robotState.scale??ctx.scale));
   robotState.layoutBody(dt);
   resolveSurfaceContacts(robotState);
   robotState.contacts(dt, old);
