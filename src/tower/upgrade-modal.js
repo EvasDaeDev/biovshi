@@ -5,6 +5,7 @@ import {towerSurgeryAvailableSites,towerSurgerySiteLabel,towerSurgeryCapacity,TO
  towerSurgeryPrice,towerSurgeryReplacePrice,TOWER_SURGERY_OPERATIONS} from './surgery.js';
 import {renderTowerUpgradePatient} from './upgrade-preview.js';
 import {towerPatientAnatomy} from './anatomy.js';
+import {ctx} from '../game/state.js';
 
 const create=(tag,className,text)=>{
  const node=document.createElement(tag);
@@ -38,7 +39,11 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  const heading=create('h2','', 'УБЕЖИЩЕ');heading.id='tower-upgrade-title';
  const closeButton=create('button','tower-upgrade-close','×');closeButton.type='button';
  closeButton.setAttribute('aria-label','Закрыть убежище');
- top.append(heading,closeButton);paper.append(top);
+ const settingsButton=create('button','tower-upgrade-settings','НАСТРОЙКИ');settingsButton.type='button';
+ settingsButton.setAttribute('aria-label','Открыть настройки из убежища');
+ const headerActions=create('div','tower-upgrade-heading-actions');
+ headerActions.append(settingsButton,closeButton);
+ top.append(heading,headerActions);paper.append(top);
  const wallet=create('div','tower-upgrade-wallet');paper.append(wallet);
  const table=create('div','tower-upgrade-table');
  const drawing=create('div','tower-upgrade-drawing');
@@ -264,6 +269,16 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
     launch.focus({preventScroll:true});
  }
  launch.onclick=()=>open();
+ settingsButton.onclick=()=>{
+  const trigger=root.querySelector('#tower-prep-settings');
+  if(!trigger||ctx.settingsOpen)return;
+  const rememberedTab=activeTab;
+  close();
+  trigger.click();
+  if(ctx.settingsOpen)ctx.afterSettingsClose=()=>{
+   if(!root.querySelector('#tower-preparation')?.hidden)open(rememberedTab);
+  };
+ };
  closeButton.onclick=close;
  mutationTab.onclick=()=>setTab('mutations');
  surgeryTab.onclick=()=>setTab('surgery');
