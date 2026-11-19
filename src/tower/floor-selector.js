@@ -19,7 +19,7 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
   const diagram=document.createElement('span');diagram.className='tower-arena-diagram';diagram.innerHTML=arenaDiagram(definition);
   const meta=document.createElement('div');
   const name=document.createElement('strong');name.textContent=definition.name;
-  const count=document.createElement('span');count.textContent=`ПРОТИВНИКОВ: ${selected?.profiles.length??towerEnemyCount(run)} · РЕКОРД: ${run.record}`;
+  const count=document.createElement('span');count.textContent=`ПРОТИВНИКОВ: ${selected?.profiles.length??towerEnemyCount(run)}`;
   meta.append(name,count);
   if(run.preparing){const recovered=document.createElement('b');recovered.textContent='+1 ОЧКО НАВЫКОВ за победу';meta.append(recovered);}
   if(hasBoss(run)){const chance=document.createElement('span');chance.dataset.artifactChance='';
@@ -35,8 +35,9 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
   reroll.disabled=!towerRerollCandidates(run).length||session.players[player].balance<price;
   reroll.title=reroll.disabled?'Недостаточно монет или нет другой подходящей арены':'Сменить арену до загрузки уровня';
   const cost=document.createElement('span');cost.className='tower-reroll-price';cost.innerHTML=Number.isFinite(price)?formatChips(price):'—';
-  const caption=document.createElement('small');caption.className='tower-reroll-caption';caption.textContent='ДРУГАЯ АРЕНА';
-  dice.append(reroll,cost,caption);map.append(overview,dice);
+  const caption=document.createElement('small');caption.className='tower-reroll-caption';caption.textContent='СМЕНИТЬ АРЕНУ ·';
+  const priceLine=document.createElement('div');priceLine.className='tower-reroll-line';priceLine.append(caption,cost);
+  dice.append(reroll,priceLine);map.append(overview,dice);
   if(!selected||!run.floorPlan?.options){container.replaceChildren(map);return;}
   const choices=document.createElement('div');choices.className='tower-challenge-options';
   run.floorPlan.options.forEach((option,index)=>{
