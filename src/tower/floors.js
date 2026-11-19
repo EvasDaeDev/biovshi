@@ -15,7 +15,7 @@ const pool=['basic','fast','strong','agile'];
 const ELITE_FROM_FLOOR=8;
 // Risk variants are generated once, then stored with the floor plan.
 export const TOWER_DANGER_STYLES=Object.freeze({
- trial:Object.freeze({name:'Отбор',description:'Меньше врагов, но все специализированные'}),
+ trial:Object.freeze({name:'Отбор',description:'Столько же врагов, но все специализированные'}),
  crowd:Object.freeze({name:'Переполнение',description:'Больше соперников, преимущественно обычных'}),
  mixed:Object.freeze({name:'Смешанный',description:'Разные специализации одновременно'})
 });
@@ -48,7 +48,7 @@ function candidateArena(floor,random,boss,requiredCapacity=0){
 function option(t,danger,random,arenaId,style=null){
  const boss=hasBoss(t);
  const max=cap(arenaId)-1,base=standardCount(t.level);
- const requested=base+(style==='trial'?-1:style==='crowd'?1:0);
+ const requested=base+(style==='crowd'?1:0);
  const count=boss?3:Math.min(max,Math.max(1,requested,style==='mixed'?2:1));
  return {arenaId,kind:boss?'boss':danger?'danger':'standard',
   ...(style?{style}:{}),
