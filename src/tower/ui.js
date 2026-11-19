@@ -590,20 +590,20 @@ export function settleTower(winner){
 export function towerResults(){
   const won=ctx.combat.winner===0,t=towerFor(ctx.betting,ctx.towerPlayer),o=ctx.towerOutcome??{floor:ctx.towerRun.level,cleared:won?ctx.towerRun.level:ctx.towerRun.level-1,record:t.record};
   ctx.resultsTitle.textContent=won?`ЭТАЖ ${towerFloorLabel(o.floor)} ПРОЙДЕН`:`ПРОЙДЕНО ЭТАЖЕЙ: ${o.cleared}`;
-  ctx.resultsSummary.textContent=won?`Получено +1 очко навыков. ${t.mutationDraft?'БОСС СПИСАН. ИМУЩЕСТВО ПЕРЕДАНО ПАЦИЕНТУ. ВЫБЕРИ НАГРАДУ. ':''}Далее — этаж ${t.level}, противников: ${towerEnemyCount(t)}.`:`${o.reason??'Поражение'} на этаже ${o.floor}. ${o.insuranceFloor?`ДМС сработала: возврат на этаж ${o.insuranceFloor} с застрахованными навыками. Страховка использована.`:'Заработанные монеты сохранены.'}`;
+  ctx.resultsSummary.textContent=won?(t.mutationDraft?'БОСС ПОБЕЖДЁН · ВЫБЕРИ НАГРАДУ.':''):`${o.reason??'Поражение'} на этаже ${o.floor}. ${o.insuranceFloor?`ДМС сработала: возврат на этаж ${o.insuranceFloor} с застрахованными навыками. Страховка использована.`:'Заработанные монеты сохранены.'}`;
   const coins=o.floorCoins??0;
   const resultWallet=ctx.root.querySelector('#tower-results-player');
   renderTowerPlayerWallet(resultWallet);resultWallet.hidden=false;
   ctx.root.querySelector('#bet-result-summary').innerHTML=`<div class="tower-run-summary${o.newRecord?' is-record':''}">
     ${o.newRecord?'<strong class="tower-record-banner">НОВЫЙ ЛИЧНЫЙ РЕКОРД!</strong>':''}
     ${won&&o.cleared%5===0?`<strong class="tower-milestone">РУБЕЖ: ${o.cleared} ЭТАЖЕЙ</strong>`:''}
-    <div class="tower-result-numbers"><div><strong>${o.cleared}</strong><span>ЭТАЖЕЙ ПРОЙДЕНО</span></div><div><strong>${o.record}</strong><span>ЛИЧНЫЙ РЕКОРД</span></div><div><strong>${formatChips(coins)}</strong><span>МОНЕТ ЗА ЭТАЖ</span></div></div>
-    ${artifactCollectionMarkup(t.artifacts,o.artifact,o.artifactBonus)}
+    <div class="tower-result-numbers${won?' has-skill-reward':''}"><div><strong>${o.cleared}</strong><span>ЭТАЖЕЙ ПРОЙДЕНО</span></div><div><strong>${o.record}</strong><span>ЛИЧНЫЙ РЕКОРД</span></div><div><strong>${formatChips(coins)}</strong><span>МОНЕТ ЗА ЭТАЖ</span></div>${won?'<div class="tower-skill-reward"><strong>+1</strong><span>ПОЛУЧЕНО ОЧКО НАВЫКОВ</span></div>':''}</div>
+    ${won&&o.artifact!=null?artifactCollectionMarkup(t.artifacts,o.artifact,o.artifactBonus):''}
     ${o.runKills==null?'':`<p>ЛИЧНЫХ ПОБЕД: ${o.runKills}</p>`}
   </div>`;
-  ctx.resultsAgain.textContent=won?(t.mutationDraft?'ПОЛУЧИТЬ НАГРАДУ · ':'НА ЭТАЖ ')+towerFloorLabel(t.level):o.insuranceFloor?`ДМС · НА ЭТАЖ ${t.level}`:'НОВАЯ ПОПЫТКА · ЭТАЖ 1';
+  ctx.resultsAgain.textContent=won?'ДАЛЕЕ':o.insuranceFloor?`ДМС · НА ЭТАЖ ${t.level}`:'НОВАЯ ПОПЫТКА · ЭТАЖ 1';
   ctx.resultsAgain.onclick=()=>ctx.startTower(ctx.towerPlayer);
-  ctx.resultsProcedure.hidden=false;ctx.resultsProcedure.textContent='В МЕНЮ';ctx.resultsProcedure.onclick=openMenu;
+  ctx.resultsProcedure.hidden=true;ctx.resultsProcedure.onclick=null;
   ctx.root.querySelector('#tower-controls').hidden=true;ctx.resultsPanel.hidden=false;ctx.resultsAgain.focus();
 }
 export function installTowerUI({enterFight=false}={}){
