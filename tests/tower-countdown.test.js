@@ -16,9 +16,11 @@ test('Tower countdown starts at four seconds, replaces the final second with ÐŸÐ
  assert.ok(towerCountdownDuration(10,{spawnIntervalSec:.75,spawnDurationSec:.2})>4);
 });
 
-test('countdown is half-size without glow and animates each value change',()=>{
+test('tower countdown is routed through streamer instead of a center-stage overlay',()=>{
+ const session=fs.readFileSync(new URL('../src/game/session.js',import.meta.url),'utf8');
+ assert.match(session,/streamerMascot\?\.showCountdown\?\.\(text\)/);
+ assert.match(session,/streamerMascot\?\.finishCountdown\?\.\(\)/);
+ assert.doesNotMatch(session,/createElement\('output'\)|countdown\.textContent/);
  const css=fs.readFileSync(new URL('../styles/tower.css',import.meta.url),'utf8');
- assert.match(css,/font-size:clamp\(31px,6vw,74px\)/);
- assert.match(css,/text-shadow:none/);
- assert.match(css,/tower-count-change/);
+ assert.doesNotMatch(css,/#tower-start-countdown/);
 });
