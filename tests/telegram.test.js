@@ -58,10 +58,10 @@ test('platform detection ignores SDK defaults, missing SDK and unrelated Telegra
 test('Telegram system Back closes confirmation first and then Settings without leaving the current screen',()=>{
  const f=setup();
  try{
-  initializeGameNavigation();
+  const navigation=initializeGameNavigation();
   const launch=f.doc.querySelector('#launch-overlay');
   const tower=f.doc.querySelector('#tower-preparation');
-  launch.hidden=true;tower.hidden=false;
+  launch.hidden=true;tower.hidden=false;navigation.update();
   const nav=f.doc.querySelector('#game-nav-back');
   assert.ok(nav);
   let charges=0;
