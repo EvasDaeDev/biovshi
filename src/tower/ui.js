@@ -116,7 +116,7 @@ export function towerPreparation(){
   function renderSkills(){
     const snapshot=towerMutationSnapshot({...t,stats:draftStats}),stats=snapshot.effective;
     const initial=towerMutationSnapshot(t).effective;
-    const combatBonus=towerMutationCombatBonus(t.mutations);
+    const combatBonus=towerMutationCombatBonus([...t.mutations,...towerInstalledSegments(t).map(item=>item.type)]);
     const comparison=(label,value,base)=>{
       const diff=value-base;
       const cls=diff>0?'is-positive':diff<0?'is-negative':'';
