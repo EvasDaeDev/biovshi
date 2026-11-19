@@ -8,6 +8,8 @@ import {initializeGame} from '../src/game/initialize.js';
 import {betNewSession} from '../src/betting/ledger.js';
 import {towerFor} from '../src/tower/model.js';
 import {installTowerUI} from '../src/tower/ui.js';
+import {initializeGameNavigation} from '../src/ui/game-navigation.js';
+import {confirmGameAction} from '../src/ui/confirm-action.js';
 import {frame,step} from '../src/game/loop.js';
 import {advanceStartup} from '../src/game/session.js';
 import {setPaused,fitField} from '../src/ui/controls.js';
@@ -19,6 +21,7 @@ function mockApp(version='8.0'){
  const listeners=new Map(),calls=[];
  const app={version,platform:'android',isActive:true,isFullscreen:false,isOrientationLocked:false,viewportStableHeight:390,
   safeAreaInset:{top:10,right:20,bottom:5,left:15},contentSafeAreaInset:{top:32,right:0,bottom:0,left:0},
+  BackButton:{show(){calls.push('BackButton.show');},hide(){calls.push('BackButton.hide');}},
   onEvent(name,fn){const set=listeners.get(name)??new Set();set.add(fn);listeners.set(name,set);},
   offEvent(name,fn){listeners.get(name)?.delete(fn);},
  };
@@ -50,6 +53,35 @@ test('platform detection ignores SDK defaults, missing SDK and unrelated Telegra
  app.version='10.1';assert.equal(supportsTelegram(app,'8.0'),true);
  app.isVersionAtLeast=()=>{throw Error('unsupported');};assert.equal(supportsTelegram(app,'8.0'),false);
  assert.deepEqual(telegramInsets({safeAreaInset:{top:NaN,left:-1},contentSafeAreaInset:{top:4}}),{top:4,right:0,bottom:0,left:0});
+});
+
+test('Telegram system Back closes confirmation first and then Settings without leaving the current screen',()=>{
+ const f=setup();
+ try{
+  initializeGameNavigation();
+  const launch=f.doc.querySelector('#launch-overlay');
+  const tower=f.doc.querySelector('#tower-preparation');
+  launch.hidden=true;tower.hidden=false;
+  const nav=f.doc.querySelector('#game-nav-back');
+  assert.ok(nav);
+  let charges=0;
+  const popup=confirmGameAction({root:ctx.root,title:'УСТАНОВКА',cost:100,onConfirm:()=>charges++});
+  f.mock.emit('backButtonClicked');
+  assert.equal(popup.isConnected,false);
+  assert.equal(charges,0,'system Back cancels and never purchases');
+  assert.equal(tower.hidden,false,'underlying preparation remains visible');
+  f.doc.querySelector('#game-nav-settings').click();
+  assert.equal(ctx.settingsOpen,true);
+  f.mock.emit('backButtonClicked');
+  assert.equal(ctx.settingsOpen,false);
+  assert.equal(tower.hidden,false);
+  assert.ok(f.mock.calls.includes('BackButton.show'));
+  ctx.root.querySelector('#launch-overlay').hidden=false;tower.hidden=true;
+  // Native Back is hidden on the main menu; it is not an app-exit command.
+  f.doc.querySelector('#game-nav-back').hidden=true;
+  ctx.platform.setBackAvailable(false);
+  assert.ok(f.mock.calls.includes('BackButton.hide'));
+ }finally{f.close();}
 });
 
 test('SDK loads only for launch parameters; no SDK network request in a browser',()=>{
