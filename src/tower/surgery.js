@@ -163,6 +163,9 @@ export function validTowerSurgicalStock(run){
 }
 export function towerSurgerySiteLabel(site){
  if(site.startsWith('spine-'))return 'Позвонок '+site.slice(6);
+ const graft=/^(arm|leg)-(-?1)-graft-(upper|lower)$/.exec(site);
+ if(graft)return 'Доп. '+(graft[1]==='arm'?'рука':'нога')+' '+(graft[2]==='1'?'справа':'слева')+
+  ' · '+(graft[3]==='upper'?'верхний':'нижний')+' сегмент';
  const [,part,side,segment]=/^(arm|leg)-(-?1)-(upper|lower)$/.exec(site)??[];
  if(!part)return site;
  return (part==='arm'?'Рука':'Нога')+' '+(side==='1'?'справа':'слева')+
