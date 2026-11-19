@@ -16,6 +16,8 @@ import {segmentDisplayState} from '../src/ui/telemetry.js';
 import {paintTelemetry} from '../src/ui/paint-telemetry.js';
 import {installTowerUI} from '../src/tower/ui.js';
 import {initializeModalFocus} from '../src/ui/modal-focus.js';
+import {initializeGameNavigation} from '../src/ui/game-navigation.js';
+import {bettingOpen} from '../src/betting/ui.js';
 import {betCommit} from '../src/betting/ledger.js';
 import {bettingCancel} from '../src/betting/ui.js';
 
@@ -260,4 +262,34 @@ test('global fixed navigation stays above betting and below open Settings',()=>{
  // Under a native Shelter top layer, the gear is still in the same
  // viewport corner rather than in the content header.
  assert.match(css,/#robot-tag-hops-v22 #tower-upgrade-window \.tower-upgrade-heading-actions \.tower-upgrade-settings\s*\{\s*position:fixed;\s*top:12px;\s*right:12px;/);
+});
+
+test('betting screen keeps Back and Settings at fixed global corners, Back returns to menu',async()=>{
+ const dom=setup();installTowerUI();initializeModalFocus();
+ const navigation=initializeGameNavigation();
+ const launch=document.getElementById('launch-overlay');
+ launch.hidden=false;
+ navigation.update();
+ assert.equal(document.getElementById('game-nav-back').hidden,true);
+ launch.hidden=true;
+ bettingOpen();
+ navigation.update();
+ const back=document.getElementById('game-nav-back');
+ const settings=document.getElementById('game-nav-settings');
+ assert.equal(back.hidden,false);
+ assert.equal(back.parentElement.id,'game-navigation');
+ assert.equal(settings.parentElement,back.parentElement);
+ assert.equal(document.querySelector('#arena-settings').hidden,true);
+ settings.click();
+ assert.equal(ctx.settingsOpen,true);
+ assert.equal(document.querySelector('#bet-overlay').hidden,false);
+ close();
+ assert.equal(ctx.settingsOpen,false);
+ assert.equal(document.querySelector('#bet-overlay').hidden,false);
+ globalThis.confirm=()=>true;
+ back.click();
+ await Promise.resolve();
+ assert.equal(launch.hidden,false);
+ assert.equal(document.querySelector('#bet-overlay').hidden,true);
+ ctx.root.__disposeTag();dom.window.close();
 });
