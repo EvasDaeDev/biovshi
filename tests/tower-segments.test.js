@@ -54,6 +54,7 @@ test('uninsured defeat keeps only warehouse parts while DMS restores its insured
  assert.deepEqual(uninsured.towers[0].segmentInventory.map(item=>item.id),['seg2']);
  assert.deepEqual(uninsured.towers[0].equippedSegments,[]);
  assert.equal(uninsured.towers[0].segmentRewardsEnabled,true);
+ assert.equal(uninsured.towers[0].preparing,true,'surviving warehouse can be used before the next fight');
  const insured=make();
  const own=insured.towers[0];
  purchaseInsurance(insured,0,own);
@@ -61,6 +62,7 @@ test('uninsured defeat keeps only warehouse parts while DMS restores its insured
  assert.deepEqual(insured.towers[0].equippedSegments,['seg1']);
  assert.deepEqual(insured.towers[0].segmentInventory.map(item=>item.id),['seg2','seg1']);
  assert.equal(insured.towers[0].insurance.checkpoint,null);
+ assert.equal(insured.towers[0].preparing,true,'DMS restored equipment can be edited before combat');
 });
 
 test('segment reward run automatically awards inventory items without a selection draft',()=>{
