@@ -2,6 +2,7 @@
 // to native popups and never performs a screen transition.
 import {ctx} from '../game/state.js';
 import {bettingOpen} from '../betting/ui.js';
+import {garageOpen} from '../garage/ui.js';
 import {openMenu} from '../tower/ui.js';
 
 export function initializeGameNavigation(){
@@ -12,7 +13,7 @@ export function initializeGameNavigation(){
  const tower=root.querySelector('#tower-preparation');
  const betting=root.querySelector('#bet-overlay');
  const results=root.querySelector('#gladiator-results');
- let screen='menu';
+ let screen='menu',previousScreens=[],suppressNext=null;
  const resolve=()=>{
   if(ctx.settingsOpen)return screen;
   if(!launch.hidden)return 'menu';
@@ -23,7 +24,12 @@ export function initializeGameNavigation(){
   return 'arena';
  };
  const update=()=>{
-  screen=resolve();
+  const next=resolve();
+  if(next!==screen){
+   if(next===suppressNext)suppressNext=null;
+   else if(screen!=='arena')previousScreens.push(screen);
+   screen=next;
+  }
   back.hidden=screen==='menu'||screen==='arena';
   back.setAttribute('aria-label',screen==='garage'?'Назад к ставкам':
    screen==='tower'?'Назад в главное меню':
@@ -35,12 +41,17 @@ export function initializeGameNavigation(){
   if(ctx.settingsOpen||back.hidden)return;
   if(root.querySelector('#tower-module-replacement[open],#tower-upgrade-window[open],.betting-input-dialog[open]'))return;
   const current=resolve();
-  if(current==='garage'){bettingOpen();return;}
-  if(current==='setup'){
-   if(ctx.afterSetup==='menu'||!ctx.betting){openMenu();return;}
-   bettingOpen();return;
+  const previous=previousScreens.pop();
+  const destination=current==='garage'&&previous==='betting'?'betting':
+   current==='betting'&&previous==='garage'?'garage':
+   current==='setup'&&previous==='betting'&&ctx.afterSetup!=='menu'?'betting':'menu';
+  suppressNext=destination;
+  if(destination==='betting'){bettingOpen();return;}
+  if(destination==='garage'){garageOpen();return;}
+  if(!openMenu()){
+   suppressNext=null;
+   if(previous)previousScreens.push(previous);
   }
-  if(current==='betting'||current==='tower'||current==='results')openMenu();
  };
  const observer=new doc.defaultView.MutationObserver(update);
  for(const node of [launch,tower,betting,results]){
