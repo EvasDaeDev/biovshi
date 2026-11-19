@@ -65,6 +65,7 @@ export function validTower(t){
  return validBossEncounter(t.bossEncounter,t.level)&&validTowerFloorPlan(t.floorPlan,t.level)&&t&&t.version===2&&Number.isSafeInteger(t.level)&&t.level>=1&&Number.isSafeInteger(t.wins)&&t.wins===t.level-1
   &&Number.isInteger(t.patient)&&t.patient>=0&&t.patient<4&&validStats(t.stats,towerCycleWins(t.level))
   &&(t.cycleNotice===undefined||t.cycleNotice===t.level&&t.level>30&&(t.level-1)%30===0)
+  &&(t.segmentRewardsEnabled===undefined||typeof t.segmentRewardsEnabled==='boolean')
   &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&validArtifactCollection(t.artifacts,t.record)&&optionalCount(t.runKills)&&optionalCount(t.runCoins)&&validInsurance(t.insurance,t.record)&&validTowerMutationState(t)&&validTowerSegmentInventory(t)&&validTowerSurgeries(t.surgeries,t.level)&&validTowerSurgicalStock(t)&&validTowerDonorState(t)&&validTowerRerolls(t)&&typeof t.arenaRerollLocked==='boolean'
   &&Array.isArray(t.graftProsthetics)&&JSON.stringify(t.graftProsthetics)===JSON.stringify(normalizeTowerGraftProsthetics(t.graftProsthetics,t))
   &&(t.legacyEnemyCount===undefined||(t.legacyEnemyCount===t.level||t.legacyEnemyCount===1))
@@ -109,10 +110,8 @@ export function completeTower(session,player,won,random=Math.random){
   if(bossWon){
    // Transitional implementation: new segment warehouse is populated while
    // the legacy reward UI remains enabled until its full replacement lands.
-   grantTowerMutationDraft(t,random);
-   // Do not award inaccessible items on top of the old reward screen:
-   // segment drops are enabled alongside the replacement Shelter UI.
    if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random);
+   else grantTowerMutationDraft(t,random);
   }}
  else {
   const c=t.insurance.checkpoint,next=newTower(undefined,t.record,t.artifacts,t.insurance);
@@ -131,6 +130,7 @@ export function completeTower(session,player,won,random=Math.random){
    !surviving.some(existing=>existing.id===item.id))]);
   next.equippedSegments=[...insuredIds];
   next.nextSegmentId=Math.max(t.nextSegmentId,c?.nextSegmentId??1);
+  next.segmentRewardsEnabled=t.segmentRewardsEnabled??false;
   delete next.lastBossSegments;
   normalizeTowerMutationInventory(next);
   session.towers[player]=next;
