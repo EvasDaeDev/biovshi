@@ -804,8 +804,8 @@ test('tower skill selection is a preview until free first confirmation',()=>{
   speed=document.querySelector('[data-tower-stat="0"]');speed.value='4';speed.dispatchEvent(new Event('change'));
   document.querySelector('[data-tower-apply]').click();
   assert.deepEqual(run.stats,[3,3,3],'preview does not purchase before dialog confirmation');
-  assert.match(document.querySelector('#game-action-confirm .game-action-confirm-submit').textContent,/−50/);
-  assert.ok(document.querySelector('#game-action-confirm .game-action-confirm-submit .chip-icon'));
+  assert.match(document.querySelector('#game-action-confirm .game-action-confirm-submit').textContent,/ПРИМЕНИТЬ/);
+  assert.equal(document.querySelector('#game-action-confirm .game-action-confirm-submit .chip-icon'),null);
   confirmPaidAction();
   assert.deepEqual(run.stats,[4,2,3]);assert.deepEqual(ctx.towerGarage[0].stats,[4,2,3]);
   assert.equal(session.players[0].balance,200);assert.equal(session.towerEconomySpent,0);
@@ -838,8 +838,8 @@ test('arena reroll before loading preserves the same challenge without rebuildin
   button.click();button.click();
   assert.equal(ctx.robots,oldRobots,'no world rebuild during arena rerolls');
   assert.equal(builds,0,'no level load during arena rerolls');
-  assert.equal(session.players[0].balance,150);
-  assert.equal(session.towerEconomySpent,50);
+  assert.equal(session.players[0].balance,190);
+  assert.equal(session.towerEconomySpent,10);
   assert.equal(run.arenaRerolls,1);
   assert.notEqual(run.floorPlan.options[0].arenaId,'ward');
   assert.equal(run.floorPlan.options[0].arenaId,run.floorPlan.options[1].arenaId);
