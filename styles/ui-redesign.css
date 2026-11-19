@@ -76,7 +76,8 @@
 #robot-tag-hops-v22 #tower-preparation .tower-prep-header{
   position:relative;z-index:2;
   display:grid;
-  grid-template-columns:minmax(112px,1fr) minmax(0,3fr) minmax(112px,1fr);
+  grid-template-columns:minmax(0,1fr);
+  justify-items:center;
   gap:8px;align-items:center;flex:none;
   padding:0 0 9px;
   border-bottom:1px solid #8e7854;
@@ -87,18 +88,6 @@
   line-height:1.2;
   overflow-wrap:anywhere;
 }
-#robot-tag-hops-v22 #tower-preparation .tower-nav-button{
-  display:flex;justify-content:center;align-items:center;
-  gap:5px;min-height:39px;
-  padding:7px 9px;
-  background:#31362d;color:#e6dcc2;
-  border:1px solid #786b51;
-  font-weight:700;font-size:12px;letter-spacing:.03em;
-  white-space:nowrap;cursor:pointer;
-}
-#robot-tag-hops-v22 #tower-preparation .tower-nav-button:hover{background:#49503e;color:#fff5d9}
-#robot-tag-hops-v22 #tower-preparation #tower-prep-back{justify-self:start}
-#robot-tag-hops-v22 #tower-preparation #tower-prep-settings{justify-self:end}
 #robot-tag-hops-v22 #tower-preparation .tower-player-wallet{
   flex:none;
   margin:0;padding:1px 0 7px;
@@ -194,13 +183,10 @@
 /* Compact landscape: keep the two-column screen until it cannot be read. */
 @media(max-width:850px){
   #robot-tag-hops-v22 #tower-preparation .tower-prep-workspace{grid-template-columns:minmax(0,1fr)}
-  #robot-tag-hops-v22 #tower-preparation .tower-prep-header{grid-template-columns:minmax(86px,1fr) minmax(0,2fr) minmax(86px,1fr)}
-  #robot-tag-hops-v22 #tower-preparation .tower-nav-button{font-size:11px;padding:5px 6px}
 }
 @media(max-height:540px){
   #robot-tag-hops-v22 #tower-preparation .bet-panel{padding-top:8px;gap:5px}
   #robot-tag-hops-v22 #tower-preparation .tower-prep-header{padding-bottom:5px}
-  #robot-tag-hops-v22 #tower-preparation .tower-nav-button{min-height:34px}
   #robot-tag-hops-v22 #tower-preparation .tower-prep-workspace{gap:8px}
   #robot-tag-hops-v22 #tower-preparation #tower-stats{padding:8px}
 }
@@ -316,7 +302,6 @@
   min-width:44px;
   min-height:44px;
 }
-#robot-tag-hops-v22 #tower-preparation .tower-nav-button:focus-visible,
 #robot-tag-hops-v22 #tower-upgrade-window :is(button,select):focus-visible{
   outline:2px solid var(--ui-selected);
   outline-offset:2px;
@@ -518,10 +503,6 @@
 #robot-tag-hops-v22 #tower-prep-settings,
 #robot-tag-hops-v22 #tower-prep-back{
   display:none!important;
-}
-#robot-tag-hops-v22 #tower-preparation .tower-prep-header{
-  grid-template-columns:minmax(0,1fr);
-  justify-items:center;
 }
 @media(max-width:540px){
   #robot-tag-hops-v22 #game-navigation>button{top:8px;min-height:42px}
