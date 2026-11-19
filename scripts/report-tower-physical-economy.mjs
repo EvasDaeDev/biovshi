@@ -29,7 +29,9 @@ export function physicalEconomyReport(batches){
    if(r.errors?.length||r.nonFinite||r.friendlyHits)throw Error('Physics failed '+id);
    if(!Number.isFinite(r.coins)||r.coins<0||
       !Number.isInteger(r.personalEliminations)||r.personalEliminations<0)throw Error('Invalid rewards '+id);
-   if(r.completed&&(!Number.isInteger(r.winner)||r.winner<0))throw Error('Finished without winner');
+   // Tower can complete with winner=null when the patient is immobilized.
+   // This is a valid defeat/draw outcome, never a corrupt physical record.
+   if(r.completed&&r.winner!==null&&(!Number.isInteger(r.winner)||r.winner<0))throw Error('Invalid winner');
    if(!r.completed&&r.winner!==null)throw Error('Unfinished with winner');
   }
   map.set(k,b.runs);
@@ -49,8 +51,9 @@ export function physicalEconomyReport(batches){
    if(!rows.length)continue;
    const n=rows.length,finished=rows.filter(r=>r.completed).length,
     won=rows.filter(r=>r.completed&&r.winner===0).length,
+    withoutWinner=rows.filter(r=>r.completed&&r.winner===null).length,
     coins=rows.map(r=>r.coins),kills=rows.map(r=>r.personalEliminations);
-   groups.push({policy,scope,kind,n,finished,timedOut:n-finished,won,
+   groups.push({policy,scope,kind,n,finished,timedOut:n-finished,won,withoutWinner,
     wonBeforeCutoff:round(won/n),win95:wilson(won,n),
     killsPerFight:round(kills.reduce((a,b)=>a+b,0)/n),
     noPersonalKills:rows.filter(r=>r.personalEliminations===0).length,
@@ -65,13 +68,13 @@ export function physicalEconomyMarkdown(data){
  const rows=[
  '# H5: реальные бои, личные добивания и доход','',
  'Это реальные физические симуляции с шагом 1/60 с, но управление игроком выполняют три простых автопилота. Это НЕ статистика людей.',
- 'Схватки, достигшие лимита времени, не являются проигрышами. Доля побед ниже означает победы только к заданному лимиту. Интервал Уилсона широкий из-за малой выборки.',
+ 'Схватки, достигшие лимита времени, не являются проигрышами. Завершённый бой может иметь winner=null — например, если пациент обездвижен. Это не обязательно ничья. Доля побед ниже означает победы только к заданному лимиту. Интервал Уилсона широкий из-за малой выборки.',
  '',
  'Всего отдельных боёв: '+data.fightCount+'.','',
- '| Стратегия | Цикл | Вид | Боёв | Завершено | Лимит | Победы | Победы к лимиту (95% ДИ) | Личные добивания/бой | Монеты: медиана/среднее (P10–P90) |',
- '|---|---|---|---:|---:|---:|---:|---|---:|---|'
+ '| Стратегия | Цикл | Вид | Боёв | Завершено | Лимит | Победы | Без победителя | Победы к лимиту (95% ДИ) | Личные добивания/бой | Монеты: медиана/среднее (P10–P90) |',
+ '|---|---|---|---:|---:|---:|---:|---:|---|---:|---|'
  ];
- for(const g of data.groups)rows.push('| '+[g.policy,g.scope,g.kind,g.n,g.finished,g.timedOut,g.won,
+ for(const g of data.groups)rows.push('| '+[g.policy,g.scope,g.kind,g.n,g.finished,g.timedOut,g.won,g.withoutWinner,
    Math.round(g.wonBeforeCutoff*100)+'% ('+Math.round(g.win95[0]*100)+'–'+Math.round(g.win95[1]*100)+'%)',
    g.killsPerFight,g.coinsMedian+'/'+g.coinsMean+' ('+g.coinsP10+'–'+g.coinsP90+')'].join(' | ')+' |');
  rows.push('','## Ограничения','',

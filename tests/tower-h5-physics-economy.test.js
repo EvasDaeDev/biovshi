@@ -22,6 +22,12 @@ test('physical data compares policies on matching floors and seeds without treat
  assert.equal(row.finished,1);assert.equal(row.timedOut,1);assert.equal(row.won,1);
  assert.equal(row.coinsMedian,15);assert.equal(row.killsPerFight,1.5);
  assert.match(physicalEconomyMarkdown(result),/НЕ статистика людей/);
+ const noWinner=fixture();noWinner[0].runs[0].winner=null;
+ const settled=physicalEconomyReport(noWinner);
+ const cohort=settled.groups.find(g=>g.policy==='approach'&&g.scope==='first'&&g.kind==='all');
+ assert.equal(cohort.finished,1);
+ assert.equal(cohort.won,0);
+ assert.equal(cohort.withoutWinner,1,'finished patient-defeat without a winner is valid');
 });
 test('reject duplicate, inconsistent or incomplete physical evidence',()=>{
  let b=fixture();b[0].runs[0].coins=-1;
