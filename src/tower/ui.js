@@ -18,7 +18,7 @@ import {towerFor,resetTower,completeTower,rewardTower,towerEnemyCount,buyTowerIn
 import {bettingSave} from '../betting/storage.js';
 import {bettingSetup,bettingCancel,bettingReadDraft} from '../betting/ui.js';
 import {patientRecovery,validStats,earnedStats,redistributeStat,statMultiplier,critChance} from '../garage/model.js';
-import {recoverTowerGrafts} from './anatomy.js';
+import {recoverTowerGrafts,towerPatientAnatomy} from './anatomy.js';
 import {startSpawnSequence} from '../game/session.js';
 import {rebuildRobots} from '../game/arena.js';
 import {onGameEvent} from '../game/event-bus.js';
@@ -184,7 +184,7 @@ export function towerPreparation(){
   let selectedReward=null,selectedOwned=null;
   function mutationIcon(type,site=null){
     const node=document.createElement('span');node.className='tower-mod-icon';
-    const candidate=site?[[site,ROBOT_PARTS[site]??ROBOT_PARTS[site.replace(/-graft(?:-\d+)?/,'')]]][0]:Object.entries(ROBOT_PARTS).find(([partSite])=>towerUpgradeApplies(type,partSite));
+    const candidate=site?[site,towerPatientAnatomy(t)?.skinParts?.[site]??ROBOT_PARTS[site]]:Object.entries(ROBOT_PARTS).find(([partSite])=>towerUpgradeApplies(type,partSite));
     if(candidate?.[1]){const [,part]=candidate;
       node.style.backgroundImage=`url("${TOWER_MUTATION_ATLAS[type]}")`;
       node.style.backgroundSize='400% 400%';
@@ -717,7 +717,8 @@ export function towerResults(){
       const item=t.segmentInventory.find(candidate=>candidate.id===id);
       if(!item)continue;
       const card=document.createElement('div');card.className='tower-inventory-item';
-      const part=ROBOT_PARTS[item.site];const icon=document.createElement('span');
+      const part=towerPatientAnatomy(t)?.skinParts?.[item.site]??ROBOT_PARTS[item.site];
+      const icon=document.createElement('span');
       icon.className='tower-mod-icon';
       if(part){
         icon.style.backgroundImage='url("'+TOWER_MUTATION_ATLAS[item.type]+'")';
