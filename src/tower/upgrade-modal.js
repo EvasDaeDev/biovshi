@@ -264,6 +264,10 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   // into a newly opened dialog. Preview starts on an intentional item focus
   // or pointer hover, and installed items otherwise show one value only.
   (activeTab==='artifacts'?artifactTab:activeTab==='surgery'?surgeryTab:mutationTab).focus();
+  // Some browsers first focus an item when showModal() enters the top layer.
+  // Discard that incidental hover/focus preview until the player interacts.
+  hoverMutation=null;
+  paint();
  }
  function close(){
   if(overlay.hidden&&!overlay.open)return;
