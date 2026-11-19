@@ -150,7 +150,7 @@
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-paper{
   display:grid;
   grid-template-columns:minmax(0,.95fr) minmax(0,1.1fr);
-  grid-template-rows:auto auto auto minmax(0,1fr) auto;
+  grid-template-rows:auto auto auto minmax(0,1fr) auto auto;
   grid-template-areas:
     "heading heading"
     "wallet wallet"
@@ -213,6 +213,12 @@
   overflow:auto;
   overscroll-behavior:contain;
   border:1px solid #625b46;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-paper.is-artifacts .tower-upgrade-tabs{
+  grid-area:3 / 1 / 4 / -1;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-paper.is-artifacts .tower-upgrade-content{
+  grid-area:4 / 1 / 6 / -1;
 }
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-feedback{
   grid-area:feedback;
