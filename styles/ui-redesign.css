@@ -1346,3 +1346,139 @@
     max-height:90px;
   }
 }
+
+/* Tower preparation: compact controls and a fixed preview row.
+   Selected challenge cards change their BORDER, not their full surface. */
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-option,
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-option.is-standard,
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-option.is-danger{
+  background:#30362d;
+  box-shadow:none;
+  border:2px solid #686853;
+  padding:9px 11px;
+  color:#eee1c7;
+  transition:border-color .12s ease;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-option.is-danger{
+  border-color:#9c4a47;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-option.is-selected.is-standard{
+  background:#30362d;
+  border-color:#63e780;
+  box-shadow:none;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-option.is-selected.is-danger{
+  background:#30362d;
+  border-color:#ff6c68;
+  box-shadow:none;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-option:focus-visible{
+  outline:2px solid #f4e6c3;
+  outline-offset:2px;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-detail-row{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:3px 5px;
+  font-size:12px;
+  line-height:1.35;
+  min-width:0;
+  color:#e3d8c0;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-detail-row>strong{
+  color:#f1e2c5;
+  font-weight:750;
+  white-space:nowrap;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-detail-row>span{
+  overflow-wrap:anywhere;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats .garage-stat-list{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  column-gap:8px;
+  row-gap:5px;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats .garage-stat-list>small{
+  grid-column:1/-1;
+  min-height:19px;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats .garage-stat-list>label{
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+  min-width:0;
+  font-size:12px;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats .tower-skill-icon{
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
+  flex:0 0 36px;
+  width:36px;
+  height:36px;
+  min-width:36px;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats .tower-skill-icon .ui-icon{
+  display:block;
+  width:36px;
+  height:36px;
+  object-fit:contain;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats select[data-tower-stat]{
+  flex:0 1 82px;
+  width:82px;
+  max-width:82px;
+  min-width:48px;
+  min-height:42px;
+  padding:5px 7px;
+  margin:0;
+  font-size:inherit;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats .tower-stat-previews{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:18px repeat(2,minmax(17px,auto));
+  row-gap:6px;
+  column-gap:10px;
+  align-content:start;
+  min-height:70px;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats .tower-preview-label{
+  display:block;
+  grid-column:1/-1;
+  height:18px;
+  line-height:18px;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.035em;
+  visibility:hidden;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats .tower-preview-label.is-active{
+  visibility:visible;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats .tower-stat-message{
+  display:block;
+  min-height:17px;
+  line-height:17px;
+  margin:0;
+  padding:0;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-insurance-status[hidden]{
+  display:none!important;
+}
+@media(max-width:630px){
+  #robot-tag-hops-v22 #tower-preparation #tower-stats .tower-skill-icon,
+  #robot-tag-hops-v22 #tower-preparation #tower-stats .tower-skill-icon .ui-icon{
+    width:32px;
+    height:32px;
+    min-width:32px;
+  }
+  #robot-tag-hops-v22 #tower-preparation #tower-stats select[data-tower-stat]{
+    flex-basis:68px;
+    width:68px;
+  }
+}
