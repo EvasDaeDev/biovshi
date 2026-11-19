@@ -306,7 +306,10 @@ export function towerPreparation(){
             onConfirm:()=>finish(replaceId)
           });
         };
-        mutationPanel.append(action);
+        // Keep the paid install / free removal action in the bottom zone,
+        // detached from the selected module's icon and description.
+        const actionArea=document.createElement('div');actionArea.className='tower-mutation-action-area';
+        actionArea.append(action);mutationPanel.append(actionArea);
       }
     }
   }
