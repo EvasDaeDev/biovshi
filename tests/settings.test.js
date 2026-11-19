@@ -29,7 +29,7 @@ function setup(start=true){
   if(start)advanceStartup(3);initializeDiagnostics();
   return dom;
 }
-const open=()=>document.querySelector('#arena-settings-button').click();
+const open=()=>document.querySelector('#game-nav-settings').click();
 const close=()=>document.querySelector('#arena-settings-close').click();
 
 test('launch menu Settings opens before choosing a mode and returns focus to its own button',async()=>{
@@ -49,7 +49,7 @@ test('Settings opens above every game sheet, keeps its focus and returns to the 
   const dom=setup();installTowerUI();
   for(const other of ['launch-overlay','tower-preparation','bet-overlay','gladiator-results'])document.getElementById(other).hidden=other!==id;
   initializeModalFocus();
-  const sheet=document.getElementById(id),settings=document.getElementById('arena-settings-button');
+  const sheet=document.getElementById(id),settings=document.getElementById('game-nav-settings');
   assert.equal(Boolean(settings.closest('[inert]')),false);
   assert.equal(Boolean(settings.inert),false);assert.equal(ctx.button.inert,true);
   let expanded=false;const expandButton=document.getElementById('arena-expand-button');
@@ -108,7 +108,7 @@ test('Settings pauses an active fight, blocks background controls and restores s
   close();assert.equal(ctx.settingsOpen,false);assert.equal(ctx.paused,false);assert.equal(ctx.timeScale,2);
   assert.equal(ctx.root.querySelector('.tag7hop-layout').inert,false);assert.equal(ctx.last,null);assert.equal(ctx.debt,0);
   frame(16000);assert.equal(ctx.game.time,time,'first resumed frame cannot replay time spent in Settings');
-  assert.equal(document.activeElement.id,'arena-settings-button');ctx.root.__disposeTag();dom.window.close();
+  assert.equal(document.activeElement.id,'game-nav-settings');ctx.root.__disposeTag();dom.window.close();
 });
 
 test('Settings preserves an existing manual pause and closes with Escape or backdrop; startup is also frozen',()=>{
@@ -251,7 +251,7 @@ test('phone field uses logical layout sizes even if Safari reports unscaled clie
 
 test('the arena Settings button has a clear layer above betting dimming and below Settings',()=>{
  const tower=fs.readFileSync(new URL('../styles/tower.css',import.meta.url),'utf8');
- assert.match(tower,/#robot-tag-hops-v22 #arena-settings-button\s*\{position:relative;z-index:1150\}/);
+ assert.match(tower,/#robot-tag-hops-v22 #game-nav-settings\s*\{position:relative;z-index:1150\}/);
  const waste=fs.readFileSync(new URL('../styles/wasteland.css',import.meta.url),'utf8');
  assert.match(waste,/\.bet-overlay\s*\{position:fixed;inset:0;z-index:1100/);
  const ui=fs.readFileSync(new URL('../styles/interface.css',import.meta.url),'utf8');
