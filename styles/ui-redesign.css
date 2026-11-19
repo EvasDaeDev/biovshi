@@ -27,6 +27,51 @@
   gap:8px;
   overflow:hidden;
   border:1px solid #75684e;
+  background:#22271f;
+  background-image:none;
+  box-shadow:0 16px 44px #0009;
+  color:var(--ui-text);
+}
+#robot-tag-hops-v22 #tower-preparation .bet-panel :is(h2,h3,th,strong,label,p,summary,small,span){
+  color:#ded3b9;
+  text-shadow:none;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-prep-title{
+  color:#f0e5cc;
+  text-align:center;
+}
+#robot-tag-hops-v22 #tower-preparation .bet-panel :is(select,input,textarea){
+  background:#131d17;
+  color:#f1e5ce;
+  border:1px solid #898066;
+  border-radius:0;
+}
+#robot-tag-hops-v22 #tower-preparation .bet-panel button{
+  background:#42483a;
+  color:#f1e3c4;
+  border:1px solid #786c50;
+}
+#robot-tag-hops-v22 #tower-preparation .bet-panel button:focus-visible{
+  outline:2px solid var(--ui-selected);
+  outline-offset:2px;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-option{
+  background:#323a30;
+  color:#e7dbc0;
+  border:1px solid #747052;
+  box-shadow:none;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-option.is-danger{
+  border-color:#a76b4c;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-option.is-selected{
+  background:#37503b;
+  border:2px solid var(--ui-selected);
+  box-shadow:inset 0 0 0 1px #183722;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-challenge-option:focus-visible{
+  outline:2px solid #e9ffeb;
+  outline-offset:2px;
 }
 #robot-tag-hops-v22 #tower-preparation .tower-prep-header{
   position:relative;z-index:2;
@@ -125,10 +170,24 @@
   gap:10px;
   margin:0 -16px;padding:10px 16px;
   border-top:1px solid #8d7854;
-  background:#d2bb86;
+  background:#22271f;
 }
 #robot-tag-hops-v22 #tower-preparation>.bet-panel>.bet-actions button{
   min-height:44px;margin:0;
+}
+#robot-tag-hops-v22 #tower-preparation>.bet-panel>.bet-actions #tower-fight{
+  background:#884734;
+  color:#fff0d6;
+  border-color:#b06c4d;
+  font-weight:800;
+}
+#robot-tag-hops-v22 #tower-preparation>.bet-panel>.bet-actions #tower-insurance{
+  background:#54543d;
+  border-color:#8f805a;
+  color:#f0e0bb;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-prep-error:not(:empty){
+  color:#ff9588;
 }
 #robot-tag-hops-v22 .currency-counter.is-credit{color:var(--ui-credit)!important;text-shadow:none!important}
 #robot-tag-hops-v22 .currency-counter.is-debit{color:var(--ui-debit)!important;text-shadow:none!important}
@@ -162,7 +221,6 @@
   row-gap:9px;
   width:min(1100px,100%);
   max-height:calc(var(--game-height,100dvh) - 20px);
-  max-height:calc(100dvh - 20px);
   overflow:hidden;
   padding:14px;
 }
@@ -191,7 +249,7 @@
 }
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-drawing>svg{
   width:100%;
-  max-height:min(30dvh,235px);
+  max-height:235px;
 }
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-stats{
   grid-area:stats;
@@ -270,7 +328,7 @@
     gap:7px;
     overflow:auto;
     padding:10px;
-    max-height:calc(100dvh - 12px);
+    max-height:calc(var(--game-height,100dvh) - 12px);
   }
   #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-drawing>svg{
     max-height:180px;
@@ -301,7 +359,7 @@
 #robot-tag-hops-v22 .tower-replacement-dialog{
   box-sizing:border-box;
   width:min(92vw,650px);
-  max-height:min(90dvh,650px);
+  max-height:min(calc(var(--game-height,100dvh) - 18px),650px);
   margin:auto;
   padding:18px;
   overflow:auto;
@@ -473,7 +531,7 @@
 
 /* A single high-contrast, non-neon purchase/renewal confirmation. */
 #robot-tag-hops-v22 .game-action-confirm{
- box-sizing:border-box;width:min(92vw,520px);max-height:90dvh;margin:auto;padding:18px;
+ box-sizing:border-box;width:min(92vw,520px);max-height:calc(var(--game-height,100dvh) - 18px);margin:auto;padding:18px;
  border:1px solid #a28b60;background:var(--ui-surface);color:var(--ui-text);
  box-shadow:0 16px 60px #000c;overflow:auto;
 }
