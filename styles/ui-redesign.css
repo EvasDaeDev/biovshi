@@ -470,3 +470,40 @@
   #robot-tag-hops-v22 #game-nav-back{left:8px;min-width:80px;padding:7px 9px}
   #robot-tag-hops-v22 #game-nav-settings{right:8px;width:42px}
 }
+
+/* A single high-contrast, non-neon purchase/renewal confirmation. */
+#robot-tag-hops-v22 .game-action-confirm{
+ box-sizing:border-box;width:min(92vw,520px);max-height:90dvh;margin:auto;padding:18px;
+ border:1px solid #a28b60;background:var(--ui-surface);color:var(--ui-text);
+ box-shadow:0 16px 60px #000c;overflow:auto;
+}
+#robot-tag-hops-v22 .game-action-confirm:not([open]){display:none!important}
+#robot-tag-hops-v22 .game-action-confirm::backdrop{background:#080a08c9}
+#robot-tag-hops-v22 .game-action-confirm>header{
+ display:flex;justify-content:space-between;align-items:center;gap:12px;
+ padding:0 0 10px;margin:0 0 12px;border-bottom:1px solid var(--ui-edge);
+}
+#robot-tag-hops-v22 .game-action-confirm h2{margin:0;font-size:19px;line-height:1.25}
+#robot-tag-hops-v22 .game-action-confirm-close{
+ width:44px;height:44px;flex:none;font-size:24px;
+ color:var(--ui-text);background:var(--ui-surface-raised);
+ border:1px solid var(--ui-edge);cursor:pointer;
+}
+#robot-tag-hops-v22 .game-action-confirm-details{font-size:13px;line-height:1.5}
+#robot-tag-hops-v22 .game-action-confirm-details p{margin:0 0 9px}
+#robot-tag-hops-v22 .game-action-confirm>footer{
+ display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin-top:15px;
+}
+#robot-tag-hops-v22 .game-action-confirm>footer button{
+ min-height:44px;padding:10px 15px;background:var(--ui-surface-raised);
+ color:var(--ui-text);border:1px solid var(--ui-edge);font-weight:800;cursor:pointer;
+}
+#robot-tag-hops-v22 .game-action-confirm>footer .game-action-confirm-submit{
+ background:#735536;color:#fce8bc;border-color:#c39a59;
+}
+#robot-tag-hops-v22 .game-action-confirm button:focus-visible{
+ outline:2px solid var(--ui-selected);outline-offset:2px;
+}
+@media(max-width:580px){
+ #robot-tag-hops-v22 .game-action-confirm{padding:12px;width:min(96vw,520px)}
+}
