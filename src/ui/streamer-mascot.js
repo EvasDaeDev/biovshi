@@ -110,11 +110,12 @@ export function initializeStreamerMascot({lines,random}={}){
  let countdownText=null,countdownActive=false,goRemaining=0,countdownWasShown=false;
  const showCountdown=text=>{
   if(typeof text!=='string'||!text)return;
+  if(text!==countdownText)motion.attention();
   countdownText=text;countdownActive=true;
   if(text==='ПОГНАЛИ!!!')goRemaining=1.6;
  };
  const finishCountdown=()=>{countdownActive=false;};
- const clearCountdown=()=>{countdownText=null;countdownActive=false;goRemaining=0;countdownWasShown=false;};
+ const clearCountdown=()=>{countdownText=null;countdownActive=false;goRemaining=0;countdownWasShown=false;caption.classList.remove('is-countdown');};
  const clearSpeech=()=>{spoken=null;quietFor=0;motion.reset();speechPacer.reset();caption.hidden=true;caption.textContent='';};
  const updateToggle=()=>{
   box.hidden=hidden;toggle.textContent=hidden?'▴':'▾';toggle.setAttribute('aria-expanded',String(!hidden));
@@ -173,9 +174,10 @@ export function initializeStreamerMascot({lines,random}={}){
   const emotion=teaching?ctx.tutorial.emotion:cheering?'joy':reaction?.emotion??'neutral';
   if(countdownShown){
    caption.textContent=countdownText;
+   caption.classList.add('is-countdown');
    caption.hidden=false;
   }else{
-   if(countdownWasShown){caption.hidden=true;caption.textContent='';spoken=null;}
+   if(countdownWasShown){caption.hidden=true;caption.textContent='';caption.classList.remove('is-countdown');spoken=null;}
   }
   countdownWasShown=countdownShown;
   if(!countdownShown&&reaction!==spoken){
