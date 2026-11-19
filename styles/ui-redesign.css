@@ -964,6 +964,21 @@
   color:#c5b89b;
   letter-spacing:.14em;
 }
+#robot-tag-hops-v22 #launch-overlay .launch-subtitle{
+  display:flex;
+  flex-direction:column;
+  gap:15px;
+  max-width:100%;
+  font-size:clamp(13px,1.3vw,16px);
+  line-height:1.55;
+  letter-spacing:normal;
+  overflow-wrap:break-word;
+}
+#robot-tag-hops-v22 #launch-overlay .launch-subtitle strong{
+  display:block;
+  font-weight:750;
+  color:#f0e2c2;
+}
 #robot-tag-hops-v22 #launch-overlay .launch-divider{
   grid-area:4 / 1;
   height:1px;
