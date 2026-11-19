@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {newTower,completeTower} from '../src/tower/model.js';
+import {purchaseInsurance} from '../src/tower/insurance.js';
 import {towerSegmentSellPrice,towerSegmentStacks,awardTowerSegments,
  equipTowerSegment,removeTowerSegment,sellTowerSegment,validTowerSegmentInventory,
  towerSegmentBonuses} from '../src/tower/segments.js';
@@ -54,9 +55,8 @@ test('uninsured defeat keeps only warehouse parts while DMS restores its insured
  assert.deepEqual(uninsured.towers[0].equippedSegments,[]);
  assert.equal(uninsured.towers[0].segmentRewardsEnabled,true);
  const insured=make();
- const checkpoint=structuredClone(insured.towers[0]);
  const own=insured.towers[0];
- own.insurance.checkpoint={...checkpoint,insurance:undefined};
+ purchaseInsurance(insured,0,own);
  completeTower(insured,0,false);
  assert.deepEqual(insured.towers[0].equippedSegments,['seg1']);
  assert.deepEqual(insured.towers[0].segmentInventory.map(item=>item.id),['seg2','seg1']);
