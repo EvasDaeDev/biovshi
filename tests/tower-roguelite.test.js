@@ -72,10 +72,11 @@ test('risk floors offer saved selection, crowd and mixed compositions',()=>{
   const [standard,danger]=plan.options;
   assert.equal(danger.style,style);
   assert.equal(danger.arenaId,standard.arenaId);
+  assert.ok(danger.profiles.length>=standard.profiles.length,'danger never has fewer opponents');
   assert.equal(validTowerFloorPlan(plan,t.level),true);
   assert.ok(TOWER_DANGER_STYLES[style].description);
   if(style==='trial'){
-   assert.ok(danger.profiles.length<=standard.profiles.length);
+   assert.equal(danger.profiles.length,standard.profiles.length,'trial keeps standard opponent count');
    assert.ok(danger.profiles.every(p=>p!=='basic'));
   }
   if(style==='crowd')assert.equal(danger.profiles.length,standard.profiles.length+1,'crowd really adds an opponent');
@@ -119,8 +120,9 @@ test('chosen floor and composition persist, with at most ten combatants includin
   assert.equal(first.options.length,2);
   assert.equal(first.options[0].arenaId,first.options[1].arenaId,'risk options must use the same arena');
   const [normal,danger]=first.options;
+  assert.ok(danger.profiles.length>=normal.profiles.length,'danger must not have fewer enemies');
   if(danger.style==='trial'){
-   assert.ok(danger.profiles.length<=normal.profiles.length,'selection trades numbers for specialists');
+   assert.equal(danger.profiles.length,normal.profiles.length,'selection keeps numbers and raises specialization');
    assert.ok(danger.profiles.every(id=>id!=='basic'),'selection contains specialists only');
   }else if(danger.style==='crowd'){
    assert.equal(danger.profiles.length,normal.profiles.length+1,'crowd adds exactly one enemy');
