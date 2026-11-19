@@ -182,8 +182,8 @@ export function towerPreparation(){
   let selectedReward=null,selectedOwned=null;
   function mutationIcon(type,site=null){
     const node=document.createElement('span');node.className='tower-mod-icon';
-    const candidate=site?[[site,ROBOT_PARTS[site]??ROBOT_PARTS[site.replace(/-graft(?:-\\d+)?/,'')]]][0]:Object.entries(ROBOT_PARTS).find(([partSite])=>towerUpgradeApplies(type,partSite));
-    if(candidate){const [,part]=candidate;
+    const candidate=site?[[site,ROBOT_PARTS[site]??ROBOT_PARTS[site.replace(/-graft(?:-\d+)?/,'')]]][0]:Object.entries(ROBOT_PARTS).find(([partSite])=>towerUpgradeApplies(type,partSite));
+    if(candidate?.[1]){const [,part]=candidate;
       node.style.backgroundImage=`url("${TOWER_MUTATION_ATLAS[type]}")`;
       node.style.backgroundSize='400% 400%';
       node.style.backgroundPosition=`${part.col/3*100}% ${part.row/3*100}%`;
@@ -224,6 +224,7 @@ export function towerPreparation(){
       const button=document.createElement('button');button.type='button';
       button.className='tower-inventory-item'+(item.installed?' is-equipped':'')+(selected?' is-selected':'');
       button.dataset.mutationType=item.type;button.dataset.mutationId=item.representativeId;
+      button.dataset.mutationSite=item.site;
       button.dataset.mutationRarity=String(item.rarity);
       button.setAttribute('aria-pressed',String(selected));
       const icon=mutationIcon(item.type,item.site);button.append(icon);
