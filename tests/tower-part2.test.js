@@ -223,6 +223,8 @@ test('every module description lists bonuses from the live gameplay model',()=>{
  }
  assert.match(towerMutationEffectText('optic'),/манёвр \+0,4/);
  assert.match(towerMutationEffectText('optic'),/крит \+2,5%/);
+ assert.match(towerMutationEffectText('optic'),/крит \+2,5% \(прямой бонус\)/);
+ assert.match(towerMutationEffectText('piston'),/сила \+0,55 \(шанс крита\)/);
  assert.match(towerMutationEffectText('synapse'),/откат атак −3%/);
 });
 
