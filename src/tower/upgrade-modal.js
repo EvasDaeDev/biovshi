@@ -6,6 +6,7 @@ import {towerSurgeryAvailableSites,towerSurgerySiteLabel,towerSurgeryCapacity,TO
 import {renderTowerUpgradePatient} from './upgrade-preview.js';
 import {towerPatientAnatomy} from './anatomy.js';
 import {ctx} from '../game/state.js';
+import {uiIcon} from '../ui/icons.js';
 
 const create=(tag,className,text)=>{
  const node=document.createElement(tag);
@@ -39,7 +40,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  const heading=create('h2','', 'УБЕЖИЩЕ');heading.id='tower-upgrade-title';
  const closeButton=create('button','tower-upgrade-close','×');closeButton.type='button';
  closeButton.setAttribute('aria-label','Закрыть убежище');
- const settingsButton=create('button','tower-upgrade-settings','НАСТРОЙКИ');settingsButton.type='button';
+ const settingsButton=create('button','tower-upgrade-settings');settingsButton.type='button';settingsButton.innerHTML=uiIcon('settings');
  settingsButton.setAttribute('aria-label','Открыть настройки из убежища');
  const headerActions=create('div','tower-upgrade-heading-actions');
  headerActions.append(settingsButton,closeButton);
