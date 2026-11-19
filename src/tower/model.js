@@ -10,7 +10,7 @@ import {validTowerRerolls} from './economy.js';
 import {isBossFloor,hasBoss} from '../boss/config.js';
 import {ensureBossEncounter,validBossEncounter,bossFloorReward} from '../boss/encounter.js';
 import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
-import {BASE_STATS,patientVictory,validStats,normalizeProsthetics} from '../garage/model.js';
+import {BASE_STATS,earnedStats,patientVictory,validStats,normalizeProsthetics} from '../garage/model.js';
 import {towerCycleInfo,towerCycleWins} from './cycles.js';
 export const TOWER_REWARD=10;
 export const towerEnemyReward=(t,victim=1)=>{
@@ -101,10 +101,17 @@ export function completeTower(session,player,won,random=Math.random){
   if(bossWon)awardBossArtifact(t.artifacts,t.level,random);
   creditArtifactRewards(session,player,t);t.record=Math.max(t.record,t.level);
   // Earned skill points restart every 30 floors without resetting history.
+  // Remember the player's manual skill allocation, independently of the
+  // points automatically earned in the current 30-floor cycle.
+  const earned=earnedStats(towerCycleWins(t.level));
+  const allocation=t.stats.map((value,i)=>value-earned[i]);
   const localPatient={stats:[...t.stats],wins:towerCycleWins(t.level),prosthetics:[...t.prosthetics]};
   patientVictory(localPatient);t.stats=localPatient.stats;t.wins++;t.level++;
   if(towerCycleWins(t.level)===0){
-   t.stats=[...BASE_STATS];t.insurance=newInsurance();t.cycleNotice=t.level;
+   // A cycle resets earned points, not the player's chosen distribution.
+   // Death without DMS and manual Tower reset still start from BASE_STATS.
+   t.stats=BASE_STATS.map((value,i)=>value+allocation[i]);
+   t.insurance=newInsurance();t.cycleNotice=t.level;
   }
   t.arenaRerolls=0;t.arenaRerollLocked=false;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;delete t.floorPlan;
   if(bossWon){
