@@ -11,6 +11,8 @@ import {onGameEvent} from '../src/game/event-bus.js';
 import {betNewSession} from '../src/betting/ledger.js';
 import {towerFor} from '../src/tower/model.js';
 import {ensureTowerFloorPlan} from '../src/tower/floors.js';
+import {towerRelationPlan,towerAllies} from '../src/tower/relations.js';
+import {towerCycleWins} from '../src/tower/cycles.js';
 import {earnedStats} from '../src/garage/model.js';
 import {BOSS_CONFIG,bossVariantForFloor} from '../src/boss/config.js';
 import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
@@ -26,6 +28,7 @@ const policy=args.policy??'approach';
 const selectedFloors=args.floors?.split(',').map(Number)??null;
 const bossBench=args.bossBench==='true';
 const naturalBoss=args.naturalBoss==='true';
+const cycleTactics=args.cycleTactics==='true';
 const diagnose=args.diagnose==='true';
 const maxAllowedBodyOverlapCm=Number(args.maxOverlapCm??2);
 if(!['approach','orbit','idle','evade'].includes(policy))throw Error('Invalid policy');
@@ -45,6 +48,17 @@ const scenarios=[
  {kind:'boss',arena:'columns',floor:20,profiles:['boss','agile','strong']},
  {kind:'boss',arena:'columns',floor:25,profiles:['boss','fast','elite']},
  {kind:'boss',arena:'columns',floor:30,profiles:['boss','strong','agile']}
+];
+// Real 1/60s physics, perception, team selection and physical boss protection
+// for cycles A, B, C, D and later combinations. Not player victory estimates.
+const cycleTacticsScenarios=[
+ {kind:'normal',arena:'columns',floor:31,profiles:['basic','fast','strong','agile','basic','fast']},
+ {kind:'normal',arena:'columns',floor:61,profiles:['fast','agile','strong','basic','elite','basic']},
+ {kind:'normal',arena:'columns',floor:91,profiles:['strong','agile','basic','elite','fast','basic']},
+ {kind:'boss',arena:'columns',floor:95,profiles:['boss','basic','basic']},
+ {kind:'normal',arena:'columns',floor:121,profiles:['elite','strong','agile','fast','basic','basic']},
+ {kind:'normal',arena:'columns',floor:151,profiles:['basic','strong','agile','elite','fast','basic']},
+ {kind:'normal',arena:'columns',floor:181,profiles:['strong','agile','basic','elite','fast','basic']}
 ];
 const bossBenchScenarios=[
  {kind:'boss',arena:'ward',floor:5,profiles:['boss','basic','basic'],label:'two ordinary'},
@@ -68,6 +82,7 @@ function runScenario(scenario,seed){
   initialPenetrations:0,initialOverlaps:0,maxBodyOverlapCm:0,overlapSamples:[],chargeProbe:{},
   combatSamples:[],longFight:null,bossHitsFrom:{},bossStrikesFrom:{},bossKilledBy:null,
   patientHitsOnBoss:0,playerHitsOnBoss:0,playerHitsTotal:0,bossHitsOnOthers:0,
+  relations:null,friendlyHits:0,
   bossDeathAt:null,playerAliveAtBossDeath:null,headHpAtEnd:null,
   errors:[],elapsedCpuMs:0};
  const began=Date.now();
@@ -83,9 +98,13 @@ function runScenario(scenario,seed){
   ctx.arenaRenderer=null;ctx.towerPlayer=0;
   const session=betNewSession(['Автопилот'],1000),tower=towerFor(session,0);
   tower.level=scenario.floor;tower.wins=scenario.floor-1;
-  tower.record=scenario.floor-1;tower.stats=earnedStats(scenario.floor-1);
+  tower.record=scenario.floor-1;tower.stats=earnedStats(towerCycleWins(scenario.floor));
   const option={arenaId:scenario.arena,kind:scenario.kind==='boss'?'boss':'danger',
    ...(scenario.kind==='normal'?{style:'mixed'}:{}),profiles:scenario.profiles};
+  if(cycleTactics){
+   option.relations=towerRelationPlan(scenario.floor,scenario.profiles,Math.random);
+   row.relations=structuredClone(option.relations);
+  }
   tower.floorPlan={floor:scenario.floor,selected:0,options:[option]};
   if(naturalBoss){
    delete tower.floorPlan;
@@ -162,6 +181,8 @@ function runScenario(scenario,seed){
   };
   inspect(true);
   off=onGameEvent(e=>{
+   if(e.type==='combat-strike'&&cycleTactics&&towerAllies(ctx.towerRun,e.from,e.to,ctx.game.time))
+    row.friendlyHits++;
    if(e.type==='combat-strike'&&scenario.kind==='boss'){
      if(e.from===0)row.playerHitsTotal++;
      if(e.to===1){
@@ -235,12 +256,13 @@ function runScenario(scenario,seed){
  return row;
 }
 const runs=[];
-for(const scenario of (naturalBoss?[{kind:'boss',arena:'ward',floor:5,profiles:['boss','basic','basic'],label:'naturally generated'}]:bossBench?bossBenchScenarios:scenarios).filter(s=>!selectedFloors||selectedFloors.includes(s.floor))){
+for(const scenario of (naturalBoss?[{kind:'boss',arena:'ward',floor:5,profiles:['boss','basic','basic'],label:'naturally generated'}]:bossBench?bossBenchScenarios:cycleTactics?cycleTacticsScenarios:scenarios).filter(s=>!selectedFloors||selectedFloors.includes(s.floor))){
  for(let sample=0;sample<samples;sample++){
   const row=runScenario(scenario,offset+sample*15485863+scenario.floor*7919);
   runs.push(row);
   console.log('FIGHT '+JSON.stringify({
    arena:row.arena,floor:row.floor,variant:row.variant,label:row.label,participants:row.participants,
+   relations:cycleTactics?row.relations:undefined,friendlyHits:cycleTactics?row.friendlyHits:undefined,
    seed:row.seed,completed:row.completed,winner:row.winner,seconds:row.duration,
    hits:row.hits,strikes:row.strikes,unstucks:row.unstucks,charges:row.charges,sweeps:row.sweeps,
    nonFinite:row.nonFinite,bodyPenetrations:row.bodyPenetrations,bodyOverlaps:row.bodyOverlaps,
@@ -257,6 +279,7 @@ for(const scenario of (naturalBoss?[{kind:'boss',arena:'ward',floor:5,profiles:[
 }
 const summary={
  total:runs.length,completed:runs.filter(r=>r.completed).length,
+ friendlyHits:runs.reduce((n,r)=>n+r.friendlyHits,0),
  timedOut:runs.filter(r=>!r.completed&&!r.errors.length).length,
  errors:runs.filter(r=>r.errors.length).length,
  nonFinite:runs.reduce((n,r)=>n+r.nonFinite,0),
@@ -279,7 +302,7 @@ const summary={
    [reason,runs.filter(r=>!r.completed&&(r.longFight?.reason??'error')===reason).length])),
  cpuSeconds:Math.round(runs.reduce((n,r)=>n+r.elapsedCpuMs,0)/100)/10
 };
-const result={simulation:'headless real 1/60s game loop',selectedFloors,diagnose,bossBench,naturalBoss,maxAllowedBodyOverlapCm,
+const result={simulation:'headless real 1/60s game loop',selectedFloors,diagnose,bossBench,naturalBoss,cycleTactics,maxAllowedBodyOverlapCm,
  policy:policy==='orbit'?'Player approaches and circles a nearby enemy at about 55 cm; not human performance':
  policy==='idle'?'Player remains idle and never presses movement controls':
  policy==='evade'?'Player avoids other fighters when closer than 170 cm and does not attack deliberately':
@@ -289,5 +312,5 @@ fs.mkdirSync(out.split('/').slice(0,-1).join('/')||'.',{recursive:true});
 fs.writeFileSync(out,JSON.stringify(result,null,2)+'\n');
 console.log('SUMMARY '+JSON.stringify(summary));
 console.log('REPORT '+out);
-if(summary.errors||summary.nonFinite||summary.initialPenetrations||summary.initialOverlaps||
+if(summary.errors||summary.nonFinite||cycleTactics&&summary.friendlyHits||summary.initialPenetrations||summary.initialOverlaps||
  summary.maxBodyOverlapCm>maxAllowedBodyOverlapCm)process.exitCode=1;
