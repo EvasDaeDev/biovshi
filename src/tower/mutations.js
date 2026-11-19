@@ -157,7 +157,10 @@ export function towerMutationSnapshot(patient,robot=null){
  // Only the headless physics harness ever attaches rarityPhysics to the
  // transient garage entry. A real run/save never serializes this field.
  // No rarity multiplier is enabled in player-facing game rules.
- const mutationBonus=patient?.rarityPhysics?.effective??towerMutationBonus(patient?.mutations);
+ const equippedParts=new Set(patient?.equippedSegments??[]);
+ const segmentTypes=(patient?.segmentInventory??[]).filter(item=>equippedParts.has(item.id)).map(item=>item.type);
+ const mutationBonus=patient?.rarityPhysics?.effective??
+  towerMutationBonus([...(patient?.mutations??[]),...segmentTypes]);
  const surgeryBonus=towerSurgeryBonus(patient?.surgeries,robot);
  return {...snapshot,mutationBonus,surgeryBonus,
   effective:snapshot.effective.map((n,i)=>n+mutationBonus[i]+surgeryBonus[i])};
