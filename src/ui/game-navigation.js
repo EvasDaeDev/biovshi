@@ -1,7 +1,7 @@
 // Consistent landscape navigation: Back is a screen transition; Close belongs
 // to native popups and never performs a screen transition.
 import {ctx} from '../game/state.js';
-import {bettingOpen} from '../betting/ui.js';
+import {bettingOpen,bettingSetup,bettingReadDraft} from '../betting/ui.js';
 import {garageOpen} from '../garage/ui.js';
 import {openMenu} from '../tower/ui.js';
 
@@ -23,35 +23,53 @@ export function initializeGameNavigation(){
   if(!results.hidden)return 'results';
   return 'arena';
  };
+ const previousFor=current=>{
+  // Arena and final results are not reversible view transitions.
+  if(current==='tower'||current==='results')return 'menu';
+  const last=previousScreens.at(-1);
+  if(current==='garage'&&['betting','setup'].includes(last))return last;
+  if(current==='betting'&&['garage','setup'].includes(last))return last;
+  if(current==='setup'&&['betting','garage'].includes(last))return last;
+  return 'menu';
+ };
  const update=()=>{
   const next=resolve();
   if(next!==screen){
    if(next===suppressNext)suppressNext=null;
-   else if(screen!=='arena')previousScreens.push(screen);
+   else if(next==='menu'||next==='arena'||next==='results')previousScreens=[];
+   else if(!['arena','results'].includes(screen)&&previousScreens.at(-1)!==screen)
+    previousScreens.push(screen);
+   if(previousScreens.length>12)previousScreens=previousScreens.slice(-12);
    screen=next;
   }
+  const target=previousFor(screen);
   back.hidden=screen==='menu'||screen==='arena';
-  back.setAttribute('aria-label',screen==='garage'?'Назад к ставкам':
-   screen==='tower'?'Назад в главное меню':
-   screen==='setup'?'Назад на предыдущий экран':
-   screen==='betting'?'Назад в главное меню':'Назад');
+  back.setAttribute('aria-label',target==='menu'?'Назад в главное меню':
+   target==='betting'?'Назад к ставкам':
+   target==='garage'?'Назад в процедурную':'Назад к созданию игры');
   nav.dataset.screen=screen;
  };
+ const protectedDialog='#game-action-confirm[open],#tower-module-replacement[open],#tower-upgrade-window[open],.betting-input-dialog[open],#tower-cycle-notice[open]';
  back.onclick=()=>{
-  if(ctx.settingsOpen||back.hidden)return;
-  if(root.querySelector('#game-action-confirm[open],#tower-module-replacement[open],#tower-upgrade-window[open],.betting-input-dialog[open],#tower-cycle-notice[open]'))return;
-  const current=resolve();
-  const previous=previousScreens.pop();
-  const destination=current==='garage'&&previous==='betting'?'betting':
-   current==='betting'&&previous==='garage'?'garage':
-   current==='setup'&&previous==='betting'&&ctx.afterSetup!=='menu'?'betting':'menu';
-  suppressNext=destination;
-  if(destination==='betting'){bettingOpen();return;}
-  if(destination==='garage'){garageOpen();return;}
-  if(!openMenu()){
-   suppressNext=null;
-   if(previous)previousScreens.push(previous);
+  update(); // MutationObserver may not have processed the last screen change yet.
+  if(ctx.settingsOpen||back.hidden||root.querySelector(protectedDialog))return;
+  const current=resolve(),destination=previousFor(current);
+  // Keep any partially edited bet slip before opening a different screen.
+  if(current==='betting'&&betting.querySelector('#bet-stakes-form')){
+   ctx.betDraft={session:ctx.betting,round:ctx.betting.round,
+    bets:bettingReadDraft(),arenaId:ctx.selectedArenaId};
   }
+  const popped=destination!=='menu'?previousScreens.pop():null;
+  suppressNext=destination;
+  if(destination==='betting'){bettingOpen();}
+  else if(destination==='garage'){garageOpen();}
+  else if(destination==='setup'){bettingSetup();}
+  else if(!openMenu()){
+   suppressNext=null;
+   if(popped)previousScreens.push(popped);
+   return;
+  }
+  update();
  };
  const observer=new doc.defaultView.MutationObserver(update);
  for(const node of [launch,tower,betting,results]){
