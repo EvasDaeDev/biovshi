@@ -63,3 +63,17 @@ test('small landscape touch devices keep global controls fixed and full combat t
  assert.match(rootCss,/#robot-tag-hops-v22\.mobile-layout #tower-upgrade-window \.tower-upgrade-heading-actions \.tower-upgrade-settings\s*\{\s*top:calc\(10px \/ var\(--interface-scale,1\)\);\s*right:calc\(10px \/ var\(--interface-scale,1\)\)/);
  assert.doesNotMatch(rootCss,/(?:\.robot-card|\.robot-card-metrics|\.patient-skills)\s*\{[^}]*display:none/);
 });
+
+test('Tower preparation remains dark and uses logical height across scaled layouts',()=>{
+ const tower=css.slice(css.indexOf('#robot-tag-hops-v22 #tower-preparation .bet-panel{'),
+  css.indexOf('/* Shelter: keep the native top-layer dialog'));
+ assert.match(tower,/background:#22271f;/);
+ assert.match(tower,/background-image:none;/);
+ assert.match(tower,/#tower-floor-preview \.tower-challenge-option\.is-selected\s*\{[\s\S]*?border:2px solid var\(--ui-selected\)/);
+ assert.match(tower,/#tower-preparation>\.bet-panel>\.bet-actions #tower-fight\s*\{[\s\S]*?background:#884734/);
+ const shelter=css.slice(css.indexOf('/* Shelter: keep the native top-layer dialog'),css.indexOf('/* Module replacement is a true popup'));
+ assert.match(shelter,/max-height:calc\(var\(--game-height,100dvh\) - 20px\);/);
+ assert.doesNotMatch(shelter,/max-height:calc\(100dvh - 20px\)/);
+ assert.doesNotMatch(shelter,/max-height:min\(30dvh,235px\)/);
+ assert.match(css,/#robot-tag-hops-v22 \.tower-replacement-dialog\s*\{[\s\S]*?max-height:min\(calc\(var\(--game-height,100dvh\) - 18px\),650px\)/);
+});
