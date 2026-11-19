@@ -44,37 +44,61 @@ export function towerUpgradeApplies(id,site){
   pattern===site
  );
 }
-// Priority: the operation implanted INTO this exact piece, then the first
-// installed mutation that covers it. Later mutations still grant all of their
-// gameplay bonuses even if an earlier mutation owns this sprite slot.
-export function towerUpgradeAtlas(patient,site,{previewSurgery=null,previewMutation=null}={}){
- const surgery=previewSurgery?.site===site?previewSurgery:
-  (patient?.surgeries??[]).find(op=>op.site===site);
- if(surgery&&TOWER_SURGERY_ATLAS[surgery.procedure])
-  return TOWER_SURGERY_ATLAS[surgery.procedure];
- // A newly owned version of the same module uses its prospective rarity,
- // while other already installed modules retain their original sprite priority.
- const installed=(patient?.mutations??[]).find(id=>towerUpgradeApplies(id,site));
- if(previewMutation&&towerUpgradeApplies(previewMutation,site)&&(!installed||installed===previewMutation))
-  return TOWER_MUTATION_ATLAS[previewMutation]??null;
- if(installed)return TOWER_MUTATION_ATLAS[installed]??null;
- // A hovered/pending module only fills free sprite slots; it does not
- // hide an earlier installed module that will remain visible after purchase.
- if(previewMutation&&towerUpgradeApplies(previewMutation,site))
-  return TOWER_MUTATION_ATLAS[previewMutation]??null;
- return null;
+// Assign a stable, pseudo-random-looking mosaic of eligible atlases across
+// anatomical cells. Each surgery and each equipped mutation is a candidate;
+// no improvement has blanket priority over another at an overlapping site.
+// The choice is derived from the upgrade set and cell, not Math.random(), so
+// previews, arena sprites and detached pieces agree between redraws/reloads.
+const hashString=value=>{
+ let hash=2166136261;
+ for(let i=0;i<value.length;i++)hash=Math.imul(hash^value.charCodeAt(i),16777619);
+ return hash>>>0;
+};
+const segmentIndex=site=>{
+ if(site.startsWith('spine-'))return Number(site.slice(6))||0;
+ const match=/^(arm|leg)-(-?1)(?:-graft-(\d+))?-(upper|lower)$/.exec(site);
+ if(!match)return 0;
+ const [,kind,side,graft,part]=match;
+ // Paired upper/lower cells are deliberately given different slots.
+ return (graft?Number(graft)*4:0)+(side==='1'?2:0)+(part==='lower'?1:0);
+};
+export function towerUpgradeVisual(patient,site,{previewSurgery=null,previewMutation=null,previewRarity=null}={}){
+ const candidates=[];
+ for(const op of patient?.surgeries??[]){
+  if(op.site===site&&TOWER_SURGERY_ATLAS[op.procedure]&&op.site!==previewSurgery?.site)
+   candidates.push({key:'surgery:'+op.procedure,atlas:TOWER_SURGERY_ATLAS[op.procedure],rarity:0});
+ }
+ if(previewSurgery?.site===site&&TOWER_SURGERY_ATLAS[previewSurgery.procedure])
+  candidates.push({key:'surgery:'+previewSurgery.procedure,atlas:TOWER_SURGERY_ATLAS[previewSurgery.procedure],rarity:0});
+ const installed=towerInstalledItems(patient);
+ for(const type of new Set([...(patient?.mutations??[]),...installed.map(item=>item.type)])){
+  if(!towerUpgradeApplies(type,site)||!TOWER_MUTATION_ATLAS[type])continue;
+  const item=installed.find(entry=>entry.type===type);
+  candidates.push({key:'mutation:'+type,atlas:TOWER_MUTATION_ATLAS[type],
+   rarity:item?.rarity??0});
+ }
+ if(previewMutation&&towerUpgradeApplies(previewMutation,site)&&TOWER_MUTATION_ATLAS[previewMutation]){
+  const previous=candidates.findIndex(item=>item.key==='mutation:'+previewMutation);
+  if(previous>=0)candidates.splice(previous,1);
+  candidates.push({key:'mutation:'+previewMutation,atlas:TOWER_MUTATION_ATLAS[previewMutation],
+   rarity:previewRarity??installed.find(item=>item.type===previewMutation)?.rarity??patient?.mutationDraft?.rarity??0});
+ }
+ if(!candidates.length)return {atlas:null,rarity:0};
+ candidates.sort((a,b)=>a.key.localeCompare(b.key,'en'));
+ const identity=candidates.map(item=>item.key).join('|');
+ // All four standard limb cells share the same candidate-set rotation.
+ // That gives both overlapping sets visible cells instead of allowing one
+ // atlas to win every cell by chance. Extra graft limbs use the same rule.
+ const rotation=hashString(identity)%candidates.length;
+ const selected=candidates[(rotation+segmentIndex(site))%candidates.length];
+ return {atlas:selected.atlas,rarity:selected.rarity};
 }
-
-// Visual-only rarity tint: 80% of the original RGB + 20% of rarity colour.
-// Combat skills retain their existing values until the balance model is approved.
-export function towerUpgradeRarity(patient,site,{previewMutation=null,previewRarity=null,previewSurgery=null}={}){
- if(previewSurgery?.site===site&&TOWER_SURGERY_ATLAS[previewSurgery.procedure]||
-  (patient?.surgeries??[]).some(op=>op.site===site&&TOWER_SURGERY_ATLAS[op.procedure]))return 0;
- const module=towerInstalledItems(patient).find(item=>towerUpgradeApplies(item.type,site));
- if(previewMutation&&towerUpgradeApplies(previewMutation,site)&&(!module||module.type===previewMutation))
-  return previewRarity??patient?.mutationDraft?.rarity??0;
- if(module)return module.rarity;
- return 0;
+export function towerUpgradeAtlas(patient,site,options={}){
+ return towerUpgradeVisual(patient,site,options).atlas;
+}
+// Rarity tint always belongs to the atlas actually selected for this cell.
+export function towerUpgradeRarity(patient,site,options={}){
+ return towerUpgradeVisual(patient,site,options).rarity;
 }
 const filters=new WeakMap();let serial=0;
 export function towerRaritySvgFilter(root,rank){
