@@ -61,6 +61,35 @@ export function refreshMenu(){
   newGame.textContent=s?'НОВАЯ ИГРА':'СОЗДАТЬ ИГРУ';
   newGame.classList.toggle('is-new-game',Boolean(s));
 }
+const menuDescriptions = [
+  {
+    body: 'Здесь ломаются конечности, сгорают ставки и умирают надежды. Ты будешь злиться, проигрывать и клясться больше не возвращаться.',
+    ending: 'Но мы-то знаем, что завтра ты снова придёшь на процедуры.'
+  },
+  {
+    body: 'Добро пожаловать в клинику, где пациенты калечат друг друга, ставки не оправдываются, а нервные срывы входят в стоимость лечения.',
+    ending: 'Удаление игры не считается выпиской.'
+  },
+  {
+    body: 'Ты будешь ненавидеть эту игру. Проклинать случайность, проигрывать ставки и смотреть, как твоего любимого урода разбирают на запчасти.',
+    ending: 'Побочные эффекты? Привыкание, агрессия и повторная госпитализация.'
+  }
+];
+let previousMenuDescription = -1;
+function rotateMenuDescription() {
+  const target = ctx.root?.querySelector('#launch-overlay .launch-subtitle');
+  if (!target) return;
+  // Never repeat the previous message on the next menu appearance.
+  const offset = Math.floor(Math.random() * (menuDescriptions.length - 1)) + 1;
+  previousMenuDescription = (previousMenuDescription + offset) % menuDescriptions.length;
+  const {body, ending} = menuDescriptions[previousMenuDescription];
+  const lead = document.createElement('span');
+  lead.textContent = body;
+  const punchline = document.createElement('strong');
+  punchline.textContent = ending;
+  target.replaceChildren(lead, punchline);
+}
+
 export function openMenu(){
   const active=['spawning','running'].includes(ctx.startup.phase)&&!ctx.combat.finished;
   if(active&&!confirm('Вернуться в главное меню? Текущий бой будет отменён.'))return false;
@@ -80,7 +109,7 @@ export function openMenu(){
   if(upgrade){if(upgrade.open&&typeof upgrade.close==='function')upgrade.close();upgrade.removeAttribute('open');upgrade.hidden=true;}
   ctx.root.querySelector('#tower-controls').hidden=true;
   ctx.root.dataset.gameMode='menu';ctx.deferTowerArena=false;
-  refreshMenu();ctx.root.querySelector('#launch-overlay').hidden=false;
+  refreshMenu();rotateMenuDescription();ctx.root.querySelector('#launch-overlay').hidden=false;
   ctx.root.querySelector('#launch-tower').focus();
   return true;
 }
@@ -763,6 +792,7 @@ export function towerResults(){
 }
 export function installTowerUI({enterFight=false}={}){
   refreshMenu();
+  rotateMenuDescription();
   ctx.resetButton.hidden=false;
   ctx.root.querySelector('#tower-wallet').hidden=ctx.mode!=='tower';
   const menu=ctx.root.querySelector('#launch-overlay');
