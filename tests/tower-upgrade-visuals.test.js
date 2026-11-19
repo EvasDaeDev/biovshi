@@ -31,7 +31,7 @@ test('overlapping mutation atlases create a stable mixed appearance for both arm
  assert.deepEqual(sites.map(site=>towerUpgradeAtlas(patient,site)),atlases,'no random visual flicker');
  assert.deepEqual(sites.map(site=>towerUpgradeAtlas({...patient,mutations:['optic','piston','servo']},site)),atlases,
   'equipping order does not change the mosaic');
- assert.match(towerUpgradeAtlas(patient,'head'),/ar_mod_optic\\.png$/);
+ assert.match(towerUpgradeAtlas(patient,'head'),/ar_mod_optic\.png$/);
  assert.equal(towerUpgradeAtlas(patient,'leg-1-upper'),TOWER_MUTATION_ATLAS.servo);
  assert.equal(towerUpgradeAtlas({mutations:['piston']},'head'),null);
  assert.equal(towerUpgradeApplies('optic','arm-1-upper'),false);
@@ -42,7 +42,7 @@ test('surgery joins segment atlas choices and rarity follows the chosen mutation
   mutationInventory:[{id:'m1',type:'servo',rarity:3},{id:'m2',type:'piston',rarity:5}],
   equippedMutations:['m1','m2']};
  const selected=towerUpgradeAtlas(patient,'arm-1-upper');
- assert.ok([TOWER_SURGERY_ATLAS.impact,TOWER_MUTATION_ATLAS.servo,TOWER_MUTATION_ATLAS.piston].includes(selected));
+ assert.equal(selected,TOWER_SURGERY_ATLAS.impact,'operated segment remains visibly operated');
  const expected=selected===TOWER_MUTATION_ATLAS.servo?3:selected===TOWER_MUTATION_ATLAS.piston?5:0;
  assert.equal(towerUpgradeRarity(patient,'arm-1-upper'),expected);
  assert.equal(towerUpgradeAtlas(patient,'arm-1-upper'),selected);
