@@ -49,9 +49,8 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  const table=create('div','tower-upgrade-table');
  const drawing=create('div','tower-upgrade-drawing');
  drawing.id='tower-upgrade-patient';
- const siteLabel=create('p','tower-upgrade-site','ПАЦИЕНТ · ВИД СВЕРХУ · ГОЛОВА СПРАВА');
- const description=create('p','tower-upgrade-help','Нажми на нужный сегмент пациента или выбери его в списке');
- table.append(drawing,siteLabel,description);paper.append(table);
+ const siteLabel=create('p','tower-upgrade-site');siteLabel.hidden=true;
+ table.append(drawing,siteLabel);paper.append(table);
  const stats=create('section','tower-upgrade-stats');stats.id='tower-upgrade-stats';
  stats.setAttribute('aria-live','polite');paper.append(stats);
  const nav=create('div','tower-upgrade-tabs');nav.setAttribute('role','tablist');
@@ -124,18 +123,22 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   const after=towerMutationSnapshot(draft).effective;
   stats.replaceChildren();
   const title=create('div','tower-upgrade-stats-head');
-  title.append(create('strong','','ПАРАМЕТРЫ'),
-   create('small','','СЕЙЧАС → ПОСЛЕ'));
+  title.append(create('strong','','ПАРАМЕТРЫ'));
   stats.append(title);
   const values=create('div','tower-upgrade-stat-values');
   for(let i=0;i<3;i++){
    const cell=create('div','tower-upgrade-stat');
    cell.append(create('span','',statNames[i]));
    const value=create('b','');
-   value.append(create('span','tower-stat-before',format(before[i])),document.createTextNode(' → '));
+   value.append(create('span','tower-stat-before',format(before[i])));
    const next=create('span','tower-stat-after',format(after[i]));
-   if(after[i]>before[i]+.0001){next.classList.add('is-positive');next.textContent+=' ▲';}
-   else if(after[i]<before[i]-.0001){next.classList.add('is-negative');next.textContent+=' ▼';}
+   const delta=after[i]-before[i],changed=Math.abs(delta)>.0001;
+   next.hidden=!changed;
+   if(changed){
+    value.append(document.createTextNode(' → '));
+    next.classList.add(delta>0?'is-positive':'is-negative');
+    next.textContent+=delta>0?' ▲':' ▼';
+   }
    value.append(next);cell.append(value);values.append(cell);
   }
   stats.append(values);
@@ -150,15 +153,19 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   stats.append(create('small','tower-upgrade-stats-note',detail));
   const currentCombat=towerMutationCombatBonus(run.mutations),nextCombat=towerMutationCombatBonus(draft.mutations);
   const combatLine=create('small','tower-upgrade-stats-note tower-combat-preview');
-  combatLine.append(document.createTextNode('КРИТ: '+format(currentCombat.crit*100)+'% → '));
-  const critAfter=create('strong','',format(nextCombat.crit*100)+'%');
-  if(nextCombat.crit>currentCombat.crit+.0001){critAfter.classList.add('is-positive');critAfter.textContent+=' ▲';}
-  else if(nextCombat.crit<currentCombat.crit-.0001){critAfter.classList.add('is-negative');critAfter.textContent+=' ▼';}
-  combatLine.append(critAfter,document.createTextNode(' · ОТКАТ АТАК: '+format(currentCombat.cooldownMultiplier*100)+'% → '));
-  const cooldownAfter=create('strong','',format(nextCombat.cooldownMultiplier*100)+'%');
-  if(nextCombat.cooldownMultiplier<currentCombat.cooldownMultiplier-.0001){cooldownAfter.classList.add('is-positive');cooldownAfter.textContent+=' ▲';}
-  else if(nextCombat.cooldownMultiplier>currentCombat.cooldownMultiplier+.0001){cooldownAfter.classList.add('is-negative');cooldownAfter.textContent+=' ▼';}
-  combatLine.append(cooldownAfter);stats.append(combatLine);
+  const combatValue=(label,before,after,higherIsBetter)=>{
+   combatLine.append(document.createTextNode(label+format(before)+'%'));
+   if(Math.abs(after-before)>.0001){
+    combatLine.append(document.createTextNode(' → '));
+    const changed=create('strong',(after>before)===higherIsBetter?'is-positive':'is-negative',format(after)+'%');
+    changed.textContent+=((after>before)===higherIsBetter?' ▲':' ▼');
+    combatLine.append(changed);
+   }
+  };
+  combatValue('КРИТ: ',currentCombat.crit*100,nextCombat.crit*100,true);
+  combatLine.append(document.createTextNode(' · '));
+  combatValue('ОТКАТ АТАК: ',currentCombat.cooldownMultiplier*100,nextCombat.cooldownMultiplier*100,false);
+  stats.append(combatLine);
   const anatomySummary=run=>{
    const body=towerPatientAnatomy(run);
    return {segments:body?.segments.length??13,
@@ -182,11 +189,8 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
     paint();
    }:null
   });
-  siteLabel.textContent=editingSurgery&&site?'ВЫБРАНО: '+towerSurgerySiteLabel(site):
-   'ПАЦИЕНТ ЛЕЖИТ ГОРИЗОНТАЛЬНО · ГОЛОВА СПРАВА';
-  description.textContent=editingSurgery?
-   'Выбери часть тела на схеме; её атлас и параметры обновятся до оплаты':
-   'Наведи курсор на модуль для предпросмотра его атласа и характеристик';
+  siteLabel.hidden=!editingSurgery||!site;
+  siteLabel.textContent=editingSurgery&&site?'ВЫБРАНО: '+towerSurgerySiteLabel(site):'';
  }
  function setTab(next){
   const surgeryUnlocked=run.level>=TOWER_SURGERY_MIN_LEVEL;
@@ -199,10 +203,9 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   modsContainer.hidden=activeTab!=='mutations';
   surgeryContainer.hidden=activeTab!=='surgery';
   artifactsContainer.hidden=activeTab!=='artifacts';
-  const viewingArtifacts=activeTab==='artifacts';
-  paper.classList.toggle('is-artifacts',viewingArtifacts);
-  table.hidden=viewingArtifacts;stats.hidden=viewingArtifacts;
-  if(!viewingArtifacts)paint();
+  // Artifacts use the same right-hand tab panel as the other two views.
+  // Keep the patient and current parameters visible in the left column.
+  paint();
  }
  function refresh(){
   renderWallet(wallet);
