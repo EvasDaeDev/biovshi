@@ -180,7 +180,7 @@ test('skip is reversible, disables all remaining chapters, survives reload and c
  s.doc.dispatchEvent(new s.dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
  s.next();assert.equal(s.api.active,false);assert.equal(readTutorial(localStorage).enabled,false);
  s.doc.querySelector('#launch-overlay').hidden=true;bettingSetup();s.api.sync();assert.equal(s.api.active,false);
- s.doc.querySelector('#arena-settings-button').click();assert.equal(ctx.settingsOpen,true);
+ s.doc.querySelector('#game-nav-settings').click();assert.equal(ctx.settingsOpen,true);
  s.doc.querySelector('#tutorial-start').click();assert.equal(ctx.settingsOpen,false);assert.equal(s.api.active,true);
  assert.equal(tutorialChapter(ctx),'setup');assert.equal(readTutorial(localStorage).enabled,true);
  s.cleanup();
