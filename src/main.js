@@ -18,16 +18,22 @@ import {applyTextures} from './render/textures.js';
 import {initializePixiArena} from './render/pixi-scene.js';
 import {initializeDiagnostics} from './render/diagnostics.js';
 import {preloadTextures} from './assets/preload.js';
+import {createLoadingScreen} from './ui/loading-screen.js';
 import {bettingLoad,bettingSave} from './betting/storage.js';
 import {startSpawnSequence} from './game/session.js';
 let cancelled=false;
 // Only a full page load requires the explicit sound/simulation gesture.
 let launchAccepted=false;
-async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,enterFight=false}){
+async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,enterFight=false,loading=null}){
+ loading?.update('Создаём пациентов…',{done:1,total:6});
  initializeGame({textures,session,entry,arenaId,tower});
  await applyTextures();if(cancelled||ctx.disposed)return;
+ loading?.update('Рисуем портреты пациентов…',{done:2,total:6});
  await preparePatientPortraits();if(cancelled||ctx.disposed)return;
- paintTelemetry();await initializeFloor();await initializePixiArena();
+ loading?.update('Подготавливаем поверхность арены…',{done:3,total:6});
+ paintTelemetry();await initializeFloor();
+ loading?.update('Настраиваем графику арены…',{done:4,total:6});
+ await initializePixiArena();
  if(cancelled||ctx.disposed)return;
  if(ctx.startup.phase==='garage')garageOpen();
  initializeDiagnostics();
@@ -38,6 +44,7 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,
  const launchButton=ctx.root.querySelector('#launch-game');
  gate.hidden=launchAccepted;
  installTowerUI({enterFight});
+ loading?.update('Подключаем управление и интерфейс…',{done:5,total:6});
  initializeModalFocus();
  initializeTutorial();
  launchButton.onclick=()=>{
@@ -51,22 +58,27 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,
  ctx.root.querySelector('#launch-setup').onclick=()=>{audio.unlock();launchAccepted=true;ctx.startSetup();};
  if(launchAccepted&&ctx.startup.phase==='demo')startSpawnSequence();
  if(enterFight)startSpawnSequence();
+ loading?.update('Арена готова!',{done:6,total:6});
  ctx.platform?.ready();
 }
 async function boot(){
  const root=document.getElementById('robot-tag-hops-v22');
- let loading=document.getElementById('texture-loading');
- if(!loading){loading=document.createElement('div');loading.id='texture-loading';loading.textContent='Подготовка арены…';loading.setAttribute('role','status');document.body.prepend(loading);}
- root.inert=true;const textures=await preloadTextures();if(cancelled)return;
+ const loading=createLoadingScreen();
+ root.inert=true;
+ const textures=await preloadTextures({onProgress:(done,total)=>
+  loading.update('Загружаем текстуры пациентов и арены…',{done,total})});
+ if(cancelled){loading.close();return;}
+ loading.update('Текстуры загружены. Запускаем игру…',{done:0,total:6});
  ctx.BET_STORAGE=SESSION_STORAGE;const session=bettingLoad();
  ctx.switchArena=async arenaId=>{
    if(arenaId===ctx.arenaId)return;
    const session=ctx.betting,expanded=ctx.arenaExpanded;
    session.arenaId=arenaId;bettingSave();root.inert=true;
-   const progress=document.createElement('div');progress.id='texture-loading';progress.textContent='Подготовка арены…';progress.setAttribute('role','status');document.body.prepend(progress);
+   const progress=createLoadingScreen();
    ctx.keepArenaRenderer=true;
-   try{await prepare({textures,session,entry:'betting',arenaId});ctx.setArenaExpanded?.(expanded);}
-   finally{ctx.keepArenaRenderer=false;root.inert=false;progress.remove();}
+   try{await prepare({textures,session,entry:'betting',arenaId,loading:progress});ctx.setArenaExpanded?.(expanded);}
+   catch(error){progress.fail('Ошибка загрузки арены. Повторите действие.');throw error;}
+   finally{ctx.keepArenaRenderer=false;root.inert=false;progress.close();}
  };
  const transition=async options=>{
    root.inert=true;ctx.audio?.unlock();launchAccepted=true;ctx.keepArenaRenderer=true;
@@ -110,27 +122,24 @@ async function boot(){
    ctx.deferTowerArena=false;
    // initializeGame changes data-game-mode before its async texture/renderer
    // work finishes. Cover the old canvas until the new scene is ready.
-   const progress=document.createElement('div');
-   progress.id='texture-loading';
-   progress.textContent='Подготовка арены…';
-   progress.setAttribute('role','status');
-   document.body.prepend(progress);
+   const progress=createLoadingScreen();
    ctx.towerTransition=(async()=>{
      try{
        await transition({session:current,entry:'tower',tower:structuredClone(run),
-         arenaId:selectedTowerFloor(run)?.arenaId??randomArenaId(),enterFight:true});
-     }finally{progress.remove();}
+         arenaId:selectedTowerFloor(run)?.arenaId??randomArenaId(),enterFight:true,loading:progress});
+     }catch(error){progress.fail('Не удалось подготовить арену.');throw error;}
+     finally{progress.close();}
    })();
    return ctx.towerTransition;
  };
  ctx.startTotalizator=()=>{bettingCancel();return transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId});};
  ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});setPaused(true);ctx.afterSetup='menu';bettingSetup();};
  ctx.startDemo=()=>transition({session:ctx.betting,entry:'auto',arenaId:ctx.betting?.arenaId??'ward'});
- await prepare({textures,session,arenaId:session?.arenaId??'ward'});
- if(cancelled||ctx.disposed)return;root.inert=false;loading.remove();
+ await prepare({textures,session,arenaId:session?.arenaId??'ward',loading});
+ if(cancelled||ctx.disposed){loading.close();return;}root.inert=false;loading.close();
 }
 boot().catch(error=>{
  console.error('Game startup:',error);
- const loading=document.getElementById('texture-loading');if(loading)loading.textContent='Не удалось подготовить арену. Обновите страницу.';
+ const loading=document.getElementById('texture-loading');if(loading){const status=loading.querySelector('.loading-status');if(status)status.textContent='Не удалось подготовить арену. Обновите страницу.';else loading.textContent='Не удалось подготовить арену. Обновите страницу.';loading.setAttribute('aria-busy','false');}
 });
 if(import.meta.hot)import.meta.hot.dispose(()=>{cancelled=true;ctx.root?.__disposeTag?.();});
