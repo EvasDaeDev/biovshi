@@ -200,7 +200,8 @@ test('preparation replaces Menu with grey priced DMS, turns green after buying, 
  const f=startBossScenario({floor:5});
  try{
   towerPreparation();const button=document.querySelector('#tower-insurance'),wallet=document.querySelector('#tower-prep-name');
-  assert.equal(wallet.querySelector('.tower-player-name').textContent,f.session.players[ctx.towerPlayer].name);
+  assert.equal(wallet.querySelector('.tower-player-name').firstChild.textContent,f.session.players[ctx.towerPlayer].name);
+   assert.match(wallet.querySelector('.tower-record-height').textContent,/РЕКОРДНАЯ ВЫСОТА: 4 ЭТАЖ/);
   assert.match(wallet.querySelector('.tower-player-bank').textContent,/1\s*000/);
   assert.equal(document.querySelector('#tower-prep-menu'),null);assert.match(button.textContent,/ДМС.*50/);assert.equal(button.classList.contains('is-active'),false);
   button.click();assert.equal(f.session.players[0].balance,1000);confirmDms();assert.equal(f.session.players[0].balance,950);
