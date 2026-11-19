@@ -632,3 +632,226 @@
   #robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-actions{gap:6px}
   #robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-actions>button{padding:8px 9px}
 }
+
+/* Procedural: keep all four patient cards and stats, replace paper with steel. */
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"]{
+  background:rgba(8,11,9,.91);
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"]>.bet-panel{
+  border:1px solid #75684e;
+  border-radius:0;
+  background:#20241e;
+  color:var(--ui-text);
+  box-shadow:0 16px 44px #0009;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .bet-panel h2{
+  color:#efe1c4;
+  text-align:center;
+  letter-spacing:.055em;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-intro-note,
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-purchase-note{
+  color:#bfb196;
+  line-height:1.45;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .procedure-player{
+  flex:none;
+  padding:6px 10px;
+  border:1px solid #5d624f;
+  background:#2b3029;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .procedure-player :is(label,span,output){
+  color:#eee0bf;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-grid{
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  align-items:stretch;
+  padding:2px;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-patient{
+  background:#30362e;
+  border:1px solid #6a6855;
+  color:#e5dbc2;
+  box-shadow:none;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-patient :is(label,small,p,span){
+  color:#ddd3b7;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-patient h3{
+  color:#f4e7c9;
+  letter-spacing:.02em;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-patient .patron-name{
+  background:transparent;
+  border:0;
+  color:#dbc394;
+  text-decoration:underline;
+  text-decoration-color:#82755b;
+  text-underline-offset:3px;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-patient .garage-stat-list{
+  border-left:1px solid #5c614e;
+  padding-left:7px;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-patient .garage-stat-list select,
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-patient input[type="number"],
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] #procedure-editor{
+  background:#151c17;
+  border:1px solid #898067;
+  border-radius:0;
+  color:#f0e8d4;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] :is(button,select,input):focus-visible{
+  outline:2px solid var(--ui-selected);
+  outline-offset:2px;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-stat-effects{
+  display:block;
+  padding:6px;
+  border-top:1px solid #5a5c4d;
+  border-bottom:1px solid #5a5c4d;
+  color:#e0d5b9;
+  font-variant-numeric:tabular-nums;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-patient button{
+  background:#45483a;
+  border:1px solid #736950;
+  color:#f0e1be;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-hats{
+  border-top-color:#6c6651;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-hats [aria-pressed="true"]{
+  outline:3px solid var(--ui-selected);
+  outline-offset:-3px;
+  background:#395240;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-patient [data-error]:not(:empty){
+  color:#d8c7a5;
+  border-left:3px solid #a28b58;
+  padding-left:7px;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-patient [data-error].is-stat-change{
+  color:#e2d8c1;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-stat-change.is-positive{
+  color:var(--ui-positive)!important;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-stat-change.is-negative{
+  color:var(--ui-negative)!important;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-lock-note{
+  color:#ffc19a!important;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .patron-popup{
+  background:#1e251f;
+  color:var(--ui-text);
+  border:1px solid #9d855a;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-actions{
+  position:sticky;
+  bottom:0;
+  z-index:2;
+  flex:none;
+  background:#20241e;
+  padding:9px 0 3px;
+  border-top:1px solid #70684e;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-actions button{
+  min-height:44px;
+  background:#44463a;
+  border:1px solid #776b50;
+  color:#e9dcbf;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-actions .bet-primary{
+  background:#874433;
+  border-color:#a75f46;
+  color:#fff2d9;
+}
+/* Combat result: clear outcome and payouts, detailed statistics remain intact. */
+#robot-tag-hops-v22 #gladiator-results{
+  background:rgba(8,11,9,.91);
+}
+#robot-tag-hops-v22 #gladiator-results .gladiator-results-card{
+  background:#20241e;
+  color:#e7dbc2;
+  border:1px solid #7b6d52;
+  border-radius:0;
+  box-shadow:0 16px 48px #0009;
+}
+#robot-tag-hops-v22 #gladiator-results #gladiator-results-title{
+  color:#f3e7cd;
+  text-align:center;
+  letter-spacing:.04em;
+}
+#robot-tag-hops-v22 #gladiator-results :is(.gladiator-results-summary,#bet-result-summary p){
+  color:#dfd3b8;
+}
+#robot-tag-hops-v22 #gladiator-results #bet-result-summary{
+  border-top-color:#686651;
+  color:#e8dcc4;
+}
+#robot-tag-hops-v22 #gladiator-results .gladiator-result-total{
+  background:#32372c;
+  border:1px solid #7e6d4e;
+}
+#robot-tag-hops-v22 #gladiator-results .gladiator-result-total strong{
+  color:#efd8a5;
+}
+#robot-tag-hops-v22 #gladiator-results .gladiator-result-total small{
+  color:#c5b89b;
+}
+#robot-tag-hops-v22 #gladiator-results .gladiator-results-details{
+  background:#2a3028;
+  border:1px solid #66664e;
+}
+#robot-tag-hops-v22 #gladiator-results .gladiator-results-details summary{
+  color:#eadbbf;
+  background:#30382d;
+  min-height:42px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+#robot-tag-hops-v22 #gladiator-results .gladiator-results-details[open] summary{
+  border-bottom-color:#7c6d53;
+}
+#robot-tag-hops-v22 #gladiator-results .gladiator-results-table{
+  color:#e0d4b9;
+}
+#robot-tag-hops-v22 #gladiator-results .gladiator-results-table :is(th,td){
+  color:#dcd3bf;
+  border-color:#62634f;
+}
+#robot-tag-hops-v22 #gladiator-results .gladiator-results-table tr.is-winner td{
+  color:#a4eda2;
+}
+#robot-tag-hops-v22 #gladiator-results :is(.bet-net-win,.bet-net-win *){
+  color:var(--ui-positive)!important;
+}
+#robot-tag-hops-v22 #gladiator-results :is(.bet-net-loss,.bet-net-loss *){
+  color:var(--ui-negative)!important;
+}
+#robot-tag-hops-v22 #gladiator-results .results-actions{
+  background:#20241e;
+  border-top:1px solid #70684e;
+  box-shadow:none;
+  padding:10px 0 5px;
+}
+#robot-tag-hops-v22 #gladiator-results .results-actions button{
+  border:1px solid #756c53;
+  background:#42463a;
+  color:#f0dfbd;
+  min-height:44px;
+}
+#robot-tag-hops-v22 #gladiator-results .results-actions #gladiator-results-again{
+  background:#874433;
+  border-color:#a75f46;
+  color:#fff2d9;
+}
+#robot-tag-hops-v22 #gladiator-results :is(button,summary):focus-visible{
+  outline:2px solid var(--ui-selected);
+  outline-offset:2px;
+}
