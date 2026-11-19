@@ -2,6 +2,7 @@ import {validStats,normalizeProsthetics} from '../garage/model.js';
 import {validBossEncounter} from '../boss/encounter.js';
 import {validTowerFloorPlan} from './floors.js';
 import {validTowerMutationState} from './mutations.js';
+import {validTowerSegmentInventory} from './segments.js';
 import {towerCycleWins} from './cycles.js';
 import {validTowerSurgeries,validTowerSurgicalStock} from './surgery.js';
 import {normalizeTowerGraftProsthetics} from './anatomy.js';
@@ -18,6 +19,7 @@ export function validInsurance(policy,record){
   &&validTowerMutationState({level:c.level,mutations:c.mutations??[],mutationDraft:c.mutationDraft,
    ...(c.mutationInventory?{mutationInventory:c.mutationInventory,equippedMutations:c.equippedMutations,
    nextMutationId:c.nextMutationId,modInstallations:c.modInstallations}:{})})
+  &&validTowerSegmentInventory({...c,segmentInventory:c.segmentInventory??[],equippedSegments:c.equippedSegments??[],nextSegmentId:c.nextSegmentId??1})
   &&validTowerSurgeries(c.surgeries??[],c.level)&&validTowerSurgicalStock({...c,surgeries:c.surgeries??[],surgicalStock:c.surgicalStock??[],consumedDonorIds:c.consumedDonorIds??[]})
   &&validTowerRerolls({...c,arenaRerolls:c.arenaRerolls??0})
   &&(c.arenaRerollLocked===undefined||typeof c.arenaRerollLocked==='boolean')
@@ -35,6 +37,8 @@ export function purchaseInsurance(session,player,tower){
   mutations:[...(tower.mutations??[])],mutationInventory:structuredClone(tower.mutationInventory??[]),
   equippedMutations:[...(tower.equippedMutations??[])],nextMutationId:tower.nextMutationId??1,
   modInstallations:tower.modInstallations??0,
+  segmentInventory:structuredClone(tower.segmentInventory??[]),
+  equippedSegments:[...(tower.equippedSegments??[])],nextSegmentId:tower.nextSegmentId??1,
   surgeries:structuredClone(tower.surgeries??[]),
   surgicalStock:structuredClone(tower.surgicalStock??[]),nextSurgicalStockId:tower.nextSurgicalStockId??1,
   consumedDonorIds:[...(tower.consumedDonorIds??[])],
