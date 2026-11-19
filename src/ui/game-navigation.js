@@ -81,6 +81,10 @@ export function initializeGameNavigation(){
  // before navigating the underlying screen; the 30-floor cycle notice is
  // mandatory and must be acknowledged with its own Continue action.
  const telegramBack=()=>{
+  // The loading overlay belongs to document.body, outside the scaled root.
+  // Never let native Back navigate the game under a pending loading screen.
+  const loading=doc.querySelector('#texture-loading');
+  if(loading){loading.querySelector('.loading-dismiss:not([hidden])')?.click();return;}
   if(root.querySelector('#landscape-required[open],#tower-cycle-notice[open]'))return;
   if(root.querySelector('#game-tutorial[open]')){root.querySelector('#game-tutorial .tutorial-skip')?.click();return;}
   if(root.querySelector('#game-action-confirm[open]')){root.querySelector('#game-action-confirm-close,.game-action-confirm-close')?.click();return;}
@@ -88,7 +92,6 @@ export function initializeGameNavigation(){
   if(root.querySelector('.betting-input-dialog[open]')){root.querySelector('.betting-input-dialog [data-cancel]')?.click();return;}
   if(ctx.settingsOpen){root.querySelector('#arena-settings-close')?.click();return;}
   if(root.querySelector('#tower-upgrade-window[open]')){root.querySelector('#tower-upgrade-window .tower-upgrade-close')?.click();return;}
-  if(root.querySelector('#texture-loading .loading-dismiss:not([hidden])')){root.querySelector('#texture-loading .loading-dismiss')?.click();return;}
   back.click();
  };
  root.addEventListener('telegram-game-back',telegramBack);
