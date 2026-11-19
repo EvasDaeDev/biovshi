@@ -36,6 +36,11 @@ import {playerBalanceMarkup} from '../ui/currency-animation.js';
 function renderTowerPlayerWallet(target){
   const player=ctx.betting.players[ctx.towerPlayer];
   const name=document.createElement('span');name.className='tower-player-name';name.textContent=player.name;
+  if(target.id==='tower-prep-name'){
+    const record=document.createElement('span');record.className='tower-record-height';
+    record.textContent=' · РЕКОРДНАЯ ВЫСОТА: '+towerFor(ctx.betting,ctx.towerPlayer).record+' ЭТАЖ';
+    name.append(record);
+  }
   const bank=document.createElement('span');bank.className='tower-player-bank';bank.innerHTML=`БАНК: ${playerBalanceMarkup(player.id,player.balance)}`;
   target.replaceChildren(name,bank);
 }
@@ -97,7 +102,7 @@ export function towerPreparation(){
   ctx.startup.phase='tower-ready';ctx.resultsPanel.hidden=true;ctx.root.querySelector('#tower-controls').hidden=true;
   panel.hidden=false;const title=ctx.root.querySelector('#tower-prep-title');
   title.classList.toggle('boss-floor-title',hasBoss(t));
-  title.textContent=hasBoss(t)?`${bossName(t.level)}\nЭТАЖ №${towerFloorLabel(t.level)}`:`БАШНЯ · ЭТАЖ ${towerFloorLabel(t.level)}`;
+  title.textContent=hasBoss(t)?`${bossName(t.level)}\nЭТАЖ №${towerFloorLabel(t.level)}`:`ПОДГОТОВКА · ЭТАЖ ${towerFloorLabel(t.level)}`;
   renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
   renderTowerFloorChoices({container:ctx.root.querySelector('#tower-floor-preview'),
     session:ctx.betting,player:ctx.towerPlayer,run:t,onSave:bettingSave,
@@ -582,6 +587,9 @@ export function towerPreparation(){
   renderSurgery();
   upgradeModal=installTowerUpgradeWindow({root:ctx.root,run:t,statsPanel:fields,mutationPanel,surgeryPanel,
     artifactPanel:ctx.root.querySelector('#tower-prep-artifacts'),renderWallet:target=>renderTowerPlayerWallet(target)});
+  // Put Shelter among the bottom primary controls, between insurance and fight.
+  const footer=panel.querySelector('.bet-actions');
+  footer.insertBefore(ctx.root.querySelector('#tower-upgrade-open'),fightButton);
   function showCycleNotice(){
     if(!t.cycleNotice||t.mutationDraft)return;
     let dialog=ctx.root.querySelector('#tower-cycle-notice');
