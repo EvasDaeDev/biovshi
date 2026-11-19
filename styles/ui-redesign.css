@@ -507,3 +507,128 @@
 @media(max-width:580px){
  #robot-tag-hops-v22 .game-action-confirm{padding:12px;width:min(96vw,520px)}
 }
+
+/* Betting: dark industrial metal, with fighter colours and money deltas intact.
+   Scoped to betting only: garage and Tower keep their own layouts. */
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"]{
+  background:rgba(8,11,9,.9);
+  backdrop-filter:blur(2px);
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"]>.bet-panel{
+  width:min(100%,940px);
+  max-height:calc(var(--game-height,100dvh) - 25px);
+  padding:16px 20px;
+  border:1px solid #75684e;
+  border-radius:0;
+  background:#20241e;
+  box-shadow:0 16px 44px #0009;
+  color:var(--ui-text);
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel h2{
+  margin:3px 0 10px;
+  color:#f0e4c5;
+  letter-spacing:.065em;
+  text-align:center;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel
+:is(p,label,small,th,td,summary,output){
+  color:#d2c8ad;
+  text-shadow:none;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-muted{
+  color:#afa48b;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-pool{
+  background:#30362e;
+  border:1px solid #69624d;
+  border-top:3px solid var(--fighter);
+  min-width:0;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-pool strong{
+  color:var(--fighter);
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-pool :is(small,span){
+  color:#e1d6ba;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-table{
+  color:var(--ui-text);
+  font-variant-numeric:tabular-nums;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-table :is(th,td){
+  border-color:#5b5e4d;
+  color:#e0d8c2;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-table th{
+  color:#aea68f;
+  font-weight:700;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel :is(input,select,textarea){
+  background:#111b17;
+  border:1px solid #78765f;
+  color:#ede9d9;
+  border-radius:0;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel
+:is(input,select,button,summary):focus-visible{
+  outline:2px solid var(--ui-selected);
+  outline-offset:2px;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel button{
+  background:#414336;
+  color:#e9ddb9;
+  border:1px solid #726950;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel button:hover:not(:disabled){
+  background:#525743;
+  color:#fff1c9;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-primary{
+  background:#864434;
+  color:#fff0d9;
+  border-color:#a75f46;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-primary:hover:not(:disabled){
+  background:#9b503d;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-actions{
+  position:sticky;
+  bottom:0;
+  z-index:2;
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  margin-top:10px;
+  padding:10px 0;
+  background:#20241e;
+  border-top:1px solid #72674c;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-actions>button{
+  min-height:44px;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-actions .arena-picker{
+  min-width:0;
+  flex:1;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .arena-options{
+  background:#34382c;
+  border-color:#756d52;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .arena-options [aria-pressed="true"]{
+  outline:2px solid var(--ui-selected);
+  outline-offset:-2px;
+  background:#3c4e38;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-net-win{
+  color:var(--ui-positive)!important;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-net-loss{
+  color:var(--ui-negative)!important;
+}
+#robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-error:not(:empty){
+  color:#ff8982;
+}
+@media(max-width:740px){
+  #robot-tag-hops-v22 #bet-overlay[data-view="betting"]>.bet-panel{padding:10px 12px}
+  #robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-actions{gap:6px}
+  #robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel .bet-actions>button{padding:8px 9px}
+}
