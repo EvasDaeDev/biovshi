@@ -1,0 +1,75 @@
+name: Tower H8 extended - 288 paired physical battles
+
+on:
+  push:
+    branches:
+      - experiment/tower-bosses
+    paths:
+      - .github/workflows/tower-h8-extended.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  physics:
+    name: H8 ${{ matrix.policy }} / ${{ matrix.step }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        policy: [approach, orbit, evade]
+        step: ['0', '0.08', '0.1', '0.12']
+    steps:
+      - name: Checkout experiment at the same revision for all variants
+        uses: actions/checkout@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Execute 24 real-physics fights on matched floors and seeds
+        run: node scripts/experiment-tower-fights.mjs --rarityCompare=true --rarityStep=${{ matrix.step }} --policy=${{ matrix.policy }} --seeds=4 --limit=65 --offset=97202611 --out=artifacts/h8x-${{ matrix.policy }}-${{ matrix.step }}.json
+      - name: Preserve individual physics, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tower-h8x-${{ matrix.policy }}-${{ matrix.step }}
+          path: artifacts/h8x-${{ matrix.policy }}-${{ matrix.step }}.json
+          if-no-files-found: warn
+
+  report:
+    name: Audit all 288 physical fights and compare real outcomes
+    needs: physics
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout report generator and model definitions
+        uses: actions/checkout@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download all twelve evidence batches
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tower-h8x-*
+          merge-multiple: true
+          path: artifacts
+      - name: Check report coverage and safety assertions
+        run: node --test tests/tower-h8-extended.test.js
+      - name: Validate identical scenarios and compile extended evidence
+        run: node scripts/report-tower-h8-extended.mjs
+      - name: Preserve individual fights and combined report
+        uses: actions/upload-artifact@v4
+        with:
+          name: tower-h8-extended-288-report
+          path: |
+            artifacts/h8x-*.json
+            artifacts/h8-extended-summary.json
+            artifacts/h8-extended-report.md
+          if-no-files-found: error
