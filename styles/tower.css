@@ -256,3 +256,11 @@
 #robot-tag-hops-v22 #tower-floor-preview .tower-arena-diagram svg{width:76px;height:76px}
 #robot-tag-hops-v22 #tower-floor-preview .tower-challenge-options{gap:8px}
 #robot-tag-hops-v22 #tower-floor-preview .tower-challenge-option.is-selected{border:2px solid #62cf7d;box-shadow:inset 0 0 0 1px #236738,0 0 0 1px #236738}
+
+/* Segmented module inventory: one visual atlas cell per independently owned part. */
+#robot-tag-hops-v22 .tower-inventory-item{position:relative}
+#robot-tag-hops-v22 .tower-segment-count{position:absolute;right:4px;bottom:4px;min-width:19px;padding:2px 5px;border-radius:8px;background:#e8bf68;color:#272319;font-size:13px;font-weight:900;line-height:1.2}
+#robot-tag-hops-v22 .tower-segment-rewards{margin-top:12px;padding:10px;border:1px solid #9a875b;background:#2c3026}
+#robot-tag-hops-v22 .tower-segment-rewards>.tower-inventory-grid{max-width:420px;margin:8px auto 0}
+#robot-tag-hops-v22 .tower-mutation-action-area{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+#robot-tag-hops-v22 .tower-mutation-action-area>.tower-mutation-install{flex:1;min-width:125px}
