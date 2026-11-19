@@ -106,7 +106,8 @@ test('module installation and free removal require confirmation; closing either 
   document.querySelector('.tower-mutation-install').click();
   let popup=document.querySelector('#game-action-confirm');
   assert.ok(popup);
-  assert.match(popup.textContent,/100 монет/);
+  assert.match(popup.querySelector('.game-action-confirm-submit').textContent,/−100/);
+  assert.ok(popup.querySelector('.game-action-confirm-submit .chip-icon'));
   assert.deepEqual(t.mutations,[]);
   popup.querySelector('.game-action-confirm-close').click();
   assert.equal(s.players[0].balance,balance);
@@ -803,7 +804,8 @@ test('tower skill selection is a nonpaying preview until explicit 50-coin confir
   speed=document.querySelector('[data-tower-stat="0"]');speed.value='4';speed.dispatchEvent(new Event('change'));
   document.querySelector('[data-tower-apply]').click();
   assert.deepEqual(run.stats,[3,3,3],'preview does not purchase before dialog confirmation');
-  assert.match(document.querySelector('#game-action-confirm').textContent,/50 монет/);
+  assert.match(document.querySelector('#game-action-confirm .game-action-confirm-submit').textContent,/−50/);
+  assert.ok(document.querySelector('#game-action-confirm .game-action-confirm-submit .chip-icon'));
   confirmPaidAction();
   assert.deepEqual(run.stats,[4,2,3]);assert.deepEqual(ctx.towerGarage[0].stats,[4,2,3]);
   assert.equal(session.players[0].balance,150);assert.equal(session.towerEconomySpent,50);
@@ -1089,7 +1091,8 @@ test('cancel surgery and DMS confirmation without charge or state change',()=>{
   const initial=s.players[0].balance,prior=structuredClone(t.surgeries);
   surgery.querySelector('.tower-surgery-purchase').click();
   const dialog=document.querySelector('#game-action-confirm');
-  assert.ok(dialog);assert.match(dialog.textContent,/60 монет/);
+  assert.ok(dialog);assert.match(dialog.querySelector('.game-action-confirm-submit').textContent,/−60/);
+  assert.ok(dialog.querySelector('.game-action-confirm-submit .chip-icon'));
   assert.equal(s.players[0].balance,initial);
   dialog.querySelector('.game-action-confirm-close').click();
   assert.equal(document.querySelector('#game-action-confirm'),null);
@@ -1097,7 +1100,8 @@ test('cancel surgery and DMS confirmation without charge or state change',()=>{
   assert.equal(s.players[0].balance,initial);
   document.querySelector('#tower-insurance').click();
   const insurance=document.querySelector('#game-action-confirm');
-  assert.ok(insurance);assert.match(insurance.textContent,/50 монет/);
+  assert.ok(insurance);assert.match(insurance.querySelector('.game-action-confirm-submit').textContent,/−50/);
+  assert.ok(insurance.querySelector('.game-action-confirm-submit .chip-icon'));
   insurance.querySelector('footer button').click();
   assert.equal(Boolean(t.insurance.checkpoint),false);
   assert.equal(s.players[0].balance,initial);
