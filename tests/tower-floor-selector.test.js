@@ -29,6 +29,11 @@ test('difficulty and arena selection live in the original preparation panel and 
   assert.equal(run.floorPlan.selected,1);
   assert.equal(container.querySelector('.tower-challenge-option.is-selected').getAttribute('aria-pressed'),'true');
   assert.equal(loads,0,'changing difficulty does not initialize the arena');
+  assert.equal(container.querySelector('.tower-arena-map').textContent.includes('РЕКОРД'),false,
+    'record belongs beside the nickname, not the floor map');
+  assert.match(container.querySelector('.tower-reroll-line').textContent,/СМЕНИТЬ АРЕНУ/);
+  assert.match(container.querySelector('.tower-reroll-line').textContent,/10/);
+  assert.ok(container.querySelector('.tower-reroll-line .chip-icon'));
   const reroll=container.querySelector('.tower-reroll-button');
   assert.equal(reroll.disabled,false);
   reroll.click();reroll.click();
