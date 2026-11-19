@@ -194,6 +194,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   surgeryContainer.hidden=activeTab!=='surgery';
   artifactsContainer.hidden=activeTab!=='artifacts';
   const viewingArtifacts=activeTab==='artifacts';
+  paper.classList.toggle('is-artifacts',viewingArtifacts);
   table.hidden=viewingArtifacts;stats.hidden=viewingArtifacts;
   if(!viewingArtifacts)paint();
  }
