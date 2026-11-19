@@ -7,15 +7,15 @@ import {towerSurgeryBonus} from './surgery.js';
 export const TOWER_MUTATIONS=Object.freeze({
  turbo:Object.freeze({name:'Форсаж',family:'mechanical',description:'Привод повышает скорость',bonus:[.55,0,0]}),
  servo:Object.freeze({name:'Сервопривод',family:'mechanical',description:'Точнее и быстрее разворачивается',bonus:[0,0,.55]}),
- piston:Object.freeze({name:'Поршень',family:'mechanical',description:'Усиленный ударный механизм',bonus:[0,.55,0]}),
- adrenal:Object.freeze({name:'Адреналин',family:'organic',description:'Быстрее двигается и сильнее атакует',bonus:[.35,.25,0]}),
- predator:Object.freeze({name:'Хищник',family:'organic',description:'Сильнее атакует и маневрирует',bonus:[0,.35,.25]}),
+ piston:Object.freeze({name:'Поршень',family:'mechanical',description:'Сила повышает вероятность критического удара',bonus:[0,.55,0]}),
+ adrenal:Object.freeze({name:'Адреналин',family:'organic',description:'Быстрее движется и чаще наносит критические удары',bonus:[.35,.25,0]}),
+ predator:Object.freeze({name:'Хищник',family:'organic',description:'Выше шанс крита и манёвренность',bonus:[0,.35,.25]}),
  instinct:Object.freeze({name:'Инстинкт',family:'organic',description:'Быстрее меняет траекторию движения',bonus:[.25,0,.35]}),
  flywheel:Object.freeze({name:'Маховик',family:'mechanical',description:'Скорость и сила; цикл атак на 4% короче',bonus:[.25,.25,0],combat:{cooldown:.04}}),
  gyro:Object.freeze({name:'Гироскоп',family:'mechanical',description:'Ускоряет коррекцию курса и движение',bonus:[.15,0,.45]}),
- spike:Object.freeze({name:'Шип-привод',family:'mechanical',description:'Жёсткий привод для мощных ударов',bonus:[0,.4,.15]}),
+ spike:Object.freeze({name:'Шип-привод',family:'mechanical',description:'Силовой привод повышает шанс критического удара',bonus:[0,.4,.15]}),
  sinews:Object.freeze({name:'Сухожилия',family:'organic',description:'Эластичные связки увеличивают подвижность',bonus:[.3,0,.3]}),
- ossify:Object.freeze({name:'Окостенение',family:'organic',description:'Более жёсткая опора усиливает атаку',bonus:[0,.45,.1]}),
+ ossify:Object.freeze({name:'Окостенение',family:'organic',description:'Жёсткая опора повышает шанс критического удара',bonus:[0,.45,.1]}),
  twitch:Object.freeze({name:'Нервный тик',family:'organic',description:'Быстрее перестраивает движение и атаки',bonus:[.2,.1,.2]}),
  optic:Object.freeze({name:'Зрительный нерв',family:'neural',description:'Точная наводка: +2,5% шанса крита',bonus:[0,0,.4],combat:{crit:.025}}),
  synapse:Object.freeze({name:'Синапс',family:'neural',description:'Короткая передача сигнала: атаки на 3% чаще',bonus:[.3,0,.15],combat:{cooldown:.03}}),
@@ -29,8 +29,8 @@ export function towerMutationEffectText(id){
  const mod=TOWER_MUTATIONS[id];if(!mod)return '';
  const names=['скорость','сила','манёвр'];
  const format=n=>Number(n.toFixed(2)).toLocaleString('ru-RU',{maximumFractionDigits:2});
- const effects=mod.bonus.flatMap((amount,i)=>amount?[names[i]+' +'+format(amount)]:[]);
- if(mod.combat?.crit)effects.push('крит +'+format(mod.combat.crit*100)+'%');
+ const effects=mod.bonus.flatMap((amount,i)=>amount?[names[i]+' +'+format(amount)+(i===1?' (шанс крита)':'')]:[]);
+ if(mod.combat?.crit)effects.push('крит +'+format(mod.combat.crit*100)+'% (прямой бонус)');
  if(mod.combat?.cooldown)effects.push('откат атак −'+format(mod.combat.cooldown*100)+'%');
  return effects.join(' · ');
 }
