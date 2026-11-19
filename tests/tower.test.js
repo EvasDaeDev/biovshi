@@ -628,6 +628,9 @@ test('tower skill selection is a nonpaying preview until explicit 50-coin confir
   assert.equal(session.towerEconomySpent,0);
   speed=document.querySelector('[data-tower-stat="0"]');speed.value='4';speed.dispatchEvent(new Event('change'));
   document.querySelector('[data-tower-apply]').click();
+  assert.deepEqual(run.stats,[3,3,3],'preview does not purchase before dialog confirmation');
+  assert.match(document.querySelector('#game-action-confirm').textContent,/50 монет/);
+  confirmPaidAction();
   assert.deepEqual(run.stats,[4,2,3]);assert.deepEqual(ctx.towerGarage[0].stats,[4,2,3]);
   assert.equal(session.players[0].balance,150);assert.equal(session.towerEconomySpent,50);
   assert.equal(document.querySelector('[data-tower-apply]').disabled,true);
@@ -885,5 +888,23 @@ test('cancel surgery and DMS confirmation without charge or state change',()=>{
   insurance.querySelector('footer button').click();
   assert.equal(Boolean(t.insurance.checkpoint),false);
   assert.equal(s.players[0].balance,initial);
+ }finally{close(dom);}
+});
+
+test('closing skill redistribution confirmation preserves balance and saved stats',()=>{
+ const session=betNewSession(['Сохранение'],200),run=towerFor(session,0);
+ const dom=setup(session,run);
+ try{
+  const selector=document.querySelector('[data-tower-stat="0"]');
+  selector.value='4';selector.dispatchEvent(new Event('change'));
+  const saved=[...run.stats],balance=session.players[0].balance;
+  document.querySelector('[data-tower-apply]').click();
+  const dialog=document.querySelector('#game-action-confirm');
+  assert.ok(dialog);
+  assert.match(dialog.textContent,/3 → 4/);
+  dialog.querySelector('.game-action-confirm-close').click();
+  assert.deepEqual(run.stats,saved);
+  assert.equal(session.players[0].balance,balance);
+  assert.equal(session.towerEconomySpent,0);
  }finally{close(dom);}
 });
