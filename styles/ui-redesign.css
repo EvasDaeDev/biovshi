@@ -389,6 +389,7 @@
   height:44px;
   min-height:44px;
   padding:9px;
+  border-radius:50%;
   border:1px solid #887957;
   background:#282e25;
   color:#e7ddc6;
@@ -436,6 +437,7 @@
   right:12px;
   width:44px;
   padding:9px;
+  border-radius:50%;
 }
 #robot-tag-hops-v22 #game-navigation>button:focus-visible{
   outline:2px solid var(--ui-selected);
@@ -457,11 +459,11 @@
 #robot-tag-hops-v22 #arena-settings-button,
 #robot-tag-hops-v22 #tower-prep-settings,
 #robot-tag-hops-v22 #tower-prep-back{
-  visibility:hidden!important;
-  pointer-events:none!important;
+  display:none!important;
 }
 #robot-tag-hops-v22 #tower-preparation .tower-prep-header{
-  grid-template-columns:minmax(120px,1fr) minmax(0,3fr) minmax(120px,1fr);
+  grid-template-columns:minmax(0,1fr);
+  justify-items:center;
 }
 @media(max-width:540px){
   #robot-tag-hops-v22 #game-navigation>button{top:8px;min-height:42px}
