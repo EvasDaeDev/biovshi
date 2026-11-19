@@ -12,6 +12,18 @@ import {startBossScenario} from '../scripts/boss-harness.mjs';
 import {towerPreparation,settleTower,towerResults} from '../src/tower/ui.js';
 import {advanceStartup} from '../src/game/session.js';
 import {ctx} from '../src/game/state.js';
+function confirmDms(){
+ const dialog=document.querySelector('#game-action-confirm');
+ assert.ok(dialog,'DMS requires explicit confirmation');
+ dialog.querySelector('.game-action-confirm-submit').click();
+ assert.equal(document.querySelector('#game-action-confirm'),null);
+}
+function cancelDms(){
+ const dialog=document.querySelector('#game-action-confirm');
+ assert.ok(dialog,'renewal should open confirmation');
+ dialog.querySelector('.game-action-confirm-close').click();
+ assert.equal(document.querySelector('#game-action-confirm'),null);
+}
 function reach(s,player,floor){
  while(towerFor(s,player).level<floor){
   const run=towerFor(s,player);
@@ -127,7 +139,7 @@ test('DMS never renews itself during wins, reentry or Shelter switching',()=>{
  const f=startBossScenario({floor:5});
  const previous=globalThis.confirm;globalThis.confirm=()=>false;
  try{
-  towerPreparation();document.querySelector('#tower-insurance').click();
+  towerPreparation();document.querySelector('#tower-insurance').click();confirmDms();
   const paid=structuredClone(towerFor(f.session,0).insurance);
   const bank=f.session.players[0].balance,spent=f.session.insuranceSpent;
   reach(f.session,0,7);towerPreparation();
@@ -139,7 +151,7 @@ test('DMS never renews itself during wins, reentry or Shelter switching',()=>{
   assert.equal(f.session.players[0].balance,bank);
   assert.equal(f.session.insuranceSpent,spent);
   assert.match(document.querySelector('#tower-insurance-status').textContent,/только вручную/);
-  document.querySelector('#tower-insurance').click();
+  document.querySelector('#tower-insurance').click();cancelDms();
   assert.deepEqual(towerFor(f.session,0).insurance,paid,'cancelled renewal is free');
   assert.equal(f.session.insuranceSpent,spent);
  }finally{globalThis.confirm=previous;f.close();}
@@ -149,15 +161,15 @@ test('preparation offers active-policy renewal on a higher floor and blocks acci
  const f=startBossScenario({floor:5});
  const previous=globalThis.confirm;let confirmations=0;globalThis.confirm=()=>{confirmations++;return true;};
  try{
-  towerPreparation();const button=document.querySelector('#tower-insurance');button.click();
+  towerPreparation();const button=document.querySelector('#tower-insurance');button.click();confirmDms();
   reach(f.session,0,7);towerPreparation();
   assert.equal(button.disabled,false);assert.ok(button.classList.contains('is-active'));
   assert.match(button.textContent,/ПРОДЛИТЬ ДМС.*55/);assert.match(button.title,/этажа 5 на этаж 7/);
-  button.click();assert.equal(f.session.players[0].balance,895);
+  button.click();assert.equal(f.session.players[0].balance,950,'renewal is not charged before confirmation');confirmDms();assert.equal(f.session.players[0].balance,895);
   assert.equal(towerFor(f.session,0).insurance.checkpoint.level,7);
   assert.match(button.textContent,/ДМС.*ЭТАЖ 7/);assert.ok(button.disabled);
   assert.match(document.querySelector('#tower-prep-error').textContent,/ДМС продлена/);
-  button.click();towerPreparation();assert.equal(confirmations,1);assert.equal(f.session.insuranceSpent,105);
+  button.click();towerPreparation();assert.equal(confirmations,0,'no browser confirmation is used');assert.equal(f.session.insuranceSpent,105);
   assert.equal(bettingLoad().towers[0].insurance.checkpoint.level,7);
  }finally{globalThis.confirm=previous;f.close();}
 });
@@ -188,7 +200,7 @@ test('preparation replaces Menu with grey priced DMS, turns green after buying, 
   assert.equal(wallet.querySelector('.tower-player-name').textContent,f.session.players[ctx.towerPlayer].name);
   assert.match(wallet.querySelector('.tower-player-bank').textContent,/1\s*000/);
   assert.equal(document.querySelector('#tower-prep-menu'),null);assert.match(button.textContent,/ДМС.*50/);assert.equal(button.classList.contains('is-active'),false);
-  button.click();assert.equal(f.session.players[0].balance,950);
+  button.click();assert.equal(f.session.players[0].balance,1000);confirmDms();assert.equal(f.session.players[0].balance,950);
   assert.equal(wallet.querySelector('[data-player-balance]').dataset.balanceTarget,'950');
   assert.ok(wallet.querySelector('[data-player-balance]').classList.contains('is-debit'),'DMS charge flashes red');
   assert.match(button.textContent,/ДМС.*ЭТАЖ 5/);assert.ok(button.classList.contains('is-active'));assert.ok(button.disabled);
