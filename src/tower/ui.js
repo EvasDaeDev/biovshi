@@ -1,7 +1,7 @@
 import {artifactDropChance,ARTIFACT_COMPLETION_REWARD,ARTIFACT_PIECE_COUNT} from './artifacts.js';
 import {bossName} from '../boss/names.js';
 import {setPaused} from '../ui/controls.js';
-import {hasBoss} from '../boss/config.js';
+import {hasBoss,isBossFloor} from '../boss/config.js';
 import {bossFloorReward} from '../boss/encounter.js';
 import {selectedTowerFloor} from './floors.js';
 import {TOWER_RELATION_NAMES} from './relations.js';
@@ -707,7 +707,7 @@ export function towerResults(){
     ${won&&o.artifact!=null?artifactCollectionMarkup(t.artifacts,o.artifact,o.artifactBonus):''}
     ${o.runKills==null?'':`<p>ЛИЧНЫХ ПОБЕД: ${o.runKills}</p>`}
   </div>`;
-  if(won&&t.segmentRewardsEnabled&&t.lastBossSegments?.length&&o.floor%5===0){
+  if(won&&t.segmentRewardsEnabled&&t.lastBossSegments?.length&&isBossFloor(o.floor)){
     const rewards=document.createElement('div');rewards.className='tower-segment-rewards';
     const title=document.createElement('strong');title.textContent='ПОЛУЧЕНЫ ЧАСТИ МОДИФИКАЦИЙ';rewards.append(title);
     const items=document.createElement('div');items.className='tower-inventory-grid';
