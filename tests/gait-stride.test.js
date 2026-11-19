@@ -61,11 +61,13 @@ test('running hand and foot steps land ahead of the body rest point, not where i
 
   const run=gaitRig(kind,side,17);
   run.state.vx=65;run.state.vy=0;
+  const projected=stepLandingTarget(run.state,run.limb);
+  assert.ok(projected.x>25,'a fast stride plans a forward landing point');
+  assert.equal(run.limb.foot.x,0,'landing projection must not move a planted support');
   contacts(run.state,0,{});
   assert.ok(run.limb.to.x>walk.limb.to.x+6,kind+' must extend stride at speed');
   assert.ok(run.limb.to.x>calm.limb.to.x+8,kind+' gains forward reach');
-  assert.equal(run.limb.from.x,0,'support stays world-space planted until lift');
-  assert.equal(run.limb.foot.x,0,'a target probe must restore planted foot');
+  assert.equal(run.limb.from.x,0,'foot records its previous world-space position for the swing');
  }
 });
 test('high speed steps respect diagonal velocity and shorten if blocked',()=>{
