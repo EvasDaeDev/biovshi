@@ -77,3 +77,22 @@ test('Tower preparation remains dark and uses logical height across scaled layou
  assert.doesNotMatch(shelter,/max-height:min\(30dvh,235px\)/);
  assert.match(css,/#robot-tag-hops-v22 \.tower-replacement-dialog\s*\{[\s\S]*?max-height:min\(calc\(var\(--game-height,100dvh\) - 18px\),650px\)/);
 });
+
+test('retired per-window navigation hooks cannot be reached by keyboard or screen reader',()=>{
+ const dom=new JSDOM(html);
+ try{
+  const root=dom.window.document.querySelector('#robot-tag-hops-v22');
+  const globalBack=root.querySelector('#game-nav-back');
+  const globalSettings=root.querySelector('#game-nav-settings');
+  assert.equal(globalBack.hasAttribute('aria-hidden'),false);
+  assert.equal(globalSettings.hasAttribute('aria-hidden'),false);
+  for(const id of ['launch-settings-button','tower-prep-back','tower-prep-settings','arena-settings-button']){
+   const legacy=root.querySelector('#'+id);
+   assert.ok(legacy,'legacy hook remains for existing handlers');
+   assert.equal(legacy.getAttribute('tabindex'),'-1',id+' is not part of keyboard navigation');
+   assert.equal(legacy.getAttribute('aria-hidden'),'true',id+' is hidden from accessibility tree');
+  }
+  const modalFocus=fs.readFileSync(new URL('../src/ui/modal-focus.js',import.meta.url),'utf8');
+  assert.match(modalFocus,/!node\.closest\('\[aria-hidden="true"\]'\)/);
+ }finally{dom.window.close();}
+});
