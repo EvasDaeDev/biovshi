@@ -44,7 +44,9 @@ function strikeProgress(p) {
 }
 // Legs strike away from the pelvis: their own side and a shared rear cone.
 export function inStrikeSector(attacker, source, point) {
-  const frame = source.kind === 'leg' ? source.frame??attacker.actualPose.pelvis : attacker;
+  // Grafted and second-pair arms pivot on a spine vertebra, not on the
+  // leading shoulder. Use each actual anchor's facing for its strike sector.
+  const frame = source.frame??(source.kind === 'leg' ? attacker.actualPose.pelvis : attacker);
   const angle = wrap(Math.atan2(point.y-frame.y, point.x-frame.x)-frame.angle);
   if (source.kind !== 'leg') return Math.abs(angle) <= (source.kind === 'head' ? .48 : 1.28);
   // Own side from 60 degrees back; the rear 40-degree cone is shared.
@@ -146,10 +148,21 @@ export function compareStrikeCandidates(a,b,{moving=false}={}) {
   const tier=c=>/^(arm|leg)-/.test(c.segment)?0:c.segment==='head'?2:1;
   return tier(a)-tier(b) || strikePriority(a)-strikePriority(b);
 }
+// Extra surgical arms and boss second-pair arms should actually participate
+// when independently reachable. Alternate with the ordinary best source, not
+// a free second hit against the same patient or a magically extended reach.
+export const isAdditionalAttackArm=key=>typeof key==='string'&&
+ /-(?:graft|pair2)-(?:upper|lower)$/.test(key);
+export function prioritizeAdditionalArm(candidates,lastSource=null){
+ if(!lastSource||isAdditionalAttackArm(lastSource))return candidates;
+ const extra=candidates.find(c=>c.source.kind==='arm'&&isAdditionalAttackArm(c.source.key));
+ return extra?[extra,...candidates.filter(c=>c!==extra)]:candidates;
+}
 // Prefer two independently reachable limb strikes at distinct opponents. If the
 // best limb is the only one reaching the second opponent, try another pairing.
-export function selectSimultaneousStrikes(candidates,{moving=false}={}){
- const sorted=[...candidates].sort((a,b)=>compareStrikeCandidates(a,b,{moving}));
+export function selectSimultaneousStrikes(candidates,{moving=false,lastSource=null}={}){
+ const sorted=prioritizeAdditionalArm(
+  [...candidates].sort((a,b)=>compareStrikeCandidates(a,b,{moving})),lastSource);
  const limbs=sorted.filter(c=>c.source.kind==='arm'||c.source.kind==='leg');
  const limb=key=>key.replace(/-(upper|lower)$/,'');
  for(const first of limbs){
@@ -320,8 +333,9 @@ export function combatAttacks() {
       const best=strikeCandidates(attacker,v,source)[0];
       if(best)candidates.push(best);
     }
-    const selected=selectSimultaneousStrikes(candidates,{moving});
+    const selected=selectSimultaneousStrikes(candidates,{moving,lastSource:ctx.agentAI[id]?.lastAttackSource});
     if(selected.length){
+      if(ctx.agentAI[id])ctx.agentAI[id].lastAttackSource=selected[0].source.key;
       const timing=attacker.body?.combat??CONFIG.combat;
       setPendingStrikes(id,selected.map(best=>({
         victim:best.victim.id,segment:best.segment,source:best.source.key,aim:{...best.aim},

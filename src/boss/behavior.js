@@ -6,7 +6,7 @@ import {wrap} from '../utils/math.js';
 import {note} from '../game/events.js';
 import {activeOpponents,fighterIntent} from '../systems/ai.js';
 import {sightClear} from '../systems/collision.js';
-import {strikeCandidates,struckSegment,compareStrikeCandidates} from '../systems/combat.js';
+import {strikeCandidates,struckSegment,compareStrikeCandidates,prioritizeAdditionalArm,isAdditionalAttackArm} from '../systems/combat.js';
 import {pendingStrikes,setPendingStrikes} from '../systems/strikes.js';
 import {BOSS_CONFIG} from './config.js';
 import {sweepPathClear,sweepContact,chargePlan,bossDamage,poseClear,poseAt} from './attacks.js';
@@ -24,11 +24,18 @@ export function updateBossPhase(robot,state){
 }
 function ordinaryCandidates(robot,target){
  const priority=segment=>segment==='head'?0:segment.startsWith('spine-')?1:2;
- return robot.attackSources.flatMap(source=>strikeCandidates(robot,target,source)).sort((a,b)=>priority(a.segment)-priority(b.segment)||compareStrikeCandidates(a,b));
+ const available=robot.attackSources.flatMap(source=>strikeCandidates(robot,target,source))
+  .sort((a,b)=>priority(a.segment)-priority(b.segment)||compareStrikeCandidates(a,b));
+ return prioritizeAdditionalArm(available,robot.body?.behavior?.state?.lastAttackSource);
 }
 function wideCandidate(robot,target,timing,exclude){
  if(!sightClear(robot.center,target.center)||Math.abs(wrap(Math.atan2(target.y-robot.y,target.x-robot.x)-robot.angle))>1.25)return null;
  const candidates=robot.attackSources.filter(s=>s.kind==='arm'&&root(s.key)!==exclude);
+ const last=robot.body?.behavior?.state?.lastAttackSource;
+ if(last&&!isAdditionalAttackArm(last)){
+  const idx=candidates.findIndex(s=>isAdditionalAttackArm(s.key));
+  if(idx>0)candidates.unshift(candidates.splice(idx,1)[0]);
+ }
  for(const source of candidates){
   const p={source:source.key,aim:{...target.center},direction:robot.angle,style:'sweep',timing,started:ctx.game.time};
   if(sweepPathClear(robot,p)&&sweepContact(robot,target,p,timing.windupSec,timing.windupSec+timing.thrustSec))return {victim:target,source,p};
@@ -45,7 +52,7 @@ function applyHit(robot,victim,p,segment){
  note('combat-strike',{from:robot.id,to:victim.id,source:p.source,segment,bossStyle:p.style??'jab'});
 }
 export function createBossBehavior(){
- const state={phase:1,cycles:0,followup:null,charge:null,quickStrike:null,chargeOutcome:null,chargeHistory:[],tacticsByTarget:{},nextChargeAt:6,lastSeen:null,lastSeenAt:-Infinity,status:''};
+ const state={phase:1,cycles:0,lastAttackSource:null,followup:null,charge:null,quickStrike:null,chargeOutcome:null,chargeHistory:[],tacticsByTarget:{},nextChargeAt:6,lastSeen:null,lastSeenAt:-Infinity,status:''};
  const hold=(robot,point,mode='атакует')=>({goal:{x:robot.x,y:robot.y},speed:0,mode,lookPoint:point??null,brake:true});
  const targetFor=robot=>activeOpponents(robot.id).sort((a,b)=>Math.hypot(a.x-robot.x,a.y-robot.y)-Math.hypot(b.x-robot.x,b.y-robot.y))[0];
  function updateChargeMemory(robot,now){
@@ -172,6 +179,7 @@ export function createBossBehavior(){
   const p={victim:target.id,segment:candidate.segment,source:source.key,aim:{...(candidate.aim??target.center)},direction:robot.angle,style,comboIndex,timing,
    started:ctx.game.time,impactAt:ctx.game.time+timing.windupSec+timing.thrustSec,endsAt:ctx.game.time+duration(timing),at:ctx.game.time+timing.windupSec,resolved:false};
   setPendingStrikes(robot.id,[p]);ctx.combat.nextStrike[robot.id]=p.endsAt;
+  state.lastAttackSource=source.key;
   ctx.combat.strikes++;ctx.combat.fighterSwings[robot.id]++;
   note('combat-windup',{from:robot.id,to:target.id,source:source.key,bossStyle:style,comboIndex});
  }

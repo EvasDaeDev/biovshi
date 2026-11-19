@@ -6,7 +6,8 @@ import {ctx} from '../src/game/state.js';
 import {CONFIG} from '../src/config.js';
 import {initializeGame} from '../src/game/initialize.js';
 import {createRobot} from '../src/robot/robot.js';
-import {combatAttacks,selectSimultaneousStrikes,strikeCandidates} from '../src/systems/combat.js';
+import {combatAttacks,selectSimultaneousStrikes,strikeCandidates,inStrikeSector} from '../src/systems/combat.js';
+import {towerPatientAnatomy} from '../src/tower/anatomy.js';
 import {pendingStrikes,cancelStrikesAgainst} from '../src/systems/strikes.js';
 import {lifted} from '../src/robot/scenes.js';
 import {onGameEvent} from '../src/game/event-bus.js';
@@ -107,5 +108,47 @@ test('jump impact damages only its designated target even when two patients over
   assert.equal(f.r.pounce({x:425,y:350},{victimId:1}),true);
   Object.assign(f.r.actualPose.leap,{kind:'combat-pounce',launched:true,soundStarted:true,victim:1,lastHead:point});
   combatAttacks();combatAttacks();assert.deepEqual(foes.map(v=>v.hits.length),[1,0]);assert.equal(foes[0].hits[0].damage,CONFIG.attack.combatPounceDamage);assert.deepEqual(pendingStrikes(0),[]);
+ }finally{f.close();}
+});
+
+
+test('graft/second-pair arms rotate into reachable single-target attacks, without adding a second hit',()=>{
+ const ordinary=candidate(1,'arm-1-lower',1);
+ const graft=candidate(1,'arm-1-graft-lower',4);
+ const pair2=candidate(1,'arm--1-pair2-lower',5);
+ assert.deepEqual(selectSimultaneousStrikes([ordinary,graft],{lastSource:'arm-1-lower'}).map(c=>c.source.key),['arm-1-graft-lower']);
+ assert.deepEqual(selectSimultaneousStrikes([ordinary,graft],{lastSource:'arm-1-graft-lower'}).map(c=>c.source.key),['arm-1-lower']);
+ assert.deepEqual(selectSimultaneousStrikes([ordinary,pair2],{lastSource:'arm-1-lower'}).map(c=>c.source.key),['arm--1-pair2-lower']);
+ assert.deepEqual(selectSimultaneousStrikes([ordinary],{lastSource:'arm-1-lower'}).map(c=>c.source.key),['arm-1-lower']);
+ const rear={kind:'arm',frame:{x:0,y:0,angle:Math.PI/2}};
+ const actor={x:0,y:0,angle:0};
+ assert.equal(inStrikeSector(actor,rear,{x:0,y:50}),true,'an anchored arm uses its own spine direction');
+ assert.equal(inStrikeSector(actor,rear,{x:50,y:0}),false,'cannot strike outside its local arc');
+});
+test('surgically attached hand is a real attacking limb with a complete thrust pose',()=>{
+ const f=setup();
+ try{
+  const patient=createRobot(0,{x:350,y:350,angle:0},towerPatientAnatomy({
+   surgeries:[{procedure:'graft_arm',site:'arm-1-upper'}]
+  }));
+  ctx.robots=[patient];
+  const extra=patient.attackSources.find(s=>s.key==='arm-1-graft-lower');
+  assert.ok(extra,'fifth anatomical limb exposes a real attack source');
+  let foe=null;
+  for(const dx of [8,14,20,26,32])for(const dy of [-8,0,8]){
+   const v=target(1,{x:extra.point.x+dx,y:extra.point.y+dy});
+   if(strikeCandidates(patient,v,extra).length){foe=v;break;}
+  }
+  assert.ok(foe,'grafted arm can reach a real collision capsule with its own shoulder');
+  ctx.robots.push(foe);
+  ctx.agentAI[0].lastAttackSource='arm-1-lower';
+  combatAttacks();
+  const hits=pendingStrikes(0);
+  assert.equal(hits.length,1,'one target is not struck twice for free');
+  assert.equal(hits[0].source,'arm-1-graft-lower','additional arm is selected when reachable');
+  ctx.game.time=hits[0].impactAt;
+  const pose=patient.attackPose(hits[0]);assert.ok(pose&&pose.kind==='arm');
+  combatAttacks();
+  assert.equal(foe.hits.length,1,'extra arm damages a stationary body when its thrust connects');
  }finally{f.close();}
 });

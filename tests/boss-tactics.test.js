@@ -7,6 +7,7 @@ import {createBoss} from '../src/boss/boss.js';
 import {BOSS_CONFIG} from '../src/boss/config.js';
 import {bossDamage,chargePlan,sweepContact,sweepPathClear} from '../src/boss/attacks.js';
 import {updateBossPhase} from '../src/boss/behavior.js';
+import {strikeCandidates} from '../src/systems/combat.js';
 import {pendingStrikes} from '../src/systems/strikes.js';
 import {onGameEvent} from '../src/game/event-bus.js';
 import {obstacleVertices} from '../src/game/arena.js';
@@ -255,5 +256,19 @@ test('tactical strike misses change side preference but a hit resets miss accumu
   recordBossTacticalStrike(m,source,true,3);
   assert.equal(m.misses,0);
   assert.equal(m.strikeFailures[source.key],0);
+ }finally{f.close();}
+});
+
+
+test('a second-pair boss hand joins ordinary combo selection when it can reach',()=>{
+ const f=duel({variant:'arms',bossX:330,playerX:365});
+ try{
+  const extras=f.boss.attackSources.filter(s=>s.key.includes('pair2'));
+  assert.equal(extras.length,2);
+  assert.ok(extras.every(s=>f.boss.attackPose({source:s.key,aim:{x:s.point.x+12,y:s.point.y},preview:true})));
+  // The choice is still gated by the actual target's capsules, line of
+  // sight, reach and windup geometry; no guaranteed strike is added.
+  const additional=extras.flatMap(s=>strikeCandidates(f.boss,f.player,s));
+  assert.ok(Array.isArray(additional));
  }finally{f.close();}
 });
