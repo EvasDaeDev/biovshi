@@ -40,6 +40,35 @@ test('selection caps attacks at two distinct opponents and distinct limbs, inclu
  const pair=selectSimultaneousStrikes([a,b,c]);assert.equal(pair.length,2);assert.deepEqual(new Set(pair.map(x=>x.victim.id)),new Set([1,2]));
  assert.equal(selectSimultaneousStrikes([a,b,c,d]).length,2,'no third opponent');
 });
+test('a reachable head attacks like other sources and alternates with arms',()=>{
+ const f=setup();
+ try{
+  const head=f.r.attackSources.find(s=>s.kind==='head');
+  assert.ok(head?.frame,'head source uses its real facing');
+  const at={x:head.point.x+14*Math.cos(head.frame.angle),y:head.point.y+14*Math.sin(head.frame.angle)};
+  const foe=target(1,at);ctx.robots.push(foe);
+  assert.ok(strikeCandidates(f.r,foe,head).length,'head really reaches a damageable segment');
+  ctx.agentAI[0].lastAttackSource='arm-1-lower';
+  combatAttacks();
+  const strikes=pendingStrikes(0);
+  assert.equal(strikes.length,1,'head never gives a free second strike on the same enemy');
+  assert.equal(strikes[0].source,'head','reachable head must be selected even with healthy hands');
+  ctx.game.time=strikes[0].impactAt;
+  combatAttacks();
+  assert.equal(foe.hits.length,1,'headbutt deals a real physical hit');
+  assert.equal(ctx.combat.fighterHits[0],1);
+ }finally{f.close();}
+});
+
+test('head and a limb can strike different targets, but never one target twice',()=>{
+ const head={victim:{id:1},segment:'head',score:3000,source:{key:'head',kind:'head'}};
+ const arm={victim:{id:1},segment:'arm-1-lower',score:0,source:{key:'arm-1-lower',kind:'arm'}};
+ const leg={victim:{id:2},segment:'leg-1-lower',score:1,source:{key:'leg-1-lower',kind:'leg'}};
+ assert.deepEqual(selectSimultaneousStrikes([head,arm],{lastSource:'arm-1-lower'}).map(c=>c.source.key),['head']);
+ assert.deepEqual(selectSimultaneousStrikes([head,arm,leg],{lastSource:'arm-1-lower'}).map(c=>c.source.key),['head','leg-1-lower']);
+ assert.deepEqual(selectSimultaneousStrikes([head,arm,leg],{lastSource:'head'}).map(c=>c.source.key),['arm-1-lower','leg-1-lower']);
+});
+
 test('two actual legs strike two opponents once each and both appear in the pose',()=>{
  const f=setup();try{
   const foes=rearTargets(f.r);ctx.robots.push(...foes);const events=[];const off=onGameEvent(e=>events.push(e));
