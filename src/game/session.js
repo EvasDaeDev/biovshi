@@ -33,7 +33,7 @@ export async function resetRound(destination='betting') {
       ctx.lastFloorBakeError='Следы последнего боя не удалось добавить. Предыдущий пол сохранён; можно продолжить игру.';
     }finally{clearTimeout(timeout);controller.abort();ctx.floorBaking=false;ctx.resultsAgain.disabled=false;if(ctx.resultsProcedure)ctx.resultsProcedure.disabled=false;}
   }
-  ctx.root.querySelector('#tower-start-countdown')?.setAttribute('hidden','');
+  ctx.streamerMascot?.finishCountdown?.();
   ctx.afterSetup=destination;ctx.exhibition=false;resetCombatLog();ctx.streamerMascot?.reset();
   ctx.telemetryDirty = true;
   ctx.lastTelemetryAt = -Infinity;
@@ -125,14 +125,10 @@ export function advanceStartup(dt) {
   if (ctx.appInactive || ctx.startup.phase !== 'spawning' || ctx.settingsOpen || ctx.tutorial?.active) return;
   ctx.startup.elapsed += dt;
   if(ctx.mode==='tower'){
-    const timer=ctx.root?.querySelector('#tower-start-countdown');
     const text=towerCountdownText(ctx.startup.readyAt,ctx.startup.elapsed);
-    if(timer&&timer.textContent!==text){
-      timer.textContent=text;
-      timer.classList.remove('is-changing');
-      // Restart a short animation every second, not just on first appearance.
-      void timer.offsetWidth;
-      timer.classList.add('is-changing');
+    if(ctx.startup.countdownText!==text){
+      ctx.startup.countdownText=text;
+      ctx.streamerMascot?.showCountdown?.(text);
     }
   }
   while (ctx.startup.nextIndex < ctx.startup.order.length && ctx.startup.elapsed + 1e-9 >= ctx.startup.nextIndex * CONFIG.startup.spawnIntervalSec) {
@@ -142,8 +138,7 @@ export function advanceStartup(dt) {
   const landedAt = Math.max(0,ctx.startup.order.length-1)*CONFIG.startup.spawnIntervalSec + CONFIG.startup.spawnDurationSec;
   const startAt=ctx.mode==='tower'?ctx.startup.readyAt:landedAt;
   if (ctx.startup.nextIndex === ctx.startup.order.length && ctx.startup.elapsed+1e-9 >= startAt) {
-    const countdown=ctx.root?.querySelector('#tower-start-countdown');
-    if(countdown)countdown.hidden=true;
+    ctx.streamerMascot?.finishCountdown?.();
     ctx.startup.phase = 'running';
     note('combat-start', {});
     ctx.button.disabled = ctx.resetButton.disabled = false;
@@ -158,15 +153,10 @@ export function startSpawnSequence() {
   ctx.startup.order = ctx.robots.map(r => r.id).sort(() => random() - .5);
   ctx.startup.elapsed = 0;
   ctx.startup.nextIndex = 0;
-  const stage=ctx.root?.querySelector('.tag7hop-stage');
-  let countdown=stage?.querySelector('#tower-start-countdown');
-  if(ctx.mode==='tower'&&stage){
-    if(!countdown){countdown=document.createElement('output');countdown.id='tower-start-countdown';
-      countdown.setAttribute('role','status');countdown.setAttribute('aria-live','polite');stage.append(countdown);}
+  ctx.startup.countdownText=null;
+  if(ctx.mode==='tower'){
     ctx.startup.readyAt=towerCountdownDuration(ctx.robots.length,CONFIG.startup);
-    countdown.textContent=towerCountdownText(ctx.startup.readyAt,0);countdown.hidden=false;
-    countdown.classList.add('is-changing');
-  }else if(countdown)countdown.hidden=true;
+  }else ctx.streamerMascot?.finishCountdown?.();
   ctx.button.disabled = ctx.speedButton.disabled = ctx.resetButton.disabled = true;
   advanceStartup(0);
 }
