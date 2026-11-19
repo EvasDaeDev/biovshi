@@ -283,6 +283,37 @@ export function watchProgress(robotState, dt, previous) {
     }
   } else robotState.stuckFor = 0;
 }
+// Moving feet used to land on the rest position of the body at swing START.
+// At chase speed the body travels several centimeters during the swing, so
+// the new support was already behind and immediately had to step again.
+// Plan a forward point using actual velocity; collision and IK still have
+// the final say, and calm walking keeps its existing landing position.
+export function fastGaitFactor(robotState){
+ const speed=Math.hypot(robotState.vx??0,robotState.vy??0);
+ return clamp((speed-CONFIG.movement.stepLeadStartSpeedCm)/
+   (CONFIG.movement.stepLeadFullSpeedCm-CONFIG.movement.stepLeadStartSpeedCm),0,1);
+}
+export function stepLandingTarget(robotState,l,home=robotState.rest(l)){
+ const vx=robotState.vx??0,vy=robotState.vy??0;
+ const speed=Math.hypot(vx,vy),factor=fastGaitFactor(robotState);
+ if(speed<1||factor===0)return home;
+ const scale=robotState.scale??ctx.scale;
+ const advance=Math.min(speed*CONFIG.movement.stepLeadTimeSec,
+   CONFIG.movement.stepLeadMaxCm*scale)*factor;
+ if(advance<.1)return home;
+ const previous=l.foot;
+ try{
+  // Each candidate must be reachable and collision-free with the REAL
+  // joint geometry. Shorten the lead instead of forcing a foot through walls.
+  for(const fraction of [1,.75,.5,.25]){
+   const candidate={x:home.x+vx/speed*advance*fraction,
+     y:home.y+vy/speed*advance*fraction};
+   l.foot=candidate;
+   if(robotState.validContact(l)&&robotState.limbClear(l))return candidate;
+  }
+ }finally{l.foot=previous;}
+ return home;
+}
 export function contacts(robotState, dt, previous) {
   const limbs = robotState.allLimbs(),
     candidate = robotState.savePose();
@@ -314,7 +345,7 @@ export function contacts(robotState, dt, previous) {
       p.l.from = {
         ...p.l.foot
       };
-      p.l.to = p.r;
+      p.l.to = stepLandingTarget(robotState,p.l,p.r);
       p.l.phase = 0;
       p.l.stall = 0;
       airborne++;
@@ -361,7 +392,11 @@ export function contacts(robotState, dt, previous) {
     // Only a lifted limb may adjust its landing position to stay reachable.
     const rx = ((desired.x - frame.x) * Math.cos(frame.angle) + (desired.y - frame.y) * Math.sin(frame.angle)) / (robotState.scale??ctx.scale),
       ry = (-(desired.x - frame.x) * Math.sin(frame.angle) + (desired.y - frame.y) * Math.cos(frame.angle)) / (robotState.scale??ctx.scale);
-    desired = robotState.local(frame, l.kind === 'extra' ? clamp(rx, -14, 18) : l.kind === 'arm' ? Math.max(7, rx) : clamp(rx, -44, -7), l.side * Math.max(l.kind === 'arm' ? 5 : 23, ry * l.side));
+    // The old -7 cm leg bound cut off even safe forward landing targets.
+    // Relax it only while moving fast; the true IK/obstacle tests below
+    // still reject unsafe placements and restore the previous pose.
+    const legFront=-7+CONFIG.movement.stepLegForwardGainCm*fastGaitFactor(robotState);
+    desired = robotState.local(frame, l.kind === 'extra' ? clamp(rx, -14, 18) : l.kind === 'arm' ? Math.max(7, rx) : clamp(rx, -44, legFront), l.side * Math.max(l.kind === 'arm' ? 5 : 23, ry * l.side));
     const a = robotState.origin(l),
       [u, v] = robotState.lengths(l),
       dx = desired.x - a.x,

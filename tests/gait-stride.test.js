@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CONFIG} from '../src/config.js';
-import {contacts} from '../src/robot/locomotion.js';
+import {contacts,stepLandingTarget,fastGaitFactor} from '../src/robot/locomotion.js';
 
 // Isolate the replant decision; real combat/arena physics are covered by the
 // existing movement, contact, boss and headless-fight regression suites.
@@ -46,4 +46,41 @@ test('support emergencies remain independent of ordinary step rhythm',()=>{
  state.validContact=()=>false;
  contacts(state,0,{});
  assert.equal(limb.phase,0,'unsafe support must be lifted even below regular stride threshold');
+});
+
+test('running hand and foot steps land ahead of the body rest point, not where it was at lift-off',()=>{
+ for(const [kind,side] of [['arm',1],['leg',-1]]){
+  const calm=gaitRig(kind,side,17);
+  calm.state.vx=0;calm.state.vy=0;
+  contacts(calm.state,0,{});
+  assert.equal(calm.limb.to.x,17,'standing and slow animation do not change');
+
+  const walk=gaitRig(kind,side,17);
+  walk.state.vx=36;walk.state.vy=0;
+  contacts(walk.state,0,{});
+
+  const run=gaitRig(kind,side,17);
+  run.state.vx=65;run.state.vy=0;
+  contacts(run.state,0,{});
+  assert.ok(run.limb.to.x>walk.limb.to.x+6,kind+' must extend stride at speed');
+  assert.ok(run.limb.to.x>calm.limb.to.x+8,kind+' gains forward reach');
+  assert.equal(run.limb.from.x,0,'support stays world-space planted until lift');
+  assert.equal(run.limb.foot.x,0,'a target probe must restore planted foot');
+ }
+});
+test('high speed steps respect diagonal velocity and shorten if blocked',()=>{
+ const {state,limb}=gaitRig('arm',1,17);
+ state.vx=45;state.vy=45;
+ const target=stepLandingTarget(state,limb);
+ assert.ok(target.x>17&&target.y>20,'support leads in the actual travel direction');
+ assert.equal(limb.foot.x,0);
+ assert.equal(limb.foot.y,20);
+ state.vx=65;state.vy=0;
+ state.validContact=l=>l.foot.x<=20;
+ const safe=stepLandingTarget(state,limb);
+ assert.ok(safe.x>17&&safe.x<=20,'stride is shortened instead of passing a reach boundary');
+ state.validContact=()=>false;
+ assert.deepEqual(stepLandingTarget(state,limb),state.rest(limb),'no safe projection leaves the old target');
+ assert.equal(fastGaitFactor({...state,vx:0,vy:0}),0);
+ assert.equal(fastGaitFactor({...state,vx:75,vy:0}),1);
 });
