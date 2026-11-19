@@ -130,7 +130,7 @@ export function completeTower(session,player,won,random=Math.random){
    !surviving.some(existing=>existing.id===item.id))]);
   next.equippedSegments=[...insuredIds];
   next.nextSegmentId=Math.max(t.nextSegmentId,c?.nextSegmentId??1);
-  next.segmentRewardsEnabled=t.segmentRewardsEnabled??false;
+  if(t.segmentRewardsEnabled!==undefined)next.segmentRewardsEnabled=t.segmentRewardsEnabled;
   // A surviving warehouse must be usable immediately on the replacement patient.
   // Likewise, DMS restores the patient to a configurable preparation phase.
   if(next.segmentRewardsEnabled)next.preparing=true;
