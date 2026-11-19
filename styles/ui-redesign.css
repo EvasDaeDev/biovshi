@@ -376,6 +376,28 @@
 #robot-tag-hops-v22 .tower-upgrade-heading-actions .tower-upgrade-settings:hover{
   background:#495340;color:#fff2ce;
 }
+/* While the Shelter is in the browser top layer, its gear occupies the
+   exact same screen corner as the global navigation gear behind it. */
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-heading-actions .tower-upgrade-settings{
+  position:fixed;
+  top:12px;
+  right:12px;
+  z-index:10;
+  display:grid;
+  place-items:center;
+  width:44px;
+  height:44px;
+  min-height:44px;
+  padding:9px;
+  border:1px solid #887957;
+  background:#282e25;
+  color:#e7ddc6;
+  box-shadow:0 3px 10px #0008;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-heading-actions .tower-upgrade-settings svg{
+  width:23px;height:23px;
+}
+
 
 /* Stable global landscape navigation: identical screen coordinates everywhere. */
 #robot-tag-hops-v22 #game-navigation{
