@@ -1575,3 +1575,13 @@
     row-gap:12px;
   }
 }
+
+/* New parts are flagged until the player selects their inventory stack. */
+#robot-tag-hops-v22 #tower-upgrade-open.has-new-items{position:relative;overflow:visible}
+#robot-tag-hops-v22 .tower-new-dot{
+ position:absolute;top:5px;right:5px;width:13px;height:13px;box-sizing:border-box;
+ border-radius:50%;background:#e52e30;border:2px solid #ffd6c9;
+ box-shadow:0 0 0 1px #4b1818;pointer-events:none;
+}
+#robot-tag-hops-v22 #tower-upgrade-open .tower-new-dot{top:5px;right:6px;width:15px;height:15px}
+#robot-tag-hops-v22 .tower-inventory-item.is-new{position:relative}
