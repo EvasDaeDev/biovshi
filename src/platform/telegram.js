@@ -110,7 +110,7 @@ export function initializeTelegram(onLayoutChange){
     colors();
     invoke('expand','6.0');invoke('disableVerticalSwipes','7.7');
     activity();layout();
-    if(backAvailable)app.BackButton?.show?.();else app.BackButton?.hide?.();
+    if(backAvailable)app.BackButton?.show?.();
     if(readyRequested)invoke('ready','6.0');
     fullscreen();
   };
