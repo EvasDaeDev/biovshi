@@ -249,7 +249,7 @@ export function towerPreparation(){
         action.disabled=Boolean(t.mutationDraft)||(!equipped&&ctx.betting.players[ctx.towerPlayer].balance<towerMutationInstallPrice(t));
         action.onclick=()=>{
           if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
-          const finish=(replaceId=null)=>{
+          const finish=(replaceId=null,confirmed=false)=>{
             if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
             try{
               if(equipped){
@@ -260,7 +260,7 @@ export function towerPreparation(){
                 const price=towerMutationInstallPrice(t);
                 // A replacement selected in our native dialog has already
                 // been explicitly confirmed with the exact price.
-                if(!replaceId&&!confirm('Установить '+mod.name+'?\\nСтоимость: '+price+' монет.'))return;
+                if(!confirmed&&!confirm((replaceId?'Заменить установленный модуль?':'Установить '+mod.name+'?')+'\\nСтоимость: '+price+' монет.'))return;
                 const charged=equipTowerMutation(ctx.betting,ctx.towerPlayer,t,selected.id,replaceId);
                 lastMutationReceipt=mod.name+' установлен · −'+charged+' монет · '+towerMutationEffectText(selected.type);
               }
@@ -277,7 +277,7 @@ export function towerPreparation(){
               installed:towerInstalledItems(t),
               installName:mod.name,
               price:towerMutationInstallPrice(t),
-              onConfirm:finish
+              onConfirm:id=>finish(id,true)
             });
             return;
           }
