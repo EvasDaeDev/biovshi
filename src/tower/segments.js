@@ -88,7 +88,7 @@ export function validTowerSegmentInventory(run){
   ||!Number.isSafeInteger(run.nextSegmentId)||run.nextSegmentId<1)return false;
  const ids=new Set(),sites=new Set();
  for(const item of run.segmentInventory){
-  if(!item||!/^seg[1-9]\\d*$/.test(item.id)||ids.has(item.id)
+  if(!item||!/^seg[1-9]\d*$/.test(item.id)||ids.has(item.id)
    ||!TOWER_MUTATION_IDS.includes(item.type)||!towerUpgradeApplies(item.type,item.site)
    ||!Number.isInteger(item.rarity)||item.rarity<0||item.rarity>5
    ||Number(item.id.slice(3))>=run.nextSegmentId)return false;
