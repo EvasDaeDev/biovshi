@@ -47,7 +47,6 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
     (index===run.floorPlan.selected?' is-selected':'');
    button.setAttribute('aria-pressed',String(index===run.floorPlan.selected));
    const style=TOWER_DANGER_STYLES[option.style];
-   const style=TOWER_DANGER_STYLES[option.style];
    const counts=new Map();for(const id of option.profiles)counts.set(id,(counts.get(id)??0)+1);
    const difficulty=option.kind==='danger'?'Опасно':option.kind==='boss'?'Босс':'Стандарт';
    const type=option.kind==='danger'?(style?.name??'Испытание'):
