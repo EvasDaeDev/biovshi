@@ -17,7 +17,8 @@ import {paintTelemetry} from '../src/ui/paint-telemetry.js';
 import {installTowerUI} from '../src/tower/ui.js';
 import {initializeModalFocus} from '../src/ui/modal-focus.js';
 import {initializeGameNavigation} from '../src/ui/game-navigation.js';
-import {bettingOpen} from '../src/betting/ui.js';
+import {bettingOpen,bettingSetup} from '../src/betting/ui.js';
+import {garageOpen} from '../src/garage/ui.js';
 import {betCommit} from '../src/betting/ledger.js';
 import {bettingCancel} from '../src/betting/ui.js';
 
@@ -293,3 +294,43 @@ test('betting screen keeps Back and Settings at fixed global corners, Back retur
  assert.equal(document.querySelector('#bet-overlay').hidden,true);
  ctx.root.__disposeTag();dom.window.close();
 });
+
+test('Back traverses betting and procedure history without losing drafted stakes',()=>{
+ const dom=setup();installTowerUI();initializeModalFocus();
+ const nav=initializeGameNavigation();
+ const launch=document.querySelector('#launch-overlay'),back=document.querySelector('#game-nav-back');
+ launch.hidden=false;nav.update();
+ launch.hidden=true;bettingOpen();nav.update();
+ assert.equal(nav.update instanceof Function,true);
+ const stake=document.querySelector('#bet-stakes-form [data-bet-player="0"] input');
+ stake.value='23';stake.dispatchEvent(new Event('input',{bubbles:true}));
+ document.querySelector('#bet-procedure').click();nav.update();
+ assert.equal(document.querySelector('#bet-overlay').dataset.view,'garage');
+ assert.equal(back.getAttribute('aria-label'),'Назад к ставкам');
+ back.click();nav.update();
+ assert.equal(document.querySelector('#bet-overlay').dataset.view,'betting');
+ assert.equal(Number(document.querySelector('#bet-stakes-form [data-bet-player="0"] input').value),23);
+ assert.equal(back.getAttribute('aria-label'),'Назад в главное меню');
+ back.click();nav.update();
+ assert.equal(launch.hidden,false);
+ assert.equal(back.hidden,true);
+ ctx.root.__disposeTag();dom.window.close();
+});
+
+test('Back returns from creation form to the actual previous betting screen',()=>{
+ const dom=setup();installTowerUI();initializeModalFocus();
+ const nav=initializeGameNavigation();
+ const launch=document.querySelector('#launch-overlay'),back=document.querySelector('#game-nav-back');
+ launch.hidden=false;nav.update();
+ launch.hidden=true;bettingOpen();nav.update();
+ const session=ctx.betting;
+ bettingSetup();nav.update();
+ assert.equal(document.querySelector('#bet-setup-form')!==null,true);
+ assert.equal(back.getAttribute('aria-label'),'Назад к ставкам');
+ back.click();nav.update();
+ assert.equal(document.querySelector('#bet-stakes-form')!==null,true);
+ assert.equal(ctx.betting,session,'return does not replace the existing game');
+ assert.equal(back.getAttribute('aria-label'),'Назад в главное меню');
+ ctx.root.__disposeTag();dom.window.close();
+});
+
