@@ -348,6 +348,76 @@ test('Tower II upgrade screen displays coin art, real equipped bonuses and one r
  }finally{close(dom);}
 });
 
+
+test('Shelter shows one value when equipped and compares only genuinely changing stats',()=>{
+ const session=betNewSession(['Одиночные значения'],1000),run=towerFor(session,0);
+ const dom=setup(session,run,'ward');
+ try{
+  const modal=document.querySelector('#tower-upgrade-window');
+  document.querySelector('#tower-upgrade-open').click();
+  const stats=modal.querySelector('#tower-upgrade-stats');
+  const cells=[...stats.querySelectorAll('.tower-upgrade-stat')];
+  assert.equal(cells.length,3);
+  assert.ok(cells.every(cell=>cell.querySelector('.tower-stat-after').hidden),
+    'without a preview, each stat has exactly one visible value');
+  assert.doesNotMatch(stats.textContent,/СЕЙЧАС\s*→\s*ПОСЛЕ/);
+  assert.doesNotMatch(modal.textContent,/ПАЦИЕНТ ЛЕЖИТ ГОРИЗОНТАЛЬНО|Наведи курсор на модуль/);
+  const options=modal.querySelectorAll('.tower-mutation-option');
+  if(options.length){
+   options[0].click();
+   const changed=[...stats.querySelectorAll('.tower-stat-after:not([hidden])')];
+   assert.ok(changed.length>0,'reward selection shows real differences');
+   assert.ok(changed.every(next=>next.classList.contains('is-positive')||next.classList.contains('is-negative')));
+   assert.ok(changed.every(next=>/[▲▼]/.test(next.textContent)));
+  }
+  modal.querySelector('.tower-upgrade-close').click();
+ }finally{close(dom);}
+});
+
+test('Shelter artifact tab stays within one popup with patient and compact tiles',()=>{
+ const session=betNewSession(['Артефакты внутри'],1000),run=towerFor(session,0);
+ const dom=setup(session,run,'ward');
+ try{
+  const modal=document.querySelector('#tower-upgrade-window');
+  document.querySelector('#tower-upgrade-open').click();
+  const popupCount=document.querySelectorAll('#tower-upgrade-window').length;
+  modal.querySelector('[data-upgrade-tab="artifacts"]').click();
+  assert.equal(document.querySelectorAll('#tower-upgrade-window').length,popupCount);
+  assert.equal(modal.querySelector('#tower-upgrade-artifacts-page').hidden,false);
+  assert.equal(modal.querySelector('.tower-upgrade-table').hidden,false,'patient stays visible on artifacts tab');
+  assert.equal(modal.querySelector('#tower-upgrade-stats').hidden,false,'current stats stay visible');
+  assert.equal(modal.querySelectorAll('#tower-upgrade-artifacts-page .artifact').length,4);
+  assert.equal(modal.querySelector('.tower-upgrade-paper').classList.contains('is-artifacts'),false,
+    'switching tabs does not replace the sheet layout');
+  modal.querySelector('[data-upgrade-tab="mutations"]').click();
+  assert.equal(modal.querySelector('#tower-upgrade-artifacts-page').hidden,true);
+  modal.querySelector('.tower-upgrade-close').click();
+ }finally{close(dom);}
+});
+
+test('Shelter removal button belongs to the bottom action area, not the module tile',()=>{
+ const session=betNewSession(['Снятие снизу'],1000),run=towerFor(session,0);
+ const dom=setup(session,run,'ward');
+ try{
+  const modal=document.querySelector('#tower-upgrade-window');
+  const choice=modal.querySelector('.tower-mutation-option');
+  assert.ok(choice,'unclaimed boss reward is available');
+  choice.click();
+  modal.querySelector('.tower-mutation-claim').click();
+  const action=modal.querySelector('.tower-mutation-action-area .tower-mutation-install');
+  assert.ok(action);
+  assert.ok(modal.querySelector('.tower-mutation-detail').compareDocumentPosition(action)&
+    dom.window.Node.DOCUMENT_POSITION_FOLLOWING,'action is beneath item description');
+  action.click();confirmPaidAction();
+  const remove=modal.querySelector('.tower-mutation-action-area .tower-mutation-install');
+  assert.match(remove.textContent,/СНЯТЬ.*БЕСПЛАТНО/);
+  const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
+  assert.match(css,/#tower-upgrade-window \.tower-mutation-action-area\s*\{[\s\S]*?margin-top:auto/);
+  assert.match(css,/#tower-upgrade-window #tower-prep-artifacts \.artifact-image\s*\{[\s\S]*?height:112px/);
+  modal.querySelector('.tower-upgrade-close').click();
+ }finally{close(dom);}
+});
+
 test('surgery implant texture survives a switch between modernization tabs and prices show coins',()=>{
  const s=betNewSession(['Хирургия UI'],1000),t=towerFor(s,0);
  unlockSurgeryForTest(s,t);
