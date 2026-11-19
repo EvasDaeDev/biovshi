@@ -1,14 +1,17 @@
 // Segment-based Tower mutation inventory (new economy, independent of old whole-kit UI).
 // Each object is one owned item. Equipped parts are at risk on uninsured death.
 import {TOWER_MUTATION_IDS,TOWER_MUTATIONS,towerMutationRarity} from './mutations.js';
-import {TOWER_UPGRADE_PARTS,towerUpgradeApplies} from './upgrade-appearance.js';
+import {towerUpgradeApplies} from './upgrade-appearance.js';
+import {towerPatientAnatomy} from './anatomy.js';
 
 export const TOWER_SEGMENT_INSTALL_PRICE=75;
 export const TOWER_SEGMENT_SELL_BASE=50;
 export const towerSegmentSellPrice=rarity=>Math.round(TOWER_SEGMENT_SELL_BASE*(1+.12*rarity));
 const standardSites=Object.freeze(['head',...Array.from({length:4},(_,i)=>'spine-'+i),
  ...[-1,1].flatMap(side=>['arm','leg'].flatMap(kind=>['upper','lower'].map(part=>kind+'-'+side+'-'+part)))]);
-export const towerSegmentSites=type=>standardSites.filter(site=>towerUpgradeApplies(type,site));
+export const towerSegmentSites=(type,run=null)=>[
+ ...standardSites,...(towerPatientAnatomy(run)?.segments??[])
+].filter((site,i,all)=>all.indexOf(site)===i&&towerUpgradeApplies(type,site));
 export function normalizeTowerSegmentInventory(run){
  run.segmentInventory??=[];
  run.equippedSegments??=[];
@@ -32,7 +35,7 @@ export function awardTowerSegments(run,clearedFloor,random=Math.random){
  const issued=[];
  for(let i=0;i<count;i++){
   const type=TOWER_MUTATION_IDS[Math.min(TOWER_MUTATION_IDS.length-1,Math.floor(random()*TOWER_MUTATION_IDS.length))];
-  const sites=towerSegmentSites(type);
+  const sites=towerSegmentSites(type,run);
   const site=sites[Math.min(sites.length-1,Math.floor(random()*sites.length))];
   const item={id:'seg'+run.nextSegmentId++,type,site,rarity:towerMutationRarity(clearedFloor)};
   run.segmentInventory.push(item);issued.push(item);
@@ -59,7 +62,8 @@ export function towerSegmentBonuses(run){
 export function equipTowerSegment(session,player,run,id){
  normalizeTowerSegmentInventory(run);
  const item=run.segmentInventory.find(x=>x.id===id);
- if(!run.preparing||!item||run.equippedSegments.includes(id))throw Error('Сегмент недоступен для установки.');
+ if(!run.preparing||!item||run.equippedSegments.includes(id)||
+  !towerSegmentSites(item.type,run).includes(item.site))throw Error('Сегмент недоступен для установки.');
  const buyer=session.players?.[player];
  if(!buyer||buyer.balance<TOWER_SEGMENT_INSTALL_PRICE)throw Error('Недостаточно монет.');
  const old=towerInstalledSegments(run).find(x=>x.site===item.site);
