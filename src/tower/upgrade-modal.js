@@ -1,6 +1,7 @@
 // Dedicated Tower modernization dialog. Reuses the existing mutation and
 // surgical control panels so purchases and save validation stay authoritative.
 import {towerMutationSnapshot,towerMutationCombatBonus,towerMutationSynergies,towerInstalledItems,TOWER_MUTATIONS,TOWER_MUTATION_LIMIT} from './mutations.js';
+import {towerInstalledSegments} from './segments.js';
 import {towerSurgeryAvailableSites,towerSurgerySiteLabel,towerSurgeryCapacity,TOWER_SURGERY_MIN_LEVEL,
  towerSurgeryPrice,towerSurgeryReplacePrice,TOWER_SURGERY_OPERATIONS} from './surgery.js';
 import {renderTowerUpgradePatient} from './upgrade-preview.js';
@@ -111,14 +112,20 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
     id:selectedCard.dataset.mutationId??null,
     rarity:Number(selectedCard.dataset.mutationRarity??0)
   }:null));
-  const equipped=run.equippedMutations?.includes(candidate?.id);
+  const segmentCandidate=run.segmentRewardsEnabled&&candidate?.id?
+    run.segmentInventory.find(item=>item.id===candidate.id):null;
+  const segmentEquipped=run.equippedSegments?.includes(segmentCandidate?.id);
+  const equipped=run.segmentRewardsEnabled?segmentEquipped:run.equippedMutations?.includes(candidate?.id);
   const installed=towerInstalledItems(run);
   const conflict=installed.find(item=>item.type===candidate?.type);
-  const canPreview=Boolean(candidate&&!equipped&&(installed.length<TOWER_MUTATION_LIMIT||conflict));
-  const proposedMutation=canPreview?candidate.type:null;
+  const canPreview=Boolean(candidate&&!equipped&&(run.segmentRewardsEnabled||installed.length<TOWER_MUTATION_LIMIT||conflict));
+  const proposedMutation=canPreview&&!run.segmentRewardsEnabled?candidate.type:null;
   const nextMutations=proposedMutation?[...run.mutations.filter(type=>type!==candidate.type),candidate.type]:run.mutations;
   const before=towerMutationSnapshot(run).effective;
+  const proposedSegments=segmentCandidate&&!segmentEquipped?
+    [...(run.equippedSegments??[]).filter(id=>run.segmentInventory.find(item=>item.id===id)?.site!==segmentCandidate.site),segmentCandidate.id]:run.equippedSegments;
   const draft=proposedSurgery?{...run,surgeries:[...run.surgeries.filter(op=>op.site!==surgeryReplace),proposedSurgery]}:
+   run.segmentRewardsEnabled?{...run,equippedSegments:proposedSegments}:
    proposedMutation?{...run,mutations:nextMutations}:run;
   const after=towerMutationSnapshot(draft).effective;
   stats.replaceChildren();
@@ -146,12 +153,14 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
     proposedSurgery?'ПРЕДПРОСМОТР: '+TOWER_SURGERY_OPERATIONS[proposedSurgery.procedure].name:
       operation?.donor&&!donorItem?'Для пересадки нужен доступный донор выбранного типа':
       'Установлено: '+run.surgeries.length+' / '+towerSurgeryCapacity(run.level)+' · цена '+(surgeryReplace?towerSurgeryReplacePrice(run):towerSurgeryPrice(run))+' монет':
+    run.segmentRewardsEnabled?(segmentCandidate?(segmentEquipped?'УСТАНОВЛЕНО: ':'ПРЕДПРОСМОТР: ')+TOWER_MUTATIONS[segmentCandidate.type].name+' · '+towerSurgerySiteLabel(segmentCandidate.site):'Установлено '+towerInstalledSegments(run).length+' сегментов'):
     proposedMutation?'ПРЕДПРОСМОТР: '+TOWER_MUTATIONS[proposedMutation].name:
       candidate&&!equipped&&installed.length>=TOWER_MUTATION_LIMIT&&!conflict?
        'Шесть мест заняты: сначала выбери модуль для замены':
        'Установлено '+run.mutations.length+' модулей · активных синергий '+towerMutationSynergies(run.mutations).length;
   stats.append(create('small','tower-upgrade-stats-note',detail));
-  const currentCombat=towerMutationCombatBonus(run.mutations),nextCombat=towerMutationCombatBonus(draft.mutations);
+  const equippedTypes=patient=>[...(patient.mutations??[]),...towerInstalledSegments(patient).map(item=>item.type)];
+  const currentCombat=towerMutationCombatBonus(equippedTypes(run)),nextCombat=towerMutationCombatBonus(equippedTypes(draft));
   const combatLine=create('small','tower-upgrade-stats-note tower-combat-preview');
   const combatValue=(label,before,after,higherIsBetter)=>{
    combatLine.append(document.createTextNode(label+format(before)+'%'));
@@ -179,7 +188,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
    'АНАТОМИЯ · частей '+summary('segments')+' · рук '+summary('arms')+
    ' · ног '+summary('legs')+' · удлинённых '+summary('extended')));
   drawing.replaceChildren();
-  renderTowerUpgradePatient(drawing,run,{
+  renderTowerUpgradePatient(drawing,run.segmentRewardsEnabled&&!editingSurgery?draft:run,{
    selectedSite:editingSurgery?site:null,
    availableSites:editingSurgery?surgeryOptions:null,
    previewSurgery:proposedSurgery,previewReplaceSite:surgeryReplace,previewMutation:proposedMutation,previewRarity:candidate?.rarity??0,
@@ -213,7 +222,8 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   surgeryTab.textContent=surgeryTab.disabled?'ХИРУРГИЯ 🔒':'ХИРУРГИЯ';
   surgeryTab.title=surgeryTab.disabled?'Откроется после победы над вторым боссом на 10-м этаже':'Операции и пересадки';
   if(hoverMutation&&(![...mutationPanel.querySelectorAll('[data-mutation-type]')].some(button=>button.dataset.mutationType===hoverMutation.type)||(!run.mutationDraft&&!hoverMutation.id)))hoverMutation=null;
-  launch.textContent=run.mutationDraft?'УБЕЖИЩЕ · ВЫБРАТЬ НАГРАДУ':
+  launch.textContent=run.segmentRewardsEnabled?'УБЕЖИЩЕ · СЕГМЕНТЫ '+towerInstalledSegments(run).length:
+   run.mutationDraft?'УБЕЖИЩЕ · ВЫБРАТЬ НАГРАДУ':
    'УБЕЖИЩЕ · МОДУЛИ '+run.mutations.length+
    ' · ОПЕРАЦИИ '+run.surgeries.length+'/'+towerSurgeryCapacity(run.level);
   launch.classList.toggle('has-reward',Boolean(run.mutationDraft));
