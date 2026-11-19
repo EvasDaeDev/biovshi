@@ -91,6 +91,10 @@ test('insurance gets a dedicated preparation target and reads the live policy ra
   const step=TUTORIAL_CHAPTERS['tower-ready'].steps.find(step=>step.target==='#tower-insurance');
   assert.ok(step);assert.ok(ctx.root.querySelector(step.target));
   const before=step.text(ctx);ctx.root.querySelector('#tower-insurance').click();
+  const confirmation=s.doc.querySelector('#game-action-confirm');
+  assert.ok(confirmation,'DMS purchase requires confirmation');
+  assert.equal(ctx.betting.towers[0].insurance.checkpoint,null,'opening confirmation never buys a policy');
+  confirmation.querySelector('.game-action-confirm-submit').click();
   assert.equal(ctx.towerRun.insurance.checkpoint,null,'arena snapshot is intentionally unchanged');
   assert.notEqual(step.text(ctx),before,'tutorial follows the policy purchased in the current window');
   assert.equal(ctx.betting.towers[0].insurance.checkpoint.level,1);
