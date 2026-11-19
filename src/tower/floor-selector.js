@@ -5,7 +5,7 @@ import {selectedTowerFloor,selectTowerFloor,TOWER_DANGER_STYLES} from './floors.
 import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
 import {towerRelationLabel} from './relations.js';
 import {purchaseTowerArenaReroll,towerRerollCandidates,towerRerollPrice} from './economy.js';
-import {towerEnemyReward,towerEnemyCount} from './model.js';
+import {towerEnemyCount} from './model.js';
 import {artifactDropChance,ARTIFACT_PIECE_COUNT} from './artifacts.js';
 import {hasBoss} from '../boss/config.js';
 import {formatChips} from '../ui/currency.js';
@@ -20,10 +20,8 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
   const meta=document.createElement('div');
   const name=document.createElement('strong');name.textContent=definition.name;
   const count=document.createElement('span');count.textContent=`ПРОТИВНИКОВ: ${selected?.profiles.length??towerEnemyCount(run)} · РЕКОРД: ${run.record}`;
-  const reward=document.createElement('span');reward.innerHTML=`${formatChips(towerEnemyReward(run))} ЗА ЛИЧНОЕ ВЫБИВАНИЕ`;
   meta.append(name,count);
   if(run.preparing){const recovered=document.createElement('b');recovered.textContent='+1 ОЧКО НАВЫКОВ за победу';meta.append(recovered);}
-  meta.append(reward);
   if(hasBoss(run)){const chance=document.createElement('span');chance.dataset.artifactChance='';
    chance.textContent=run.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':
     'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(run.artifacts,run.level)*100)+'%';
