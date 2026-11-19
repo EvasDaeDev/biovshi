@@ -37,8 +37,8 @@ export function initializeGameNavigation(){
   const current=resolve();
   if(current==='garage'){bettingOpen();return;}
   if(current==='setup'){
-   if(ctx.betting){bettingOpen();return;}
-   openMenu();return;
+   if(ctx.afterSetup==='menu'||!ctx.betting){openMenu();return;}
+   bettingOpen();return;
   }
   if(current==='betting'||current==='tower'||current==='results')openMenu();
  };
