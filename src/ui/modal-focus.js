@@ -5,10 +5,11 @@ import {ctx} from '../game/state.js';
 export function initializeModalFocus(){
  const root=ctx.root,doc=root.ownerDocument,win=doc.defaultView;
  const sheets=['#arena-settings','#launch-overlay','#tower-preparation','#bet-overlay','#gladiator-results'].map(id=>root.querySelector(id));
- const settings=root.querySelector('#arena-settings-button');
+ const settings=root.querySelector('#game-nav-settings');
+ const navigation=root.querySelector('#game-navigation');
  let current=null,previous=null,background=[];
- const controls=sheet=>[...sheet.querySelectorAll('button,input,select,summary,[tabindex="0"]'),settings].filter(node=>!node.disabled&&!node.closest('[hidden]')&&!(node.closest('details')?.open===false&&node.tagName!=='SUMMARY'));
- const ownsFocus=sheet=>sheet.contains(doc.activeElement)||doc.activeElement===settings;
+ const controls=sheet=>[...sheet.querySelectorAll('button,input,select,summary,[tabindex="0"]'),...navigation.querySelectorAll('button')].filter(node=>!node.disabled&&!node.hidden&&!node.closest('[hidden]')&&!(node.closest('details')?.open===false&&node.tagName!=='SUMMARY'));
+ const ownsFocus=sheet=>sheet.contains(doc.activeElement)||navigation.contains(doc.activeElement);
  // Tower modernization is a sibling of #tower-preparation, not a child.
  // It lives in the native dialog top layer, but events still capture through
  // the game root. Treat its content as part of the active Tower sheet.
@@ -59,7 +60,7 @@ export function initializeModalFocus(){
    // No controls behind an open modernization dialog may be activated.
    event.preventDefault();event.stopImmediatePropagation();return;
   }
-  if(!current||current.id==='arena-settings'||current.contains(event.target)||settings.contains(event.target))return;
+  if(!current||current.id==='arena-settings'||current.contains(event.target)||navigation.contains(event.target))return;
   event.preventDefault();event.stopImmediatePropagation();
  };
  const pointerEvents=['click','pointerdown','pointerup'];
