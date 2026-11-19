@@ -75,6 +75,15 @@ export function openMenu(){
 }
 export function towerPreparation(){
   const t=towerFor(ctx.betting,ctx.towerPlayer),panel=ctx.root.querySelector('#tower-preparation');
+  // This is a screen transition, not a popup dismissal. All paid state is already saved.
+  const back=ctx.root.querySelector('#tower-prep-back');
+  back.onclick=()=>{
+    if(ctx.settingsOpen)return;
+    const upgrade=ctx.root.querySelector('#tower-upgrade-window');
+    if(upgrade?.open)return;
+    if(ctx.root.querySelector('#tower-cycle-notice[open]'))return;
+    openMenu();
+  };
   ctx.startup.phase='tower-ready';ctx.resultsPanel.hidden=true;ctx.root.querySelector('#tower-controls').hidden=true;
   panel.hidden=false;const title=ctx.root.querySelector('#tower-prep-title');
   title.classList.toggle('boss-floor-title',hasBoss(t));
@@ -96,10 +105,20 @@ export function towerPreparation(){
   };
   function renderSkills(){
     const snapshot=towerMutationSnapshot({...t,stats:draftStats}),stats=snapshot.effective;
+    const initial=towerMutationSnapshot(t).effective;
     const combatBonus=towerMutationCombatBonus(t.mutations);
+    const comparison=(label,value,base)=>{
+      const diff=value-base;
+      const cls=diff>0?'is-positive':diff<0?'is-negative':'';
+      return '<span class="tower-stat-preview"><span>'+label+'</span> <strong class="'+cls+'">'+value+'%'+(diff>0?' ▲':diff<0?' ▼':'')+'</strong></span>';
+    };
+    const current=[Math.round(statMultiplier(stats[0])*100),Math.round(statMultiplier(stats[2])*100),
+      Math.round(Math.min(.75,critChance(stats[1])+combatBonus.crit)*100)];
+    const original=[Math.round(statMultiplier(initial[0])*100),Math.round(statMultiplier(initial[2])*100),
+      Math.round(Math.min(.75,critChance(initial[1])+combatBonus.crit)*100)];
     fields.innerHTML=`<div class="garage-stat-list"><small>Побед: ${t.wins} · очков в текущем цикле: ${9+towerCycleWins(t.level)}</small>
       ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)}><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select data-tower-stat="${i}" aria-label="${skill.name}">${[earnedStats(towerCycleWins(t.level))[i]-1,earnedStats(towerCycleWins(t.level))[i],earnedStats(towerCycleWins(t.level))[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===draftStats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
-      <small class="garage-stat-effects">Скор. ${Math.round(statMultiplier(stats[0])*100)}% Мобиль. ${Math.round(statMultiplier(stats[2])*100)}% Крит. ${Math.round(Math.min(.75,critChance(stats[1])+combatBonus.crit)*100)}% · откат ударов ${Math.round(combatBonus.cooldownMultiplier*100)}%</small>
+      <div class="garage-stat-effects tower-stat-previews">${comparison('СКОРОСТЬ',current[0],original[0])}${comparison('МОБИЛЬНОСТЬ',current[1],original[1])}${comparison('КРИТ',current[2],original[2])}<span class="tower-stat-preview"><span>ОТКАТ УДАРОВ</span> <strong>${Math.round(combatBonus.cooldownMultiplier*100)}%</strong></span></div>
       <div class="tower-stat-confirm"><button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button><button type="button" data-tower-apply>ПРИМЕНИТЬ · ${formatChips(TOWER_STAT_CHANGE_PRICE)}</button></div><small class="tower-stat-message" role="status"></small>`;
     const changed=draftStats.some((v,i)=>v!==t.stats[i]);
     const transfer=draftStats.reduce((sum,v,i)=>sum+Math.max(0,v-t.stats[i]),0);
