@@ -10,7 +10,7 @@ import {validTowerRerolls} from './economy.js';
 import {isBossFloor,hasBoss} from '../boss/config.js';
 import {ensureBossEncounter,validBossEncounter,bossFloorReward} from '../boss/encounter.js';
 import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
-import {BASE_STATS,earnedStats,patientVictory,validStats,normalizeProsthetics} from '../garage/model.js';
+import {BASE_STATS,earnedStats,validStats,normalizeProsthetics} from '../garage/model.js';
 import {towerCycleInfo,towerCycleWins} from './cycles.js';
 export const TOWER_REWARD=10;
 export const towerEnemyReward=(t,victim=1)=>{
@@ -105,12 +105,15 @@ export function completeTower(session,player,won,random=Math.random){
   // points automatically earned in the current 30-floor cycle.
   const earned=earnedStats(towerCycleWins(t.level));
   const allocation=t.stats.map((value,i)=>value-earned[i]);
-  const localPatient={stats:[...t.stats],wins:towerCycleWins(t.level),prosthetics:[...t.prosthetics]};
-  patientVictory(localPatient);t.stats=localPatient.stats;t.wins++;t.level++;
+  t.wins++;t.level++;
+  // New earned point follows the standard progression, while the patient's
+  // manually selected +1/-1 redistribution remains attached to its skills.
+  // In particular, a boosted mobility skill stays boosted after every victory.
+  const nextBase=earnedStats(towerCycleWins(t.level));
+  t.stats=nextBase.map((value,i)=>value+allocation[i]);
   if(towerCycleWins(t.level)===0){
-   // A cycle resets earned points, not the player's chosen distribution.
-   // Death without DMS and manual Tower reset still start from BASE_STATS.
-   t.stats=BASE_STATS.map((value,i)=>value+allocation[i]);
+   // Starting a new cycle resets earned points only, not the chosen allocation.
+   // Death without DMS and manual reset still restore the standard baseline.
    t.insurance=newInsurance();t.cycleNotice=t.level;
   }
   t.arenaRerolls=0;t.arenaRerollLocked=false;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;delete t.floorPlan;
