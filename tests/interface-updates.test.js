@@ -74,13 +74,13 @@ test('modal keyboard focus wraps within the sheet and restores background contro
   document.querySelector('#launch-overlay').hidden=true;
   const {initializeModalFocus}=await import('../src/ui/modal-focus.js');initializeModalFocus();
   assert.equal(ctx.button.inert,true);
-  assert.equal(Boolean(document.querySelector('#arena-settings-button').inert),false);
+  assert.equal(Boolean(document.querySelector('#game-nav-settings').inert),false);
   const history=document.querySelector('#bet-fight');history.focus();
   document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true}));
-  assert.equal(document.activeElement.id,'arena-settings-button');
+  assert.equal(document.activeElement.id,'game-nav-settings');
   document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true}));assert.equal(document.activeElement.id,'bet-fight');
   ctx.betOverlay.hidden=true;await Promise.resolve();assert.equal(ctx.button.inert,false);
-  document.querySelector('#arena-settings-button').click();await Promise.resolve();
+  document.querySelector('#game-nav-settings').click();await Promise.resolve();
   document.querySelector('#arena-settings-close').click();await Promise.resolve();
   assert.equal(ctx.button.inert,false);
  }finally{close(dom);}
