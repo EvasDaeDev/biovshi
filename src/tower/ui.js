@@ -262,19 +262,14 @@ export function towerPreparation(){
         action.innerHTML=equipped?'СНЯТЬ · БЕСПЛАТНО':'УСТАНОВИТЬ · '+formatChips(towerMutationInstallPrice(t));
         action.disabled=Boolean(t.mutationDraft)||(!equipped&&ctx.betting.players[ctx.towerPlayer].balance<towerMutationInstallPrice(t));
         action.onclick=()=>{
-          if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
-          const finish=(replaceId=null,confirmed=false)=>{
+          if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||action.disabled)return;
+          const finish=(replaceId=null)=>{
             if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
             try{
               if(equipped){
-                if(!confirm('Снять «'+mod.name+'»? При повторной установке потребуется оплата.'))return;
                 if(!removeTowerMutation(t,selected.id))return;
                 lastMutationReceipt=mod.name+' снят и возвращён на склад';
               }else{
-                const price=towerMutationInstallPrice(t);
-                // A replacement selected in our native dialog has already
-                // been explicitly confirmed with the exact price.
-                if(!confirmed&&!confirm((replaceId?'Заменить установленный модуль?':'Установить '+mod.name+'?')+'\\nСтоимость: '+price+' монет.'))return;
                 const charged=equipTowerMutation(ctx.betting,ctx.towerPlayer,t,selected.id,replaceId);
                 lastMutationReceipt=mod.name+' установлен · −'+charged+' монет · '+towerMutationEffectText(selected.type);
               }
@@ -291,11 +286,25 @@ export function towerPreparation(){
               installed:towerInstalledItems(t),
               installName:mod.name,
               price:towerMutationInstallPrice(t),
-              onConfirm:id=>finish(id,true)
+              onConfirm:id=>finish(id)
             });
             return;
           }
-          finish(replacement?.id??null);
+          const replaceId=replacement?.id??null;
+          const displaced=replaceId?towerInstalledItems(t).find(item=>item.id===replaceId):null;
+          confirmGameAction({
+            root:ctx.root,
+            title:equipped?'СНЯТИЕ МОДУЛЯ':replaceId?'ЗАМЕНА МОДУЛЯ':'УСТАНОВКА МОДУЛЯ',
+            details:[
+              'Модуль: '+mod.name+' · '+TOWER_RARITIES[selected.rarity].name,
+              equipped?'Модуль вернётся на склад. Повторная установка будет платной.':
+                'Эффект: '+towerMutationEffectText(selected.type),
+              displaced?'Снимаем «'+TOWER_MUTATIONS[displaced.type].name+'». Модуль останется на складе.':''
+            ],
+            ...(equipped?{}:{cost:towerMutationInstallPrice(t)}),
+            confirmLabel:equipped?'СНЯТЬ':replaceId?'ЗАМЕНИТЬ':'УСТАНОВИТЬ',
+            onConfirm:()=>finish(replaceId)
+          });
         };
         mutationPanel.append(action);
       }
