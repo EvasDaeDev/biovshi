@@ -376,3 +376,73 @@
 #robot-tag-hops-v22 .tower-upgrade-heading-actions .tower-upgrade-settings:hover{
   background:#495340;color:#fff2ce;
 }
+
+/* Stable global landscape navigation: identical screen coordinates everywhere. */
+#robot-tag-hops-v22 #game-navigation{
+  position:fixed;
+  inset:0 0 auto 0;
+  z-index:1900;
+  height:0;
+  pointer-events:none;
+}
+#robot-tag-hops-v22 #game-navigation>button{
+  position:absolute;
+  top:12px;
+  display:grid;place-items:center;
+  box-sizing:border-box;
+  min-height:44px;
+  border:1px solid #887957;
+  background:#282e25;
+  color:#e7ddc6;
+  font-size:12px;
+  font-weight:800;
+  line-height:1;
+  cursor:pointer;
+  pointer-events:auto;
+  box-shadow:0 3px 10px #0008;
+  touch-action:manipulation;
+}
+#robot-tag-hops-v22 #game-nav-back{
+  left:12px;
+  min-width:90px;
+  padding:9px 12px;
+  white-space:nowrap;
+  letter-spacing:.025em;
+}
+#robot-tag-hops-v22 #game-nav-back[hidden]{display:none!important}
+#robot-tag-hops-v22 #game-nav-settings{
+  right:12px;
+  width:44px;
+  padding:9px;
+}
+#robot-tag-hops-v22 #game-navigation>button:focus-visible{
+  outline:2px solid var(--ui-selected);
+  outline-offset:2px;
+}
+#robot-tag-hops-v22 #game-navigation>button:hover{
+  background:#3d4734;
+  border-color:#b3a074;
+}
+#robot-tag-hops-v22:has(#arena-settings:not([hidden])) #game-navigation{
+  visibility:hidden;
+  pointer-events:none;
+}
+#robot-tag-hops-v22 #arena-settings{
+  z-index:2050;
+}
+/* Legacy local navigation is visually retired; existing DOM hooks remain. */
+#robot-tag-hops-v22 #launch-settings-button,
+#robot-tag-hops-v22 #arena-settings-button,
+#robot-tag-hops-v22 #tower-prep-settings,
+#robot-tag-hops-v22 #tower-prep-back{
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+#robot-tag-hops-v22 #tower-preparation .tower-prep-header{
+  grid-template-columns:minmax(120px,1fr) minmax(0,3fr) minmax(120px,1fr);
+}
+@media(max-width:540px){
+  #robot-tag-hops-v22 #game-navigation>button{top:8px;min-height:42px}
+  #robot-tag-hops-v22 #game-nav-back{left:8px;min-width:80px;padding:7px 9px}
+  #robot-tag-hops-v22 #game-nav-settings{right:8px;width:42px}
+}
