@@ -418,7 +418,7 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 /* The speed switch stays visibly latched while double time is active. */
 
 #texture-loading{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(ellipse at center,#29312b,#101713 65%,#070a09);color:#e9dfc4;font-family:Arial,sans-serif}
-#texture-loading .loading-center{width:min(600px,82vw);text-align:center;padding:24px 10px 46px;z-index:1}
+#texture-loading .loading-center{box-sizing:border-box;width:min(600px,82vw);text-align:center;padding:24px 10px;z-index:1}
 #texture-loading .loading-title{margin:0;font-size:clamp(54px,12vw,124px);font-weight:1000;line-height:1;letter-spacing:.09em;color:#f0ca83;text-shadow:0 5px #54392b}
 #texture-loading .loading-subtitle{margin:18px 0 50px;font-size:clamp(11px,1.55vw,16px);font-weight:800;letter-spacing:.2em;color:#a5a690}
 #texture-loading .loading-status{font-size:clamp(14px,2vw,20px);font-weight:800;min-height:1.6em;margin:0 0 14px}
@@ -433,7 +433,7 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 #texture-loading .loading-dismiss:focus-visible{outline:3px solid #fbd17a;outline-offset:3px}
 #texture-loading[role="alert"] .loading-status{color:#ffaba0}
 #texture-loading .loading-streamer.without-art canvas{visibility:hidden}
-@media(max-width:700px){#texture-loading .loading-center{align-self:flex-start;margin-top:14vh;width:88vw;padding-bottom:0}#texture-loading .loading-subtitle{margin:12px 0 28px}#texture-loading .loading-streamer{bottom:4%;left:2vw;max-width:96vw}#texture-loading .loading-streamer canvas{width:clamp(110px,34vw,190px)}#texture-loading .loading-tip{margin-bottom:30px;max-width:52vw;padding:10px;font-size:13px}}
+@media(max-width:700px){#texture-loading .loading-center{width:88vw}#texture-loading .loading-subtitle{margin:12px 0 28px}#texture-loading .loading-streamer{bottom:4%;left:2vw;max-width:96vw}#texture-loading .loading-streamer canvas{width:clamp(110px,34vw,190px)}#texture-loading .loading-tip{margin-bottom:30px;max-width:52vw;padding:10px;font-size:13px}}
 @media(prefers-reduced-motion:reduce){#texture-loading .loading-fill{transition:none}}
 
 #landscape-required:not([hidden]) {position:fixed;inset:0;z-index:1500;display:grid;place-items:center;padding:24px;background:#090f0c;color:#d3cead;text-align:center;}
