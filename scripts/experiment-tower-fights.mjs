@@ -14,6 +14,10 @@ import {ensureTowerFloorPlan} from '../src/tower/floors.js';
 import {towerRelationPlan,towerAllies} from '../src/tower/relations.js';
 import {towerCycleWins} from '../src/tower/cycles.js';
 import {earnedStats} from '../src/garage/model.js';
+import {towerRarityScenario} from '../src/tower/rarity-scenarios.js';
+import {towerMutationBonus,towerMutationCombatBonus} from '../src/tower/mutations.js';
+import {patientCombatStats} from '../src/game/patients.js';
+import {towerFighterCombatBonus} from '../src/systems/combat.js';
 import {BOSS_CONFIG,bossVariantForFloor} from '../src/boss/config.js';
 import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
 import {segmentDistance,wrap} from '../src/utils/math.js';
@@ -29,9 +33,13 @@ const selectedFloors=args.floors?.split(',').map(Number)??null;
 const bossBench=args.bossBench==='true';
 const naturalBoss=args.naturalBoss==='true';
 const cycleTactics=args.cycleTactics==='true';
+const rarityCompare=args.rarityCompare==='true';
+const rarityStep=Number(args.rarityStep??0);
 const diagnose=args.diagnose==='true';
 const maxAllowedBodyOverlapCm=Number(args.maxOverlapCm??2);
 if(!['approach','orbit','idle','evade'].includes(policy))throw Error('Invalid policy');
+if(rarityCompare&&!([0,.08,.1,.12].includes(rarityStep))||
+   !rarityCompare&&args.rarityStep!==undefined)throw Error('Invalid H8 rarity switch');
 if(!Number.isFinite(maxAllowedBodyOverlapCm)||maxAllowedBodyOverlapCm<0)throw Error('Invalid maximum body overlap');
 if(!Number.isInteger(samples)||samples<1||samples>(naturalBoss?60:20)||!Number.isInteger(seconds)||seconds<5||seconds>180)throw Error('Invalid seeds/limit');
 const scenarios=[
@@ -60,6 +68,17 @@ const cycleTacticsScenarios=[
  {kind:'normal',arena:'columns',floor:151,profiles:['basic','strong','agile','elite','fast','basic']},
  {kind:'normal',arena:'columns',floor:181,profiles:['strong','agile','basic','elite','fast','basic']}
 ];
+// Controlled H8 fixtures: each variant receives the same physical topology,
+ // seed, skill points, opponent profiles and equipped module types. Only the
+ // numerical effects of the equipped ranks vary in the transient garage.
+const rarityPresets=Object.freeze({
+ mixed:['turbo','piston','adrenal','focus','synapse','gyro'],
+ neural:['optic','focus','quiet','flywheel','metronome','synapse']
+});
+const rarityScenarios=[31,91,181].flatMap(floor=>Object.keys(rarityPresets).map(preset=>({
+ kind:'normal',arena:'columns',floor,rarityPreset:preset,
+ profiles:['basic','fast','strong','agile','basic','fast']
+})));
 const bossBenchScenarios=[
  {kind:'boss',arena:'ward',floor:5,profiles:['boss','basic','basic'],label:'two ordinary'},
  {kind:'boss',arena:'ward',floor:5,profiles:['boss','basic','strong'],label:'one strong'},
@@ -83,6 +102,8 @@ function runScenario(scenario,seed){
   combatSamples:[],longFight:null,bossHitsFrom:{},bossStrikesFrom:{},bossKilledBy:null,
   patientHitsOnBoss:0,playerHitsOnBoss:0,playerHitsTotal:0,bossHitsOnOthers:0,
   relations:null,friendlyHits:0,personalEliminations:0,
+  rarityCompare:rarityCompare?{step:rarityStep,preset:scenario.rarityPreset,
+    rank:Math.min(5,Math.floor((scenario.floor-1)/30))}:null,
   bossDeathAt:null,playerAliveAtBossDeath:null,headHpAtEnd:null,
   errors:[],elapsedCpuMs:0};
  const began=Date.now();
@@ -99,9 +120,18 @@ function runScenario(scenario,seed){
   const session=betNewSession(['Автопилот'],1000),tower=towerFor(session,0);
   tower.level=scenario.floor;tower.wins=scenario.floor-1;
   tower.record=scenario.floor-1;tower.stats=earnedStats(towerCycleWins(scenario.floor));
+  if(rarityCompare){
+   const types=rarityPresets[scenario.rarityPreset],rank=row.rarityCompare.rank;
+   tower.mutations=[...types];
+   tower.mutationInventory=types.map((type,i)=>({id:'m'+(i+1),type,rarity:rank,obtainedAt:scenario.floor-1}));
+   tower.equippedMutations=types.map((_,i)=>'m'+(i+1));
+   tower.nextMutationId=types.length+1;
+   // Fixture owns equipment at zero simulated purchase cost; this is NOT a
+   // 30-floor economic progression or a claim about affordability.
+  }
   const option={arenaId:scenario.arena,kind:scenario.kind==='boss'?'boss':'danger',
    ...(scenario.kind==='normal'?{style:'mixed'}:{}),profiles:scenario.profiles};
-  if(cycleTactics){
+  if(cycleTactics||rarityCompare){
    option.relations=towerRelationPlan(scenario.floor,scenario.profiles,Math.random);
    row.relations=structuredClone(option.relations);
   }
@@ -117,11 +147,38 @@ function runScenario(scenario,seed){
    texture:'assets/textures/robots/boss/b_01.png'
   };
   initializeGame({session,entry:'tower',tower:structuredClone(tower),arenaId:row.arena});
+  if(rarityCompare){
+   const patient=ctx.towerGarage[0];
+   const installed=patient.mutationInventory.filter(item=>patient.equippedMutations.includes(item.id));
+   const live=towerMutationBonus(patient.mutations),liveCombat=towerMutationCombatBonus(patient.mutations);
+   const proposal=rarityStep===0?{effective:live,crit:liveCombat.crit,
+     cooldownMultiplier:liveCombat.cooldownMultiplier}:towerRarityScenario(installed,rarityStep);
+   if(rarityStep!==0){
+    // Ephemeral arena data ONLY; never attached to towerRun, insurance, or
+    // any other serialized patient data.
+    patient.rarityPhysics=Object.freeze({effective:Object.freeze([...proposal.effective]),
+     crit:proposal.crit,cooldownMultiplier:proposal.cooldownMultiplier});
+   }
+   row.rarityCompare.live=Object.freeze({effective:live,crit:liveCombat.crit,
+     cooldownMultiplier:liveCombat.cooldownMultiplier});
+   row.rarityCompare.proposed=Object.freeze({effective:[...proposal.effective],
+     crit:proposal.crit,cooldownMultiplier:proposal.cooldownMultiplier});
+  }
   installTowerUI();document.querySelector('#tower-fight').click();
   advanceStartup(20);
   ctx.paused=false;ctx.appInactive=false;ctx.orientationBlocked=false;
   ctx.settingsOpen=false;ctx.towerControlMode='joystick';
   if(ctx.startup.phase!=='running')throw Error('Fight failed to reach running phase');
+  if(rarityCompare){
+   const actual=patientCombatStats(0).mutationBonus,combat=towerFighterCombatBonus(0);
+   const planned=row.rarityCompare.proposed;
+   if(actual.some((n,i)=>Math.abs(n-planned.effective[i])>1e-8)||
+       Math.abs(combat.crit-planned.crit)>1e-8||
+       Math.abs(combat.cooldownMultiplier-planned.cooldownMultiplier)>1e-8)
+    throw Error('H8 proposed bonuses were not used by the physical game');
+   row.rarityCompare.actual={effective:[...actual],crit:combat.crit,
+     cooldownMultiplier:combat.cooldownMultiplier};
+  }
   const solid=c=>c.segment==='head'||c.segment?.startsWith('spine-');
   const inspect=(initial=false)=>{
    const bodies=ctx.robots;
@@ -252,19 +309,23 @@ function runScenario(scenario,seed){
  }finally{
   off();
   try{ctx.root?.__disposeTag?.();dom?.window.close();}catch{}
-  Math.random=previousRandom;ctx.mode='spectator';
+  Math.random=previousRandom;
+  if(ctx.towerGarage?.[0])delete ctx.towerGarage[0].rarityPhysics;
+  ctx.mode='spectator';
   row.elapsedCpuMs=Date.now()-began;
  }
  return row;
 }
 const runs=[];
-for(const scenario of (naturalBoss?[{kind:'boss',arena:'ward',floor:5,profiles:['boss','basic','basic'],label:'naturally generated'}]:bossBench?bossBenchScenarios:cycleTactics?cycleTacticsScenarios:scenarios).filter(s=>!selectedFloors||selectedFloors.includes(s.floor))){
+for(const scenario of (naturalBoss?[{kind:'boss',arena:'ward',floor:5,profiles:['boss','basic','basic'],label:'naturally generated'}]:bossBench?bossBenchScenarios:rarityCompare?rarityScenarios:cycleTactics?cycleTacticsScenarios:scenarios).filter(s=>!selectedFloors||selectedFloors.includes(s.floor))){
  for(let sample=0;sample<samples;sample++){
   const row=runScenario(scenario,offset+sample*15485863+scenario.floor*7919);
   runs.push(row);
   console.log('FIGHT '+JSON.stringify({
    arena:row.arena,floor:row.floor,variant:row.variant,label:row.label,participants:row.participants,
-   relations:cycleTactics?row.relations:undefined,friendlyHits:cycleTactics?row.friendlyHits:undefined,
+   relations:cycleTactics||rarityCompare?row.relations:undefined,
+   friendlyHits:cycleTactics||rarityCompare?row.friendlyHits:undefined,
+   rarityCompare:rarityCompare?row.rarityCompare:undefined,
    seed:row.seed,completed:row.completed,winner:row.winner,seconds:row.duration,
    personalEliminations:row.personalEliminations,earnedCoins:row.coins,
    hits:row.hits,strikes:row.strikes,unstucks:row.unstucks,charges:row.charges,sweeps:row.sweeps,
@@ -305,7 +366,8 @@ const summary={
    [reason,runs.filter(r=>!r.completed&&(r.longFight?.reason??'error')===reason).length])),
  cpuSeconds:Math.round(runs.reduce((n,r)=>n+r.elapsedCpuMs,0)/100)/10
 };
-const result={simulation:'headless real 1/60s game loop',selectedFloors,diagnose,bossBench,naturalBoss,cycleTactics,maxAllowedBodyOverlapCm,
+const result={simulation:'headless real 1/60s game loop',selectedFloors,diagnose,bossBench,naturalBoss,cycleTactics,
+ rarityCompare,rarityStep:rarityCompare?rarityStep:null,maxAllowedBodyOverlapCm,
  policy:policy==='orbit'?'Player approaches and circles a nearby enemy at about 55 cm; not human performance':
  policy==='idle'?'Player remains idle and never presses movement controls':
  policy==='evade'?'Player avoids other fighters when closer than 170 cm and does not attack deliberately':
@@ -315,5 +377,5 @@ fs.mkdirSync(out.split('/').slice(0,-1).join('/')||'.',{recursive:true});
 fs.writeFileSync(out,JSON.stringify(result,null,2)+'\n');
 console.log('SUMMARY '+JSON.stringify(summary));
 console.log('REPORT '+out);
-if(summary.errors||summary.nonFinite||cycleTactics&&summary.friendlyHits||summary.initialPenetrations||summary.initialOverlaps||
+if(summary.errors||summary.nonFinite||(cycleTactics||rarityCompare)&&summary.friendlyHits||summary.initialPenetrations||summary.initialOverlaps||
  summary.maxBodyOverlapCm>maxAllowedBodyOverlapCm)process.exitCode=1;

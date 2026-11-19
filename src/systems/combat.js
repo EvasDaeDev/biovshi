@@ -273,7 +273,13 @@ export function finishingPounceInProgress(robot,time) {
     || time<(robot?.combatRecoverUntil??0);
 }
 export function towerFighterCombatBonus(id){
- return ctx.mode==='tower'&&id===0?towerMutationCombatBonus(patientGarage()?.[0]?.mutations):{crit:0,cooldownMultiplier:1};
+ if(ctx.mode!=='tower'||id!==0)return {crit:0,cooldownMultiplier:1};
+ const patient=patientGarage()?.[0];
+ // Offline H8 injection lives solely in a transient, simulator-created
+ // garage entry. Production loads never set this field; defaults are intact.
+ const offline=patient?.rarityPhysics;
+ return offline?{crit:offline.crit,cooldownMultiplier:offline.cooldownMultiplier}:
+  towerMutationCombatBonus(patient?.mutations);
 }
 export function combatAttacks() {
   if (ctx.combat.finished) return;

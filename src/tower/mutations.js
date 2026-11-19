@@ -154,7 +154,10 @@ export function towerMutationSynergies(mutations=[]){
 }
 export function towerMutationSnapshot(patient,robot=null){
  const snapshot=prostheticStatSnapshot(patient,robot);
- const mutationBonus=towerMutationBonus(patient?.mutations);
+ // Only the headless physics harness ever attaches rarityPhysics to the
+ // transient garage entry. A real run/save never serializes this field.
+ // No rarity multiplier is enabled in player-facing game rules.
+ const mutationBonus=patient?.rarityPhysics?.effective??towerMutationBonus(patient?.mutations);
  const surgeryBonus=towerSurgeryBonus(patient?.surgeries,robot);
  return {...snapshot,mutationBonus,surgeryBonus,
   effective:snapshot.effective.map((n,i)=>n+mutationBonus[i]+surgeryBonus[i])};
