@@ -129,7 +129,6 @@ export function towerPreparation(){
     fields.querySelector('.tower-stat-message').textContent=lastStatReceipt?'✓ '+lastStatReceipt:
       changed?'ПРЕДПРОСМОТР · изменение вступит в силу только после оплаты 50 монет.':
       'Нет изменений · оплата не требуется.';
-    fields.querySelector('.garage-stat-effects').prepend(document.createTextNode(changed?'ПРЕДПРОСМОТР · ':''));
     fields.querySelectorAll('select').forEach(select=>select.onchange=()=>{
       const index=Number(select.dataset.towerStat);
       try{draftStats=redistributeStat({...t,wins:towerCycleWins(t.level),stats:draftStats},index,Number(select.value));lastStatReceipt=null;}
