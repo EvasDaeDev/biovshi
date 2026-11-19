@@ -20,6 +20,7 @@ export function initializeHints(){
     hide();
     if(target.hasAttribute('title')){moved.set(target,message);target.dataset.hint=message;target.removeAttribute('title');}
     current=target;description=target.getAttribute('aria-describedby');target.setAttribute('aria-describedby',[description,tooltip.id].filter(Boolean).join(' '));
+    tooltip.classList.toggle('is-modifier-reward',target.classList.contains('tower-segment-reward'));
     tooltip.textContent=message;tooltip.hidden=false;tooltip.showPopover?.();
     const box=screenRect(target),bounds=screenRect(tooltip),view=contentViewport(win);
     tooltip.style.left=Math.max(view.x+4,Math.min(box.left,view.x+view.width-bounds.width-4))+'px';
