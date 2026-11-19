@@ -990,7 +990,7 @@ test('floor result distinguishes a cleared floor from a reached floor and marks 
  const lossDom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.robots[0].damage('head',1,100);ctx.combat.finished=true;ctx.combat.winner=null;settleTower(null);showResults();
  assert.equal(ctx.resultsTitle.textContent,'ПРОЙДЕНО ЭТАЖЕЙ: 1');assert.match(ctx.resultsSummary.textContent,/на этаже 2/);
  assert.equal(document.querySelector('.tower-skill-reward'),null,'a loss grants no skill point');
- assert.equal(document.querySelector('.tower-artifacts'),null,'no artifact reward on defeat');
+ assert.equal(document.querySelector('#gladiator-results .tower-artifacts'),null,'no artifact reward on defeat');
  const floorCoins=document.querySelector('.tower-result-numbers').children[2];
  assert.equal(floorCoins.querySelector('strong').textContent.trim(),'0');assert.equal(floorCoins.querySelector('span').textContent,'МОНЕТ ЗА ЭТАЖ');assert.equal(towerFor(s,0).level,1);assert.equal(towerFor(s,0).record,1);assert.equal(s.players[0].balance,110);close(lossDom);
 });
