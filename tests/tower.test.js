@@ -974,7 +974,7 @@ test('floor result distinguishes a cleared floor from a reached floor and marks 
  assert.equal(wallet.hidden,false);
  assert.equal(wallet.querySelector('.tower-player-name').textContent,'Первый');
  assert.match(wallet.querySelector('.tower-player-bank').textContent,/БАНК:/);
- assert.equal(Number(wallet.querySelector('.currency-counter-value').textContent.replace(/\s/g,'')),s.players[0].balance,'visible bank equals the actual stored balance');
+ assert.equal(Number(wallet.querySelector('.currency-counter').dataset.balanceTarget),s.players[0].balance,'wallet animates toward the actual stored balance');
  assert.ok(result.querySelector('.tower-skill-reward'));
  assert.match(result.querySelector('.tower-skill-reward').textContent,/\+1/);
  assert.match(result.querySelector('.tower-skill-reward').textContent,/ПОЛУЧЕНО ОЧКО НАВЫКОВ/);
