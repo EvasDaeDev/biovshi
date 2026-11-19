@@ -55,7 +55,9 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     return {stats:id===0?[...tower.stats]:[...profile.stats],head:null,
       prosthetics:id===0?[...(tower.prosthetics??[]),...(tower.graftProsthetics??[])]:[],
       ...(id===0?{mutations:[...(tower.mutations??[])],mutationInventory:structuredClone(tower.mutationInventory??[]),
-        equippedMutations:[...(tower.equippedMutations??[])],surgeries:structuredClone(tower.surgeries??[])}:{}),
+        equippedMutations:[...(tower.equippedMutations??[])],
+        segmentInventory:structuredClone(tower.segmentInventory??[]),equippedSegments:[...(tower.equippedSegments??[])],
+        surgeries:structuredClone(tower.surgeries??[])}:{}),
       ...(id>0?{profileId:selectedTowerFloor(tower)?.profiles[id-1]??'basic',
         skinKey:profile.skinKey,voice:profile.voice}:{})};
    }):null;
