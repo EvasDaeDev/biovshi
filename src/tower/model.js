@@ -107,9 +107,10 @@ export function completeTower(session,player,won,random=Math.random){
   }
   t.arenaRerolls=0;t.arenaRerollLocked=false;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;delete t.floorPlan;
   if(bossWon){
+   // Transitional implementation: new segment warehouse is populated while
+   // the legacy reward UI remains enabled until its full replacement lands.
    awardTowerSegments(t,t.level-1,random);
-   // Whole-kit selection is retired in the new segmented reward flow.
-   delete t.mutationDraft;
+   grantTowerMutationDraft(t,random);
   }}
  else {
   const c=t.insurance.checkpoint,next=newTower(undefined,t.record,t.artifacts,t.insurance);
