@@ -150,7 +150,10 @@ test('DMS never renews itself during wins, reentry or Shelter switching',()=>{
   assert.deepEqual(towerFor(f.session,0).insurance,paid,'neither winning nor reopening Shelter buys a renewal');
   assert.equal(f.session.players[0].balance,bank);
   assert.equal(f.session.insuranceSpent,spent);
-  assert.match(document.querySelector('#tower-insurance-status').textContent,/только вручную/);
+  assert.equal(document.querySelector('#tower-insurance-status').hidden,true,'redundant DMS status is not visible');
+  assert.equal(document.querySelector('#tower-insurance-status').textContent,'');
+  assert.match(document.querySelector('#tower-insurance').title,/ПРОДЛЕНИЕ ВРУЧНУЮ/,
+    'manual renewal is still explained on the actionable insurance control');
   document.querySelector('#tower-insurance').click();cancelDms();
   assert.deepEqual(towerFor(f.session,0).insurance,paid,'cancelled renewal is free');
   assert.equal(f.session.insuranceSpent,spent);
