@@ -54,6 +54,12 @@ test('Shelter offers paid stock reinstallation and consumes one stored implant',
   assert.equal(install.disabled,false);
   assert.match(install.textContent,/УСТАНОВИТЬ СО СКЛАДА/);
   install.click();
+  const confirmation=document.querySelector('#game-action-confirm');
+  assert.ok(confirmation,'stock reinstallation requires explicit confirmation');
+  assert.match(confirmation.textContent,/85 монет/);
+  assert.equal(session.players[0].balance,before,'no coins are charged before confirmation');
+  confirmation.querySelector('.game-action-confirm-submit').click();
+  assert.equal(document.querySelector('#game-action-confirm'),null);
   assert.equal(session.players[0].balance,before-85);
   assert.deepEqual(run.surgeries,[{site:'leg--1-upper',procedure:'drive',stockId:'s1'}]);
   assert.deepEqual(run.surgicalStock,[{id:'s2',procedure:'impact',fromSite:'arm-1-upper'}]);
