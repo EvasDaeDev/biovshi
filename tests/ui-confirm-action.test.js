@@ -21,7 +21,9 @@ test('confirmation is a popup; cancelling never calls the paid operation',()=>{
   assert.ok(dialog.open||dialog.hasAttribute('open'));
   assert.match(dialog.textContent,/Скорость \+1/);
   assert.match(dialog.textContent,/Мобильность −1/);
-  assert.match(dialog.querySelector('.game-action-confirm-submit').textContent,/−85 монет/);
+  assert.match(dialog.querySelector('.game-action-confirm-submit').textContent,/−85/);
+  assert.ok(dialog.querySelector('.game-action-confirm-submit .chip-icon'));
+  assert.ok(dialog.querySelector('.game-action-confirm-submit').innerHTML.includes('coin_01.png'));
   assert.equal(purchased,0);
   dialog.querySelector('.game-action-confirm-close').click();
   assert.equal(purchased,0);
