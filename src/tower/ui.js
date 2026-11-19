@@ -75,13 +75,23 @@ const menuDescriptions = [
     ending: 'Побочные эффекты? Привыкание, агрессия и повторная госпитализация.'
   }
 ];
+let menuDescriptionQueue = [];
 let previousMenuDescription = -1;
 function rotateMenuDescription() {
   const target = ctx.root?.querySelector('#launch-overlay .launch-subtitle');
   if (!target) return;
-  // Never repeat the previous message on the next menu appearance.
-  const offset = Math.floor(Math.random() * (menuDescriptions.length - 1)) + 1;
-  previousMenuDescription = (previousMenuDescription + offset) % menuDescriptions.length;
+  // Shuffle a complete cycle so all three messages appear before any repeats.
+  if (!menuDescriptionQueue.length) {
+    menuDescriptionQueue = menuDescriptions.map((_, index) => index);
+    for (let i = menuDescriptionQueue.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [menuDescriptionQueue[i], menuDescriptionQueue[j]] = [menuDescriptionQueue[j], menuDescriptionQueue[i]];
+    }
+    if (menuDescriptionQueue[0] === previousMenuDescription && menuDescriptionQueue.length > 1) {
+      [menuDescriptionQueue[0], menuDescriptionQueue[1]] = [menuDescriptionQueue[1], menuDescriptionQueue[0]];
+    }
+  }
+  previousMenuDescription = menuDescriptionQueue.shift();
   const {body, ending} = menuDescriptions[previousMenuDescription];
   const lead = document.createElement('span');
   lead.textContent = body;
