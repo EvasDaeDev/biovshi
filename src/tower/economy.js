@@ -7,9 +7,10 @@ import {hasBoss} from '../boss/config.js';
 import {TOWER_ARENA_CAPACITY,validTowerFloorPlan} from './floors.js';
 
 export const TOWER_STAT_CHANGE_PRICE=50;
+export const towerStatChangePrice=run=>(run?.statChanges??0)===0?0:TOWER_STAT_CHANGE_PRICE;
 export const TOWER_REROLL_MAX=60;
 export const towerRerollPrice=count=>Number.isSafeInteger(count)&&count>=0&&count<TOWER_REROLL_MAX
- ?Math.ceil(50*1.2**count):Infinity;
+ ?10:Infinity;
 export const validTowerRerolls=run=>Number.isSafeInteger(run?.arenaRerolls)&&run.arenaRerolls>=0&&run.arenaRerolls<=TOWER_REROLL_MAX
  &&(run.arenaRerolls===0||run.floorPlan?.floor===run.level);
 
@@ -26,9 +27,11 @@ export function purchaseTowerStatChange(session,player,run,stats){
   ||run.stats.every((v,i)=>v===stats[i])
   ||stats.reduce((sum,v,i)=>sum+Math.max(0,v-run.stats[i]),0)!==1)
   throw Error('Выбери допустимый перенос одного очка для подтверждения.');
- charge(session,player,TOWER_STAT_CHANGE_PRICE);
+ const price=towerStatChangePrice(run);
+ if(price)charge(session,player,price);
  run.stats=[...stats];
- return TOWER_STAT_CHANGE_PRICE;
+ run.statChanges=(run.statChanges??0)+1;
+ return price;
 }
 
 // Both challenge cards have to fit the *same* new arena, so that changing
