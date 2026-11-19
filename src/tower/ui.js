@@ -250,7 +250,7 @@ export function towerPreparation(){
     mutationPanel.append(description);
     const actions=document.createElement('div');actions.className='tower-mutation-action-area';
     const install=document.createElement('button');install.type='button';install.className='tower-mutation-install';
-    install.textContent=chosen.installed?'СНЯТЬ · БЕСПЛАТНО':'УСТАНОВИТЬ · '+formatChips(TOWER_SEGMENT_INSTALL_PRICE);
+    install.innerHTML=chosen.installed?'СНЯТЬ · БЕСПЛАТНО':'УСТАНОВИТЬ · '+formatChips(TOWER_SEGMENT_INSTALL_PRICE);
     install.disabled=!chosen.installed&&ctx.betting.players[ctx.towerPlayer].balance<TOWER_SEGMENT_INSTALL_PRICE;
     install.onclick=()=>{
       if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||install.disabled)return;
@@ -276,9 +276,9 @@ export function towerPreparation(){
         }
       });
     };
-    const sell=document.createElement('button');sell.type='button';sell.className='tower-mutation-install';
+    const sell=document.createElement('button');sell.type='button';sell.className='tower-mutation-install tower-segment-sell';
     const price=towerSegmentSellPrice(chosen.rarity);
-    sell.textContent='ПРОДАТЬ · +'+formatChips(price);sell.disabled=chosen.installed;
+    sell.innerHTML='ПРОДАТЬ · +'+formatChips(price);sell.disabled=chosen.installed;
     sell.onclick=()=>{
       if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||sell.disabled)return;
       confirmGameAction({root:ctx.root,title:'ПРОДАЖА СЕГМЕНТА',
