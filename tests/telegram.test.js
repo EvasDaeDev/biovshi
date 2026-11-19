@@ -75,6 +75,15 @@ test('Telegram system Back closes confirmation first and then Settings without l
   f.mock.emit('backButtonClicked');
   assert.equal(ctx.settingsOpen,false);
   assert.equal(tower.hidden,false);
+  const loader=f.doc.createElement('div');
+  loader.id='texture-loading';
+  const dismiss=f.doc.createElement('button');
+  dismiss.className='loading-dismiss';
+  loader.append(dismiss);f.doc.body.append(loader);
+  dismiss.onclick=()=>loader.remove();
+  f.mock.emit('backButtonClicked');
+  assert.equal(loader.isConnected,false,'native Back dismisses failed loading overlay');
+  assert.equal(tower.hidden,false,'native Back cannot navigate behind the loader');
   assert.ok(f.mock.calls.includes('BackButton.show'));
   ctx.root.querySelector('#launch-overlay').hidden=false;tower.hidden=true;
   // Native Back is hidden on the main menu; it is not an app-exit command.
