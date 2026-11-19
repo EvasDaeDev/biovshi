@@ -9,6 +9,7 @@ import {towerEnemyCount} from './model.js';
 import {artifactDropChance,ARTIFACT_PIECE_COUNT} from './artifacts.js';
 import {hasBoss} from '../boss/config.js';
 import {formatChips} from '../ui/currency.js';
+import {ASSETS,assetUrl} from '../assets/manifest.js';
 
 export function renderTowerFloorChoices({container,session,player,run,fallbackArenaId='ward',onSave,onChange=()=>{},onError=()=>{}}){
  function render(){
@@ -30,7 +31,7 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
   const dice=document.createElement('div');dice.className='tower-arena-dice';
   const reroll=document.createElement('button');reroll.type='button';reroll.className='tower-reroll-button';
   reroll.setAttribute('aria-label','Другая арена');
-  reroll.innerHTML='<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="6" width="52" height="52" rx="8"/><circle cx="20" cy="20" r="4"/><circle cx="44" cy="20" r="4"/><circle cx="32" cy="32" r="4"/><circle cx="20" cy="44" r="4"/><circle cx="44" cy="44" r="4"/></svg>';
+  const diceImage=document.createElement('img');diceImage.src=assetUrl(ASSETS.textures.uiDice);diceImage.alt='';diceImage.setAttribute('aria-hidden','true');reroll.append(diceImage);
   const price=towerRerollPrice(run.arenaRerolls);
   reroll.disabled=!towerRerollCandidates(run).length||session.players[player].balance<price;
   reroll.title=reroll.disabled?'Недостаточно монет или нет другой подходящей арены':'Сменить арену до загрузки уровня';
