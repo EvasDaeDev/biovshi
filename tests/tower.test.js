@@ -357,20 +357,21 @@ test('Shelter shows one value when equipped and compares only genuinely changing
   const modal=document.querySelector('#tower-upgrade-window');
   document.querySelector('#tower-upgrade-open').click();
   const stats=modal.querySelector('#tower-upgrade-stats');
-  const cells=[...stats.querySelectorAll('.tower-upgrade-stat')];
-  assert.equal(cells.length,3);
-  assert.ok(cells.every(cell=>cell.querySelector('.tower-stat-after').hidden),
-    'without a preview, each stat has exactly one visible value: '+JSON.stringify(cells.map(cell=>({text:cell.textContent,after:cell.querySelector('.tower-stat-after')?.hidden}))));
   assert.doesNotMatch(stats.textContent,/СЕЙЧАС\s*→\s*ПОСЛЕ/);
   assert.doesNotMatch(modal.textContent,/ПАЦИЕНТ ЛЕЖИТ ГОРИЗОНТАЛЬНО|Наведи курсор на модуль/);
   const options=modal.querySelectorAll('.tower-mutation-option');
-  if(options.length){
-   options[0].click();
-   const changed=[...stats.querySelectorAll('.tower-stat-after:not([hidden])')];
-   assert.ok(changed.length>0,'reward selection shows real differences');
-   assert.ok(changed.every(next=>next.classList.contains('is-positive')||next.classList.contains('is-negative')));
-   assert.ok(changed.every(next=>/[▲▼]/.test(next.textContent)));
-  }
+  assert.ok(options.length>0,'boss reward supplies a real preview candidate');
+  options[0].click();
+  const changed=[...stats.querySelectorAll('.tower-stat-after:not([hidden])')];
+  assert.ok(changed.length>0,'reward selection shows real differences');
+  assert.ok(changed.every(next=>next.classList.contains('is-positive')||next.classList.contains('is-negative')));
+  assert.ok(changed.every(next=>/[▲▼]/.test(next.textContent)));
+  modal.querySelector('.tower-mutation-claim').click();
+  modal.querySelector('.tower-mutation-install').click();confirmPaidAction();
+  const cells=[...stats.querySelectorAll('.tower-upgrade-stat')];
+  assert.equal(cells.length,3);
+  assert.ok(cells.every(cell=>cell.querySelector('.tower-stat-after').hidden),
+    'after installation, each stat has exactly one visible value: '+JSON.stringify(cells.map(cell=>({text:cell.textContent,after:cell.querySelector('.tower-stat-after')?.hidden}))));
   modal.querySelector('.tower-upgrade-close').click();
  }finally{close(dom);}
 });
