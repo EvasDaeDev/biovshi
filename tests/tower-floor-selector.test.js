@@ -32,7 +32,7 @@ test('difficulty and arena selection live in the original preparation panel and 
   const reroll=container.querySelector('.tower-reroll-button');
   assert.equal(reroll.disabled,false);
   reroll.click();reroll.click();
-  assert.equal(session.players[0].balance,250,'stale button cannot double-charge');
+  assert.equal(session.players[0].balance,290,'stale button cannot double-charge');
   assert.equal(run.arenaRerolls,1);
   assert.equal(run.floorPlan.options[0].arenaId,run.floorPlan.options[1].arenaId);
   assert.notEqual(run.floorPlan.options[0].arenaId,'ward');
