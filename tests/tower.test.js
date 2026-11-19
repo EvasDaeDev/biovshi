@@ -18,7 +18,7 @@ import {betNewSession,betCommit,betResolve,betAddPlayer} from '../src/betting/le
 import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 import {initializeGame} from '../src/game/initialize.js';
 import {ctx} from '../src/game/state.js';
-import {installTowerUI,openMenu,settleTower} from '../src/tower/ui.js';
+import {installTowerUI,openMenu,settleTower,towerResults} from '../src/tower/ui.js';
 import {renderTowerFloorChoices} from '../src/tower/floor-selector.js';
 import {initializeModalFocus} from '../src/ui/modal-focus.js';
 import {controlledIntent} from '../src/tower/input.js';
@@ -967,14 +967,53 @@ test('legacy runs keep the current fight, skill points and paid enemies, then ad
 test('floor result distinguishes a cleared floor from a reached floor and marks a new personal record',()=>{
  const s=betNewSession(['Первый'],100),dom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);
  ctx.robots[1].damage('head',0,100);ctx.combat.finished=true;ctx.combat.winner=0;settleTower(0);showResults();
- assert.equal(ctx.resultsTitle.textContent,'ЭТАЖ 1 ПРОЙДЕН');assert.match(document.querySelector('#bet-result-summary').textContent,/НОВЫЙ ЛИЧНЫЙ РЕКОРД/);assert.equal(ctx.resultsAgain.textContent,'НА ЭТАЖ 2');
+ assert.equal(ctx.resultsTitle.textContent,'ЭТАЖ 1 ПРОЙДЕН');assert.match(document.querySelector('#bet-result-summary').textContent,/НОВЫЙ ЛИЧНЫЙ РЕКОРД/);assert.equal(ctx.resultsAgain.textContent,'ДАЛЕЕ');
  assert.match(document.querySelector('#bet-result-summary').textContent,/10/);assert.equal(towerFor(s,0).record,1);assert.equal(towerFor(s,0).runCoins,10);
+ const result=document.querySelector('#gladiator-results');
+ const wallet=result.querySelector('#tower-results-player');
+ assert.equal(wallet.hidden,false);
+ assert.equal(wallet.querySelector('.tower-player-name').textContent,'Первый');
+ assert.match(wallet.querySelector('.tower-player-bank').textContent,/БАНК:/);
+ assert.equal(wallet.querySelector('.currency-counter-value').textContent,'110');
+ assert.ok(result.querySelector('.tower-skill-reward'));
+ assert.match(result.querySelector('.tower-skill-reward').textContent,/\+1/);
+ assert.match(result.querySelector('.tower-skill-reward').textContent,/ПОЛУЧЕНО ОЧКО НАВЫКОВ/);
+ assert.equal(result.querySelectorAll('.tower-result-numbers>div').length,4);
+ assert.equal(result.querySelector('.tower-artifacts'),null,'no new fragment means no artifact collection on the result');
+ assert.doesNotMatch(ctx.resultsSummary.textContent,/Далее — этаж|противников:/);
+ assert.equal(ctx.resultsProcedure.hidden,true,'the separate Menu button is hidden on Tower results');
+ assert.equal(ctx.resultsAgain.textContent,'ДАЛЕЕ');
+ const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
+ assert.match(css,/#tower-results-player \.tower-player-name\s*\{[\s\S]*?color:#f3e4c5!important/);
+ assert.match(css,/\.tower-result-numbers\.has-skill-reward\s*\{[\s\S]*?repeat\(4,minmax\(0,1fr\)\)/);
  openMenu();assert.match(document.querySelector('#menu-tower-progress').textContent,/ПРОЙДЕНО ЭТАЖЕЙ: 1 · РЕКОРД: 1/);close(dom);
  const lossDom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.robots[0].damage('head',1,100);ctx.combat.finished=true;ctx.combat.winner=null;settleTower(null);showResults();
  assert.equal(ctx.resultsTitle.textContent,'ПРОЙДЕНО ЭТАЖЕЙ: 1');assert.match(ctx.resultsSummary.textContent,/на этаже 2/);
+ assert.equal(document.querySelector('.tower-skill-reward'),null,'a loss grants no skill point');
+ assert.equal(document.querySelector('.tower-artifacts'),null,'no artifact reward on defeat');
  const floorCoins=document.querySelector('.tower-result-numbers').children[2];
  assert.equal(floorCoins.querySelector('strong').textContent.trim(),'0');assert.equal(floorCoins.querySelector('span').textContent,'МОНЕТ ЗА ЭТАЖ');assert.equal(towerFor(s,0).level,1);assert.equal(towerFor(s,0).record,1);assert.equal(s.players[0].balance,110);close(lossDom);
 });
+test('Tower victory reveals collection only when the just-completed floor awarded a fragment',()=>{
+ const s=betNewSession(['Артефакт'],100),dom=setup(s,towerFor(s,0));
+ try{
+  document.querySelector('#tower-fight').click();advanceStartup(10);
+  ctx.robots[1].damage('head',0,100);
+  ctx.combat.finished=true;ctx.combat.winner=0;
+  settleTower(0);showResults();
+  const artifact=0,t=towerFor(s,0);
+  t.artifacts.pieces.push(artifact);
+  ctx.towerOutcome.artifact=artifact;
+  towerResults();
+  const collection=document.querySelector('#gladiator-results .tower-artifacts');
+  assert.ok(collection,'a newly earned fragment reveals the artifact collection');
+  assert.equal(collection.querySelectorAll('.artifact').length,4);
+  assert.ok(collection.querySelector('.artifact-piece.is-new'));
+  assert.equal(ctx.resultsAgain.textContent,'ДАЛЕЕ');
+  assert.equal(ctx.resultsProcedure.hidden,true);
+ }finally{close(dom);}
+});
+
 test('a five-floor milestone is celebrated without awarding extra money',()=>{
  const s=betNewSession(['Первый'],100);for(let i=0;i<4;i++)completeTower(s,0,true);
  const dom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.combat.finished=true;ctx.combat.winner=0;settleTower(0);showResults();
