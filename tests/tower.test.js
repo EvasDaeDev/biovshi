@@ -787,7 +787,7 @@ test('Tower preparation uses compact icon-only controls, fixed preview slot and 
  }finally{close(dom);}
 });
 
-test('tower skill selection is a nonpaying preview until explicit 50-coin confirmation',()=>{
+test('tower skill selection is a preview until free first confirmation',()=>{
  const session=betNewSession(['Игрок'],200),run=towerFor(session,0);
  const dom=setup(session,run);
  try{
@@ -796,7 +796,7 @@ test('tower skill selection is a nonpaying preview until explicit 50-coin confir
   assert.deepEqual([...document.querySelectorAll('[data-tower-stat]')].map(n=>Number(n.value)),[4,2,3]);
   assert.match(document.querySelector('#tower-stats .garage-stat-effects').textContent,/ПРЕДПРОСМОТР/);
   assert.match(document.querySelector('[data-tower-apply]').textContent,/ПРИМЕНИТЬ/);
-  assert.match(document.querySelector('[data-tower-apply]').textContent,/50/);
+  assert.match(document.querySelector('[data-tower-apply]').textContent,/БЕСПЛАТНО/);
   assert.equal(session.players[0].balance,200);
   document.querySelector('[data-tower-base]').click();
   assert.equal(document.querySelector('[data-tower-apply]').disabled,true);
@@ -808,7 +808,7 @@ test('tower skill selection is a nonpaying preview until explicit 50-coin confir
   assert.ok(document.querySelector('#game-action-confirm .game-action-confirm-submit .chip-icon'));
   confirmPaidAction();
   assert.deepEqual(run.stats,[4,2,3]);assert.deepEqual(ctx.towerGarage[0].stats,[4,2,3]);
-  assert.equal(session.players[0].balance,150);assert.equal(session.towerEconomySpent,50);
+  assert.equal(session.players[0].balance,200);assert.equal(session.towerEconomySpent,0);
   assert.equal(document.querySelector('[data-tower-apply]').disabled,true);
   assert.deepEqual(bettingLoad().towers[0].stats,[4,2,3]);
   assert.match(document.querySelector('#tower-stats .tower-stat-message').textContent,/подтверждено/);
@@ -834,7 +834,7 @@ test('arena reroll before loading preserves the same challenge without rebuildin
     onSave:bettingSave});
   const button=document.querySelector('#tower-floor-preview .tower-reroll-button');
   assert.equal(button.disabled,false);
-  assert.match(document.querySelector('.tower-reroll-price').textContent,/50/);
+  assert.match(document.querySelector('.tower-reroll-price').textContent,/10/);
   button.click();button.click();
   assert.equal(ctx.robots,oldRobots,'no world rebuild during arena rerolls');
   assert.equal(builds,0,'no level load during arena rerolls');
@@ -845,7 +845,7 @@ test('arena reroll before loading preserves the same challenge without rebuildin
   assert.equal(run.floorPlan.options[0].arenaId,run.floorPlan.options[1].arenaId);
   assert.deepEqual(run.floorPlan.options.map(o=>o.profiles),[['basic'],['fast','strong']]);
   assert.equal(run.floorPlan.selected,1);
-  assert.equal(bettingLoad().towerEconomySpent,50);
+  assert.equal(bettingLoad().towerEconomySpent,10);
  }finally{close(dom);}
 });
 test('standing manual patient never rotates toward another patient',()=>{
