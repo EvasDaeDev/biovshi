@@ -9,7 +9,8 @@ export function initializeSettings() {
   const panel=root.querySelector('#arena-settings'),button=root.querySelector('#arena-settings-button');
   const launchButton=root.querySelector('#launch-settings-button');
   const towerButton=root.querySelector('#tower-prep-settings');
-  const buttons=[button,launchButton,towerButton].filter(Boolean);
+  const globalButton=root.querySelector('#game-nav-settings');
+  const buttons=[button,launchButton,towerButton,globalButton].filter(Boolean);
   let opener=button;
   panel.querySelector('#settings-build-version').textContent=typeof __BUILD_VERSION__==='string'?__BUILD_VERSION__:'0.1.0+dev';
   for(const trigger of buttons)trigger.innerHTML=uiIcon('settings');
