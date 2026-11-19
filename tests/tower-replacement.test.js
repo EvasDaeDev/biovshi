@@ -54,3 +54,37 @@ test('closing replacement dialog cancels without any equipment action',()=>{
   assert.equal(root.querySelector('#tower-module-replacement'),null);
  }finally{dom.window.close();}
 });
+
+test('replacement returns focus to its real opener and cannot submit twice',()=>{
+ const {dom,root}=fixture();
+ try{
+  const opener=root.querySelector('.tower-mutation-install');
+  opener.focus();
+  const entries=[{type:TOWER_MUTATION_IDS[0],id:'slot-a',rarity:0}];
+  let calls=0;
+  chooseTowerModuleReplacement({root,installed:entries,installName:'Новый',price:75,onConfirm:()=>calls++});
+  const dialog=root.querySelector('#tower-module-replacement');
+  dialog.querySelector('.tower-replacement-option').click();
+  const submit=dialog.querySelector('.tower-replacement-apply');
+  submit.click();
+  submit.click();
+  assert.equal(calls,1,'same confirmation cannot be submitted twice');
+  assert.equal(dom.window.document.activeElement,opener);
+  assert.equal(root.querySelector('#tower-module-replacement'),null);
+ }finally{dom.window.close();}
+});
+
+test('reopening an already open replacement dialog removes the old top layer',()=>{
+ const {dom,root}=fixture();
+ try{
+  const entries=[{type:TOWER_MUTATION_IDS[0],id:'slot-a',rarity:0}];
+  let calls=0;
+  chooseTowerModuleReplacement({root,installed:entries,installName:'Новый',price:75,onConfirm:()=>calls++});
+  const old=root.querySelector('#tower-module-replacement');
+  chooseTowerModuleReplacement({root,installed:entries,installName:'Новый',price:75,onConfirm:()=>calls++});
+  assert.equal(old.isConnected,false);
+  assert.equal(root.querySelectorAll('#tower-module-replacement').length,1);
+  root.querySelector('.tower-replacement-close').click();
+  assert.equal(calls,0);
+ }finally{dom.window.close();}
+});
