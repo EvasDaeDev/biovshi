@@ -351,6 +351,7 @@ test('Tower II upgrade screen displays coin art, real equipped bonuses and one r
 
 test('Shelter shows one value when equipped and compares only genuinely changing stats',()=>{
  const session=betNewSession(['Одиночные значения'],1000),run=towerFor(session,0);
+ for(let i=0;i<5;i++)completeTower(session,0,true,()=>.24);
  const dom=setup(session,run,'ward');
  try{
   const modal=document.querySelector('#tower-upgrade-window');
@@ -397,6 +398,7 @@ test('Shelter artifact tab stays within one popup with patient and compact tiles
 
 test('Shelter removal button belongs to the bottom action area, not the module tile',()=>{
  const session=betNewSession(['Снятие снизу'],1000),run=towerFor(session,0);
+ for(let i=0;i<5;i++)completeTower(session,0,true,()=>.24);
  const dom=setup(session,run,'ward');
  try{
   const modal=document.querySelector('#tower-upgrade-window');
