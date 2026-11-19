@@ -51,7 +51,7 @@ test('loading status uses measured phases and texture completions',()=>{
  const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  const preload=fs.readFileSync(new URL('../src/assets/preload.js',import.meta.url),'utf8');
  assert.match(main,/createLoadingScreen\(/);
- assert.match(main,/loading\.update\('Настраиваем графику арены/);
+ assert.match(main,/loading\?\.update\('Настраиваем графику арены/);
  assert.match(main,/progress\.close\(\)/);
  assert.match(preload,/onProgress\?\.\(completed,files\.length\)/);
  const css=fs.readFileSync(new URL('../styles/interface.css',import.meta.url),'utf8');
