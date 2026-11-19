@@ -6,6 +6,7 @@ on:
       - experiment/tower-bosses
     paths:
       - .github/workflows/tower-h8-replay.yml
+      - scripts/report-tower-rarity-physics.mjs
   workflow_dispatch:
 
 permissions:

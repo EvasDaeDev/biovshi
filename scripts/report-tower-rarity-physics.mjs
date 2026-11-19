@@ -36,7 +36,7 @@ export function compareH8(batches){
   const set=new Map();
   for(const r of batch.runs){
    const cmp=r.rarityCompare,step=batch.rarityStep,types=H8_LOADOUTS[cmp?.preset];
-   if(!types||!H8_FLOORS.includes(r.floor)||cmp.step!==step||cmp.rank!==Math.floor((r.floor-1)/30))
+   if(!types||!H8_FLOORS.includes(r.floor)||cmp.step!==step||cmp.rank!==Math.min(5,Math.floor((r.floor-1)/30)))
     throw Error('Invalid scenario '+key(r));
    if(set.has(key(r)))throw Error('Duplicate physical scenario '+key(r));
    if(r.errors?.length||r.nonFinite||r.friendlyHits||r.initialPenetrations||r.initialOverlaps||
