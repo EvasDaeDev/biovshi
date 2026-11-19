@@ -81,8 +81,11 @@ async function boot(){
    finally{ctx.keepArenaRenderer=false;root.inert=false;progress.close();}
  };
  const transition=async options=>{
+   const owned=!options.loading,progress=options.loading??createLoadingScreen();
    root.inert=true;ctx.audio?.unlock();launchAccepted=true;ctx.keepArenaRenderer=true;
-   try{await prepare({textures,...options});}finally{ctx.keepArenaRenderer=false;root.inert=false;}
+   try{await prepare({textures,...options,loading:progress});}
+   catch(error){progress.fail('Не удалось подготовить арену.');throw error;}
+   finally{ctx.keepArenaRenderer=false;root.inert=false;if(owned)progress.close();}
  };
  ctx.openMainMenu=openMenu;
  ctx.startTower=async player=>{
