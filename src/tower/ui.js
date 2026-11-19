@@ -29,6 +29,7 @@ import {formatChips} from '../ui/currency.js';
 import {purchaseTowerStatChange,TOWER_STAT_CHANGE_PRICE} from './economy.js';
 import {installTowerUpgradeWindow} from './upgrade-modal.js';
 import {chooseTowerModuleReplacement} from './replacement-dialog.js';
+import {confirmGameAction} from '../ui/confirm-action.js';
 import {playerBalanceMarkup} from '../ui/currency-animation.js';
 
 function renderTowerPlayerWallet(target){
@@ -403,23 +404,38 @@ export function towerPreparation(){
     stockSelect.onchange=()=>procedureSelect.dispatchEvent(new Event('change'));
     purchase.onclick=()=>{
       if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
-      try{
-        const procedure=procedureSelect.value,site=siteSelect.value;
-        const old=t.surgeries.find(op=>op.site===replaceSelect.value);
-        const price=replaceSelect.value?towerSurgeryReplacePrice(t):towerSurgeryPrice(t);
-        const stockItem=stock.find(item=>item.id===stockSelect.value);
-        if(!confirm((old?'ЗАМЕНИТЬ '+TOWER_SURGERY_OPERATIONS[old.procedure].name+' на ':'ПРОВЕСТИ ')+
-          TOWER_SURGERY_OPERATIONS[procedure].name+
-          (stockItem?'\nИМПЛАНТ ИЗ СОБСТВЕННОГО СКЛАДА':'')+
-          '\nУчасток: '+towerSurgerySiteLabel(site)+'\nСписать '+price+' монет?'))return;
-        const charged=buyTowerSurgery(ctx.betting,ctx.towerPlayer,procedure,site,
-          donorSelect.hidden?null:donorSelect.value,replaceSelect.value||null,stockItem?.id??null);
-        ctx.towerGarage[0].surgeries=structuredClone(t.surgeries);
-        lastSurgeryReceipt='Операция «'+TOWER_SURGERY_OPERATIONS[procedure].name+'» выполнена на '+towerSurgerySiteLabel(site)+' · −'+charged+' монет';
-        bettingSave();renderSkills();renderSurgery();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
-        renderInsurance();updateTowerHud();upgradeModal?.resetSurgeryPreview();upgradeModal?.refresh();
-        upgradeMessage('');
-      }catch(error){upgradeMessage(error.message);}
+      const procedure=procedureSelect.value,site=siteSelect.value;
+      const replaceSite=replaceSelect.value||null;
+      const old=t.surgeries.find(op=>op.site===replaceSite);
+      const price=replaceSite?towerSurgeryReplacePrice(t):towerSurgeryPrice(t);
+      const stockItem=stock.find(item=>item.id===stockSelect.value);
+      const donorId=donorSelect.hidden?null:donorSelect.value;
+      confirmGameAction({
+        root:ctx.root,
+        title:old?'ЗАМЕНА ОПЕРАЦИИ':'ХИРУРГИЧЕСКАЯ ОПЕРАЦИЯ',
+        details:[
+          (old?'Снимаем «'+TOWER_SURGERY_OPERATIONS[old.procedure].name+'». ':'')+
+          'Устанавливаем «'+TOWER_SURGERY_OPERATIONS[procedure].name+'».',
+          'Участок: '+towerSurgerySiteLabel(site),
+          stockItem?'Имплант из собственного склада.':'',
+          donorId?'Будет использован выбранный донор.':'',
+          'После подтверждения отменить операцию без новой покупки нельзя.'
+        ],
+        cost:price,
+        confirmLabel:old?'ЗАМЕНИТЬ':'ПРОВЕСТИ',
+        onConfirm:()=>{
+          if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
+          try{
+            const charged=buyTowerSurgery(ctx.betting,ctx.towerPlayer,procedure,site,
+              donorId,replaceSite,stockItem?.id??null);
+            ctx.towerGarage[0].surgeries=structuredClone(t.surgeries);
+            lastSurgeryReceipt='Операция «'+TOWER_SURGERY_OPERATIONS[procedure].name+'» выполнена на '+towerSurgerySiteLabel(site)+' · −'+charged+' монет';
+            bettingSave();renderSkills();renderSurgery();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
+            renderInsurance();updateTowerHud();upgradeModal?.resetSurgeryPreview();upgradeModal?.refresh();
+            upgradeMessage('');
+          }catch(error){upgradeMessage(error.message);}
+        }
+      });
     };
     controls.append(replaceSelect,stockSelect,procedureSelect,siteSelect,donorSelect,purchase);
     surgeryPanel.append(controls);
@@ -462,14 +478,28 @@ export function towerPreparation(){
   };
   renderInsurance();
   insuranceButton.onclick=()=>{
-    if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
-    try{
-      const checkpoint=t.insurance.checkpoint,renewal=Boolean(checkpoint);
-      if(renewal&&!confirm(`Продлить ДМС с этажа ${towerFloorLabel(checkpoint.level)} на ${towerFloorLabel(t.level)}?\nСписать ${t.insurance.price} монет?\nПрежняя точка возврата будет заменена.`))return;
-      buyTowerInsurance(ctx.betting,ctx.towerPlayer);bettingSave();renderInsurance();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));updateTowerHud();
-      ctx.root.querySelector('#tower-prep-error').textContent=renewal?`ДМС продлена: этаж ${t.level} и текущие навыки застрахованы.`:'ДМС оформлена: этаж и навыки застрахованы.';
-    }
-    catch(error){ctx.root.querySelector('#tower-prep-error').textContent=error.message;}
+    if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||insuranceButton.disabled)return;
+    const checkpoint=t.insurance.checkpoint,renewal=Boolean(checkpoint);
+    const price=t.insurance.price;
+    confirmGameAction({
+      root:ctx.root,
+      title:renewal?'ПРОДЛЕНИЕ ДМС':'ОФОРМЛЕНИЕ ДМС',
+      details:[
+        renewal?'Перенос страховки с этажа '+towerFloorLabel(checkpoint.level)+' на этаж '+towerFloorLabel(t.level)+'.':
+          'Страховка текущего этажа '+towerFloorLabel(t.level)+' и навыков пациента.',
+        renewal?'Прежняя точка возврата будет заменена. Следующий тариф +3%.':
+          'После использования полис прекращает действие. Следующий тариф +10%.'
+      ],
+      cost:price,
+      confirmLabel:renewal?'ПРОДЛИТЬ ДМС':'ОФОРМИТЬ ДМС',
+      onConfirm:()=>{
+        if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
+        try{
+          buyTowerInsurance(ctx.betting,ctx.towerPlayer);bettingSave();renderInsurance();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));updateTowerHud();
+          ctx.root.querySelector('#tower-prep-error').textContent=renewal?`ДМС продлена: этаж ${t.level} и текущие навыки застрахованы.`:'ДМС оформлена: этаж и навыки застрахованы.';
+        }catch(error){ctx.root.querySelector('#tower-prep-error').textContent=error.message;}
+      }
+    });
   };
   fightButton.onclick=async()=>{
     if(fightButton.disabled||t.mutationDraft){ctx.root.querySelector('#tower-prep-error').textContent='Сначала выбери модификацию после победы над боссом.';return;}
