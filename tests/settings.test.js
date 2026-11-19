@@ -249,11 +249,15 @@ test('phone field uses logical layout sizes even if Safari reports unscaled clie
 });
 
 
-test('the arena Settings button has a clear layer above betting dimming and below Settings',()=>{
- const tower=fs.readFileSync(new URL('../styles/tower.css',import.meta.url),'utf8');
- assert.match(tower,/#robot-tag-hops-v22 #game-nav-settings\s*\{position:relative;z-index:1150\}/);
+test('global fixed navigation stays above betting and below open Settings',()=>{
+ const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
+ assert.match(css,/#robot-tag-hops-v22 #game-navigation\s*\{\s*position:fixed;/);
+ assert.match(css,/#robot-tag-hops-v22 #game-nav-back\s*\{\s*left:12px;/);
+ assert.match(css,/#robot-tag-hops-v22 #game-nav-settings\s*\{\s*right:12px;/);
+ assert.match(css,/#robot-tag-hops-v22 #arena-settings\s*\{\s*z-index:2050;/);
  const waste=fs.readFileSync(new URL('../styles/wasteland.css',import.meta.url),'utf8');
  assert.match(waste,/\.bet-overlay\s*\{position:fixed;inset:0;z-index:1100/);
- const ui=fs.readFileSync(new URL('../styles/interface.css',import.meta.url),'utf8');
- assert.match(ui,/\.settings-overlay\s*\{position:fixed;inset:0;z-index:1200/);
+ // Under a native Shelter top layer, the gear is still in the same
+ // viewport corner rather than in the content header.
+ assert.match(css,/#robot-tag-hops-v22 #tower-upgrade-window \.tower-upgrade-heading-actions \.tower-upgrade-settings\s*\{\s*position:fixed;\s*top:12px;\s*right:12px;/);
 });
