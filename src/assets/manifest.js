@@ -4,6 +4,8 @@ export const ASSETS = {
   textures: {
     ...bossAssets(),
     uiBone:'assets/textures/UI/icons/bone_01.png',
+    uiDice:'assets/textures/UI/dice.png',
+    uiTable:'assets/textures/UI/table.png',
     uiCoin:'assets/textures/UI/icons/coin_01.png',
     uiMobility:'assets/textures/UI/icons/mobi_01.png',
     uiScreen:'assets/textures/UI/icons/screen_01.png',
