@@ -1,0 +1,44 @@
+name: Tower H7 - 50 additional physical bouts
+
+on:
+  push:
+    branches:
+      - experiment/tower-bosses
+    paths:
+      - .github/workflows/tower-h7-50.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulate-h7:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout experimental revision
+        uses: actions/checkout@v4
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Run 49 independent physical fights across seven H7 scenarios
+        run: node scripts/experiment-tower-fights.mjs --cycleTactics=true --seeds=7 --limit=75 --offset=50000000 --policy=orbit --out=artifacts/tower-h7-49.json
+      - name: Run eighth boss escort fight to complete 50
+        run: node scripts/experiment-tower-fights.mjs --cycleTactics=true --seeds=1 --limit=75 --floors=95 --offset=60000000 --policy=orbit --out=artifacts/tower-h7-1-boss.json
+      - name: Aggregate 50 unique results and check faction safety
+        run: node scripts/report-tower-h7-50.mjs
+      - name: Upload physical fights and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tower-h7-50-physical-fights
+          path: |
+            artifacts/tower-h7-49.json
+            artifacts/tower-h7-1-boss.json
+            artifacts/tower-h7-50-summary.json
+            artifacts/tower-h7-50-report.md
+          if-no-files-found: warn
