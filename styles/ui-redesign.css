@@ -855,3 +855,269 @@
   outline:2px solid var(--ui-selected);
   outline-offset:2px;
 }
+
+/* Main menu is a landscape dashboard, never a tall portrait card. */
+#robot-tag-hops-v22 #launch-overlay{
+  padding:clamp(14px,2.7vw,34px);
+  background:radial-gradient(ellipse at 50% 35%,#30352c 0%,#10140f 74%);
+}
+#robot-tag-hops-v22 #launch-overlay .launch-paper{
+  box-sizing:border-box;
+  width:min(100%,1020px);
+  max-height:calc(var(--game-height,100dvh) - 28px);
+  margin:auto;
+  padding:clamp(18px,2.4vw,30px);
+  display:grid;
+  grid-template-columns:minmax(0,.87fr) minmax(0,1.13fr);
+  grid-template-rows:auto auto minmax(0,1fr) auto;
+  column-gap:clamp(16px,3vw,42px);
+  row-gap:9px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  text-align:left;
+  border:1px solid #817153;
+  border-radius:0!important;
+  background:#22271f;
+  background-image:none;
+  color:var(--ui-text);
+  box-shadow:0 20px 56px #0009;
+}
+#robot-tag-hops-v22 #launch-overlay .launch-stamp{
+  grid-area:1 / 1;
+  align-self:end;
+  margin:0;
+  font-size:11px;
+  letter-spacing:.11em;
+  color:#aa9978;
+}
+#robot-tag-hops-v22 #launch-overlay #launch-title{
+  grid-area:2 / 1;
+  margin:0;
+  font-size:clamp(34px,5vw,64px);
+  line-height:1.02;
+  color:#f0e2c2;
+  letter-spacing:.055em;
+}
+#robot-tag-hops-v22 #launch-overlay .launch-subtitle{
+  grid-area:3 / 1;
+  align-self:start;
+  margin:0;
+  padding-top:5px;
+  font-size:13px;
+  color:#c5b89b;
+  letter-spacing:.14em;
+}
+#robot-tag-hops-v22 #launch-overlay .launch-divider{
+  grid-area:4 / 1;
+  height:1px;
+  margin:0;
+  background:#867251;
+}
+#robot-tag-hops-v22 #launch-overlay .launch-instruction,
+#robot-tag-hops-v22 #launch-overlay .launch-footnote{
+  display:none;
+}
+#robot-tag-hops-v22 #launch-overlay #launch-game{
+  grid-area:1 / 2 / 3 / 3;
+  min-height:56px;
+  width:100%;
+  margin:0;
+  padding:10px 15px;
+  background:#8b4936;
+  border:1px solid #ad674a;
+  color:#fff0d3;
+  box-shadow:none;
+  font-size:clamp(16px,2.2vw,25px);
+  letter-spacing:.055em;
+}
+#robot-tag-hops-v22 #launch-overlay #launch-game:hover{
+  background:#a0523c;
+}
+#robot-tag-hops-v22 #launch-overlay .tower-menu-block{
+  grid-area:3 / 2;
+  align-self:start;
+  display:grid;
+  gap:7px;
+  margin:0;
+  padding:11px;
+  background:#2f352c;
+  border:1px solid #666652;
+  text-align:left;
+}
+#robot-tag-hops-v22 #launch-overlay .tower-menu-player{
+  grid-template-columns:auto minmax(0,1fr) minmax(75px,.55fr);
+  gap:8px;
+}
+#robot-tag-hops-v22 #launch-overlay .tower-menu-player label,
+#robot-tag-hops-v22 #launch-overlay #menu-tower-progress{
+  color:#c9bea5;
+  font-size:12px;
+}
+#robot-tag-hops-v22 #launch-overlay #menu-tower-progress{
+  margin:0;
+  line-height:1.35;
+}
+#robot-tag-hops-v22 #launch-overlay .tower-menu-player select{
+  color:#f1e3c7;
+  background:#161e18;
+  border:1px solid #817658;
+  min-height:38px;
+  border-radius:0;
+}
+#robot-tag-hops-v22 #launch-overlay #menu-bank{
+  color:#e9d6ab;
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+#robot-tag-hops-v22 #launch-overlay #launch-tower{
+  min-height:46px;
+  background:#666045;
+  color:#fff0cb;
+  border:1px solid #9c885d;
+  font-size:14px;
+}
+#robot-tag-hops-v22 #launch-overlay #tower-reset{
+  justify-self:end;
+  width:auto;
+  min-height:32px;
+  margin:0;
+  padding:5px 10px;
+  background:transparent;
+  color:#e1aaa0;
+  border:1px solid #83514a;
+  font-size:11px;
+}
+#robot-tag-hops-v22 #launch-overlay #launch-totalizator{
+  grid-area:4 / 2;
+  margin:0;
+  min-height:43px;
+  background:#45493a;
+  color:#eddfbf;
+  border:1px solid #797057;
+}
+#robot-tag-hops-v22 #launch-overlay #launch-setup{
+  grid-area:5 / 2;
+  margin:0;
+  min-height:41px;
+  padding:8px 14px;
+  background:#3f4639;
+  color:#e5d6b7;
+  border:1px solid #6e6b53;
+  cursor:pointer;
+}
+#robot-tag-hops-v22 #launch-overlay #launch-setup.is-new-game{
+  background:#613c33;
+  color:#f4d5c1;
+  border-color:#8d5b4b;
+}
+#robot-tag-hops-v22 #launch-overlay :is(button,select):focus-visible{
+  outline:2px solid var(--ui-selected);
+  outline-offset:2px;
+}
+@media(max-width:690px){
+  #robot-tag-hops-v22 #launch-overlay .launch-paper{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto;
+    gap:8px;
+    padding:14px;
+  }
+  #robot-tag-hops-v22 #launch-overlay .launch-paper>:not(#launch-settings-button){
+    grid-column:1;
+    grid-row:auto;
+  }
+  #robot-tag-hops-v22 #launch-overlay .launch-stamp,
+  #robot-tag-hops-v22 #launch-overlay .launch-divider{display:none}
+  #robot-tag-hops-v22 #launch-overlay #launch-title{font-size:clamp(26px,5vw,40px)}
+  #robot-tag-hops-v22 #launch-overlay .launch-subtitle{font-size:11px;padding:0}
+  #robot-tag-hops-v22 #launch-overlay .tower-menu-block{padding:8px}
+  #robot-tag-hops-v22 #launch-overlay #launch-game{min-height:43px;font-size:16px}
+}
+@media(max-height:475px){
+  #robot-tag-hops-v22 #launch-overlay .launch-paper{padding:11px 16px;row-gap:5px}
+  #robot-tag-hops-v22 #launch-overlay .tower-menu-block{gap:5px;padding:7px}
+  #robot-tag-hops-v22 #launch-overlay #launch-title{font-size:clamp(28px,4vw,44px)}
+  #robot-tag-hops-v22 #launch-overlay #launch-game{min-height:42px}
+}
+/* Settings use the same material as the game without reducing readability. */
+#robot-tag-hops-v22 #arena-settings .settings-panel{
+  box-sizing:border-box;
+  width:min(100%,540px);
+  max-height:calc(var(--game-height,100dvh) - 20px);
+  padding:14px 18px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  background:#22271f;
+  background-image:none;
+  border:1px solid #827254;
+  border-radius:0!important;
+  box-shadow:0 20px 58px #000a;
+  color:#dfd5bd;
+}
+#robot-tag-hops-v22 #arena-settings .settings-panel :is(h2,h3,strong,label,small,p,span,output,summary){
+  color:#ded3b9;
+  text-shadow:none;
+}
+#robot-tag-hops-v22 #arena-settings .settings-panel>header{
+  position:sticky;
+  top:-14px;
+  z-index:3;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:6px 0 10px;
+  margin:0 0 8px;
+  background:#22271f;
+  border-bottom:1px solid #736b53;
+}
+#robot-tag-hops-v22 #arena-settings #arena-settings-title{
+  color:#f3e3c4;
+  margin:0;
+  font-size:22px;
+}
+#robot-tag-hops-v22 #arena-settings .settings-panel button{
+  min-height:42px;
+  background:#454b3c;
+  color:#e9d9b8;
+  border:1px solid #746c52;
+  border-radius:0;
+}
+#robot-tag-hops-v22 #arena-settings #arena-settings-close{
+  min-width:44px;
+  min-height:44px;
+  background:#30382d;
+  color:#eadcc3;
+}
+#robot-tag-hops-v22 #arena-settings .settings-panel :is(select,input:not([type="range"]),textarea){
+  box-sizing:border-box;
+  color:#f2e3c6;
+  background:#141d17;
+  border:1px solid #81775d;
+  border-radius:0;
+  color-scheme:dark;
+}
+#robot-tag-hops-v22 #arena-settings .settings-panel :is(#graphics-quality,#tower-control-mode){
+  color:#f2e3c6;
+  background:#141d17;
+  border:1px solid #81775d;
+  color-scheme:dark;
+}
+#robot-tag-hops-v22 #arena-settings .settings-panel input[type="range"]{
+  accent-color:#b68c52;
+}
+#robot-tag-hops-v22 #arena-settings .settings-panel :is(button,select,input,summary):focus-visible{
+  outline:2px solid var(--ui-selected);
+  outline-offset:2px;
+}
+#robot-tag-hops-v22 #arena-settings #settings-main-menu{
+  background:#754336;
+  border-color:#a3644c;
+  color:#ffead0;
+}
+#robot-tag-hops-v22 #arena-settings .settings-panel .credits-view{
+  background:#292f28;
+}
+#robot-tag-hops-v22 #arena-settings .settings-panel .credits-stamp,
+#robot-tag-hops-v22 #arena-settings .settings-panel .settings-copyright{
+  color:#a99d85;
+}
