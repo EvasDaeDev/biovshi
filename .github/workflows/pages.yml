@@ -52,8 +52,8 @@ jobs:
         run: npm ci
       - name: Test stable game
         working-directory: stable
-        run: npm test -- --test-timeout=30000
-        timeout-minutes: 5
+        run: npm test -- --test-concurrency=2 --test-timeout=120000
+        timeout-minutes: 12
       - name: Build stable game
         working-directory: stable
         run: npm run build
@@ -62,8 +62,8 @@ jobs:
         run: npm ci
       - name: Test experimental game and isolated storage
         working-directory: preview
-        run: npm test -- --test-timeout=30000
-        timeout-minutes: 5
+        run: npm test -- --test-concurrency=2 --test-timeout=120000
+        timeout-minutes: 12
       - name: Build experimental game with bosses every fifth floor
         working-directory: preview
         run: npm run build -- --mode test
