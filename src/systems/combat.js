@@ -64,7 +64,7 @@ export function kickPathClear(attacker, pending) {
   return true;
 }
 export function strikeCandidates(attacker, victim, source) {
-  if(ctx.mode==='tower'&&towerAllies(ctx.towerRun,attacker.id,victim.id))return [];
+  if(ctx.mode==='tower'&&towerAllies(ctx.towerRun,attacker.id,victim.id,ctx.game.time))return [];
   if (!attacker.attackSources.some(s => s.key === source.key)) return [];
   const facing = attacker.angle;
   if (!sightClear(attacker.center, victim.center)) return [];
@@ -200,6 +200,9 @@ function resolvePounceImpacts() {
     // Shifting the body back over planted feet is preparation, not impact.
     if(!leap.soundStarted)continue;
     const victim=ctx.robots[leap.victim];
+    if(ctx.mode==='tower'&&towerAllies(ctx.towerRun,attacker.id,victim?.id,ctx.game.time)){
+      leap.impactDone=true;continue;
+    }
     if(!victim?.mobile||!victim.visible||!attacker.hasHead)return;
     const touched=pounceContactSegment(previous,current,victim.capsules,
       segment=>victim.isDamageable(segment),13*(attacker.scale??ctx.scale)+.5);
@@ -272,7 +275,7 @@ export function combatAttacks() {
         const victim = ctx.robots[pending.victim];
         const src = attacker.attackSources.find(s => s.key === pending.source);
         if (attacker.visible && attacker.mobile && src && victim?.visible && victim.hasHead && victim.segmentCount > 0
-          &&(ctx.mode!=='tower'||!towerAllies(ctx.towerRun,id,victim.id))) {
+          &&(ctx.mode!=='tower'||!towerAllies(ctx.towerRun,id,victim.id,ctx.game.time))) {
           const touched = struckSegment(attacker, victim, pending);
           const damage=touched&&random()<Math.min(.75,critChance(patientCombatStats(id,attacker).effective[1])+towerFighterCombatBonus(id).crit)?2:1;
           if (touched && victim.damage(touched, id, damage)) {

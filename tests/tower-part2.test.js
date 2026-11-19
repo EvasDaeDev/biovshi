@@ -5,7 +5,7 @@ import {towerFor,completeTower,validTower,buyTowerInsurance,normalizeTower} from
 import {chooseTowerMutation,equipTowerMutation,removeTowerMutation,towerMutationInstallPrice,
  towerInstalledItems,towerRarityMultiplier,validTowerMutationState,towerMutationEffectText,TOWER_MUTATIONS} from '../src/tower/mutations.js';
 import {towerCycleInfo,towerFloorLabel} from '../src/tower/cycles.js';
-import {towerRelationPlan,towerAllies,validTowerRelations} from '../src/tower/relations.js';
+import {towerRelationPlan,towerAllies,towerTeamMembers,towerTeamFocus,towerRelationLabel,validTowerRelations} from '../src/tower/relations.js';
 import {towerUpgradeRarity,towerRarityMatrix} from '../src/tower/upgrade-appearance.js';
 import {towerMutationBonus} from '../src/tower/mutations.js';
 import {purchaseTowerSurgery,towerSurgeryPrice,towerSurgeryReplacePrice} from '../src/tower/surgery.js';
@@ -141,6 +141,45 @@ test('team relations exclude player, preserve team uniqueness and mix cycles',()
  assert.ok(validTowerRelations(c,['boss','basic','basic']));
  const run={level:91,floorPlan:{floor:91,selected:0,options:[{relations:c}]}};
  assert.equal(towerAllies(run,1,2),true);assert.equal(towerAllies(run,1,0),false);
+});
+test('A truce expires at its pre-rolled second; legacy alliances remain valid',()=>{
+ const rel=towerRelationPlan(31,['basic','fast','agile','strong'],()=>.5);
+ assert.equal(rel.type,'plot');assert.deepEqual(rel.teamUntil,[14]);
+ const run={level:31,floorPlan:{floor:31,selected:0,options:[{relations:rel}]}};
+ assert.equal(towerAllies(run,1,2,13.99),true);
+ assert.equal(towerAllies(run,1,2,14),false);
+ assert.deepEqual(towerTeamMembers(run,1,14),[]);
+ assert.equal(validTowerRelations(rel,['basic','fast','agile','strong']),true);
+ const old={type:'plot',teams:[[1,2]],hunters:[]};
+ run.floorPlan.options[0].relations=old;
+ assert.equal(towerAllies(run,1,2,200),true,'legacy permanent teams stay intact');
+ assert.equal(validTowerRelations({...rel,teamUntil:[NaN]},['basic','fast','agile','strong']),false);
+ assert.equal(validTowerRelations({...rel,teamUntil:[7,8]},['basic','fast','agile','strong']),false);
+});
+test('C teammates share only visible target IDs and respect expiry of tactical focus',()=>{
+ const c=towerRelationPlan(91,['boss','basic','basic'],()=>.5);
+ const run={level:91,floorPlan:{floor:91,selected:0,options:[{relations:c}]}};
+ assert.deepEqual(towerTeamMembers(run,2,10),[1,2,3]);
+ assert.deepEqual(towerTeamFocus(run,2,[-1,0,4,0],[0,8,8,8],4),[0]);
+ assert.deepEqual(towerTeamFocus(run,2,[-1,0,4,0],[0,8,8,8],9),[]);
+ assert.deepEqual(towerTeamFocus(run,2,[-1,0,4,0],[0,8,8,8],4,id=>id!==1),[0]);
+ assert.deepEqual(towerTeamFocus(run,0,[-1,0,4,0],[0,8,8,8],4),[]);
+});
+test('D+ combines saved tactics and keeps boss guards from attacking one another',()=>{
+ const d=towerRelationPlan(121,['basic','fast','strong','agile','elite','basic'],()=>.9);
+ assert.equal(d.type,'mixed');assert.deepEqual(d.modes,['plot','hunt']);
+ assert.ok(d.teamUntil.some(Number.isInteger));assert.ok(d.hunters.length>0);
+ assert.match(towerRelationLabel(d),/СГОВОР/);
+ const e=towerRelationPlan(151,['boss','basic','basic'],()=>.9);
+ assert.deepEqual(e.modes,['hunt','gang']);assert.deepEqual(e.teams,[[1,2,3]]);
+ assert.equal(e.teamUntil[0],null);assert.ok(e.hunters.includes(2));
+ const f=towerRelationPlan(181,['boss','basic','basic'],()=>.9);
+ assert.deepEqual(f.modes,['gang','hunt'],'cannot promise an absent second alliance');
+ const run={level:151,floorPlan:{floor:151,selected:0,options:[{relations:e}]}};
+ assert.equal(towerAllies(run,1,3,1000),true);
+ assert.ok(validTowerRelations(e,['boss','basic','basic']));
+ assert.ok(validTowerRelations(f,['boss','basic','basic']));
+ assert.equal(validTowerRelations({...e,modes:['plot','plot']},['boss','basic','basic']),false);
 });
 test('rarity colour is 20% visual and never applies to strength',()=>{
  const color=towerRarityMatrix(2);

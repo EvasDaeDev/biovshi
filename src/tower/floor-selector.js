@@ -3,7 +3,7 @@
 import {arenaDefinition,arenaDiagram} from '../game/arenas.js';
 import {selectedTowerFloor,selectTowerFloor,TOWER_DANGER_STYLES} from './floors.js';
 import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
-import {TOWER_RELATION_NAMES} from './relations.js';
+import {towerRelationLabel} from './relations.js';
 import {purchaseTowerArenaReroll,towerRerollCandidates,towerRerollPrice} from './economy.js';
 import {towerEnemyReward,towerEnemyCount} from './model.js';
 import {artifactDropChance,ARTIFACT_PIECE_COUNT} from './artifacts.js';
@@ -53,10 +53,14 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
     ' · '+option.profiles.length+' ВРАГ.';
    button.append(heading);
    if(option.relations){const relation=document.createElement('strong');relation.className='tower-relation-banner';
-    relation.textContent='ОСОБОЕ ИСПЫТАНИЕ · '+TOWER_RELATION_NAMES[option.relations.type];button.append(relation);}
+    relation.textContent='ОСОБОЕ ИСПЫТАНИЕ · '+towerRelationLabel(option.relations);button.append(relation);}
    const counts=new Map();for(const id of option.profiles)counts.set(id,(counts.get(id)??0)+1);
    const hints=[style?.description,...[...counts].map(([id,n])=>towerEnemyProfile(id)?.name+(n>1?' ×'+n:'')+': '+towerProfileDifference(id))].filter(Boolean);
-   if(option.relations)hints.push('ОТНОШЕНИЯ: '+TOWER_RELATION_NAMES[option.relations.type]);
+   if(option.relations){
+    hints.push('ОТНОШЕНИЯ: '+towerRelationLabel(option.relations));
+    const truces=option.relations.teamUntil?.filter(Number.isInteger)??[];
+    if(truces.length)hints.push('ВРЕМЕННЫЕ СОЮЗЫ РАСПАДУТСЯ ЧЕРЕЗ '+truces.join(' И ')+' СЕКУНД БОЯ');
+   }
    button.dataset.hint=hints.join(' · ');button.setAttribute('data-hint-tap','');
    for(const [id,n] of counts){const line=document.createElement('span');line.className='tower-enemy-line';
     line.textContent=(towerEnemyProfile(id)?.name??'Босс')+(n>1?' ×'+n:'');button.append(line);}
