@@ -121,10 +121,14 @@ export function completeTower(session,player,won,random=Math.random){
   // The warehouse survives uninsured death; only the installed parts are lost.
   // A DMS checkpoint restores the patient build, but the latest warehouse
   // remains current even if its snapshot was taken earlier.
-  next.segmentInventory=structuredClone(t.segmentInventory).filter(item=>
-   c||!t.equippedSegments.includes(item.id));
-  next.equippedSegments=c?[...t.equippedSegments]:[];
-  next.nextSegmentId=t.nextSegmentId;
+  const insuredIds=new Set(c?.equippedSegments??[]);
+  const uninsuredIds=new Set(t.equippedSegments??[]);
+  const surviving=t.segmentInventory.filter(item=>!uninsuredIds.has(item.id));
+  const insured=(c?.segmentInventory??[]).filter(item=>insuredIds.has(item.id));
+  next.segmentInventory=structuredClone([...surviving,...insured.filter(item=>
+   !surviving.some(existing=>existing.id===item.id))]);
+  next.equippedSegments=[...insuredIds];
+  next.nextSegmentId=Math.max(t.nextSegmentId,c?.nextSegmentId??1);
   delete next.lastBossSegments;
   normalizeTowerMutationInventory(next);
   session.towers[player]=next;
