@@ -41,7 +41,6 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   // Reusing mutated SVG definitions can bake the previous arena into new layers.
   const root=document.getElementById('robot-tag-hops-v22');
   root.__disposeTag?.();
-  root.querySelector('#tower-start-countdown')?.remove();
   root.querySelector('#tower-floor-selector')?.remove();
   const svg=root.querySelector('#tag7hop-field');
   if(root.__arenaSvgTemplate===undefined)root.__arenaSvgTemplate=svg.innerHTML;
