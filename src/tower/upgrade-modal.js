@@ -118,8 +118,8 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   const after=towerMutationSnapshot(draft).effective;
   stats.replaceChildren();
   const title=create('div','tower-upgrade-stats-head');
-  title.append(create('strong','','СКОРОСТЬ · СИЛА · МАНЁВРЕННОСТЬ'),
-   create('small','','СЕЙЧАС / ПОСЛЕ'));
+  title.append(create('strong','','ПАРАМЕТРЫ'),
+   create('small','','СЕЙЧАС → ПОСЛЕ'));
   stats.append(title);
   const values=create('div','tower-upgrade-stat-values');
   for(let i=0;i<3;i++){
@@ -128,8 +128,8 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
    const value=create('b','');
    value.append(create('span','tower-stat-before',format(before[i])),document.createTextNode(' → '));
    const next=create('span','tower-stat-after',format(after[i]));
-   if(after[i]>before[i]+.0001)next.classList.add('is-positive');
-   else if(after[i]<before[i]-.0001)next.classList.add('is-negative');
+   if(after[i]>before[i]+.0001){next.classList.add('is-positive');next.textContent+=' ▲';}
+   else if(after[i]<before[i]-.0001){next.classList.add('is-negative');next.textContent+=' ▼';}
    value.append(next);cell.append(value);values.append(cell);
   }
   stats.append(values);
@@ -146,12 +146,12 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   const combatLine=create('small','tower-upgrade-stats-note tower-combat-preview');
   combatLine.append(document.createTextNode('КРИТ: '+format(currentCombat.crit*100)+'% → '));
   const critAfter=create('strong','',format(nextCombat.crit*100)+'%');
-  if(nextCombat.crit>currentCombat.crit+.0001)critAfter.classList.add('is-positive');
-  else if(nextCombat.crit<currentCombat.crit-.0001)critAfter.classList.add('is-negative');
+  if(nextCombat.crit>currentCombat.crit+.0001){critAfter.classList.add('is-positive');critAfter.textContent+=' ▲';}
+  else if(nextCombat.crit<currentCombat.crit-.0001){critAfter.classList.add('is-negative');critAfter.textContent+=' ▼';}
   combatLine.append(critAfter,document.createTextNode(' · ОТКАТ АТАК: '+format(currentCombat.cooldownMultiplier*100)+'% → '));
   const cooldownAfter=create('strong','',format(nextCombat.cooldownMultiplier*100)+'%');
-  if(nextCombat.cooldownMultiplier<currentCombat.cooldownMultiplier-.0001)cooldownAfter.classList.add('is-positive');
-  else if(nextCombat.cooldownMultiplier>currentCombat.cooldownMultiplier+.0001)cooldownAfter.classList.add('is-negative');
+  if(nextCombat.cooldownMultiplier<currentCombat.cooldownMultiplier-.0001){cooldownAfter.classList.add('is-positive');cooldownAfter.textContent+=' ▲';}
+  else if(nextCombat.cooldownMultiplier>currentCombat.cooldownMultiplier+.0001){cooldownAfter.classList.add('is-negative');cooldownAfter.textContent+=' ▼';}
   combatLine.append(cooldownAfter);stats.append(combatLine);
   const anatomySummary=run=>{
    const body=towerPatientAnatomy(run);
