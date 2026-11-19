@@ -129,6 +129,7 @@ test('tower countdown appears in streamer speech, waves joyfully on GO and prese
   ctx.streamerMascot.showCountdown(line);ctx.streamerMascot.sync(.1,now+=100);
   assert.equal(box.hidden,false,'countdown must remain visible even with hidden preference');
   assert.equal(caption.textContent,line);assert.equal(caption.hidden,false);
+  assert.equal(caption.classList.contains('is-countdown'),true);
   assert.equal(box.dataset.emotion,'neutral');
  }
  ctx.streamerMascot.showCountdown('ПОГНАЛИ!!!');
@@ -143,6 +144,7 @@ test('tower countdown appears in streamer speech, waves joyfully on GO and prese
  for(let i=0;i<20;i++)ctx.streamerMascot.sync(.1,now+=100);
  assert.equal(box.hidden,true,'saved hidden preference returns after GO');
  assert.equal(caption.hidden,true);
+ assert.equal(caption.classList.contains('is-countdown'),false);
  assert.equal(win.localStorage.getItem('biovshi.streamer-hidden.v1'),'true');
  ctx.root.__disposeTag();dom.window.close();
 });
