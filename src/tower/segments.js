@@ -16,6 +16,7 @@ export function normalizeTowerSegmentInventory(run){
  run.segmentInventory??=[];
  run.equippedSegments??=[];
  run.nextSegmentId??=1;
+ run.unseenSegmentIds??=[];
  return run;
 }
 export function towerSegmentStacks(run){
@@ -41,7 +42,18 @@ export function awardTowerSegments(run,clearedFloor,random=Math.random){
   run.segmentInventory.push(item);issued.push(item);
  }
  run.lastBossSegments=issued.map(item=>item.id);
+ run.unseenSegmentIds.push(...run.lastBossSegments);
  return issued;
+}
+// A stack is new while at least one of its identical pieces has not been viewed.
+export const towerUnreadSegments=run=>new Set(run?.unseenSegmentIds??[]);
+export function markTowerSegmentSeen(run,selected){
+ normalizeTowerSegmentInventory(run);
+ const seen=new Set(run.segmentInventory.filter(item=>item.type===selected.type&&
+   item.site===selected.site&&item.rarity===selected.rarity).map(item=>item.id));
+ const before=run.unseenSegmentIds.length;
+ run.unseenSegmentIds=run.unseenSegmentIds.filter(id=>!seen.has(id));
+ return run.unseenSegmentIds.length!==before;
 }
 export function towerInstalledSegments(run){
  const equipped=new Set(run?.equippedSegments??[]);
@@ -86,6 +98,7 @@ export function sellTowerSegment(session,player,run,id){
  if(!buyer||buyer.balance+price>16000000||totalEarned+price>16000000)
   throw Error('Невозможно начислить монеты.');
  run.segmentInventory=run.segmentInventory.filter(x=>x.id!==id);
+ run.unseenSegmentIds=run.unseenSegmentIds.filter(unseen=>unseen!==id);
  buyer.balance+=price;
  // Count sold parts as credited Tower income to preserve balance-ledger conservation.
  session.towerEarned=totalEarned+price;
@@ -93,6 +106,7 @@ export function sellTowerSegment(session,player,run,id){
 }
 export function validTowerSegmentInventory(run){
  if(!Array.isArray(run.segmentInventory)||!Array.isArray(run.equippedSegments)
+  ||!Array.isArray(run.unseenSegmentIds??[])
   ||!Number.isSafeInteger(run.nextSegmentId)||run.nextSegmentId<1)return false;
  const ids=new Set(),sites=new Set();
  for(const item of run.segmentInventory){
@@ -102,6 +116,8 @@ export function validTowerSegmentInventory(run){
    ||Number(item.id.slice(3))>=run.nextSegmentId)return false;
   ids.add(item.id);
  }
+ if(new Set(run.unseenSegmentIds??[]).size!==(run.unseenSegmentIds??[]).length||
+  !(run.unseenSegmentIds??[]).every(id=>ids.has(id)))return false;
  for(const id of run.equippedSegments){
   if(!ids.has(id))return false;
   const site=run.segmentInventory.find(x=>x.id===id).site;
