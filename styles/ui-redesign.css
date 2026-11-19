@@ -1255,3 +1255,94 @@
 }
 /* Plainly keep the complete combat telemetry; changing these selectors to
    display:none or hiding rows would violate the HUD information contract. */
+
+/* Shelter refinement: the three tabs share one unchanged two-column sheet. */
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-heading{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-heading h2{
+  grid-column:2;
+  justify-self:center;
+  text-align:center;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-heading-actions{
+  grid-column:3;
+  justify-self:end;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-site[hidden],
+#robot-tag-hops-v22 #tower-upgrade-window .tower-stat-after[hidden]{
+  display:none!important;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-content{
+  display:flex;
+  flex-direction:column;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-page:not([hidden]){
+  flex:1 0 auto;
+  min-height:100%;
+  box-sizing:border-box;
+}
+#robot-tag-hops-v22 #tower-upgrade-window #tower-prep-mutations:not([hidden]){
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  min-height:100%;
+  box-sizing:border-box;
+  margin:0;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-mutation-action-area{
+  display:flex;
+  flex-direction:column;
+  margin-top:auto;
+  padding-top:14px;
+  padding-bottom:4px;
+  border-top:1px solid #615f4b;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-mutation-action-area .tower-mutation-install{
+  display:block;
+  width:100%;
+  min-height:44px;
+  margin:0;
+}
+/* The artifact collection is a regular right-hand tab: no full-width
+   replacement sheet and no oversized thumbnails. */
+#robot-tag-hops-v22 #tower-upgrade-window #tower-prep-artifacts{
+  margin:0;
+  padding:10px;
+  min-width:0;
+  height:100%;
+}
+#robot-tag-hops-v22 #tower-upgrade-window #tower-prep-artifacts .artifact-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  align-items:start;
+  justify-items:center;
+  gap:9px;
+}
+#robot-tag-hops-v22 #tower-upgrade-window #tower-prep-artifacts .artifact{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  width:100%;
+  min-width:0;
+  max-width:122px;
+}
+#robot-tag-hops-v22 #tower-upgrade-window #tower-prep-artifacts .artifact-image{
+  width:min(100%,112px);
+  height:112px;
+  max-height:112px;
+  aspect-ratio:1;
+  flex:none;
+}
+#robot-tag-hops-v22 #tower-upgrade-window #tower-prep-artifacts .artifact figcaption{
+  margin-top:5px;
+  font-size:11px;
+  text-align:center;
+}
+@media(max-width:720px){
+  #robot-tag-hops-v22 #tower-upgrade-window #tower-prep-artifacts .artifact-image{
+    height:90px;
+    max-height:90px;
+  }
+}
