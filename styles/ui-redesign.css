@@ -364,3 +364,15 @@
   #robot-tag-hops-v22 .tower-replacement-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   #robot-tag-hops-v22 .tower-replacement-dialog>footer{flex-wrap:wrap}
 }
+
+#robot-tag-hops-v22 .tower-upgrade-heading-actions{
+  display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:none;
+}
+#robot-tag-hops-v22 .tower-upgrade-heading-actions .tower-upgrade-settings{
+  min-height:40px;padding:7px 10px;font-size:12px;font-weight:700;
+  letter-spacing:.03em;white-space:nowrap;cursor:pointer;
+  background:#343a2f;color:#eee0bd;border:1px solid #8e7c58;
+}
+#robot-tag-hops-v22 .tower-upgrade-heading-actions .tower-upgrade-settings:hover{
+  background:#495340;color:#fff2ce;
+}
