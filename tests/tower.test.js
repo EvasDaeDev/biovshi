@@ -1125,3 +1125,25 @@ test('closing skill redistribution confirmation preserves balance and saved stat
   assert.equal(session.towerEconomySpent,0);
  }finally{close(dom);}
 });
+
+test('Shelter and unviewed segment cards show red badges until the stack is opened',()=>{
+ const session=betNewSession(['Инвентарь'],200),run=towerFor(session,0);
+ run.segmentRewardsEnabled=true;run.preparing=true;
+ run.segmentInventory=[{id:'seg1',type:'servo',site:'arm-1-upper',rarity:0}];
+ run.unseenSegmentIds=['seg1'];run.nextSegmentId=2;
+ const dom=setup(session,run);
+ try{
+  const launch=document.querySelector('#tower-upgrade-open');
+  assert.match(launch.textContent,/ИНВЕНТАРЬ 0/);
+  assert.ok(launch.querySelector('.tower-new-dot'),'unread badge is visible on Shelter button');
+  launch.click();
+  assert.ok(launch.querySelector('.tower-new-dot'),'opening Shelter does not mark a part read');
+  const card=document.querySelector('#tower-upgrade-window .tower-inventory-item[data-mutation-id="seg1"]');
+  assert.ok(card);
+  assert.ok(card.querySelector('.tower-new-dot'),'new part is marked in the inventory');
+  card.click();
+  assert.equal(document.querySelector('#tower-upgrade-open .tower-new-dot'),null);
+  assert.equal(document.querySelector('.tower-inventory-item[data-mutation-id="seg1"] .tower-new-dot'),null);
+  assert.deepEqual(bettingLoad().towers[0].unseenSegmentIds,[]);
+ }finally{close(dom);}
+});
