@@ -28,7 +28,7 @@ test('global navigation remains outside local menu and settings documents',()=>{
   assert.equal(nav.parentElement,root);
   assert.ok(nav.querySelector('#game-nav-settings'));
   assert.ok(nav.querySelector('#game-nav-back'));
-  assert.equal(root.querySelector('#launch-paper #game-nav-settings'),null);
+  assert.equal(root.querySelector('.launch-paper #game-nav-settings'),null);
   const settings=root.querySelector('#arena-settings');
   assert.ok(settings.querySelector('#arena-settings-close'));
   assert.equal(nav.contains(settings),false);
