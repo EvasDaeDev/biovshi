@@ -512,6 +512,7 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 #robot-tag-hops-v22 .patient-skills>div{display:flex;align-items:center;gap:6px;white-space:nowrap}
 #robot-tag-hops-v22 .patient-skills>div>span:first-child{width:19px;text-align:center;font-size:16px}
 .biovshi-hint{position:fixed;padding:5px 7px;font:8.6667px/1.45 Arial,sans-serif;pointer-events:none;white-space:normal}
+.biovshi-hint.is-modifier-reward{font:12px/1.5 Arial,sans-serif;white-space:pre-line;max-width:min(340px,calc(100vw - 24px));padding:9px 12px}
 /* Shared alignment and patient identity. */
 #robot-tag-hops-v22 h1,#robot-tag-hops-v22 h2,#robot-tag-hops-v22 h3,#robot-tag-hops-v22 th,#robot-tag-hops-v22 .gladiator-results-summary{text-align:center}
 #robot-tag-hops-v22 .patient-name{font-weight:700;white-space:nowrap}
