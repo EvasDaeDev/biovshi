@@ -81,8 +81,10 @@ export function openMenu(){
 }
 export function towerPreparation(){
   const t=towerFor(ctx.betting,ctx.towerPlayer),panel=ctx.root.querySelector('#tower-preparation');
-  // New Shelter uses independently owned anatomical pieces, not whole kits.
-  t.segmentRewardsEnabled=true;
+  // Start the new equipment system for clean runs. Existing Tower saves
+  // with whole-kit rewards keep their legacy UI until the next fresh run.
+  if(t.segmentRewardsEnabled===undefined&&!t.mutationDraft&&
+     !(t.mutations?.length||t.mutationInventory?.length))t.segmentRewardsEnabled=true;
   // This is a screen transition, not a popup dismissal. All paid state is already saved.
   const back=ctx.root.querySelector('#tower-prep-back');
   back.onclick=()=>{
