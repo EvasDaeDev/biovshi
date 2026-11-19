@@ -118,7 +118,7 @@ export function towerPreparation(){
       Math.round(Math.min(.75,critChance(initial[1])+combatBonus.crit)*100)];
     fields.innerHTML=`<div class="garage-stat-list"><small>Побед: ${t.wins} · очков в текущем цикле: ${9+towerCycleWins(t.level)}</small>
       ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)}><span>${skill.icon} ${i===2?'Манёвр.':skill.name}</span><select data-tower-stat="${i}" aria-label="${skill.name}">${[earnedStats(towerCycleWins(t.level))[i]-1,earnedStats(towerCycleWins(t.level))[i],earnedStats(towerCycleWins(t.level))[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===draftStats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
-      <div class="garage-stat-effects tower-stat-previews">${comparison('СКОРОСТЬ',current[0],original[0])}${comparison('МОБИЛЬНОСТЬ',current[1],original[1])}${comparison('КРИТ',current[2],original[2])}<span class="tower-stat-preview"><span>ОТКАТ УДАРОВ</span> <strong>${Math.round(combatBonus.cooldownMultiplier*100)}%</strong></span></div>
+      <div class="garage-stat-effects tower-stat-previews">${draftStats.some((v,i)=>v!==t.stats[i])?'<span class="tower-preview-label">ПРЕДПРОСМОТР</span>':''}${comparison('СКОРОСТЬ',current[0],original[0])}${comparison('МОБИЛЬНОСТЬ',current[1],original[1])}${comparison('КРИТ',current[2],original[2])}<span class="tower-stat-preview"><span>ОТКАТ УДАРОВ</span> <strong>${Math.round(combatBonus.cooldownMultiplier*100)}%</strong></span></div>
       <div class="tower-stat-confirm"><button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button><button type="button" data-tower-apply>ПРИМЕНИТЬ · ${formatChips(TOWER_STAT_CHANGE_PRICE)}</button></div><small class="tower-stat-message" role="status"></small>`;
     const changed=draftStats.some((v,i)=>v!==t.stats[i]);
     const transfer=draftStats.reduce((sum,v,i)=>sum+Math.max(0,v-t.stats[i]),0);
@@ -127,7 +127,7 @@ export function towerPreparation(){
       ||t.arenaRerollLocked||Boolean(t.rewarded?.length)
       ||ctx.betting.players[ctx.towerPlayer].balance<TOWER_STAT_CHANGE_PRICE;
     fields.querySelector('.tower-stat-message').textContent=lastStatReceipt?'✓ '+lastStatReceipt:
-      changed?'ПРЕДПРОСМОТР · изменение вступит в силу только после оплаты 50 монет.':
+      changed?'Изменение вступит в силу только после оплаты 50 монет.':
       'Нет изменений · оплата не требуется.';
     fields.querySelectorAll('select').forEach(select=>select.onchange=()=>{
       const index=Number(select.dataset.towerStat);
