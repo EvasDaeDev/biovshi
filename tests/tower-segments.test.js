@@ -4,7 +4,7 @@ import {newTower,completeTower} from '../src/tower/model.js';
 import {purchaseInsurance} from '../src/tower/insurance.js';
 import {towerSegmentSellPrice,towerSegmentStacks,awardTowerSegments,
  equipTowerSegment,removeTowerSegment,sellTowerSegment,validTowerSegmentInventory,
- towerSegmentBonuses} from '../src/tower/segments.js';
+ towerSegmentBonuses,towerUnreadSegments,markTowerSegmentSeen} from '../src/tower/segments.js';
 
 test('segment prices are fixed installation and rarity-scaled sale',()=>{
  assert.deepEqual(Array.from({length:6},(_,i)=>towerSegmentSellPrice(i)),[50,56,62,68,74,80]);
@@ -76,4 +76,22 @@ test('segment reward run automatically awards inventory items without a selectio
  assert.equal(run.segmentInventory.length,1);
  assert.equal(run.lastBossSegments.length,1);
  assert.equal(run.segmentInventory[0].rarity,0);
+});
+
+test('unread segment notifications persist until its exact inventory stack is selected',()=>{
+ const run=newTower();
+ const drops=awardTowerSegments(run,5,()=>0);
+ assert.equal(drops.length,1);
+ const id=drops[0].id;
+ const second={...drops[0],id:'seg'+run.nextSegmentId++};
+ run.segmentInventory.push(second);run.unseenSegmentIds.push(second.id);
+ assert.deepEqual([...towerUnreadSegments(run)],[id,second.id]);
+ const same=structuredClone(run);
+ assert.equal(towerUnreadSegments(same).size,2,'unread state persists through save snapshots');
+ assert.equal(markTowerSegmentSeen(run,{type:'servo',site:'arm-1-upper',rarity:0}),false,
+  'opening an unrelated inventory item does not clear the notification');
+ assert.equal(towerUnreadSegments(run).size,2);
+ assert.equal(markTowerSegmentSeen(run,{type:drops[0].type,site:drops[0].site,rarity:drops[0].rarity}),true);
+ assert.equal(towerUnreadSegments(run).size,0,'all duplicates in one visible stack are marked read');
+ assert.ok(validTowerSegmentInventory(run));
 });
