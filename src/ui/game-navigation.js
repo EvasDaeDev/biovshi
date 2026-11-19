@@ -48,8 +48,14 @@ export function initializeGameNavigation(){
    target==='betting'?'Назад к ставкам':
    target==='garage'?'Назад в процедурную':'Назад к созданию игры');
   nav.dataset.screen=screen;
+  syncNativeBack();
  };
  const protectedDialog='#game-action-confirm[open],#tower-module-replacement[open],#tower-upgrade-window[open],.betting-input-dialog[open],#tower-cycle-notice[open]';
+ const nativeBackDialogs='#game-action-confirm[open],#tower-module-replacement[open],#tower-upgrade-window[open],.betting-input-dialog[open],#game-tutorial[open]';
+ const syncNativeBack=()=>ctx.platform?.setBackAvailable?.(
+  ctx.settingsOpen||!back.hidden||Boolean(root.querySelector(nativeBackDialogs))
+ );
+
  back.onclick=()=>{
   update(); // MutationObserver may not have processed the last screen change yet.
   if(ctx.settingsOpen||back.hidden||root.querySelector(protectedDialog))return;
@@ -71,11 +77,31 @@ export function initializeGameNavigation(){
   }
   update();
  };
- const observer=new doc.defaultView.MutationObserver(update);
+ // Telegram owns the system Back gesture. Always unwind the topmost popup
+ // before navigating the underlying screen; the 30-floor cycle notice is
+ // mandatory and must be acknowledged with its own Continue action.
+ const telegramBack=()=>{
+  if(root.querySelector('#landscape-required[open],#tower-cycle-notice[open]'))return;
+  if(root.querySelector('#game-tutorial[open]')){root.querySelector('#game-tutorial .tutorial-skip')?.click();return;}
+  if(root.querySelector('#game-action-confirm[open]')){root.querySelector('#game-action-confirm-close,.game-action-confirm-close')?.click();return;}
+  if(root.querySelector('#tower-module-replacement[open]')){root.querySelector('.tower-replacement-close')?.click();return;}
+  if(root.querySelector('.betting-input-dialog[open]')){root.querySelector('.betting-input-dialog [data-cancel]')?.click();return;}
+  if(ctx.settingsOpen){root.querySelector('#arena-settings-close')?.click();return;}
+  if(root.querySelector('#tower-upgrade-window[open]')){root.querySelector('#tower-upgrade-window .tower-upgrade-close')?.click();return;}
+  if(root.querySelector('#texture-loading .loading-dismiss:not([hidden])')){root.querySelector('#texture-loading .loading-dismiss')?.click();return;}
+  back.click();
+ };
+ root.addEventListener('telegram-game-back',telegramBack);
+ const observer=new doc.defaultView.MutationObserver(records=>{
+  if(records.some(record=>record.attributeName==='open'))syncNativeBack();
+  update();
+ });
  for(const node of [launch,tower,betting,results]){
   if(node)observer.observe(node,{attributes:true,attributeFilter:['hidden','data-view']});
  }
  observer.observe(root.querySelector('#bet-content'),{childList:true});
+ observer.observe(root,{subtree:true,attributes:true,attributeFilter:['open']});
+ observer.observe(root.querySelector('#arena-settings'),{attributes:true,attributeFilter:['hidden']});
  const key=event=>{
   if(event.key!=='Escape'||event.defaultPrevented||ctx.settingsOpen)return;
   if(doc.querySelector('dialog[open]'))return;
@@ -87,6 +113,8 @@ export function initializeGameNavigation(){
  const dispose=root.__disposeTag;
  root.__disposeTag=()=>{
   observer.disconnect();doc.removeEventListener('keydown',key);
+  root.removeEventListener('telegram-game-back',telegramBack);
+  ctx.platform?.setBackAvailable?.(false);
   back.onclick=null;dispose();
  };
  return {update};
