@@ -1294,17 +1294,37 @@
 }
 #robot-tag-hops-v22 #tower-upgrade-window .tower-mutation-action-area{
   display:flex;
-  flex-direction:column;
+  flex-direction:row;
+  flex-wrap:nowrap;
+  align-items:stretch;
+  gap:8px;
   margin-top:auto;
   padding-top:14px;
   padding-bottom:4px;
   border-top:1px solid #615f4b;
 }
 #robot-tag-hops-v22 #tower-upgrade-window .tower-mutation-action-area .tower-mutation-install{
-  display:block;
-  width:100%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:1 1 0;
+  min-width:0;
+  width:0;
   min-height:44px;
   margin:0;
+  gap:4px;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-mutation-action-area .tower-segment-sell{
+  background:#813e35;
+  border-color:#b56c5e;
+  color:#fff0e8;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-mutation-action-area .tower-segment-sell:not(:disabled):hover{
+  background:#a14a40;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-mutation-action-area .tower-mutation-install .chip-icon{
+  flex:none;
+  vertical-align:middle;
 }
 /* The artifact collection is a regular right-hand tab: no full-width
    replacement sheet and no oversized thumbnails. */
