@@ -8,7 +8,7 @@ export function initializeModalFocus(){
  const settings=root.querySelector('#game-nav-settings');
  const navigation=root.querySelector('#game-navigation');
  let current=null,previous=null,background=[];
- const controls=sheet=>[...sheet.querySelectorAll('button,input,select,summary,[tabindex="0"]'),...navigation.querySelectorAll('button')].filter(node=>!node.disabled&&!node.hidden&&!node.closest('[hidden]')&&!(node.closest('details')?.open===false&&node.tagName!=='SUMMARY'));
+ const controls=sheet=>[...sheet.querySelectorAll('button,input,select,summary,[tabindex="0"]'),...navigation.querySelectorAll('button')].filter(node=>!node.disabled&&!node.hidden&&!node.closest('[hidden]')&&!node.closest('[aria-hidden="true"]')&&!(node.closest('details')?.open===false&&node.tagName!=='SUMMARY'));
  const ownsFocus=sheet=>sheet.contains(doc.activeElement)||navigation.contains(doc.activeElement);
  // Tower modernization is a sibling of #tower-preparation, not a child.
  // It lives in the native dialog top layer, but events still capture through
