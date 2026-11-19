@@ -264,3 +264,15 @@
 #robot-tag-hops-v22 .tower-segment-rewards>.tower-inventory-grid{max-width:420px;margin:8px auto 0}
 #robot-tag-hops-v22 .tower-mutation-action-area{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
 #robot-tag-hops-v22 .tower-mutation-action-area>.tower-mutation-install{flex:1;min-width:125px}
+
+/* Artist-provided PNG replaces the old SVG reroll die. */
+#robot-tag-hops-v22 #tower-floor-preview .tower-reroll-button img{
+  display:block;
+  width:100%;
+  height:100%;
+  max-width:76px;
+  max-height:76px;
+  object-fit:contain;
+  pointer-events:none;
+  image-rendering:auto;
+}
