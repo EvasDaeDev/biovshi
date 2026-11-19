@@ -1482,3 +1482,66 @@
     width:68px;
   }
 }
+
+/* Tower victory: keep player identity readable and make the earned skill
+   point a primary result beside the floor coins. */
+#robot-tag-hops-v22 #gladiator-results #tower-results-player:not([hidden]){
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px 16px;
+  min-height:35px;
+  margin:4px 0 12px;
+  padding:6px 0 9px;
+  border-bottom:1px solid #786c52;
+  color:#f3e4c5;
+}
+#robot-tag-hops-v22 #gladiator-results #tower-results-player .tower-player-name{
+  color:#f3e4c5!important;
+  opacity:1;
+  font-size:14px;
+  font-weight:750;
+}
+#robot-tag-hops-v22 #gladiator-results #tower-results-player .tower-player-bank,
+#robot-tag-hops-v22 #gladiator-results #tower-results-player .currency-counter{
+  color:#f0dfb7!important;
+  opacity:1;
+  font-size:14px;
+  font-weight:800;
+}
+#robot-tag-hops-v22 #gladiator-results #tower-results-player .currency-counter.is-credit{
+  color:var(--ui-credit)!important;
+}
+#robot-tag-hops-v22 #gladiator-results #tower-results-player .currency-counter.is-debit{
+  color:var(--ui-debit)!important;
+}
+#robot-tag-hops-v22 #gladiator-results .tower-result-numbers.has-skill-reward{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+#robot-tag-hops-v22 #gladiator-results .tower-result-numbers .tower-skill-reward strong{
+  color:#7df19b;
+}
+#robot-tag-hops-v22 #gladiator-results .tower-result-numbers .tower-skill-reward span{
+  color:#d8eccd;
+  font-weight:750;
+}
+#robot-tag-hops-v22 #gladiator-results .gladiator-results-summary:empty{
+  display:none;
+}
+#robot-tag-hops-v22 #gladiator-results .results-actions #gladiator-results-procedure[hidden]{
+  display:none!important;
+}
+#robot-tag-hops-v22 #gladiator-results .results-actions:has(#gladiator-results-procedure[hidden]){
+  display:block;
+}
+#robot-tag-hops-v22 #gladiator-results .results-actions:has(#gladiator-results-procedure[hidden]) #gladiator-results-again{
+  width:100%;
+  margin-top:0;
+}
+@media(max-width:490px){
+  #robot-tag-hops-v22 #gladiator-results .tower-result-numbers.has-skill-reward{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    row-gap:12px;
+  }
+}
