@@ -1663,3 +1663,13 @@
   #robot-tag-hops-v22 #tower-preparation>.bet-panel>.bet-actions button{font-size:11px}
   #robot-tag-hops-v22 #tower-floor-preview .tower-reroll-line .tower-reroll-caption{font-size:9px}
 }
+
+/* Reserve room for the full one-line "СМЕНИТЬ АРЕНУ · 10 [coin]" caption. */
+#robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-arena-overview{
+  grid-template-columns:minmax(0,1fr) minmax(150px,170px);
+}
+@media(max-width:540px){
+  #robot-tag-hops-v22 #tower-preparation #tower-floor-preview .tower-arena-overview{
+    grid-template-columns:minmax(0,1fr) minmax(128px,142px);
+  }
+}
