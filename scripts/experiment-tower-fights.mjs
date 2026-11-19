@@ -82,7 +82,7 @@ function runScenario(scenario,seed){
   initialPenetrations:0,initialOverlaps:0,maxBodyOverlapCm:0,overlapSamples:[],chargeProbe:{},
   combatSamples:[],longFight:null,bossHitsFrom:{},bossStrikesFrom:{},bossKilledBy:null,
   patientHitsOnBoss:0,playerHitsOnBoss:0,playerHitsTotal:0,bossHitsOnOthers:0,
-  relations:null,friendlyHits:0,
+  relations:null,friendlyHits:0,personalEliminations:0,
   bossDeathAt:null,playerAliveAtBossDeath:null,headHpAtEnd:null,
   errors:[],elapsedCpuMs:0};
  const began=Date.now();
@@ -181,6 +181,8 @@ function runScenario(scenario,seed){
   };
   inspect(true);
   off=onGameEvent(e=>{
+   if(e.type==='robot-immobilized'&&e.robot>0&&e.lastAttacker===0)
+    row.personalEliminations++;
    if(e.type==='combat-strike'&&cycleTactics&&towerAllies(ctx.towerRun,e.from,e.to,ctx.game.time))
     row.friendlyHits++;
    if(e.type==='combat-strike'&&scenario.kind==='boss'){
@@ -264,6 +266,7 @@ for(const scenario of (naturalBoss?[{kind:'boss',arena:'ward',floor:5,profiles:[
    arena:row.arena,floor:row.floor,variant:row.variant,label:row.label,participants:row.participants,
    relations:cycleTactics?row.relations:undefined,friendlyHits:cycleTactics?row.friendlyHits:undefined,
    seed:row.seed,completed:row.completed,winner:row.winner,seconds:row.duration,
+   personalEliminations:row.personalEliminations,earnedCoins:row.coins,
    hits:row.hits,strikes:row.strikes,unstucks:row.unstucks,charges:row.charges,sweeps:row.sweeps,
    nonFinite:row.nonFinite,bodyPenetrations:row.bodyPenetrations,bodyOverlaps:row.bodyOverlaps,
    initialPenetrations:row.initialPenetrations,initialOverlaps:row.initialOverlaps,
