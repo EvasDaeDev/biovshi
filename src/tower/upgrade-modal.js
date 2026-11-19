@@ -260,8 +260,10 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   if(typeof overlay.showModal==='function')overlay.showModal();
   else overlay.setAttribute('open','');
   setTab(tab);
-  (run.mutationDraft?mutationPanel.querySelector('.tower-mutation-option'):null)?.focus();
-  if(!run.mutationDraft)(activeTab==='artifacts'?artifactTab:activeTab==='surgery'?surgeryTab:mutationTab).focus();
+  // Do not preview the first reward merely because keyboard focus is moved
+  // into a newly opened dialog. Preview starts on an intentional item focus
+  // or pointer hover, and installed items otherwise show one value only.
+  (activeTab==='artifacts'?artifactTab:activeTab==='surgery'?surgeryTab:mutationTab).focus();
  }
  function close(){
   if(overlay.hidden&&!overlay.open)return;
