@@ -13,6 +13,7 @@ export function initializeModalFocus(){
  // It lives in the native dialog top layer, but events still capture through
  // the game root. Treat its content as part of the active Tower sheet.
  const activeTowerUpgrade=()=>root.querySelector('#tower-upgrade-window[open]:not([hidden])');
+ const activeReplacement=()=>root.querySelector('#tower-module-replacement[open]');
  function sync(){
   if(ctx.tutorial?.active)return;
   const next=sheets.find(sheet=>!sheet.hidden)??null;
@@ -32,7 +33,7 @@ export function initializeModalFocus(){
   sync();
   // Let the top-layer dialog own Tab and Escape. Trapping focus inside the
   // preparation sheet would make the modernization controls unreachable.
-  if(activeTowerUpgrade())return;
+  if(activeReplacement()||activeTowerUpgrade())return;
   if(!current||current.id==='arena-settings'||doc.querySelector('.betting-input-dialog[open]'))return;
   if(event.key==='Tab'){
    const nodes=controls(current),index=nodes.indexOf(doc.activeElement);
@@ -47,6 +48,11 @@ export function initializeModalFocus(){
  const pointer=event=>{
   if(ctx.tutorial?.active||doc.querySelector('.betting-input-dialog[open]'))return;
   sync();
+  const replacement=activeReplacement();
+  if(replacement){
+   if(replacement.contains(event.target))return;
+   event.preventDefault();event.stopImmediatePropagation();return;
+  }
   const upgrade=activeTowerUpgrade();
   if(upgrade){
    if(upgrade.contains(event.target))return;
