@@ -33,6 +33,12 @@ export function renderTowerUpgradePatient(target,patient,{
   preserveAspectRatio:'xMidYMid meet','aria-hidden':'true',
   'pointer-events':'none'
  },svg);
+ // Keep the original softly rounded outer frame above the PNG texture.
+ make('rect',{
+  x:5,y:5,width:460,height:190,rx:18,
+  fill:'none',stroke:'#80745a','stroke-width':1.5,
+  'pointer-events':'none','aria-hidden':'true'
+ },svg);
  const original=ASSETS.textures[['robotA','robotB','robotC','robotD'][(patient?.patient??0)%4]];
  const draft=previewSurgery?{...patient,surgeries:[...(patient?.surgeries??[]).filter(s=>s.site!==previewReplaceSite),previewSurgery]}:patient;
  const pose=towerUpgradePose(draft);
