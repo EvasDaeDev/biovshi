@@ -1,7 +1,7 @@
 // Dedicated Tower modernization dialog. Reuses the existing mutation and
 // surgical control panels so purchases and save validation stay authoritative.
 import {towerMutationSnapshot,towerMutationCombatBonus,towerMutationSynergies,towerInstalledItems,TOWER_MUTATIONS,TOWER_MUTATION_LIMIT} from './mutations.js';
-import {towerInstalledSegments} from './segments.js';
+import {towerInstalledSegments,towerUnreadSegments} from './segments.js';
 import {towerSurgeryAvailableSites,towerSurgerySiteLabel,towerSurgeryCapacity,TOWER_SURGERY_MIN_LEVEL,
  towerSurgeryPrice,towerSurgeryReplacePrice,TOWER_SURGERY_OPERATIONS} from './surgery.js';
 import {renderTowerUpgradePatient} from './upgrade-preview.js';
@@ -222,11 +222,17 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   surgeryTab.textContent=surgeryTab.disabled?'ХИРУРГИЯ 🔒':'ХИРУРГИЯ';
   surgeryTab.title=surgeryTab.disabled?'Откроется после победы над вторым боссом на 10-м этаже':'Операции и пересадки';
   if(hoverMutation&&(![...mutationPanel.querySelectorAll('[data-mutation-type]')].some(button=>button.dataset.mutationType===hoverMutation.type)||(!run.mutationDraft&&!hoverMutation.id)))hoverMutation=null;
-  launch.textContent=run.segmentRewardsEnabled?'УБЕЖИЩЕ · СЕГМЕНТЫ '+towerInstalledSegments(run).length:
+  launch.textContent=run.segmentRewardsEnabled?'УБЕЖИЩЕ · ИНВЕНТАРЬ '+towerInstalledSegments(run).length:
    run.mutationDraft?'УБЕЖИЩЕ · ВЫБРАТЬ НАГРАДУ':
    'УБЕЖИЩЕ · МОДУЛИ '+run.mutations.length+
    ' · ОПЕРАЦИИ '+run.surgeries.length+'/'+towerSurgeryCapacity(run.level);
+  const hasNew=run.segmentRewardsEnabled&&towerUnreadSegments(run).size>0;
   launch.classList.toggle('has-reward',Boolean(run.mutationDraft));
+  launch.classList.toggle('has-new-items',hasNew);
+  if(hasNew){
+   const dot=create('span','tower-new-dot');dot.setAttribute('aria-label','Новые предметы');
+   launch.append(dot);
+  }
   for(const [index,button] of [...mutationPanel.querySelectorAll('.tower-mutation-option')].entries()){
    const id=run.mutationDraft?.options[index];
    const value=id?{type:id,rarity:run.mutationDraft?.rarity??0}:null;
