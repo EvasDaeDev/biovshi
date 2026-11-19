@@ -19,7 +19,7 @@ export const towerEnemyReward=(t,victim=1)=>{
 };
 export const floorEnemyCount=floor=>1+Math.floor(floor/2);
 export const towerEnemyCount=t=>t.legacyEnemyCount??towerFloorCount(t)??(hasBoss(t)?3:floorEnemyCount(t.level));
-export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],graftProsthetics:[],donorTissues:[],mutations:[],mutationInventory:[],equippedMutations:[],nextMutationId:1,modInstallations:0,segmentInventory:[],equippedSegments:[],nextSegmentId:1,surgeries:[],surgicalStock:[],nextSurgicalStockId:1,consumedDonorIds:[],arenaRerolls:0,arenaRerollLocked:false,rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
+export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],graftProsthetics:[],donorTissues:[],mutations:[],mutationInventory:[],equippedMutations:[],nextMutationId:1,modInstallations:0,segmentInventory:[],equippedSegments:[],nextSegmentId:1,statChanges:0,surgeries:[],surgicalStock:[],nextSurgicalStockId:1,consumedDonorIds:[],arenaRerolls:0,arenaRerollLocked:false,rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
 export function normalizeTower(t){
  if(!t||typeof t!=='object'||Array.isArray(t))return t;
  const previousBossInterval=t.artifacts?.bossEvery??(TEST_BUILD?2:5);
@@ -27,6 +27,7 @@ export function normalizeTower(t){
  t.mutations??=[];
  normalizeTowerMutationInventory(t);
  normalizeTowerSegmentInventory(t);
+ t.statChanges??=0;
  t.surgeries??=[];
  normalizeTowerSurgicalStock(t);
  if(t.insurance?.checkpoint){
@@ -65,6 +66,7 @@ export function validTower(t){
  return validBossEncounter(t.bossEncounter,t.level)&&validTowerFloorPlan(t.floorPlan,t.level)&&t&&t.version===2&&Number.isSafeInteger(t.level)&&t.level>=1&&Number.isSafeInteger(t.wins)&&t.wins===t.level-1
   &&Number.isInteger(t.patient)&&t.patient>=0&&t.patient<4&&validStats(t.stats,towerCycleWins(t.level))
   &&(t.cycleNotice===undefined||t.cycleNotice===t.level&&t.level>30&&(t.level-1)%30===0)
+  &&Number.isSafeInteger(t.statChanges)&&t.statChanges>=0
   &&(t.segmentRewardsEnabled===undefined||typeof t.segmentRewardsEnabled==='boolean')
   &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&validArtifactCollection(t.artifacts,t.record)&&optionalCount(t.runKills)&&optionalCount(t.runCoins)&&validInsurance(t.insurance,t.record)&&validTowerMutationState(t)&&validTowerSegmentInventory(t)&&validTowerSurgeries(t.surgeries,t.level)&&validTowerSurgicalStock(t)&&validTowerDonorState(t)&&validTowerRerolls(t)&&typeof t.arenaRerollLocked==='boolean'
   &&Array.isArray(t.graftProsthetics)&&JSON.stringify(t.graftProsthetics)===JSON.stringify(normalizeTowerGraftProsthetics(t.graftProsthetics,t))
@@ -140,6 +142,8 @@ export function completeTower(session,player,won,random=Math.random){
    !surviving.some(existing=>existing.id===item.id))]);
   next.equippedSegments=[...insuredIds];
   next.nextSegmentId=Math.max(t.nextSegmentId,c?.nextSegmentId??1);
+  next.statChanges=c?.statChanges??0;
+  next.unseenSegmentIds=(t.unseenSegmentIds??[]).filter(id=>next.segmentInventory.some(item=>item.id===id));
   if(t.segmentRewardsEnabled!==undefined)next.segmentRewardsEnabled=t.segmentRewardsEnabled;
   // A surviving warehouse must be usable immediately on the replacement patient.
   // Likewise, DMS restores the patient to a configurable preparation phase.
