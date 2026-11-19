@@ -78,9 +78,13 @@ export function sellTowerSegment(session,player,run,id){
  const item=run.segmentInventory.find(x=>x.id===id);
  if(!run.preparing||!item||run.equippedSegments.includes(id))throw Error('Этот предмет нельзя продать.');
  const price=towerSegmentSellPrice(item.rarity),buyer=session.players?.[player];
- if(!buyer||buyer.balance+price>16000000)throw Error('Невозможно начислить монеты.');
+ const totalEarned=session.towerEarned??0;
+ if(!buyer||buyer.balance+price>16000000||totalEarned+price>16000000)
+  throw Error('Невозможно начислить монеты.');
  run.segmentInventory=run.segmentInventory.filter(x=>x.id!==id);
  buyer.balance+=price;
+ // Count sold parts as credited Tower income to preserve balance-ledger conservation.
+ session.towerEarned=totalEarned+price;
  return price;
 }
 export function validTowerSegmentInventory(run){
