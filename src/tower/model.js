@@ -110,7 +110,9 @@ export function completeTower(session,player,won,random=Math.random){
    // Transitional implementation: new segment warehouse is populated while
    // the legacy reward UI remains enabled until its full replacement lands.
    grantTowerMutationDraft(t,random);
-   awardTowerSegments(t,t.level-1,random);
+   // Do not award inaccessible items on top of the old reward screen:
+   // segment drops are enabled alongside the replacement Shelter UI.
+   if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random);
   }}
  else {
   const c=t.insurance.checkpoint,next=newTower(undefined,t.record,t.artifacts,t.insurance);
