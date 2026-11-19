@@ -163,6 +163,15 @@ export function prioritizeAdditionalArm(candidates,lastSource=null){
 export function selectSimultaneousStrikes(candidates,{moving=false,lastSource=null}={}){
  const sorted=prioritizeAdditionalArm(
   [...candidates].sort((a,b)=>compareStrikeCandidates(a,b,{moving})),lastSource);
+ // The head is a real striking source, not a permanent last-resort weapon.
+ // Alternate a physically reachable headbutt with limb attacks, preserving
+ // the two-distinct-opponents limit and never double-hitting the same target.
+ const head=lastSource!=='head'&&sorted.find(c=>c.source.kind==='head');
+ if(head){
+  const partner=sorted.find(c=>c.victim.id!==head.victim.id&&
+   (c.source.kind==='arm'||c.source.kind==='leg'));
+  return partner?[head,partner]:[head];
+ }
  const limbs=sorted.filter(c=>c.source.kind==='arm'||c.source.kind==='leg');
  const limb=key=>key.replace(/-(upper|lower)$/,'');
  for(const first of limbs){
