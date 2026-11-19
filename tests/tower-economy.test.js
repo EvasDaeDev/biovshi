@@ -13,34 +13,36 @@ const setup=(capital=1000)=>{
 };
 const total=s=>s.players[0].balance+s.shopSpent+s.insuranceSpent+s.surgerySpent+s.towerEconomySpent;
 
-test('G: skill preview is not an expense; explicit commit charges 50 per one-point transfer',()=>{
+test('G: first skill transfer is free, later transfers cost 50',()=>{
  const {session,run}=setup();
  assert.deepEqual(run.stats,[3,3,3]);assert.equal(session.towerEconomySpent,0);
  const draft=[4,2,3];assert.deepEqual(run.stats,[3,3,3]);
- assert.equal(purchaseTowerStatChange(session,0,run,draft),50);
- assert.deepEqual(run.stats,draft);assert.equal(session.players[0].balance,950);
- assert.equal(session.towerEconomySpent,50);
+ assert.equal(purchaseTowerStatChange(session,0,run,draft),0);
+ assert.deepEqual(run.stats,draft);assert.equal(session.players[0].balance,1000);
+ assert.equal(session.towerEconomySpent,0);
  assert.throws(()=>purchaseTowerStatChange(session,0,run,draft),/Выбери/);
  assert.throws(()=>purchaseTowerStatChange(session,0,run,[3,4,2]),/Выбери/);
  assert.equal(purchaseTowerStatChange(session,0,run,[3,3,3]),50);
- assert.equal(session.towerEconomySpent,100);assert.equal(total(session),1000);
+ assert.equal(session.towerEconomySpent,50);assert.equal(total(session),1000);
  assert.ok(validTower(run));
 });
 
 test('G: insufficient funds and combat lock never mutate funds or run',()=>{
- const {session,run}=setup(49);const before=structuredClone(run);
- assert.throws(()=>purchaseTowerStatChange(session,0,run,[4,2,3]),/Недостаточно/);
+ const {session,run}=setup(9);
+ assert.equal(purchaseTowerStatChange(session,0,run,[4,2,3]),0);
+ const before=structuredClone(run);
+ assert.throws(()=>purchaseTowerStatChange(session,0,run,[3,3,3]),/Недостаточно/);
  assert.equal(session.towerEconomySpent,0);assert.deepEqual(run,before);
  assert.throws(()=>purchaseTowerArenaReroll(session,0,run,()=>.5),/Недостаточно/);
  assert.deepEqual(run,before);
  session.players[0].balance=1000;run.arenaRerollLocked=true;
- assert.throws(()=>purchaseTowerStatChange(session,0,run,[4,2,3]),/Выбери/);
+ assert.throws(()=>purchaseTowerStatChange(session,0,run,[3,3,3]),/Выбери/);
  assert.throws(()=>purchaseTowerArenaReroll(session,0,run,()=>.5),/Нет другой/);
  assert.equal(session.towerEconomySpent,0);
 });
 
 test('G: reroll prices use base formula, with next-floor reset',()=>{
- assert.deepEqual(Array.from({length:6},(_,i)=>towerRerollPrice(i)),[50,60,72,87,104,125]);
+ assert.deepEqual(Array.from({length:6},(_,i)=>towerRerollPrice(i)),[10,10,10,10,10,10]);
  assert.equal(towerRerollPrice(60),Infinity);
  const {session,run}=setup(1000);
  const old=run.floorPlan.options.map(o=>structuredClone(o));
@@ -58,11 +60,11 @@ test('G: reroll prices use base formula, with next-floor reset',()=>{
   }
   assert.ok(validTower(run));
  }
- assert.deepEqual(prices,[50,60,72,87,104]);
- assert.equal(session.towerEconomySpent,373);
+ assert.deepEqual(prices,[10,10,10,10,10]);
+ assert.equal(session.towerEconomySpent,50);
  assert.equal(total(session),1000);
  completeTower(session,0,true);
- assert.equal(run.arenaRerolls,0);assert.equal(towerRerollPrice(run.arenaRerolls),50);
+ assert.equal(run.arenaRerolls,0);assert.equal(towerRerollPrice(run.arenaRerolls),10);
  assert.ok(validTower(run));
 });
 
@@ -102,7 +104,7 @@ test('G: insurance checkpoint retains reroll count, chosen arena and skill purch
  assert.equal(restored.arenaRerolls,1);
  assert.deepEqual(restored.stats,[4,2,3]);
  assert.deepEqual(restored.floorPlan,run.floorPlan);
- assert.equal(session.players[0].balance,850);
+ assert.equal(session.players[0].balance,940);
  assert.equal(total(session),1000);
  assert.ok(validTower(restored));
 });
