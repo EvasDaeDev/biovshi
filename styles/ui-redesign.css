@@ -1439,6 +1439,15 @@
   margin:0;
   font-size:inherit;
 }
+/* The manually favored skill remains green after every earned point. */
+#robot-tag-hops-v22 #tower-preparation #tower-stats select.tower-stat-boosted{
+  color:#78df8c;
+  border-color:#4f9c66;
+  font-weight:800;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats select.tower-stat-reduced{
+  color:#e5c19b;
+}
 #robot-tag-hops-v22 #tower-preparation #tower-stats .tower-stat-previews{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
