@@ -271,8 +271,10 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  }
  launch.onclick=()=>open();
  settingsButton.onclick=()=>{
-  const trigger=root.querySelector('#tower-prep-settings');
-  if(!trigger||ctx.settingsOpen)return;
+  // A native dialog occupies the top layer: release it before opening
+  // Settings using the real, fixed upper-right global navigation button.
+  const trigger=root.querySelector('#game-nav-settings');
+  if(!trigger||ctx.settingsOpen||root.querySelector('#game-action-confirm[open],#tower-module-replacement[open]'))return;
   const rememberedTab=activeTab;
   close();
   trigger.click();
