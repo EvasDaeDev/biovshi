@@ -56,6 +56,11 @@ test('saved floor profiles reach live robots, texture keys, voices and preparati
  ]};
  const dom=setup(session,t,'ward');
  try{
+  assert.match(document.querySelector('#tower-prep-title').textContent,/ПОДГОТОВКА/);
+  assert.match(document.querySelector('#tower-prep-name').textContent,/РЕКОРДНАЯ ВЫСОТА: 0 ЭТАЖ/);
+  const footer=document.querySelector('#tower-preparation .bet-actions');
+  assert.deepEqual([...footer.querySelectorAll(':scope > button')].map(x=>x.id),
+   ['tower-insurance','tower-upgrade-open','tower-fight']);
   assert.equal(ctx.robots.length,3);
   assert.deepEqual(ctx.towerGarage[1].stats,[7,2,3]);
   assert.deepEqual(ctx.towerGarage[2].stats,[3,2,7]);
