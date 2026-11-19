@@ -36,7 +36,7 @@ test('temporary H8 rarity affects only the test patient and preserves normal gam
 });
 function fixture(step){
  const runs=H8_FLOORS.flatMap(floor=>Object.keys(H8_LOADOUTS).flatMap(preset=>[1,2].map(seed=>{
-  const types=H8_LOADOUTS[preset],rank=Math.floor((floor-1)/30);
+  const types=H8_LOADOUTS[preset],rank=Math.min(5,Math.floor((floor-1)/30));
   const live={effective:towerMutationBonus(types),...towerMutationCombatBonus(types)};
   const p=step===0?live:towerRarityScenario(types.map(type=>({type,rarity:rank})),step);
   const compared={effective:p.effective,crit:p.crit,cooldownMultiplier:p.cooldownMultiplier};

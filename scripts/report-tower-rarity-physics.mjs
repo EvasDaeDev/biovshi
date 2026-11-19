@@ -77,7 +77,7 @@ export function compareH8(batches){
   if(related.length!==2)throw Error('Expected two seeds for '+floor+' / '+preset);
   for(const step of H8_STEPS){
    const values=related.map(k=>read(step,k)),p=values[0].rarityCompare.proposed;
-   groups.push({floor,preset,step,rank:Math.floor((floor-1)/30),
+   groups.push({floor,preset,step,rank:Math.min(5,Math.floor((floor-1)/30)),
     bonus:p.effective,crit:p.crit,cooldownMultiplier:p.cooldownMultiplier,
     ...metrics(values)});
   }
