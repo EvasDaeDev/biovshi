@@ -7,6 +7,7 @@ import {ensureTowerFloorPlan,selectedTowerFloor} from './tower/floors.js';
 import {bettingSetup,bettingCancel} from './betting/ui.js';
 import {initializeFloor} from './render/floor-history.js';
 import {initializeModalFocus} from './ui/modal-focus.js';
+import {initializeGameNavigation} from './ui/game-navigation.js';
 import {initializeTutorial} from './ui/tutorial.js';
 import {garageOpen} from './garage/ui.js';
 import {preparePatientPortraits} from './ui/patient-portrait.js';
@@ -46,6 +47,7 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,
  installTowerUI({enterFight});
  loading?.update('Подключаем управление и интерфейс…',{done:5,total:6});
  initializeModalFocus();
+ initializeGameNavigation();
  initializeTutorial();
  launchButton.onclick=()=>{
    if(launchAccepted){ctx.audio?.unlock();ctx.startDemo();return;}
