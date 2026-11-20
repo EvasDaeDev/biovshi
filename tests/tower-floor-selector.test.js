@@ -76,7 +76,7 @@ test('late-floor crowded fight can reroll from columns to ward without changing 
   const view=renderTowerFloorChoices({container:document.getElementById('tower-floor-preview'),session,player:0,run});
   const reroll=document.querySelector('.tower-reroll-button');
   assert.equal(reroll.disabled,false);
-  reroll.querySelector('.tower-reroll-caption').click();
+  document.querySelector('.tower-reroll-caption').click();
   assert.equal(run.floorPlan.options[0].arenaId,'ward');
   assert.deepEqual(run.floorPlan.options.map(o=>o.profiles),before);
   assert.equal(session.players[0].balance,290);
