@@ -147,7 +147,13 @@ export function completeTower(session,player,won,random=Math.random){
   next.nextSegmentId=Math.max(t.nextSegmentId,c?.nextSegmentId??1);
   next.statChanges=c?.statChanges??0;
   next.unseenSegmentIds=(t.unseenSegmentIds??[]).filter(id=>next.segmentInventory.some(item=>item.id===id));
-  if(t.segmentRewardsEnabled!==undefined)next.segmentRewardsEnabled=t.segmentRewardsEnabled;
+  // Death without DMS starts a genuinely new patient/run. An older saved
+  // segmentRewardsEnabled=false flag must not trap that fresh run in the
+  // obsolete whole-modification reward path (which hides segment rewards).
+  // A restored DMS checkpoint retains its original reward system.
+  if(c){
+   if(t.segmentRewardsEnabled!==undefined)next.segmentRewardsEnabled=t.segmentRewardsEnabled;
+  }else next.segmentRewardsEnabled=true;
   // A surviving warehouse must be usable immediately on the replacement patient.
   // Likewise, DMS restores the patient to a configurable preparation phase.
   if(next.segmentRewardsEnabled)next.preparing=true;
