@@ -19,6 +19,17 @@ test('boss generates one or two independent segments and preserves duplicates',(
  assert.equal(towerSegmentStacks(run).reduce((n,x)=>n+x.count,0),3);
  assert.ok(validTowerSegmentInventory(run));
 });
+test('second segment drops at 35 percent after winning the segment batch',()=>{
+ const below=newTower(),atBoundary=newTower();
+ // A single deterministic random source supplies the quantity roll.
+ assert.equal(awardTowerSegments(below,5,()=>.649999).length,1);
+ assert.equal(awardTowerSegments(atBoundary,5,()=>.65).length,2);
+ // The second-segment probability is independent of the repeat-boss drop roll.
+ const repeat=newTower(),rolls=[.69,.65,.4,.3,.8];
+ assert.equal(awardTowerSegments(repeat,5,()=>rolls.shift(),.7).length,2);
+ assert.ok(validTowerSegmentInventory(repeat));
+});
+
 test('a repeat boss segment batch has a 70%, then 49% chance; misses grant nothing',()=>{
  const run=newTower();
  const first=awardTowerSegments(run,5,()=>.99,1);
