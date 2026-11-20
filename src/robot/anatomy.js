@@ -195,6 +195,7 @@ export function robotDamage(robotState, key, by, damage=1) {
   // Only the contacted bone receives a soft visual hit tint. Never mark
   // descendants; critical-hit visuals keep their existing stronger effect.
   if(damage<2)(robotState.segmentHitTints??=new Map()).set(key,ctx.game.time);
+  else robotState.segmentHitTints?.delete(key);
   const actualDamage = Math.min(robotState.hp.get(key), damage);
   robotState.hp.set(key, robotState.hp.get(key) - actualDamage);
   if (CONFIG.combat.trauma.enabled && robotState.body?.traumaEnabled!==false) {
