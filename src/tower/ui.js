@@ -141,7 +141,17 @@ export function towerPreparation(){
   ctx.startup.phase='tower-ready';ctx.resultsPanel.hidden=true;ctx.root.querySelector('#tower-controls').hidden=true;
   panel.hidden=false;const title=ctx.root.querySelector('#tower-prep-title');
   title.classList.toggle('boss-floor-title',hasBoss(t));
-  title.textContent=hasBoss(t)?`${bossName(t.level)}\nЭТАЖ №${towerFloorLabel(t.level)}`:`ПОДГОТОВКА · ЭТАЖ ${towerFloorLabel(t.level)}`;
+  const bossFloor=hasBoss(t);
+  const headingText=bossFloor?`${bossName(t.level)} · ЭТАЖ №${towerFloorLabel(t.level)}`:`ПОДГОТОВКА · ЭТАЖ ${towerFloorLabel(t.level)}`;
+  const headingLine=document.createElement('span');
+  headingLine.className='tower-prep-title-line';
+  headingLine.textContent=headingText;
+  if(bossFloor){
+    const bossLabel=document.createElement('span');
+    bossLabel.className='tower-prep-boss-label';
+    bossLabel.textContent='БОСС';
+    title.replaceChildren(bossLabel,headingLine);
+  }else title.replaceChildren(headingLine);
   renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
   renderTowerFloorChoices({container:ctx.root.querySelector('#tower-floor-preview'),
     session:ctx.betting,player:ctx.towerPlayer,run:t,onSave:bettingSave,
