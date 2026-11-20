@@ -18,7 +18,7 @@ export function recordSegmentHitTint(robot,key,time,damage){
  // not traversed. A repeated ordinary hit restarts only this segment's fade.
  (robot.segmentHitTints??=new Map()).set(key,time);
 }
-export const SEGMENT_HIT_TINT=.15;
+export const SEGMENT_HIT_TINT=.30;
 export const SEGMENT_HIT_TINT_SEC=.28;
 export function segmentHitTint(time,hitAt){
  if(!Number.isFinite(hitAt)||!Number.isFinite(time))return 0;
@@ -151,9 +151,9 @@ export function paintRobotSkin(robot,strikePoses=[]) {
     const until=robot.segmentHitTints?.get(key);
     const strength=segmentHitTint(ctx.game.time,until);
     if(strength>0){
-      // Pixi reads the group attribute; SVG uses its own colour-matrix on
-      // the nested (clipped) atlas viewport. Neither affects other segments.
-      attr(piece.group,'data-hit-tint',strength.toFixed(4));
+      // Both renderers colour the actual clipped atlas texture viewport.
+      // Do not filter the parent bone group or its descendant bones.
+      attr(piece.viewport,'data-hit-tint',strength.toFixed(4));
       if(!piece.hitFilter){
         const id='tag7hop-hit-tint-'+robot.id+'-'+key.replace(/[^a-z0-9-]/gi,'_');
         const filter=el('filter',{id,x:'-10%',y:'-10%',width:'120%',height:'120%'},ctx.defs);
@@ -165,7 +165,7 @@ export function paintRobotSkin(robot,strikePoses=[]) {
       const m=segmentHitTintMatrix(strength);
       attr(piece.hitFilter.matrix,'values',m.join(' '));
     }else{
-      if(piece.group.getAttribute('data-hit-tint')!=='0')attr(piece.group,'data-hit-tint','0');
+      if(piece.viewport.getAttribute('data-hit-tint')!=='0')attr(piece.viewport,'data-hit-tint','0');
       if(piece.hitFilter&&piece.viewport.getAttribute('filter')!=='none')attr(piece.viewport,'filter','none');
       if(until!==undefined)robot.segmentHitTints.delete(key);
     }
