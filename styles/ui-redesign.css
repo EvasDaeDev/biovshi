@@ -1056,7 +1056,7 @@
   text-align:left;
 }
 #robot-tag-hops-v22 #launch-overlay .tower-menu-player{
-  grid-template-columns:auto minmax(0,1fr) 102px auto;
+  grid-template-columns:auto minmax(0,1fr) 146px auto;
   gap:8px;
 }
 #robot-tag-hops-v22 #launch-overlay .menu-patient-preview{
@@ -1064,8 +1064,8 @@
   align-items:center;
   justify-content:center;
   box-sizing:border-box;
-  width:102px;
-  height:58px;
+  width:146px;
+  height:80px;
   min-width:0;
   overflow:hidden;
   pointer-events:none;
@@ -1100,22 +1100,22 @@
 }
 @media(max-width:690px){
   #robot-tag-hops-v22 #launch-overlay .tower-menu-player{
-    grid-template-columns:auto minmax(0,1fr) 76px auto;
+    grid-template-columns:auto minmax(0,1fr) 112px auto;
     gap:5px;
   }
   #robot-tag-hops-v22 #launch-overlay .menu-patient-preview{
-    width:76px;
-    height:48px;
+    width:112px;
+    height:63px;
   }
 }
 @media(max-width:480px){
   #robot-tag-hops-v22 #launch-overlay .tower-menu-player{
-    grid-template-columns:auto minmax(0,1fr) 62px auto;
+    grid-template-columns:auto minmax(0,1fr) 80px auto;
     gap:4px;
   }
   #robot-tag-hops-v22 #launch-overlay .menu-patient-preview{
-    width:62px;
-    height:42px;
+    width:80px;
+    height:48px;
   }
 }
 #robot-tag-hops-v22 #launch-overlay .tower-menu-player label,
