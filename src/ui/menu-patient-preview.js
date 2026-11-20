@@ -26,10 +26,24 @@ const polar=(point,length,angle)=>[
 ];
 const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
 
-export function menuPatientPose(run){
+// Find the joint of a two-bone chain while keeping its contact point fixed.
+// Bend direction comes from the original drawing, so elbows and knees never flip.
+export function solveMenuLimb(root,contact,upperLength,lowerLength,bendSign){
+ const dx=contact[0]-root[0],dy=contact[1]-root[1];
+ const distanceToContact=Math.hypot(dx,dy);
+ const distanceSafe=Math.max(1e-6,distanceToContact);
+ const along=(upperLength*upperLength-lowerLength*lowerLength+distanceSafe*distanceSafe)/(2*distanceSafe);
+ const perpendicular=Math.sqrt(Math.max(0,upperLength*upperLength-along*along));
+ const ux=dx/distanceSafe,uy=dy/distanceSafe;
+ const joint=[root[0]+ux*along-uy*perpendicular*bendSign,
+              root[1]+uy*along+ux*perpendicular*bendSign];
+ return {joint,tip:[...contact]};
+}
+
+const menuStaticPose=run=>{
  const pose=towerUpgradePose(run);
  for(const site of Object.keys(pose)){
-  const match=/^(arm|leg)-(-?1)(?:-graft(?:-\\d+)?)?-upper$/.exec(site);
+  const match=/^(arm|leg)-(-?1)(?:-graft(?:-\d+)?)?-upper$/.exec(site);
   if(!match)continue;
   const lowerKey=site.slice(0,-5)+'lower';
   const upper=pose[site],lower=pose[lowerKey];
@@ -37,8 +51,6 @@ export function menuPatientPose(run){
   const [,kind,sideText]=match,side=Number(sideText);
   const graft=site.includes('-graft');
   const spread=graft?(side<0?-7:7):0;
-  // Left arm reaches upward-left, right arm extends outward. Legs open
-  // downward to either side, reproducing the asymmetrical sketch pose.
   const angles=kind==='arm'
    ?(side<0?[-151,-190]:[20,-4])
    :(side<0?[144,110]:[48,65]);
@@ -48,6 +60,38 @@ export function menuPatientPose(run){
   pose[lowerKey]=[joint,tip];
  }
  return pose;
+};
+
+// The neutral pose defines immutable contacts for every hand/foot, including
+// surgical grafts. Only the body and shoulders/hips move during idle.
+export function menuPatientFramePose(base,phase=0){
+ if(!phase)return base;
+ const dx=Math.sin(phase)*1.8,dy=(1-Math.cos(phase))*0.8;
+ const move=([x,y])=>[x+dx,y+dy];
+ const pose={};
+ for(const [site,points] of Object.entries(base)){
+  if(site.startsWith('spine-')||site==='head')pose[site]=points.map(move);
+ }
+ for(const site of Object.keys(base)){
+  if(!/^(arm|leg)-(-?1)(?:-graft(?:-\d+)?)?-upper$/.test(site))continue;
+  const lowerKey=site.slice(0,-5)+'lower';
+  const upper=base[site],lower=base[lowerKey];
+  if(!lower)continue;
+  const root=move(upper[0]),contact=lower[1];
+  const upperLength=distance(upper[0],upper[1]);
+  const lowerLength=distance(lower[0],lower[1]);
+  const cross=(contact[0]-upper[0][0])*(upper[1][1]-upper[0][1])-
+              (contact[1]-upper[0][1])*(upper[1][0]-upper[0][0]);
+  const sign=cross>=0?1:-1;
+  const {joint,tip}=solveMenuLimb(root,contact,upperLength,lowerLength,sign);
+  pose[site]=[root,joint];
+  pose[lowerKey]=[joint,tip];
+ }
+ return pose;
+}
+
+export function menuPatientPose(run,phase=0){
+ return menuPatientFramePose(menuStaticPose(run),phase);
 }
 
 // Rotate the existing horizontal neutral pose into the tilted display pose;
@@ -66,7 +110,45 @@ export function menuPatientTransform(pose){
  return `translate(${x} ${y}) scale(${scale}) rotate(${ANGLE*180/Math.PI})`;
 }
 
+// A single menu preview owns at most one animation frame. The static SVG and
+// atlas image elements are created once; animation only updates 2D transforms.
+let idleState=null;
+export function stopMenuPatientIdle(){
+ if(idleState?.raf!=null&&typeof cancelAnimationFrame==='function')
+  cancelAnimationFrame(idleState.raf);
+ idleState=null;
+}
+
+export function startMenuPatientIdle(target,menu){
+ if(typeof requestAnimationFrame!=='function'||!target||!menu||menu.hidden||target.hidden)return;
+ if(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+ if(!idleState||idleState.target!==target)return;
+ if(idleState.raf!=null)return;
+ const state=idleState;
+ const tick=now=>{
+  state.raf=null;
+  if(idleState!==state||menu.hidden||target.hidden||!target.isConnected){
+   if(idleState===state)idleState=null;
+   return;
+  }
+  // ~25 fps is sufficient for a subtle idle, with no new images or SVG nodes.
+  if(now-state.lastFrame>=40){
+   state.lastFrame=now;
+   const frame=menuPatientFramePose(state.pose,(now-state.started)/1000*1.35);
+   for(const [site,node] of state.nodes){
+    const points=frame[site],part=state.parts.get(site);
+    if(!points)continue;
+    const [[ax,ay],[bx,by]]=points;
+    node.setAttribute('transform','matrix('+skinMatrix({x:ax,y:ay},{x:bx,y:by},part).join(' ')+')');
+   }
+  }
+  state.raf=requestAnimationFrame(tick);
+ };
+ state.raf=requestAnimationFrame(tick);
+}
+
 export function renderMenuPatient(target,run){
+ stopMenuPatientIdle();
  target.replaceChildren();
  if(!run){target.hidden=true;return null;}
  target.hidden=false;
@@ -76,6 +158,7 @@ export function renderMenuPatient(target,run){
   'data-menu-patient':'true'
  },target);
  const pose=menuPatientPose(run);
+ const nodes=new Map(),parts=new Map();
  const body=towerPatientAnatomy(run);
  const prosthetics=new Set([...(run.prosthetics??[]),...(run.graftProsthetics??[])]);
  const original=ASSETS.textures[['robotA','robotB','robotC','robotD'][(run.patient??0)%4]];
@@ -95,6 +178,7 @@ export function renderMenuPatient(target,run){
    'data-menu-site':site,
    transform:'matrix('+skinMatrix({x:ax,y:ay},{x:bx,y:by},part).join(' ')+')'
   },idle);
+  nodes.set(site,group);parts.set(site,part);
   const atlas=towerUpgradeAtlas(run,site);
   const rarity=atlas?towerUpgradeRarity(run,site):0;
   if(rarity)group.setAttribute('filter',towerRaritySvgFilter(svg,rarity));
@@ -108,5 +192,6 @@ export function renderMenuPatient(target,run){
    style:'image-rendering:pixelated'
   },cell);
  }
+ idleState={target,pose,nodes,parts,started:performance.now(),lastFrame:-Infinity,raf:null};
  return svg;
 }
