@@ -889,6 +889,34 @@
   border-top-color:#686651;
   color:#e8dcc4;
 }
+/* Totalizator payouts are inside the DARK results dialog, not the
+   parchment-colored betting sheet. Override the older paper-theme cell,
+   header and <details> text colors without changing betting/garage tables. */
+#robot-tag-hops-v22 #gladiator-results #bet-result-summary .bet-table{
+  color:#eee4cf;
+}
+#robot-tag-hops-v22 #gladiator-results #bet-result-summary .bet-table :is(th,td){
+  color:#eee4cf;
+  border-bottom-color:#696a58;
+}
+#robot-tag-hops-v22 #gladiator-results #bet-result-summary .bet-table th{
+  color:#d6c9ae;
+  font-weight:700;
+}
+#robot-tag-hops-v22 #gladiator-results #bet-result-summary .bet-table :is(strong,summary,summary span,details>span,details>strong){
+  color:#f3e6cb;
+}
+#robot-tag-hops-v22 #gladiator-results #bet-result-summary > strong{
+  color:#f3e6cb;
+}
+/* Preserve the existing high-contrast green/red reward signifiers inside
+   cells and the expanded balance equation. */
+#robot-tag-hops-v22 #gladiator-results #bet-result-summary .bet-table .bet-net-win{
+  color:var(--ui-positive)!important;
+}
+#robot-tag-hops-v22 #gladiator-results #bet-result-summary .bet-table .bet-net-loss{
+  color:var(--ui-negative)!important;
+}
 #robot-tag-hops-v22 #gladiator-results .gladiator-result-total{
   background:#32372c;
   border:1px solid #7e6d4e;
