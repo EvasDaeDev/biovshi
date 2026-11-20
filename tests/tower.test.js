@@ -1176,3 +1176,21 @@ test('Shelter and unviewed segment cards show red badges until the stack is open
   assert.deepEqual(bettingLoad().towers[0].unseenSegmentIds,[]);
  }finally{close(dom);}
 });
+
+
+test('normal-floor victory does not repeat the previous boss reward caption',()=>{
+ const session=betNewSession(['Результаты'],300),run=towerFor(session,0);
+ const dom=setup(session,run);
+ try{
+  run.segmentRewardsEnabled=true;
+  run.lastBossSegments=['seg1']; // Still present after an earlier boss floor.
+  ctx.combat.winner=0;
+  ctx.towerOutcome={won:true,floor:16,cleared:16,record:16,newRecord:true,floorCoins:60};
+  towerResults();
+  assert.equal(ctx.resultsSummary.textContent,'','regular floor must not inherit the boss message');
+  assert.equal(document.querySelector('.tower-segment-rewards'),null);
+  ctx.towerOutcome={won:true,floor:15,cleared:15,record:15,newRecord:true,floorCoins:60};
+  towerResults();
+  assert.match(ctx.resultsSummary.textContent,/БОСС ПОБЕЖДЁН/,'boss message still displays on boss floors');
+ }finally{close(dom);}
+});
