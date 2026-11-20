@@ -12,6 +12,12 @@ import {createSkinReadiness} from './skin-readiness.js';
 // their span also controls texture scale through skinMatrix.
 // An ordinary hit gives only the exact contacted bone a subtle red flash.
 // A critical hit keeps the existing crit/sever VFX instead of stacking tints.
+export function recordSegmentHitTint(robot,key,time,damage){
+ if(damage>=2){robot.segmentHitTints?.delete(key);return;}
+ // Exact key only; the hierarchy and severing cascade are deliberately
+ // not traversed. A repeated ordinary hit restarts only this segment's fade.
+ (robot.segmentHitTints??=new Map()).set(key,time);
+}
 export const SEGMENT_HIT_TINT=.15;
 export const SEGMENT_HIT_TINT_SEC=.28;
 export function segmentHitTint(time,hitAt){
