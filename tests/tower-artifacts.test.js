@@ -180,7 +180,35 @@ test('boss preparation shows saved chance; settlement and repeated result render
   document.querySelector('#tower-fight').click();f.boss.damage('head',0,100);ctx.combat.winner=0;settleTower(0);
   assert.equal(ctx.towerOutcome.artifact,3);assert.equal(ctx.towerOutcome.artifactBonus,333);assert.equal(ctx.towerOutcome.runCoins,433);
   const balance=f.session.players[0].balance;settleTower(0);towerResults();towerResults();assert.equal(f.session.players[0].balance,balance);
+  assert.equal(ctx.towerOutcome.bossLoot.previousWins,3);
+  assert.ok(Math.abs(ctx.towerOutcome.bossLoot.fragmentChance-.7**3)<1e-12);
+  assert.match(document.querySelector('.tower-boss-loot-chances').textContent,/№4.*34,3%/);
   assert.match(document.querySelector('.artifact-completed').textContent,/333/);assert.ok(bettingLoad());
   assert.equal(bettingLoad().players[0].balance,balance);
+ }finally{f.close();}
+});
+
+test('boss results explain failed independent loot rolls instead of showing only money',()=>{
+ const f=startBossScenario({floor:5});
+ try{
+  f.tower.artifacts={...newArtifactCollection(),bossWins:{5:1}};
+  f.tower.segmentRewardsEnabled=true;
+  Math.random=()=>.99;
+  towerPreparation();
+  document.querySelector('#tower-fight').click();
+  f.boss.damage('head',0,100);
+  ctx.combat.winner=0;
+  settleTower(0);towerResults();
+  assert.equal(ctx.towerOutcome.bossLoot.previousWins,1);
+  assert.equal(ctx.towerOutcome.bossLoot.segmentChance,.7);
+  assert.equal(ctx.towerOutcome.bossLoot.fragmentChance,.7);
+  assert.equal(ctx.towerOutcome.bossLoot.segments,0);
+  assert.equal(ctx.towerOutcome.bossLoot.fragment,false);
+  assert.equal(f.tower.artifacts.bossWins[5],2);
+  assert.match(document.querySelector('#gladiator-results-summary').textContent,/СЕГМЕНТЫ НЕ ВЫПАЛИ/);
+  const explanation=document.querySelector('.tower-boss-loot-chances').textContent;
+  assert.match(explanation,/ПОБЕДА НАД ЭТИМ БОССОМ: №2/);
+  assert.match(explanation,/СЕГМЕНТЫ: НЕ ВЫПАЛИ · ШАНС: 70%/);
+  assert.match(explanation,/ФРАГМЕНТ: НЕ ВЫПАЛ · ШАНС: 70%/);
  }finally{f.close();}
 });
