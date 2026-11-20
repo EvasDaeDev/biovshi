@@ -76,7 +76,7 @@ const menuStaticPose=run=>{
  // Solve both bones again instead of simply translating the extremities:
  // shoulder/hip roots and real atlas segment lengths remain unchanged.
  for(const site of Object.keys(pose)){
-  const match=/^(arm|leg)-(-?1)(?:-graft(?:-\\d+)?)?-upper$/.exec(site);
+  const match=/^(arm|leg)-(-?1)(?:-graft(?:-\d+)?)?-upper$/.exec(site);
   if(!match)continue;
   const [,kind,sideText]=match;
   if(kind!=='leg'&&!(kind==='arm'&&Number(sideText)===1))continue;
