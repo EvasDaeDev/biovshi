@@ -70,8 +70,9 @@ test('menu sketch pose spreads limbs while preserving actual bone lengths and gr
  };
  assert.ok(angle('arm--1-upper')<-110,'left arm points above and left of the body');
  assert.ok(angle('arm-1-upper')>-15&&angle('arm-1-upper')<50,'right arm stretches out');
- assert.ok(angle('leg--1-upper')>105,'left leg extends down-left');
- assert.ok(angle('leg-1-upper')>10&&angle('leg-1-upper')<90,'right leg extends down-right');
+ // Feet now sit 15 cm higher than the original sketch; their former
+ // upper-bone angles are intentionally no longer invariant. The contact
+ // elevation and bone lengths are checked in the dedicated test below.
  assert.ok(pose['arm-1-graft-upper'],'additional graft follows the display pose');
  assert.ok(pose['leg--1-graft-lower'],'surgical graft remains visible');
 });
