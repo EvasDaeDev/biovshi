@@ -1706,3 +1706,37 @@
     grid-template-columns:minmax(0,1fr) minmax(128px,142px);
   }
 }
+
+/* Boss identification is separate from the single-line floor title. */
+#robot-tag-hops-v22 #tower-preparation .tower-prep-header h2{
+  min-width:0;
+  max-width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:3px;
+}
+#robot-tag-hops-v22 #tower-preparation .tower-prep-title-line{
+  display:block;
+  white-space:nowrap;
+  overflow-wrap:normal;
+  font-size:clamp(13px,2.35vw,29px);
+  line-height:1.15;
+}
+#robot-tag-hops-v22 #tower-preparation .tower-prep-boss-label{
+  display:block;
+  font-size:clamp(11px,1.25vw,15px);
+  font-weight:800;
+  letter-spacing:.12em;
+  line-height:1.1;
+  color:#edc27f;
+}
+/* The insurance remains visibly green even while its active checkpoint
+   disables another purchase. The active class follows the saved policy. */
+#robot-tag-hops-v22 #tower-preparation>.bet-panel>.bet-actions #tower-insurance.is-active,
+#robot-tag-hops-v22 #tower-preparation>.bet-panel>.bet-actions #tower-insurance.is-active:disabled{
+  background:#315b38;
+  border-color:#69bd78;
+  color:#eaffdf;
+  opacity:1;
+}
