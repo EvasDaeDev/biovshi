@@ -10,7 +10,7 @@ import { ik } from "../utils/math.js";
 import { burst, flashSeveredParts } from "../render/effects.js";
 import { note } from "../game/events.js";
 import { random } from "../utils/random.js";
-import { snapshotRobotSkin } from '../render/robot-skin.js';
+import { snapshotRobotSkin,recordSegmentHitTint } from '../render/robot-skin.js';
 import { createInertia } from '../render/inertia.js';
 import { spawnHitEffect } from '../render/hit-effects.js';
 export
@@ -192,6 +192,9 @@ export function robotDamage(robotState, key, by, damage=1) {
   if (!robotState.mobile() || !Number.isFinite(damage) || damage <= 0 || !key || !robotState.isDamageable(key) || !robotState.hp.has(key) || robotState.broken.has(key) || ctx.game.time - (robotState.hitAt.get(key) ?? -99) < CONFIG.combat.damageInvulnerabilitySec) return false;
   robotState.lastTowerAttacker=by;
   robotState.hitAt.set(key, ctx.game.time);
+  // Only the contacted bone receives a soft visual hit tint. Never mark
+  // descendants; critical-hit visuals keep their existing stronger effect.
+  recordSegmentHitTint(robotState,key,ctx.game.time,damage);
   const actualDamage = Math.min(robotState.hp.get(key), damage);
   robotState.hp.set(key, robotState.hp.get(key) - actualDamage);
   if (CONFIG.combat.trauma.enabled && robotState.body?.traumaEnabled!==false) {

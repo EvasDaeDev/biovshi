@@ -4,6 +4,8 @@ export const ASSETS = {
   textures: {
     ...bossAssets(),
     uiBone:'assets/textures/UI/icons/bone_01.png',
+    uiDice:'assets/textures/UI/dice.png',
+    uiTable:'assets/textures/UI/table.png',
     uiCoin:'assets/textures/UI/icons/coin_01.png',
     uiMobility:'assets/textures/UI/icons/mobi_01.png',
     uiScreen:'assets/textures/UI/icons/screen_01.png',
@@ -24,10 +26,24 @@ export const ASSETS = {
     hat3: 'assets/textures/robots/decor/head/3.png',
     hat4: 'assets/textures/robots/decor/head/4.png',
     robotAndroid: 'assets/textures/robots/ar_01.png',
+    // Include ALL artist-editable Tower upgrade atlases in both hosted and
+    // fully offline standalone builds. Runtime lookups select per segment.
+    ...Object.fromEntries(['brace','alignment','drive','impact','reflex'].map(id=>[
+      'towerSurgery_'+id,'assets/textures/robots/upgrades/ar_surg_'+id+'.png'
+    ])),
+    ...Object.fromEntries(['turbo','servo','piston','adrenal','predator','instinct',
+      'flywheel','gyro','spike','sinews','ossify','twitch','optic','synapse',
+      'focus','metronome','alarm','quiet'].map(id=>[
+      'towerMutation_'+id,'assets/textures/robots/upgrades/ar_mod_'+id+'.png'
+    ])),
     robotA: 'assets/textures/robots/r_01.png',
     robotB: 'assets/textures/robots/r_02.png',
     robotC: 'assets/textures/robots/r_03.png',
     robotD: 'assets/textures/robots/r_04.png',
+    robotEnemy1: 'assets/textures/robots/e_01.png',
+    robotEnemy2: 'assets/textures/robots/e_02.png',
+    robotEnemy3: 'assets/textures/robots/e_03.png',
+    robotEnemy4: 'assets/textures/robots/e_04.png',
   },
   sounds: {
     // Patient voices are separate from the impact and severing effects.

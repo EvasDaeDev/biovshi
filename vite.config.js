@@ -1,5 +1,8 @@
 import { defineConfig } from 'vite';
 import {execFileSync} from 'node:child_process';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {copyRuntimeAssets,verifyRuntimeAssets} from './scripts/runtime-assets.mjs';
 import {buildVersion} from './scripts/build-version.mjs';
 
 export default defineConfig(({mode})=>{
@@ -8,6 +11,7 @@ export default defineConfig(({mode})=>{
   return {
   base: './',
   define: { __TEST_BUILD__: JSON.stringify(testBuild), __INLINE_ASSETS__: '{}', __BUILD_SOURCE__: JSON.stringify(sourceCommit), __BUILD_VERSION__: JSON.stringify(buildVersion+(testBuild?'-test':'')) },
+  publicDir: 'public',
   plugins:[{
     name:'build-channel',
     transformIndexHtml(html){
@@ -16,7 +20,14 @@ export default defineConfig(({mode})=>{
         .replace('ПРОТОКОЛ № 001 · ДОПУСК НА АРЕНУ','ТЕСТОВАЯ СБОРКА · БОСС КАЖДЫЙ 5-Й ЭТАЖ');
     },
     generateBundle(){this.emitFile({type:'asset',fileName:'build-info.json',source:JSON.stringify({channel:testBuild?'test':'main',bossEvery:5,sourceCommit})+'\n'});},
+    async writeBundle(outputOptions){
+      const root=fileURLToPath(new URL('.',import.meta.url));
+      const output=path.resolve(root,outputOptions.dir??'dist');
+      const report=await copyRuntimeAssets(path.join(root,'public'),output,{warn:message=>console.warn(message)});
+      await verifyRuntimeAssets(output);
+      console.log('Curated runtime assets:',report.copied,'files,',report.bytes,'bytes');
+    },
   }],
-  build: { target: 'es2022', sourcemap: true },
+  build: { target: 'es2022', sourcemap: false, copyPublicDir: false },
   };
 });

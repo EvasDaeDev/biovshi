@@ -3,10 +3,13 @@ import { ctx } from '../game/state.js';
 import { CONFIG } from '../config.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { loadTextureImage } from '../assets/preload.js';
+import {arenaSpriteAtlasUrls,resolveArenaSpriteSource} from './pixi-sources.js';
 import { staticArenaImage,staticWallNodes } from './pixi-static.js';
 import { ArenaPostEffects } from './post-effects.js';
 import { victoryGold, goldMatrix } from './victory-glow.js';
 import { transformMatrix } from './pixi-math.js';
+import {towerRarityMatrix} from '../tower/rarity-tint.js';
+import {segmentHitTintMatrix,SEGMENT_HIT_TINT} from './robot-skin.js';
 
 // The hidden SVG is a scene description for the existing animation code, not a
 // second renderer. Only changed nodes are synchronized; atlases become native
@@ -33,7 +36,7 @@ export class PixiArena {
     this.owned.add(texture);return texture;
   }
   async prepareSources() {
-    const urls=[...Object.entries(ASSETS.textures).filter(([key])=>/^robot|liquids|hat|flashlight/.test(key)).map(([,file])=>assetUrl(file)),...(ctx.liquidAtlasSources??[]),...(ctx.coolantAtlasSources??[])];
+    const urls=[...arenaSpriteAtlasUrls(ASSETS.textures,assetUrl),...(ctx.liquidAtlasSources??[]),...(ctx.coolantAtlasSources??[])];
     await Promise.all([...new Set(urls.filter(Boolean))].map(async url=>{
       try{this.sources.set(url,this.texture(await loadTextureImage(url),url!==assetUrl(ASSETS.textures.flashlight)));}catch{/* Vector fallback is already prepared by the game. */}
     }));
@@ -43,7 +46,11 @@ export class PixiArena {
     const sprite=new this.p.Sprite(this.texture(canvas,false));
     sprite.position.set(x,y);sprite.width=sprite.height=size;return sprite;
   }
-  floorSprite(canvas){const sprite=new this.p.Sprite(this.texture(canvas,false));sprite.width=sprite.height=700;return sprite;}
+  floorSprite(canvas){
+    const sprite=new this.p.Sprite(this.texture(canvas,false));
+    const {left,top,size}=ctx.arenaDefinition;
+    sprite.position.set(left,top);sprite.width=sprite.height=size;return sprite;
+  }
   setAmbientHue(shift){
     if(!this.ambient||!this.obstacleGlow||this.disposed)return;
     if(!this.ambientHueFilters){
@@ -56,7 +63,9 @@ export class PixiArena {
   }
   replaceFloor(canvas){
     if(!this.floor||this.disposed)return;
-    const old=this.floor.texture;this.floor.texture=this.texture(canvas,false);this.floor.width=this.floor.height=700;
+    const {left,top,size}=ctx.arenaDefinition,old=this.floor.texture;
+    this.floor.texture=this.texture(canvas,false);
+    this.floor.position.set(left,top);this.floor.width=this.floor.height=size;
     this.owned.delete(old);old.destroy(true);this.render();
   }
   rasterizeRemains(nodes,size=1024){
@@ -73,7 +82,10 @@ export class PixiArena {
         }
         temporary.addChild(object);
       }
-      return this.app.renderer.extract.canvas({target:temporary,frame:new this.p.Rectangle(0,0,700,700),resolution:size/700,clearColor:[0,0,0,0],antialias:false});
+      const {left,top,size:arenaSize}=ctx.arenaDefinition;
+      return this.app.renderer.extract.canvas({target:temporary,
+        frame:new this.p.Rectangle(left,top,arenaSize,arenaSize),
+        resolution:size/arenaSize,clearColor:[0,0,0,0],antialias:false});
     }finally{
       for(const item of [...moved].reverse())item.parent.addChildAt(item.object,Math.min(item.index,item.parent.children.length));
       for(const [object,visible] of labels)object.visible=visible;
@@ -100,12 +112,17 @@ export class PixiArena {
     this.obstacleGlow=obstacleGlow;this.content.addChild(obstacleGlow);
     this.content.addChild(obstacles);
     for(const root of [ctx.trailsG,ctx.groundG,ctx.oilG,ctx.detachedG,ctx.actorsG,ctx.sparksG,ctx.pulsesG])this.attachRoot(root,this.content);
-    this.nightComposition=new this.p.Container();this.nightComposition.addChild(night);
+    const {left,top,size}=ctx.arenaDefinition;
+    this.nightComposition=new this.p.Container();
+    // RenderTexture origin is local, while the arena itself has world coordinates.
+    this.nightComposition.position.set(-left,-top);
+    this.nightComposition.addChild(night);
     this.nightLights=new this.p.Container();this.nightComposition.addChild(this.nightLights);
     this.attachRoot(ctx.lightHoles,this.nightLights);
-    this.nightTexture=this.p.RenderTexture.create({width:700,height:700,resolution:2});
+    this.nightTexture=this.p.RenderTexture.create({width:size,height:size,resolution:2});
     this.owned.add(this.nightTexture);
-    this.content.addChild(new this.p.Sprite(this.nightTexture));
+    const darknessSprite=new this.p.Sprite(this.nightTexture);
+    darknessSprite.position.set(left,top);this.content.addChild(darknessSprite);
     this.ambient=ambient;ambient.blendMode='screen';this.content.addChild(ambient);
     this.attachRoot(ctx.flashlightsG,this.content);
     for(const root of [ctx.scoreG,ctx.severFlashG,ctx.hitEffects.group])this.attachRoot(root,this.content);
@@ -175,7 +192,7 @@ export class PixiArena {
     if(record){
       for(const child of [...record.children])this.release(child.node);
       this.dirty.delete(record);this.records.delete(node);
-      record.object.destroy({children:true});
+      record.rarityFilter?.destroy();record.hitTintFilter?.destroy();record.critRedFilter?.destroy();record.object.destroy({children:true});
     }else for(const child of [...node.children])this.release(child);
   }
   cropped(source,x,y,width,height) {
@@ -211,6 +228,31 @@ export class PixiArena {
     const number=(name,fallback=0)=>Number(node.getAttribute(name)??fallback);
     object.visible=node.getAttribute('display')!=='none'&&node.style.display!=='none';
     object.alpha=number('opacity',1);
+    const rarity=number('data-tower-rarity');
+    if(rarity>0){
+      record.rarityFilter??=new this.p.ColorMatrixFilter();
+      record.rarityFilter.matrix=towerRarityMatrix(rarity);
+    }else if(record.rarityFilter){record.rarityFilter.destroy();record.rarityFilter=null;}
+    // Only the hit bone carries this attribute. Compose AFTER rarity to keep
+    // texture rarity colours intact, and do not tint a whole patient container.
+    const hitStrength=Math.max(0,Math.min(SEGMENT_HIT_TINT,number('data-hit-tint')));
+    const critOverlay=node.getAttribute('data-hit-crit-overlay')==='true';
+    if(hitStrength>0){
+      record.hitTintFilter??=new this.p.ColorMatrixFilter();
+      record.hitTintFilter.matrix=segmentHitTintMatrix(hitStrength);
+    }else if(record.hitTintFilter){record.hitTintFilter.destroy();record.hitTintFilter=null;}
+    if(critOverlay){
+      // The duplicate atlas cell is a full-red silhouette over the original,
+      // blended additively. It fades via the node's animated opacity.
+      record.critRedFilter??=new this.p.ColorMatrixFilter();
+      record.critRedFilter.matrix=segmentHitTintMatrix(1);
+    }
+    const filters=[record.rarityFilter,record.hitTintFilter,record.critRedFilter].filter(Boolean);
+    // Apply filters to the actual sprite, never to the bone/container.
+    object.filters=null;
+    if(visual)visual.filters=filters.length?filters:null;
+    if(critOverlay&&visual)visual.blendMode='add';
+
     object.setFromMatrix(new this.p.Matrix(...transformMatrix(node.getAttribute('transform')??'')));
     const s=record.style;
     s.fill=this.colour(node.style.fill||node.getAttribute('fill'),record.parent?.style.fill??'#26312b');
@@ -224,7 +266,8 @@ export class PixiArena {
     if(node===ctx.sparksG){s.fill='none';s.stroke='#ff397b';s.width=1.2;}
     if(!visual)return;
     if(record.viewport){
-      const image=node.querySelector('image'),source=this.sources.get(image?.getAttribute('href'));
+      const image=node.querySelector('image'),source=resolveArenaSpriteSource(this.sources,
+        image?.getAttribute('href'),node.getAttribute('data-fallback-src'));
       if(source){
         const [x,y,width,height]=node.getAttribute('viewBox').split(/[\s,]+/).map(Number);
         visual.texture=this.cropped(source,x,y,width,height);

@@ -48,3 +48,22 @@ test('wave frequency rises with activity and victory stays fast without new atta
  for(let i=0;i<300;i++)victory.tick(1/60);
  assert.ok(victory.tick(1/60).intensity<.001);
 });
+
+test('each countdown cue triggers a fresh brief attention wave without changing combat mechanics',()=>{
+ const motion=createStreamerMotion();
+ const peaks=[];
+ for(let number=4;number>=1;number--){
+  motion.attention();
+  let peak=0;
+  for(let i=0;i<60;i++){
+   const pose=motion.tick(1/60);
+   if(i<30)peak=Math.max(peak,pose.intensity);
+   assert.ok(Math.abs(pose.left)<=MAX_ARM_ANGLE+1e-9);
+   assert.ok(Math.abs(pose.right)<=MAX_ARM_ANGLE+1e-9);
+  }
+  peaks.push(peak);
+ }
+ assert.ok(peaks.every(value=>value>.9),'every second produces a strong visible wave');
+ for(let i=0;i<240;i++)motion.tick(1/60);
+ assert.ok(motion.tick(1/60).intensity<.001,'animation settles after countdown');
+});

@@ -27,28 +27,87 @@ test('draw selects equally among missing fragments, never repeats and stops at a
  assert.deepEqual(all.pieces,Array.from({length:16},(_,n)=>n));assert.equal(drawArtifactPiece(all),null);
 });
 
-test('drop chance is per boss floor, falls multiplicatively after every victory and floors at 20 percent',()=>{
+test('drop chance decreases by 30 percent of the current chance per boss win, without floor',()=>{
  const c=newArtifactCollection();
  for(let wins=0;wins<20;wins++){
-  const expected=Math.max(.2,.8**wins);assert.equal(artifactDropChance(c,5),expected);assert.equal(artifactDropChance(c,10),1);
-  const before=c.pieces.length;assert.equal(awardBossArtifact(c,5,()=>.99999)!==null,wins===0);
-  assert.equal(c.bossWins[5],wins+1);assert.equal(c.pieces.length,before+(wins===0?1:0));
+  const expected=.7**wins;
+  assert.equal(artifactDropChance(c,5),expected);
+  assert.equal(artifactDropChance(c,10),1,'each boss floor has its own history');
+  const before=c.pieces.length;
+  assert.equal(awardBossArtifact(c,5,()=>.99999)!==null,wins===0);
+  assert.equal(c.bossWins[5],wins+1);
+  assert.equal(c.pieces.length,before+(wins===0?1:0));
  }
- const boundary=newArtifactCollection();awardBossArtifact(boundary,5,()=>0);assert.equal(awardBossArtifact(boundary,5,()=>.8),null);
- assert.ok(Number.isInteger(awardBossArtifact(boundary,5,()=>.63999)));
+ assert.ok(artifactDropChance(c,5)<.01,'no artificial 20 percent floor');
+ const boundary=newArtifactCollection();
+ awardBossArtifact(boundary,5,()=>0);
+ assert.equal(awardBossArtifact(boundary,5,()=>.7),null,'roll equal to 70 percent fails');
+ assert.ok(Number.isInteger(awardBossArtifact(boundary,5,()=>.48999)),'49 percent chance on third victory');
 });
 
 test('only bosses drop fragments; losses and resets preserve counts, collections and chances per player',()=>{
  const s=betNewSession(['Первый','Второй'],100);
  completeTower(s,0,true,()=>0);assert.deepEqual(towerFor(s,0).artifacts,newArtifactCollection());
  const t=atFloor(s,0,5);completeTower(s,0,false,()=>0);assert.equal(towerFor(s,0).artifacts.bossWins[5],undefined);
- atFloor(s,0,5);completeTower(s,0,true,()=>0);assert.equal(t.artifacts.pieces.length,1);assert.equal(artifactDropChance(t.artifacts,5),.8);
+ atFloor(s,0,5);completeTower(s,0,true,()=>0);assert.equal(t.artifacts.pieces.length,1);assert.equal(artifactDropChance(t.artifacts,5),.7);
  resetTower(s,0);assert.deepEqual(towerFor(s,0).artifacts,t.artifacts);
  atFloor(s,0,5);completeTower(s,0,true,()=>.99);assert.equal(t.artifacts.pieces.length,1);assert.equal(t.artifacts.bossWins[5],2);
  assert.equal(artifactDropChance(t.artifacts,10),1);assert.ok(validTower(towerFor(s,0)));
  assert.deepEqual(towerFor(s,1).artifacts,newArtifactCollection());
  const legacy=atFloor(s,1,5);delete legacy.bossEncounter;legacy.legacyBossFloor=true;completeTower(s,1,true,()=>0);
  assert.deepEqual(legacy.artifacts,newArtifactCollection(),'a legacy ordinary floor cannot masquerade as a boss');
+});
+
+test('losing the boss first, then winning it gives both guaranteed first-victory loot types',()=>{
+ const session=betNewSession(['Игрок'],1000);
+ let run=atFloor(session,0,5);
+ // An old saved run can still contain a legacy whole-modification flag.
+ run.segmentRewardsEnabled=false;
+ // Boss can be paid for a kill before its fight ultimately ends in defeat.
+ assert.equal(rewardTower(session,0,1,0),true);
+ completeTower(session,0,false,()=>.99);
+ run=towerFor(session,0);
+ assert.equal(run.artifacts.bossWins[5],undefined,'defeat must not count as a boss victory');
+ assert.deepEqual(run.artifacts.pieces,[],'defeat never consumes the fragment reward');
+ assert.equal(run.segmentRewardsEnabled,true,'a new uninsured run upgrades legacy rewards');
+ run=atFloor(session,0,5);
+ assert.equal(rewardTower(session,0,1,0),true);
+ completeTower(session,0,true,()=>.99);
+ assert.equal(run.artifacts.bossWins[5],1,'only the victory increments the penalty counter');
+ assert.equal(run.artifacts.pieces.length,1,'first victory guarantees one fragment');
+ assert.equal(run.segmentInventory.length,2,'first victory guarantees segments even with high RNG');
+ assert.equal(run.lastBossSegments.length,2);
+ assert.ok(validTower(towerFor(session,0)));
+});
+
+test('segment and artifact replay chances share per-boss saved victory count',()=>{
+ const session=betNewSession(['Первый','Второй'],500);
+ let run=atFloor(session,0,5);
+ run.segmentRewardsEnabled=true;
+ completeTower(session,0,true,()=>.99);
+ assert.equal(run.artifacts.bossWins[5],1);
+ assert.equal(run.segmentInventory.length,2,'first boss drops segments even on a high roll');
+ assert.equal(run.artifacts.pieces.length,1,'first artifact fragment guaranteed');
+ resetTower(session,0);
+ run=atFloor(session,0,5);
+ run.segmentRewardsEnabled=true;
+ completeTower(session,0,true,()=>.8);
+ assert.equal(run.artifacts.bossWins[5],2);
+ assert.equal(run.segmentInventory.length,0,'repeated boss can miss segments');
+ assert.deepEqual(run.lastBossSegments,[]);
+ assert.equal(run.artifacts.pieces.length,1,'repeated boss can miss artifact fragment');
+ assert.ok(Math.abs(artifactDropChance(run.artifacts,5)-.49)<1e-12);
+ assert.equal(artifactDropChance(run.artifacts,10),1,'another boss remains at first-drop chance');
+ // The saved artifact history also applies to segments after resetting again.
+ resetTower(session,0);
+ run=atFloor(session,0,5);
+ run.segmentRewardsEnabled=true;
+ completeTower(session,0,true,()=>.48);
+ assert.equal(run.artifacts.bossWins[5],3);
+ assert.equal(run.segmentInventory.length,1,'below 49 percent earns a segment batch');
+ assert.equal(run.artifacts.pieces.length,2,'below 49 percent also grants a fragment');
+ assert.deepEqual(towerFor(session,1).artifacts,newArtifactCollection(),
+  'another player does not inherit boss defeats');
 });
 
 test('each complete artifact pays exactly 333 once, while every replay still pays 100 boss coins',()=>{
@@ -116,12 +175,61 @@ test('boss preparation shows saved chance; settlement and repeated result render
  const f=startBossScenario({floor:5});
  try{
   f.tower.artifacts=filled([0,1,2]);Math.random=()=>0;towerPreparation();
-  assert.match(document.querySelector('[data-artifact-chance]').textContent,/51,2%/);
+  assert.match(document.querySelector('[data-artifact-chance]').textContent,/34,3%/);
   assert.match(document.querySelector('.artifact-bonus-note').textContent,/333/);
   document.querySelector('#tower-fight').click();f.boss.damage('head',0,100);ctx.combat.winner=0;settleTower(0);
   assert.equal(ctx.towerOutcome.artifact,3);assert.equal(ctx.towerOutcome.artifactBonus,333);assert.equal(ctx.towerOutcome.runCoins,433);
   const balance=f.session.players[0].balance;settleTower(0);towerResults();towerResults();assert.equal(f.session.players[0].balance,balance);
+  assert.equal(ctx.towerOutcome.bossLoot.previousWins,3);
+  assert.ok(Math.abs(ctx.towerOutcome.bossLoot.fragmentChance-.7**3)<1e-12);
+  assert.match(document.querySelector('.tower-boss-loot-chances').textContent,/№4.*34,3%/);
   assert.match(document.querySelector('.artifact-completed').textContent,/333/);assert.ok(bettingLoad());
   assert.equal(bettingLoad().players[0].balance,balance);
+ }finally{f.close();}
+});
+
+test('boss results explain failed independent loot rolls instead of showing only money',()=>{
+ const f=startBossScenario({floor:5});
+ try{
+  f.tower.artifacts={...newArtifactCollection(),bossWins:{5:1}};
+  f.tower.segmentRewardsEnabled=true;
+  Math.random=()=>.99;
+  towerPreparation();
+  document.querySelector('#tower-fight').click();
+  f.boss.damage('head',0,100);
+  ctx.combat.winner=0;
+  settleTower(0);towerResults();
+  assert.equal(ctx.towerOutcome.bossLoot.previousWins,1);
+  assert.equal(ctx.towerOutcome.bossLoot.segmentChance,.7);
+  assert.equal(ctx.towerOutcome.bossLoot.fragmentChance,.7);
+  assert.equal(ctx.towerOutcome.bossLoot.segments,0);
+  assert.equal(ctx.towerOutcome.bossLoot.fragment,false);
+  assert.equal(f.tower.artifacts.bossWins[5],2);
+  assert.match(document.querySelector('#gladiator-results-summary').textContent,/СЕГМЕНТЫ НЕ ВЫПАЛИ/);
+  const explanation=document.querySelector('.tower-boss-loot-chances').textContent;
+  assert.match(explanation,/ПОБЕДА НАД ЭТИМ БОССОМ: №2/);
+  assert.match(explanation,/СЕГМЕНТЫ: НЕ ВЫПАЛИ · ШАНС: 70%/);
+  assert.match(explanation,/ФРАГМЕНТ: НЕ ВЫПАЛ · ШАНС: 70%/);
+ }finally{f.close();}
+});
+
+test('rare automatic boss rewards tint the segment and its cell on the existing victory screen',()=>{
+ const f=startBossScenario({floor:5});
+ try{
+  f.tower.segmentRewardsEnabled=true;
+  towerPreparation();document.querySelector('#tower-fight').click();
+  f.boss.damage('head',0,100);
+  ctx.combat.winner=0;
+  // Artifact, fragment index, quantity, segment type, slot, rarity.
+  const rolls=[0,0,0,0,0,.995];
+  Math.random=()=>rolls.shift()??0;
+  settleTower(0);towerResults();
+  const reward=document.querySelector('#bet-result-summary .tower-segment-reward');
+  assert.equal(reward.dataset.mutationRarity,'2');
+  assert.match(reward.textContent,/СИНЯЯ/);
+  assert.equal(reward.style.getPropertyValue('--tower-rarity-color'),'#4b94d2');
+  assert.ok(reward.querySelector('image[filter]'),'matrix is applied to the texture');
+  assert.equal(f.tower.mutationDraft,undefined,'no new selection for an automatic boss');
+  assert.equal(bettingLoad().towers[0].segmentInventory[0].rarity,2);
  }finally{f.close();}
 });

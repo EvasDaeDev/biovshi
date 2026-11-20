@@ -108,3 +108,43 @@ test('mascot preserves pixel scaling and participates in normal and standalone a
  const initialize=fs.readFileSync(new URL('../src/game/initialize.js',import.meta.url),'utf8');
  assert.match(initialize,/initializeStreamerMascot\(\)/);
 });
+
+test('tower countdown appears in streamer speech, waves joyfully on GO and preserves hidden preference',()=>{
+ const dom=new JSDOM('<div id="root"><div class="tag7hop-stage"></div></div>',{url:'https://countdown.test/',pretendToBeVisual:true});
+ const win=dom.window;
+ const painter=new Proxy({imageSmoothingEnabled:true,getImageData:()=>({data:new Uint8ClampedArray(163*249*4)})},{get:(o,k)=>k in o?o[k]:()=>{}});
+ win.HTMLCanvasElement.prototype.getContext=()=>painter;
+ let atlas;
+ win.Image=class{constructor(){this.naturalWidth=783;this.naturalHeight=512;atlas=this;}set src(value){this.url=value;}};
+ win.localStorage.setItem('biovshi.streamer-hidden.v1','true');
+ Object.assign(ctx,{root:win.document.querySelector('#root'),stage:win.document.querySelector('.tag7hop-stage'),
+  mode:'tower',betting:{players:[{name:'Лис'}]},towerPlayer:0,combat:{finished:false},
+  startup:{phase:'spawning'},paused:false,settingsOpen:false,orientationBlocked:false,appInactive:false,tutorial:null});
+ ctx.root.__disposeTag=()=>{};
+ initializeStreamerMascot();atlas.onload();
+ const box=ctx.root.querySelector('#streamer-mascot'),caption=box.querySelector('.streamer-quip');
+ assert.equal(box.hidden,true);
+ let now=100;
+ for(const line of ['4','3','2']){
+  ctx.streamerMascot.showCountdown(line);ctx.streamerMascot.sync(.1,now+=100);
+  assert.equal(box.hidden,false,'countdown must remain visible even with hidden preference');
+  assert.equal(caption.textContent,line);assert.equal(caption.hidden,false);
+  assert.equal(caption.classList.contains('is-countdown'),true);
+  assert.equal(box.dataset.emotion,'neutral');
+ }
+ ctx.streamerMascot.showCountdown('ПОГНАЛИ!!!');
+ ctx.streamerMascot.sync(.1,now+=100);
+ assert.equal(caption.textContent,'ПОГНАЛИ!!!');
+ assert.equal(box.dataset.emotion,'joy');
+ ctx.startup.phase='running';
+ ctx.streamerMascot.finishCountdown();
+ for(let i=0;i<8;i++)ctx.streamerMascot.sync(.1,now+=100);
+ assert.equal(box.dataset.emotion,'joy','joy and arm-waving hold after combat begins');
+ assert.equal(caption.textContent,'ПОГНАЛИ!!!');
+ for(let i=0;i<20;i++)ctx.streamerMascot.sync(.1,now+=100);
+ assert.equal(box.hidden,true,'saved hidden preference returns after GO');
+ assert.equal(caption.hidden,true);
+ assert.equal(caption.classList.contains('is-countdown'),false);
+ assert.equal(win.localStorage.getItem('biovshi.streamer-hidden.v1'),'true');
+ ctx.root.__disposeTag();dom.window.close();
+});

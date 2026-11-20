@@ -50,21 +50,22 @@ export function sweepContact(robot,victim,p,fromAge,toAge){
 // Plan a straight-line dash BEFORE takeoff. Candidate endpoints are offset to
 // expose a surviving arm/leg instead of running the boss's head into the enemy.
 // This is only a reach estimate; every real strike is checked by strikeCandidates.
-export function chargePlan(robot,target,{history=[]}={}){
- if(robot.movementLimbs<2)return null;
+export function chargePlan(robot,target,{history=[],diagnostics=null}={}){
+ const reject=key=>{if(diagnostics)diagnostics[key]=(diagnostics[key]??0)+1;};
+ if(robot.movementLimbs<2){reject('fewLimbs');return null;}
  const cfg=BOSS_CONFIG.tactics,dx=target.x-robot.x,dy=target.y-robot.y,d=Math.hypot(dx,dy);
- if(d<cfg.chargeMinGap||d>cfg.chargeMaxGap)return null;
+ if(d<cfg.chargeMinGap||d>cfg.chargeMaxGap){reject('distance');return null;}
  const unit={x:dx/d,y:dy/d},perp={x:-unit.y,y:unit.x};
  const sources=robot.attackSources.filter(s=>s.kind==='arm'||s.kind==='leg');
- if(!sources.length)return null;
+ if(!sources.length){reject('noWeapons');return null;}
  const candidates=[];
  for(const [approach,offset] of [['direct',0],['left',cfg.chargeSideOffset],['right',-cfg.chargeSideOffset]]){
   const desired={x:target.x-unit.x*cfg.chargeTerminalGap+perp.x*offset,
    y:target.y-unit.y*cfg.chargeTerminalGap+perp.y*offset};
   const vx=desired.x-robot.x,vy=desired.y-robot.y,length=Math.hypot(vx,vy);
-  if(length<18)continue;
+  if(length<18){reject('shortPath');continue;}
   const direction=Math.atan2(vy,vx),turn=wrap(direction-robot.angle);
-  if(Math.abs(turn)>cfg.chargeSteerLimit)continue;
+  if(Math.abs(turn)>cfg.chargeSteerLimit){reject('turn');continue;}
   const forward={x:vx/length,y:vy/length};
   const distance=Math.min(cfg.chargeDistance,length),goal={x:robot.x+forward.x*distance,y:robot.y+forward.y*distance};
   // Check the rotated full rig at every translation step. The locomotion
@@ -79,7 +80,7 @@ export function chargePlan(robot,target,{history=[]}={}){
     if(!coreClearBone(rotate(capsule.a),rotate(capsule.b),capsule.r+1)){clear=false;break;}
    }
   }
-  if(!clear)continue;
+  if(!clear){reject('rigBlocked');continue;}
   const bearing=wrap(Math.atan2(target.y-goal.y,target.x-goal.x)-direction);
   let reachPenalty=Infinity;
   for(const source of sources){
@@ -92,7 +93,7 @@ export function chargePlan(robot,target,{history=[]}={}){
    const reach=(18+17.25)*(source.reachFactor??1)*(robot.body?.scaleMultiplier??1);
    reachPenalty=Math.min(reachPenalty,Math.max(0,gap-reach));
   }
-  if(!Number.isFinite(reachPenalty))continue;
+  if(!Number.isFinite(reachPenalty)){reject('noSector');continue;}
   // Persistent outcome feedback: an approach that repeatedly exposes the
   // head without landing a strike becomes less attractive on future dashes.
   const punished=history.filter(h=>h.approach===approach&&h.headDamage>0&&!h.landed).length;
@@ -102,7 +103,8 @@ export function chargePlan(robot,target,{history=[]}={}){
   candidates.push({direction,distance,origin:{x:robot.x,y:robot.y},goal,approach,score});
  }
  candidates.sort((a,b)=>a.score-b.score||a.distance-b.distance);
- if(!candidates.length)return null;
+ if(!candidates.length){reject('noCandidate');return null;}
+ reject('candidate');
  const {score,...plan}=candidates[0];
  return plan;
 }

@@ -1,0 +1,42 @@
+name: Tower H5 - recover report from validated physics
+
+on:
+  push:
+    branches:
+      - experiment/tower-bosses
+    paths:
+      - .github/workflows/tower-h5-replay.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  report:
+    name: Aggregate completed 90 physics fights (no rerun)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout corrected report generator
+        uses: actions/checkout@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download all physical samples from previous run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 44432509828
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: tower-h5-*
+          merge-multiple: true
+          path: artifacts
+      - name: Validate and report real rewards and combat outcomes
+        run: node scripts/report-tower-physical-economy.mjs
+      - name: Archive corrected complete evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: tower-h5-physical-economy
+          path: artifacts/h5-*
+          if-no-files-found: error

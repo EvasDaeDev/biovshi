@@ -6,6 +6,8 @@ import {ROBOT_PARTS,skinMatrix} from '../render/robot-skin.js';
 import {transformPoint} from '../render/pixi-math.js';
 import {ik} from '../utils/math.js';
 import {TELEMETRY_COLOURS} from './telemetry-colours.js';
+import {towerUpgradeAtlas,towerUpgradeRarity} from '../tower/upgrade-appearance.js';
+import {TOWER_RARITIES} from '../tower/mutations.js';
 
 export const PORTRAIT_WIDTH=260,PORTRAIT_HEIGHT=112;
 // Same neutral kinematics, atlas anchors and spine width as the arena. No second
@@ -23,9 +25,81 @@ export function portraitBones() {
   return bones.map(bone=>({...bone,part:ROBOT_PARTS[bone.key],matrix:skinMatrix(bone.a,bone.b,ROBOT_PARTS[bone.key])}));
 }
 export const PORTRAIT_BONES=portraitBones();
+
+const anatomyPortraitCache=new WeakMap();
+// Combat-card anatomy uses the same limb anchors, lengths and sprite cells as
+// the actual fight rig. A second arm grows from its assigned spine segment,
+// never from the original shoulder by accident.
+export function portraitBonesForBody(body){
+ if(!body?.limbs||!body.skinParts)return PORTRAIT_BONES;
+ if(anatomyPortraitCache.has(body))return anatomyPortraitCache.get(body);
+ const count=body.spineSegments??4,bones=[];
+ for(const limb of body.limbs){
+  const kind=limb.kind,side=limb.side;
+  if(kind!=='arm'&&kind!=='leg')continue;
+  const index=limb.anchor??(kind==='arm'?0:count);
+  const extra=limb.key?.includes('-graft')??false;
+  const a={x:-index*10+(kind==='arm'?3:-5),y:side*(kind==='arm'?15:12)+(extra?side*8:0)};
+  const factor=limb.lengthScale??1;
+  const end={x:a.x+(kind==='arm'?27:-23)*factor,
+   y:a.y+side*(extra?24:kind==='arm'?12:19)*factor};
+  const solved=ik(a,end,...(kind==='arm'?[27*factor,29*factor]:[32*factor,33*factor]),kind==='arm'?side:-side);
+  const key=limb.key??`${kind}-${side}`;
+  bones.push({key:`${key}-upper`,a,b:solved.joint},
+   {key:`${key}-lower`,a:solved.joint,b:solved.end});
+ }
+ for(let i=count-1;i>=0;i--)bones.push({key:`spine-${i}`,a:{x:-i*10,y:0},b:{x:-(i+1)*10,y:0}});
+ bones.push({key:'head',a:{x:15,y:0},b:{x:35,y:0}});
+ const result=bones.map(bone=>{
+  const part=body.skinParts[bone.key]??ROBOT_PARTS[bone.key];
+  return {...bone,part,matrix:skinMatrix(bone.a,bone.b,part)};
+ });
+ anatomyPortraitCache.set(body,result);
+ return result;
+}
+
 const palettes=new Map();
 const hatImages=new Map();
 let androidAtlas=null;
+// Card portraits use the same per-piece replacement atlas as the arena.
+// This cache is independent of the base skin palette and paints while the
+// texture is loading, then invalidates the portrait exactly once on arrival.
+const replacementAtlases=new Map();
+const rarityPortraitAtlases=new WeakMap();
+function rarityPortraitAtlas(atlas,rarity){
+ if(!rarity||!atlas)return atlas;
+ let variants=rarityPortraitAtlases.get(atlas);
+ if(!variants){variants=new Map();rarityPortraitAtlases.set(atlas,variants);}
+ if(variants.has(rarity))return variants.get(rarity);
+ const shade=TOWER_RARITIES[rarity].colour,colour=[1,3,5].map(p=>parseInt(shade.slice(p,p+2),16));
+ const canvases={};
+ for(const [status,source] of Object.entries(atlas)){
+  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
+  const draw=canvas.getContext('2d',{willReadFrequently:true});draw.drawImage(source,0,0,256,256);
+  const pixels=draw.getImageData(0,0,256,256);
+  for(let i=0;i<pixels.data.length;i+=4){
+   if(!pixels.data[i+3])continue;
+   for(let c=0;c<3;c++)pixels.data[i+c]=Math.round(.8*pixels.data[i+c]+.2*colour[c]);
+  }
+  draw.putImageData(pixels,0,0);canvases[status]=canvas;
+ }
+ variants.set(rarity,canvases);return canvases;
+}
+function portraitReplacement(url,card){
+ let entry=replacementAtlases.get(url);
+ if(!entry){
+  entry={atlas:null,loading:true};
+  replacementAtlases.set(url,entry);
+  atlasPalette(url).then(atlas=>{
+   entry.atlas=atlas;
+  }).catch(()=>{}).finally(()=>{
+   entry.loading=false;
+   for(const current of ctx.cardNodes??[])current.portraitPaintKey=null;
+   ctx.telemetryDirty=true;ctx.lastTelemetryAt=-Infinity;
+  });
+ }
+ return entry.atlas;
+}
 
 // Palette atlases are prepared once. Transparency and luminance detail survive;
 // healthy parts use the original image with absolutely no green tint.
@@ -72,7 +146,11 @@ export async function preparePatientPortraits() {
 export function paintPatientPortrait(card,id,states,bones=PORTRAIT_BONES) {
   const prosthetics=ctx.robots[id]?.prosthetics??patientGarage()?.[id]?.prosthetics??[];
   const hat=patientGarage()?.[id]?.head?.hat;
-  const key=states.map(s=>s.key+':'+s.state+':'+s.opacity).join('|')+'|'+prosthetics.join(',')+'|'+hat+'|'+card.portrait.width+'x'+card.portrait.height;
+  const upgrades=ctx.mode==='tower'&&id===0?
+   new Map(bones.map(b=>[b.key,towerUpgradeAtlas(patientGarage()?.[0],b.key)])
+    .filter(([,url])=>Boolean(url)).map(([part,url])=>[part,assetUrl(url)])):new Map();
+  const rarity=ctx.mode==='tower'&&id===0?new Map(bones.map(b=>[b.key,towerUpgradeRarity(patientGarage()?.[0],b.key)])):new Map();
+  const key=states.map(s=>s.key+':'+s.state+':'+s.opacity).join('|')+'|'+prosthetics.join(',')+'|'+hat+'|'+card.portrait.width+'x'+card.portrait.height+'|'+bones.map(b=>b.key+':'+b.matrix.join(',')).join(';')+'|'+[...upgrades].map(([part,url])=>part+':'+url+':'+(rarity.get(part)??0)).join(',');
   if(card.portraitStateKey!==key){
     card.portraitStateKey=key;card.portraitStates=Object.fromEntries(states.map(s=>[s.key,s.state]));
     const counts=states.reduce((counts,s)=>(counts[s.state]=(counts[s.state]??0)+1,counts),{});
@@ -88,7 +166,10 @@ export function paintPatientPortrait(card,id,states,bones=PORTRAIT_BONES) {
   draw.setTransform(portraitScale,0,0,portraitScale,card.portrait.width/2-(minX+maxX)*portraitScale/2,card.portrait.height/2-(minY+maxY)*portraitScale/2);draw.imageSmoothingEnabled=false;
   for(let i=0;i<bones.length;i++){
     const bone=bones[i],state=states[i];draw.save();draw.globalAlpha=Number(state.opacity);
-    const atlas=prosthetics.includes(bone.key)&&androidAtlas?androidAtlas:card.portraitAtlas;
+    const replacementUrl=upgrades.get(bone.key);
+    const replacement=replacementUrl?portraitReplacement(replacementUrl,card):null;
+    const atlas=replacement?rarityPortraitAtlas(replacement,rarity.get(bone.key)??0):
+      (prosthetics.includes(bone.key)&&androidAtlas?androidAtlas:card.portraitAtlas);
     if(atlas){
       draw.transform(...bone.matrix);
       draw.drawImage(atlas[state.state],bone.part.col*64,bone.part.row*64,64,64,0,0,64,64);

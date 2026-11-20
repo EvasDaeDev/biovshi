@@ -25,9 +25,13 @@ export function drawArtifactPiece(collection,random=Math.random){
  const piece=remaining[Math.floor(random()*remaining.length)];
  collection.pieces.push(piece);return piece;
 }
+// Each repeat victory against this specific boss floor removes 30% of
+// the remaining drop probability. There is no minimum probability floor.
+// The same saved bossWins counter controls both fragment and segment drops.
+export const bossRepeatDropChance=previousWins=>.7**previousWins;
 export function artifactDropChance(collection,floor){
  if(collection.pieces.length===ARTIFACT_PIECE_COUNT)return 0;
- return Math.max(.20,.8**(collection.bossWins[floor]??0));
+ return bossRepeatDropChance(collection.bossWins[floor]??0);
 }
 export function awardBossArtifact(collection,floor,random=Math.random){
  const chance=artifactDropChance(collection,floor);

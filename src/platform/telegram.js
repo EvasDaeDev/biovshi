@@ -35,6 +35,7 @@ export function initializeTelegram(onLayoutChange){
   const root=ctx.root,doc=root.ownerDocument,win=doc.defaultView;
   let app=null,disposed=false,pageHidden=false,readyRequested=false,fullscreenRequested=false,orientationRequested=false,lastGesture=-Infinity;
   let fullscreenConfirmed=null,fullscreenError=null,fullscreenAttempts=0,readyRetry=0;
+  let backAvailable=false;
   const subscriptions=[];
   const launched=()=>Boolean(app||doc.documentElement.classList.contains('telegram-launch'));
   // WKWebView can report zero Telegram insets while opening or rotating. Read
@@ -104,15 +105,22 @@ export function initializeTelegram(onLayoutChange){
       else{fullscreenConfirmed=false;fullscreenRequested=false;lastGesture=-Infinity;}
       layout();
     });
+    subscribe('backButtonClicked',()=>root.dispatchEvent(new win.Event('telegram-game-back')),'6.1');
     subscribe('themeChanged',colors,'6.0');
     colors();
     invoke('expand','6.0');invoke('disableVerticalSwipes','7.7');
     activity();layout();
+    if(backAvailable)app.BackButton?.show?.();
     if(readyRequested)invoke('ready','6.0');
     fullscreen();
   };
   const api={
     get isTelegram(){return launched();},
+    setBackAvailable(visible){
+      backAvailable=Boolean(visible);
+      if(!app||!supportsTelegram(app,'6.1'))return;
+      try{if(backAvailable)app.BackButton?.show?.();else app.BackButton?.hide?.();}catch{}
+    },
     ready(){
       readyRequested=true;invoke('ready','6.0');fullscreenRequested=false;fullscreen();
       win.clearTimeout(readyRetry);readyRetry=win.setTimeout(()=>{if(!disposed&&fullscreenConfirmed!==true){fullscreenRequested=false;fullscreen();}},700);
@@ -162,6 +170,7 @@ export function initializeTelegram(onLayoutChange){
   root.__disposeTag=()=>{
     disposed=true;
     win.clearTimeout(readyRetry);
+    try{app?.BackButton?.hide?.();}catch{}
     for(const [owner,event,handler] of subscriptions){try{owner.offEvent?.(event,handler);}catch{}}
     doc.removeEventListener('visibilitychange',activity);win.removeEventListener('pagehide',hide);win.removeEventListener('pageshow',show);
     win.removeEventListener('telegram-sdk-ready',connect);root.removeEventListener('pointerdown',gesture);root.removeEventListener('keydown',gesture);

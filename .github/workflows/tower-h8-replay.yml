@@ -1,0 +1,45 @@
+name: Tower H8 - assemble saved paired rarity physics
+
+on:
+  push:
+    branches:
+      - experiment/tower-bosses
+    paths:
+      - .github/workflows/tower-h8-replay.yml
+      - scripts/report-tower-rarity-physics.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  report:
+    name: Aggregate already completed 48 physical fights
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout corrected experimental H8 reporter
+        uses: actions/checkout@v4
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reuse saved physical fights from original H8 run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 44434354652
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: tower-h8-step-*
+          merge-multiple: true
+          path: artifacts
+      - name: Compare four rarity models with the correct rank cap
+        run: node scripts/report-tower-rarity-physics.mjs
+      - name: Upload complete H8 report and original fights
+        uses: actions/upload-artifact@v4
+        with:
+          name: tower-h8-rarity-physics-report
+          path: |
+            artifacts/h8-step-*.json
+            artifacts/h8-rarity-physical-report.*
+          if-no-files-found: error

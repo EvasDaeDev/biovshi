@@ -1,5 +1,7 @@
 import {pendingStrikes} from './strikes.js';
 import {patientGarage} from '../game/patients.js';
+import {towerTacticalProfile} from '../tower/tactics.js';
+import {towerAllies,towerHuntsPlayer,towerTeamMembers,towerTeamFocus} from '../tower/relations.js';
 import { clamp, wrap } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { random } from "../utils/random.js";
@@ -105,7 +107,8 @@ export function fleeAllAttackers(r, threats) {
 // bodies remain physical obstacles but no longer attract tactical attention.
 export // Непрерывная кинематика удара. Урон возможен лишь в конце фазы выпада.
 function activeOpponents(id) {
-  return ctx.robots.filter(o => o.id !== id && o.visible && o.mobile && o.segmentCount > 0);
+  return ctx.robots.filter(o => o.id !== id && o.visible && o.mobile && o.segmentCount > 0
+    &&(ctx.mode!=='tower'||!towerAllies(ctx.towerRun,id,o.id,ctx.game.time)));
 }
 // Independent, deterministic cooldown for critical-head tactical cover.
 export function headGuardActive(ai, now, headHp, opponentDistance, visible, movementLimbs) {
@@ -137,6 +140,13 @@ export function tacticalProfile() {
     guardTriggerCm: 115 + random() * 35,
     dodgeSide: random() < .5 ? -1 : 1
   };
+}
+// Scope the personality to tower enemies. Other game modes and the controlled
+// player still use the unchanged randomized tactical profile.
+export function fighterTacticalProfile(r){
+  const standard=tacticalProfile();
+  if(ctx.mode!=='tower'||r.id===0||r.isBoss)return standard;
+  return towerTacticalProfile(standard,patientGarage()?.[r.id]?.profileId);
 }
 function pursuitProgress(ai, now, foe, distance, quietSeconds) {
   if (ai.pursuitTarget !== foe.id || !Number.isFinite(ai.bestPursuitDistance)) {
@@ -255,7 +265,7 @@ export function fighterIntent(r) {
   // A real pincer needs TWO visible, attack-capable opponents nearby. Scan
   // toward the most immediate threat with the HEAD; travelling and attack
   // headings must not be driven by a speculative "looking around" turn.
-  ai.profile ??= tacticalProfile();
+  ai.profile ??= fighterTacticalProfile(r);
   const pincerRadius = 60 + ai.profile.closeRange; // 92-104 cm per fighter
   const nearbyAttackers = active.filter(o =>
     pincerThreat(r,o,pincerRadius,
@@ -319,8 +329,16 @@ export function fighterIntent(r) {
   }
 
   const visible = active.filter(o => r.hasHead ? notices(r, o) : Math.hypot(r.x - o.x, r.y - o.y) < CONFIG.combat.contactSenseCm);
+  const members=ctx.mode==='tower'?towerTeamMembers(ctx.towerRun,id,ctx.game.time):[];
+  const partnerFocus=ctx.mode==='tower'?towerTeamFocus(ctx.towerRun,id,ctx.combat.focus,ctx.combat.focusUntil,
+    ctx.game.time,member=>ctx.robots[member]?.visible&&ctx.robots[member]?.mobile):[];
+  const guardedBoss=members.map(member=>ctx.robots[member]).find(member=>member?.isBoss&&member.mobile);
   visible.sort((a, b) => {
-    const rank = o => {const distance=Math.hypot(o.x-r.x,o.y-r.y);const stats=patientGarage()?.[o.id]?.stats??[3,3,3];const leader=stats.reduce((a,b)=>a+b,0)-9;const threat=o.attackSources.length;return distance*.40 - leader*11*.35 - threat*12*.25 - (ctx.combat.focus[id]===o.id&&ctx.game.time<ctx.combat.focusUntil[id]?50:0);};
+    const rank = o => {const distance=Math.hypot(o.x-r.x,o.y-r.y);const stats=patientGarage()?.[o.id]?.stats??[3,3,3];const leader=stats.reduce((a,b)=>a+b,0)-9;const threat=o.attackSources.length;return distance*.40 - leader*11*.35 - threat*12*.25
+      -(ctx.mode==='tower'&&o.id===0&&towerHuntsPlayer(ctx.towerRun,id)?95:0)
+      -(partnerFocus.includes(o.id)?60:0)
+      -(guardedBoss&&Math.hypot(o.x-guardedBoss.x,o.y-guardedBoss.y)<155?32:0)
+      -(ctx.combat.focus[id]===o.id&&ctx.game.time<ctx.combat.focusUntil[id]?50:0);};
     return rank(a) - rank(b);
   });
   // Keep a recently engaged opponent while it remains visible. A small change
@@ -392,7 +410,7 @@ export function fighterIntent(r) {
     return {goal:patrol(r),speed:CONFIG.movement.walkSpeedCm,
       mode:'ищет врага',lookPoint:null};
   }
-  ai.profile ??= tacticalProfile();
+  ai.profile ??= fighterTacticalProfile(r);
   // Caution is a SHORT manoeuvre, not a permanent state at low head HP.
   // Once used, the patient must re-engage for several seconds before guarding again.
   // This prevents two wounded patients from circling indefinitely without attacking.

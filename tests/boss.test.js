@@ -27,8 +27,10 @@ import {pounceContactSegment,pounceOpportunity,selectSimultaneousStrikes,strikeP
 import {bossPortraitBones} from '../src/boss/card.js';
 import {drawDetachedSkin} from '../src/render/robot-skin.js';
 import {limbKey} from '../src/robot/body.js';
+import {bossOpponentMemory,bossSideWeaponIntent} from '../src/boss/positioning.js';
+import {chargePlan} from '../src/boss/attacks.js';
 
-for(const variant of BOSS_VARIANTS)for(const arena of ['ward','ring','annulus'])test(`${variant.id} boss has independent geometry, atlas, supports and unique attack sources in ${arena}`,()=>{
+for(const variant of BOSS_VARIANTS)for(const arena of variant.spineSegments>6?['columns']:['ward','ring','annulus'])test(`${variant.id} boss has independent geometry, atlas, supports and unique attack sources in ${arena}`,()=>{
  const f=startBossScenario({variant:variant.id,arena});
  try{
   const r=f.boss;assert.equal(ctx.robots.length,4);assert.ok(r.isBoss);assert.equal(r.scale,f.player.scale*1.5);assert.equal(ctx.scale,CONFIG.robot.scale);
@@ -69,6 +71,29 @@ for(const variant of BOSS_VARIANTS)for(const arena of ['ward','ring','annulus'])
   assert.equal((portrait.a.x+portrait.b.x)/2,18);
 
  }finally{f.close();}
+});
+
+test('long combined bosses spawn safely with several independent arena seeds',()=>{
+ const solid=c=>c.segment==='head'||c.segment?.startsWith('spine-');
+ for(const variant of ['long_legs','long_arms'])for(const seed of [3,37,251]){
+  const f=startBossScenario({variant,arena:'columns',floor:variant==='long_legs'?25:30,seed});
+  try{
+   assert.equal(f.boss.spineSegmentTotal,8);
+   assert.equal(f.boss.limbs.length,6);
+   for(const robot of ctx.robots){
+    assert.ok(robot.capsules.every(c=>staticContacts(c).every(h=>h.depth<=(isLimb(c)?5:0)+1e-6)),
+     variant+' seed '+seed+' initially intersects the arena');
+   }
+   for(let i=0;i<ctx.robots.length;i++)for(let j=i+1;j<ctx.robots.length;j++)
+    for(const a of ctx.robots[i].capsules.filter(solid))
+     for(const b of ctx.robots[j].capsules.filter(solid))
+      assert.ok(segmentDistance(a.a,a.b,b.a,b.b)>=a.r+b.r+.15-1e-6,
+       variant+' seed '+seed+' starts with overlapping bodies');
+   for(let tick=0;tick<90;tick++)step(1/60);
+   assert.ok(f.boss.capsules.every(c=>[c.a.x,c.a.y,c.b.x,c.b.y,c.r].every(Number.isFinite)),
+    variant+' seed '+seed+' produced non-finite physics');
+  }finally{f.close();}
+ }
 });
 
 test('boss ignores cumulative trauma, but head destruction still kills and pays exactly 100 once',()=>{
@@ -113,6 +138,49 @@ test('extra limbs sever independently and retain boss atlas mapping in detached 
  }finally{f.close();}
 });
 
+test('charge rejection diagnostics leave the selected boss plan unchanged',()=>{
+ for(const variant of ['legs','long_legs','long_arms']){
+  const f=startBossScenario({variant,arena:'columns',floor:variant==='long_legs'?25:variant==='long_arms'?30:15});
+  try{
+   const boss=f.boss,targets=[
+    {...f.player.center},
+    {x:boss.x+120*Math.cos(boss.angle),y:boss.y+120*Math.sin(boss.angle)}
+   ];
+   for(const target of targets){
+    const clean=chargePlan(boss,target),reasons={};
+    const observed=chargePlan(boss,target,{diagnostics:reasons});
+    assert.deepEqual(observed,clean,'optional instrumentation must not change the charge plan');
+    assert.ok(Object.values(reasons).every(n=>Number.isInteger(n)&&n>0));
+   }
+  }finally{f.close();}
+ }
+});
+
+test('extended bosses use surviving rear limbs after both front arms are severed',()=>{
+ for(const variant of ['long_legs','long_arms']){
+  const f=startBossScenario({variant,arena:'columns',floor:variant==='long_legs'?25:30,seed:23});
+  try{
+   const boss=f.boss;
+   for(const arm of ['arm--1-upper','arm-1-upper'])
+    assert.equal(boss.damage(arm,0,100),true);
+   assert.equal(boss.spineSegmentTotal,8);
+   assert.equal(boss.attackSources.some(s=>s.kind==='arm'&&!s.key.includes('pair2')),false);
+   const remaining=boss.attackSources.filter(s=>s.kind==='arm'||s.kind==='leg');
+   assert.ok(remaining.length>=4,'surviving limbs remain available to attack');
+   if(variant==='long_arms')
+    assert.ok(remaining.some(s=>s.kind==='arm'&&s.key.includes('pair2')));
+   else assert.ok(remaining.filter(s=>s.kind==='leg').length>=4);
+   const memory=bossOpponentMemory(boss.body.behavior.state,f.player.id);
+   const intent=bossSideWeaponIntent(boss,f.player,memory);
+   assert.ok(intent,'boss should retain a side-on limb-based engagement stance');
+   assert.equal(Number.isFinite(intent.heading),true);
+   assert.doesNotMatch(intent.mode,/^преследует$/,'do not regress to head-first pursuit');
+   for(let i=0;i<90;i++)step(1/60);
+   assert.ok(boss.capsules.every(c=>[c.a.x,c.a.y,c.b.x,c.b.y,c.r].every(Number.isFinite)));
+  }finally{f.close();}
+ }
+});
+
 test('boss card conceals stats with skulls, hides trauma and describes destruction accurately',()=>{
  const f=startBossScenario({variant:'long'});
  try{
@@ -124,14 +192,14 @@ test('boss card conceals stats with skulls, hides trauma and describes destructi
 });
 
 test('boss fallback handles every anatomy when texture loading fails',()=>{
- for(const {id} of BOSS_VARIANTS){const f=startBossScenario({variant:id,textured:false});try{f.boss.paint(0);assert.equal(f.boss.actor.querySelectorAll('[data-robot-fallback]').length,2);assert.doesNotMatch(f.boss.actor.outerHTML,/NaN|undefined/);}finally{f.close();}}
+ for(const {id,spineSegments} of BOSS_VARIANTS){const f=startBossScenario({variant:id,arena:spineSegments>6?'columns':'ward',textured:false});try{f.boss.paint(0);assert.equal(f.boss.actor.querySelectorAll('[data-robot-fallback]').length,2);assert.doesNotMatch(f.boss.actor.outerHTML,/NaN|undefined/);}finally{f.close();}}
 });
 
 test('boss encounter survives serialization, rerolls only on the next boss floor and preserves old paid floors',()=>{
  const s=betNewSession(['Test'],100),t=towerFor(s,0);Object.assign(t,{level:5,wins:4,record:4,stats:[4,5,4]});
  const e=ensureBossEncounter(t,()=>.6),copy=JSON.parse(JSON.stringify(t));assert.deepEqual(ensureBossEncounter(copy,()=>0),e);assert.equal(towerEnemyCount(copy),3);
  completeTower(s,0,true);assert.equal(t.bossEncounter,undefined);
- Object.assign(t,{level:10,wins:9,stats:[6,6,6],record:9});assert.equal(ensureBossEncounter(t,()=>0).variant,'brute');
+ Object.assign(t,{level:10,wins:9,stats:[6,6,6],record:9});assert.equal(ensureBossEncounter(t,()=>0).variant,'long');
  const old=JSON.parse(JSON.stringify(t));delete old.bossEncounter;old.rewarded=[1,2];s.towers[0]=old;
  assert.equal(towerEnemyCount(towerFor(s,0)),6);assert.equal(old.legacyBossFloor,true);assert.equal(rewardTower(s,0,1,0),false);assert.equal(rewardTower(s,0,3,0),false,'preparing floors cannot pay');
  old.preparing=false;const before=s.players[0].balance;assert.equal(rewardTower(s,0,3,0),true);assert.equal(s.players[0].balance-before,10);
@@ -187,9 +255,9 @@ test('named boss announcement, card, arena label and combat identity survive sav
    assert.equal(f.boss.bossName,'Потрошитель 2');assert.equal(fighterLabel(1),'Босс · Потрошитель 2');
    const encounter=JSON.parse(JSON.stringify(f.tower));assert.equal(bossName(ensureBossEncounter(encounter,()=>.99).floor),'Потрошитель 2');
    towerPreparation();const title=document.querySelector('#tower-prep-title');
-   assert.equal(title.textContent,'Потрошитель 2\nЭТАЖ №65');assert.ok(title.classList.contains('boss-floor-title'));
+   assert.equal(title.textContent,'БОСС · Потрошитель 2 · ЭТАЖ №B-05');assert.ok(title.classList.contains('boss-floor-title'));
    document.querySelector('#tower-fight').click();updateTowerHud();paint();
-   assert.match(ctx.status.textContent,/Потрошитель 2 · ЭТАЖ №65/);assert.ok(ctx.status.classList.contains('boss-floor-badge'));
+   assert.match(ctx.status.textContent,/Потрошитель 2 · ЭТАЖ №B-05/);assert.ok(ctx.status.classList.contains('boss-floor-badge'));
    assert.match(ctx.cardNodes[1].card.textContent,/Потрошитель 2/);assert.equal(f.boss.label.textContent,'Потрошитель 2');
    assert.doesNotMatch(document.querySelector('#tower-wallet').textContent,/Потрошитель/);
   }finally{f.close();}

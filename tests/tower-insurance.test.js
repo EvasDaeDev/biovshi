@@ -6,12 +6,32 @@ import {betNewSession} from '../src/betting/ledger.js';
 import {bettingSave,bettingLoad} from '../src/betting/storage.js';
 import {towerFor,completeTower,resetTower,validTower,buyTowerInsurance,rewardTower} from '../src/tower/model.js';
 import {validInsurance} from '../src/tower/insurance.js';
+import {chooseTowerMutation} from '../src/tower/mutations.js';
 import {redistributeStat} from '../src/garage/model.js';
 import {startBossScenario} from '../scripts/boss-harness.mjs';
 import {towerPreparation,settleTower,towerResults} from '../src/tower/ui.js';
 import {advanceStartup} from '../src/game/session.js';
 import {ctx} from '../src/game/state.js';
-function reach(s,player,floor){while(towerFor(s,player).level<floor)completeTower(s,player,true,()=>.99);const t=towerFor(s,player);t.preparing=false;return t;}
+function confirmDms(){
+ const dialog=document.querySelector('#game-action-confirm');
+ assert.ok(dialog,'DMS requires explicit confirmation');
+ dialog.querySelector('.game-action-confirm-submit').click();
+ assert.equal(document.querySelector('#game-action-confirm'),null);
+}
+function cancelDms(){
+ const dialog=document.querySelector('#game-action-confirm');
+ assert.ok(dialog,'renewal should open confirmation');
+ dialog.querySelector('.game-action-confirm-close').click();
+ assert.equal(document.querySelector('#game-action-confirm'),null);
+}
+function reach(s,player,floor){
+ while(towerFor(s,player).level<floor){
+  const run=towerFor(s,player);
+  if(run.mutationDraft)assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
+  completeTower(s,player,true,()=>.99);
+ }
+ const t=towerFor(s,player);t.preparing=false;return t;
+}
 
 test('new DMS purchases grow the next tariff by ten percent; same-floor policy cannot be purchased twice',()=>{
  const s=betNewSession(['Игрок'],1000),t=reach(s,0,3);
@@ -35,10 +55,27 @@ test('defeat restores the insured floor, patient and chosen build with intact pr
  const second=completeTower(s,0,false);assert.equal(second.level,1);assert.deepEqual(second.stats,[3,3,3]);assert.equal(second.insurance.price,55);
 });
 
-test('policies are independent per player and survive victories, menu restarts and voluntary run reset',()=>{
- const s=betNewSession(['Первый','Второй'],1000);reach(s,0,5);buyTowerInsurance(s,0);const insured=structuredClone(towerFor(s,0).insurance);
- completeTower(s,0,true,()=>0);assert.deepEqual(towerFor(s,0).insurance,insured);assert.equal(towerFor(s,1).insurance.checkpoint,null);
- resetTower(s,0);assert.deepEqual(towerFor(s,0).insurance,insured);assert.equal(completeTower(s,0,false).level,5);assert.ok(validTower(towerFor(s,0)));
+test('voluntary Tower reset cancels the active DMS without refunding coins or resetting tariff',()=>{
+ const s=betNewSession(['Первый','Второй'],1000);
+ reach(s,0,5);buyTowerInsurance(s,0);
+ const insured=structuredClone(towerFor(s,0).insurance);
+ const balance=s.players[0].balance,spent=s.insuranceSpent;
+ completeTower(s,0,true,()=>0);
+ assert.deepEqual(towerFor(s,0).insurance,insured,'victory keeps the checkpoint');
+ assert.equal(towerFor(s,1).insurance.checkpoint,null,'other player is unaffected');
+ const artifacts=structuredClone(towerFor(s,0).artifacts),record=towerFor(s,0).record;
+ const reset=resetTower(s,0);
+ assert.equal(reset.level,1);
+ assert.equal(reset.insurance.checkpoint,null,'manual reset cancels the policy');
+ assert.equal(reset.insurance.price,insured.price,'next DMS tariff remains escalated');
+ assert.equal(s.players[0].balance,balance,'manual reset never refunds insurance');
+ assert.equal(s.insuranceSpent,spent,'spent funds stay in the currency ledger');
+ assert.equal(reset.record,record);
+ assert.deepEqual(reset.artifacts,artifacts);
+ assert.ok(validTower(reset));
+ assert.equal(completeTower(s,0,false).level,1,'defeat after reset cannot return to the old insured floor');
+ assert.equal(buyTowerInsurance(s,0),insured.price,'new DMS purchase uses existing tariff');
+ assert.ok(validTower(towerFor(s,0)));
 });
 
 test('insufficient funds do not change price, policy or bank',()=>{
@@ -98,20 +135,46 @@ test('renewed policies and existing historical tariffs remain valid after saving
  }finally{dom.window.close();}
 });
 
+test('DMS never renews itself during wins, reentry or Shelter switching',()=>{
+ const f=startBossScenario({floor:5});
+ const previous=globalThis.confirm;globalThis.confirm=()=>false;
+ try{
+  towerPreparation();document.querySelector('#tower-insurance').click();confirmDms();
+  const paid=structuredClone(towerFor(f.session,0).insurance);
+  const bank=f.session.players[0].balance,spent=f.session.insuranceSpent;
+  reach(f.session,0,7);towerPreparation();
+  document.querySelector('#tower-upgrade-open').click();
+  document.querySelector('[data-upgrade-tab="artifacts"]').click();
+  document.querySelector('.tower-upgrade-close').click();
+  towerPreparation();
+  assert.deepEqual(towerFor(f.session,0).insurance,paid,'neither winning nor reopening Shelter buys a renewal');
+  assert.equal(f.session.players[0].balance,bank);
+  assert.equal(f.session.insuranceSpent,spent);
+  assert.equal(document.querySelector('#tower-insurance-status').hidden,true,'redundant DMS status is not visible');
+  assert.equal(document.querySelector('#tower-insurance-status').textContent,'');
+  assert.match(document.querySelector('#tower-insurance').title,/ПРОДЛЕНИЕ ВРУЧНУЮ/,
+    'manual renewal is still explained on the actionable insurance control');
+  document.querySelector('#tower-insurance').click();cancelDms();
+  assert.deepEqual(towerFor(f.session,0).insurance,paid,'cancelled renewal is free');
+  assert.equal(f.session.insuranceSpent,spent);
+ }finally{globalThis.confirm=previous;f.close();}
+});
+
 test('preparation offers active-policy renewal on a higher floor and blocks accidental repeat charging',()=>{
  const f=startBossScenario({floor:5});
+ const previous=globalThis.confirm;let confirmations=0;globalThis.confirm=()=>{confirmations++;return true;};
  try{
-  towerPreparation();const button=document.querySelector('#tower-insurance');button.click();
+  towerPreparation();const button=document.querySelector('#tower-insurance');button.click();confirmDms();
   reach(f.session,0,7);towerPreparation();
   assert.equal(button.disabled,false);assert.ok(button.classList.contains('is-active'));
   assert.match(button.textContent,/ПРОДЛИТЬ ДМС.*55/);assert.match(button.title,/этажа 5 на этаж 7/);
-  button.click();assert.equal(f.session.players[0].balance,895);
+  button.click();assert.equal(f.session.players[0].balance,950,'renewal is not charged before confirmation');confirmDms();assert.equal(f.session.players[0].balance,895);
   assert.equal(towerFor(f.session,0).insurance.checkpoint.level,7);
   assert.match(button.textContent,/ДМС.*ЭТАЖ 7/);assert.ok(button.disabled);
   assert.match(document.querySelector('#tower-prep-error').textContent,/ДМС продлена/);
-  button.click();towerPreparation();assert.equal(f.session.insuranceSpent,105);
+  button.click();towerPreparation();assert.equal(confirmations,0,'no browser confirmation is used');assert.equal(f.session.insuranceSpent,105);
   assert.equal(bettingLoad().towers[0].insurance.checkpoint.level,7);
- }finally{f.close();}
+ }finally{globalThis.confirm=previous;f.close();}
 });
 
 test('purchased DMS and its monetary sink survive storage, and old saves receive a free empty policy',()=>{
@@ -137,10 +200,11 @@ test('preparation replaces Menu with grey priced DMS, turns green after buying, 
  const f=startBossScenario({floor:5});
  try{
   towerPreparation();const button=document.querySelector('#tower-insurance'),wallet=document.querySelector('#tower-prep-name');
-  assert.equal(wallet.querySelector('.tower-player-name').textContent,f.session.players[ctx.towerPlayer].name);
+  assert.equal(wallet.querySelector('.tower-player-name').firstChild.textContent,f.session.players[ctx.towerPlayer].name);
+   assert.match(wallet.querySelector('.tower-record-height').textContent,/РЕКОРДНАЯ ВЫСОТА: 4 ЭТАЖ/);
   assert.match(wallet.querySelector('.tower-player-bank').textContent,/1\s*000/);
   assert.equal(document.querySelector('#tower-prep-menu'),null);assert.match(button.textContent,/ДМС.*50/);assert.equal(button.classList.contains('is-active'),false);
-  button.click();assert.equal(f.session.players[0].balance,950);
+  button.click();assert.equal(f.session.players[0].balance,1000);confirmDms();assert.equal(f.session.players[0].balance,950);
   assert.equal(wallet.querySelector('[data-player-balance]').dataset.balanceTarget,'950');
   assert.ok(wallet.querySelector('[data-player-balance]').classList.contains('is-debit'),'DMS charge flashes red');
   assert.match(button.textContent,/ДМС.*ЭТАЖ 5/);assert.ok(button.classList.contains('is-active'));assert.ok(button.disabled);

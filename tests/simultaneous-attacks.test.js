@@ -6,7 +6,8 @@ import {ctx} from '../src/game/state.js';
 import {CONFIG} from '../src/config.js';
 import {initializeGame} from '../src/game/initialize.js';
 import {createRobot} from '../src/robot/robot.js';
-import {combatAttacks,selectSimultaneousStrikes,strikeCandidates} from '../src/systems/combat.js';
+import {combatAttacks,selectSimultaneousStrikes,strikeCandidates,inStrikeSector} from '../src/systems/combat.js';
+import {towerPatientAnatomy} from '../src/tower/anatomy.js';
 import {pendingStrikes,cancelStrikesAgainst} from '../src/systems/strikes.js';
 import {lifted} from '../src/robot/scenes.js';
 import {onGameEvent} from '../src/game/event-bus.js';
@@ -39,6 +40,35 @@ test('selection caps attacks at two distinct opponents and distinct limbs, inclu
  const pair=selectSimultaneousStrikes([a,b,c]);assert.equal(pair.length,2);assert.deepEqual(new Set(pair.map(x=>x.victim.id)),new Set([1,2]));
  assert.equal(selectSimultaneousStrikes([a,b,c,d]).length,2,'no third opponent');
 });
+test('a reachable head attacks like other sources and alternates with arms',()=>{
+ const f=setup();
+ try{
+  const head=f.r.attackSources.find(s=>s.kind==='head');
+  assert.ok(head?.frame,'head source uses its real facing');
+  const at={x:head.point.x+14*Math.cos(head.frame.angle),y:head.point.y+14*Math.sin(head.frame.angle)};
+  const foe=target(1,at);ctx.robots.push(foe);
+  assert.ok(strikeCandidates(f.r,foe,head).length,'head really reaches a damageable segment');
+  ctx.agentAI[0].lastAttackSource='arm-1-lower';
+  combatAttacks();
+  const strikes=pendingStrikes(0);
+  assert.equal(strikes.length,1,'head never gives a free second strike on the same enemy');
+  assert.equal(strikes[0].source,'head','reachable head must be selected even with healthy hands');
+  ctx.game.time=strikes[0].impactAt;
+  combatAttacks();
+  assert.equal(foe.hits.length,1,'headbutt deals a real physical hit');
+  assert.equal(ctx.combat.fighterHits[0],1);
+ }finally{f.close();}
+});
+
+test('head and a limb can strike different targets, but never one target twice',()=>{
+ const head={victim:{id:1},segment:'head',score:3000,source:{key:'head',kind:'head'}};
+ const arm={victim:{id:1},segment:'arm-1-lower',score:0,source:{key:'arm-1-lower',kind:'arm'}};
+ const leg={victim:{id:2},segment:'leg-1-lower',score:1,source:{key:'leg-1-lower',kind:'leg'}};
+ assert.deepEqual(selectSimultaneousStrikes([head,arm],{lastSource:'arm-1-lower'}).map(c=>c.source.key),['head']);
+ assert.deepEqual(selectSimultaneousStrikes([head,arm,leg],{lastSource:'arm-1-lower'}).map(c=>c.source.key),['head','leg-1-lower']);
+ assert.deepEqual(selectSimultaneousStrikes([head,arm,leg],{lastSource:'head'}).map(c=>c.source.key),['arm-1-lower','leg-1-lower']);
+});
+
 test('two actual legs strike two opponents once each and both appear in the pose',()=>{
  const f=setup();try{
   const foes=rearTargets(f.r);ctx.robots.push(...foes);const events=[];const off=onGameEvent(e=>events.push(e));
@@ -107,5 +137,53 @@ test('jump impact damages only its designated target even when two patients over
   assert.equal(f.r.pounce({x:425,y:350},{victimId:1}),true);
   Object.assign(f.r.actualPose.leap,{kind:'combat-pounce',launched:true,soundStarted:true,victim:1,lastHead:point});
   combatAttacks();combatAttacks();assert.deepEqual(foes.map(v=>v.hits.length),[1,0]);assert.equal(foes[0].hits[0].damage,CONFIG.attack.combatPounceDamage);assert.deepEqual(pendingStrikes(0),[]);
+ }finally{f.close();}
+});
+
+
+test('graft/second-pair arms rotate into reachable single-target attacks, without adding a second hit',()=>{
+ const ordinary=candidate(1,'arm-1-lower',1);
+ const graft=candidate(1,'arm-1-graft-lower',4);
+ const pair2=candidate(1,'arm--1-pair2-lower',5);
+ assert.deepEqual(selectSimultaneousStrikes([ordinary,graft],{lastSource:'arm-1-lower'}).map(c=>c.source.key),['arm-1-graft-lower']);
+ assert.deepEqual(selectSimultaneousStrikes([ordinary,graft],{lastSource:'arm-1-graft-lower'}).map(c=>c.source.key),['arm-1-lower']);
+ assert.deepEqual(selectSimultaneousStrikes([ordinary,pair2],{lastSource:'arm-1-lower'}).map(c=>c.source.key),['arm--1-pair2-lower']);
+ assert.deepEqual(selectSimultaneousStrikes([ordinary],{lastSource:'arm-1-lower'}).map(c=>c.source.key),['arm-1-lower']);
+ const rear={kind:'arm',frame:{x:0,y:0,angle:Math.PI/2}};
+ const actor={x:0,y:0,angle:0};
+ assert.equal(inStrikeSector(actor,rear,{x:0,y:50}),true,'an anchored arm uses its own spine direction');
+ assert.equal(inStrikeSector(actor,rear,{x:50,y:0}),false,'cannot strike outside its local arc');
+});
+test('surgically attached hand is a real attacking limb with a complete thrust pose',()=>{
+ const f=setup();
+ try{
+  const patient=createRobot(0,{x:350,y:350,angle:0},towerPatientAnatomy({
+   surgeries:[{procedure:'graft_arm',site:'arm-1-upper'}]
+  }));
+  ctx.robots=[patient];
+  const extra=patient.attackSources.find(s=>s.key==='arm-1-graft-lower');
+  assert.ok(extra,'fifth anatomical limb exposes a real attack source');
+  let foe=null;
+  // Position an immobile test capsule at the hand's *physical* fully
+  // extended tip, rather than a marginal 2.2–3.5 cm preflight near miss.
+  for(const dx of [8,14,20,26,32])for(const dy of [-8,0,8]){
+   const aim={x:extra.point.x+dx,y:extra.point.y+dy};
+   const preview=patient.attackPose({source:extra.key,aim,preview:true,started:ctx.game.time});
+   if(!preview)continue;
+   const v=target(1,{...preview.tip});
+   const hits=strikeCandidates(patient,v,extra);
+   if(hits.length&&hits[0].gap<=0){foe=v;break;}
+  }
+  assert.ok(foe,'grafted arm can physically overlap a stationary collision capsule');
+  ctx.robots.push(foe);
+  ctx.agentAI[0].lastAttackSource='arm-1-lower';
+  combatAttacks();
+  const hits=pendingStrikes(0);
+  assert.equal(hits.length,1,'one target is not struck twice for free');
+  assert.equal(hits[0].source,'arm-1-graft-lower','additional arm is selected when reachable');
+  ctx.game.time=hits[0].impactAt;
+  const pose=patient.attackPose(hits[0]);assert.ok(pose&&pose.kind==='arm');
+  combatAttacks();
+  assert.equal(foe.hits.length,1,'extra arm damages a stationary body when its thrust connects');
  }finally{f.close();}
 });

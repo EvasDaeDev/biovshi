@@ -23,12 +23,16 @@ export function loadTextureImage(url, {timeoutMs=15000}={}) {
   return images.get(url);
 }
 
-export async function preloadTextures() {
-  const entries=await Promise.all(Object.entries(ASSETS.textures).map(async([key,file])=>{
+export async function preloadTextures({onProgress}={}) {
+  const files=Object.entries(ASSETS.textures);
+  let completed=0;
+  const report=()=>onProgress?.(completed,files.length);
+  report();
+  const entries=await Promise.all(files.map(async([key,file])=>{
     const url=assetUrl(file);
-    if(!url)return [key,{url:null,loaded:false}];
-    try {await loadTextureImage(url);return [key,{url,loaded:true}];}
-    catch {return [key,{url,loaded:false}];}
+    let loaded=false;
+    try {if(url){await loadTextureImage(url);loaded=true;}}catch{/* Optional images fall back safely. */}
+    completed++;report();return [key,{url,loaded}];
   }));
   return Object.fromEntries(entries);
 }

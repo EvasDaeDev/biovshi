@@ -107,6 +107,15 @@ export function initializeStreamerMascot({lines,random}={}){
  try{hidden=win.localStorage.getItem(STORAGE)==='true';}catch{/* Storage may be disabled. */}
  const motion=createStreamerMotion(),track=createReactionTrack(),speechPacer=createSpeechPacer(),heads={},selectQuip=createQuipSelector(lines,random);
  let spoken=null,quietFor=0,wasTeaching=false;
+ let countdownText=null,countdownActive=false,goRemaining=0,countdownWasShown=false;
+ const showCountdown=text=>{
+  if(typeof text!=='string'||!text)return;
+  if(text!==countdownText)motion.attention();
+  countdownText=text;countdownActive=true;
+  if(text==='ПОГНАЛИ!!!')goRemaining=1.6;
+ };
+ const finishCountdown=()=>{countdownActive=false;};
+ const clearCountdown=()=>{countdownText=null;countdownActive=false;goRemaining=0;countdownWasShown=false;caption.classList.remove('is-countdown');};
  const clearSpeech=()=>{spoken=null;quietFor=0;motion.reset();speechPacer.reset();caption.hidden=true;caption.textContent='';};
  const updateToggle=()=>{
   box.hidden=hidden;toggle.textContent=hidden?'▴':'▾';toggle.setAttribute('aria-expanded',String(!hidden));
@@ -130,7 +139,8 @@ export function initializeStreamerMascot({lines,random}={}){
  atlas.onerror=()=>{if(!disposed){box.hidden=true;toggle.hidden=true;}};
  atlas.src=assetUrl(ASSETS.textures.streamer);
  const unsubscribe=onGameEvent(event=>{
-  if(hidden)return;
+  if(hidden&&!(countdownActive||goRemaining>0))return;
+  if(event.type==='combat-start'&&ctx.mode==='tower'&&goRemaining>0)return;
   motion.offer(event);
   if(quipCategory(event)&&event.type!=='streamer-idle')quietFor=0;
   const id=event.loser??event.robot??event.to??event.winner;
@@ -145,19 +155,32 @@ export function initializeStreamerMascot({lines,random}={}){
   const teaching=Boolean(ctx.tutorial?.active);
   // A tutorial cameo may temporarily reveal the ordinary mascot, without
   // changing the player's saved visibility preference.
-  box.hidden=hidden&&!(teaching&&root.classList.contains('tutorial-echo'));
-  if(disposed||ctx.appInactive||hidden&&!teaching||doc.hidden||ctx.orientationBlocked||!loaded)return;
+  const showingCountdown=!teaching&&(countdownActive||goRemaining>0);
+  box.hidden=hidden&&!showingCountdown&&!(teaching&&root.classList.contains('tutorial-echo'));
+  if(disposed||ctx.appInactive||hidden&&!teaching&&!showingCountdown||doc.hidden||ctx.orientationBlocked||!loaded)return;
   if(now-lastPaint<1000/30-1)return;
   const delta=Number.isFinite(lastPaint)?Math.min((now-lastPaint)/1000,.1):Math.min(dt,.1);lastPaint=now;elapsed+=delta;
   if(wasTeaching&&!teaching)spoken=null;wasTeaching=teaching;
   const active=!teaching&&!ctx.paused&&!ctx.settingsOpen&&ctx.startup.phase==='running';
+  if(!countdownActive&&goRemaining>0&&active)goRemaining=Math.max(0,goRemaining-delta);
   if(active&&!ctx.combat?.finished){
    quietFor+=delta;
    if(quietFor>=20){track.offer({type:'streamer-idle'});quietFor=0;}
   }
   speechPacer.tick(delta);
-  const reaction=teaching?null:track.tick(delta,active),emotion=teaching?ctx.tutorial.emotion:reaction?.emotion??'neutral';
-  if(reaction!==spoken){
+  const reaction=teaching?null:track.tick(delta,active&&!countdownActive);
+  const countdownShown=!teaching&&(countdownActive||goRemaining>0);
+  const cheering=countdownShown&&countdownText==='ПОГНАЛИ!!!';
+  const emotion=teaching?ctx.tutorial.emotion:cheering?'joy':reaction?.emotion??'neutral';
+  if(countdownShown){
+   caption.textContent=countdownText;
+   caption.classList.add('is-countdown');
+   caption.hidden=false;
+  }else{
+   if(countdownWasShown){caption.hidden=true;caption.textContent='';caption.classList.remove('is-countdown');spoken=null;}
+  }
+  countdownWasShown=countdownShown;
+  if(!countdownShown&&reaction!==spoken){
    spoken=reaction;
    caption.hidden=true;
    if(reaction&&(reaction.required||speechPacer.take(reaction.duration))){
@@ -167,7 +190,7 @@ export function initializeStreamerMascot({lines,random}={}){
   }
   if(teaching)caption.hidden=true;
   const celebrating=reaction?.event.type==='combat-end'&&quipCategory(reaction.event)==='victory';
-  const pose=motion.tick(delta,{celebrating}),t=elapsed;
+  const pose=motion.tick(delta,{celebrating:celebrating||cheering}),t=elapsed;
   const bob=Math.sin(t*(reaction?9:2.7))*(reaction?2:1);
   // The torso ends at y=277; align it with the 288px canvas bottom.
   // Only the head bobs, so the lower edge never floats above the arena.
@@ -178,7 +201,7 @@ export function initializeStreamerMascot({lines,random}={}){
   arm([150,319,105,58],165,165+SHOULDER_OFFSET_Y,157,140+SHOULDER_OFFSET_Y,pose.right);
   painter.save();painter.translate(135,153+HEAD_OFFSET_Y+Math.round(bob));painter.rotate(Math.sin(t*(reaction?6:2))*(reaction?.045:.012));
   const head=heads[emotion];painter.drawImage(head,-83,-149,165,235);painter.restore();
-  if(reaction){
+  if(reaction||cheering){
    const effects=EFFECTS[emotion]??[];
    for(let i=0;i<effects.length;i++){
     const effect=effects[i],x=i===0?22:222,y=42+HEAD_OFFSET_Y+Math.sin(t*13+i*2)*5;
@@ -193,8 +216,9 @@ export function initializeStreamerMascot({lines,random}={}){
    if(paint){paint.clearRect(0,0,destination.width,destination.height);paint.imageSmoothingEnabled=false;paint.drawImage(canvas,0,0,destination.width,destination.height);}
   }
  };
- const reset=()=>{track.reset();clearSpeech();lastPaint=-Infinity;};
- ctx.streamerMascot={sync,reset,hasRequiredAnnouncements:()=>!hidden&&loaded&&track.hasRequired()};
+ const reset=()=>{track.reset();clearSpeech();clearCountdown();lastPaint=-Infinity;};
+ ctx.streamerMascot={sync,reset,showCountdown,finishCountdown,
+  hasRequiredAnnouncements:()=>!hidden&&loaded&&track.hasRequired()};
  const dispose=root.__disposeTag;
  root.__disposeTag=()=>{
   disposed=true;unsubscribe();atlas.onload=atlas.onerror=null;toggle.onclick=null;box.remove();toggle.remove();

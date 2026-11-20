@@ -45,7 +45,7 @@ export function limbClear(robotState, l, endpoint = robotState.handEnd(l)) {
   const a = robotState.origin(l),
     [u, v] = robotState.lengths(l),
     solved = ik(a, endpoint, u, v, l.kind === 'arm' ? l.side : -l.side),
-    r = l.kind === 'arm' ? [4.8, 3.8, 4.8] : [6.8, 4.8, 5.8];
+    r = (l.kind === 'arm' ? [4.8, 3.8, 4.8] : [6.8, 4.8, 5.8]).map(v=>v*(l.massScale??1));
   const clear=(from,to,radius)=>robotState.clearBone(from,to,radius*(robotState.scale??ctx.scale),false)||limbCapsuleClear(from,to,radius*(robotState.scale??ctx.scale),5);
   if (!robotState.healthy(`${limbKey(l)}-lower`)) return clear(a,solved.joint,r[0]);
   return clear(a,solved.joint,r[0])&&clear(solved.joint,solved.end,r[1])&&clear(solved.end,solved.end,r[2]);
@@ -200,9 +200,9 @@ export function makeCapsules(robotState) {
       ls = robotState.lengths(l),
       p = ik(a, robotState.handEnd(l), ...ls, l.kind === 'arm' ? l.side : -l.side);
     const prefix = `${limbKey(l)}-`;
-    push(a, p.joint, l.kind === 'arm' ? 4.8 : 6.8, prefix + 'upper');
-    push(p.joint, p.end, l.kind === 'arm' ? 3.8 : 4.8, prefix + 'lower');
-    push(p.end, p.end, l.kind === 'arm' ? 4.8 : 5.8, prefix + 'lower');
+    push(a, p.joint, (l.kind === 'arm' ? 4.8 : 6.8)*(l.massScale??1), prefix + 'upper');
+    push(p.joint, p.end, (l.kind === 'arm' ? 3.8 : 4.8)*(l.massScale??1), prefix + 'lower');
+    push(p.end, p.end, (l.kind === 'arm' ? 4.8 : 5.8)*(l.massScale??1), prefix + 'lower');
   }
   if (robotState.mode === 'scratch') {
     const hand = robotState.arms.find(l => l.side === 1);

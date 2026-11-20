@@ -11,10 +11,17 @@ const pointsFormat=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2});
 export const formatSkillPoints=value=>pointsFormat.format(value);
 export function skillValue(snapshot,index){
  const points=snapshot.effective[index];
- return `${formatSkillPoints(points)} · ${Math.round((index===1?critChance(points):statMultiplier(points))*100)}%`;
+ const effect=snapshot.effects?.[index]??(index===1?critChance(points):statMultiplier(points));
+ const percent=Math.round(effect*100);
+ return `${formatSkillPoints(points)} · ${percent}%`;
 }
 export function skillHint(snapshot,index){
  const descriptions=['Скорость движения','Шанс критического урона (КРИТ)','Маневренность · скорость поворота'];
+ if(snapshot.effects){
+  const cap=snapshot.effects[index]>=snapshot.effectCaps[index]?'\nДостигнут боевой предел.':'';
+  const prosthetics=snapshot.count?'\nБионические протезы: '+snapshot.count+' сегм.':'';
+  return descriptions[index]+': '+formatSkillPoints(snapshot.baseEffects[index]*100)+'% → '+formatSkillPoints(snapshot.effects[index]*100)+'%.'+prosthetics+cap;
+ }
  if(!snapshot.count)return descriptions[index];
  const percent=snapshot.modifiers[index]*100;
  const effect=index===1?critChance:statMultiplier;

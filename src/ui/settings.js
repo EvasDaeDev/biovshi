@@ -8,7 +8,9 @@ export function initializeSettings() {
   const root=ctx.root,doc=root.ownerDocument;
   const panel=root.querySelector('#arena-settings'),button=root.querySelector('#arena-settings-button');
   const launchButton=root.querySelector('#launch-settings-button');
-  const buttons=[button,launchButton];
+  const towerButton=root.querySelector('#tower-prep-settings');
+  const globalButton=root.querySelector('#game-nav-settings');
+  const buttons=[button,launchButton,towerButton,globalButton].filter(Boolean);
   let opener=button;
   panel.querySelector('#settings-build-version').textContent=typeof __BUILD_VERSION__==='string'?__BUILD_VERSION__:'0.1.0+dev';
   for(const trigger of buttons)trigger.innerHTML=uiIcon('settings');
@@ -60,7 +62,8 @@ export function initializeSettings() {
     if(!creditsView.hidden)showCredits(false);
     panel.hidden=true;ctx.settingsOpen=false;for(const trigger of buttons)trigger.setAttribute('aria-expanded','false');
     for(const [node,inert] of background)node.inert=inert;background=[];
-    if(restore){setPaused(wasPaused);opener.focus();}
+    const resume=ctx.afterSettingsClose;ctx.afterSettingsClose=null;
+    if(restore){setPaused(wasPaused);opener.focus();resume?.();}
   };
   const open=event=>{
     if(ctx.settingsOpen)return;
@@ -90,7 +93,7 @@ export function initializeSettings() {
   };
   doc.addEventListener('keydown',onKey);
   const dispose=root.__disposeTag;
-  root.__disposeTag=()=>{close(false);telegram.ontoggle=fullButton.onclick=copyButton.onclick=null;telegram.remove();doc.defaultView.removeEventListener('telegram-viewport-change',refreshTelegram);doc.defaultView.removeEventListener('telegram-sdk-ready',refreshTelegram);doc.defaultView.removeEventListener('telegram-sdk-error',refreshTelegram);controlMode.onchange=null;panel.hidden=true;tutorialButton.onclick=menuButton.onclick=null;button.onclick=launchButton.onclick=closeButton.onclick=panel.onclick=creditsOpen.onclick=creditsBack.onclick=null;doc.removeEventListener('keydown',onKey);dispose();};
+  root.__disposeTag=()=>{close(false);ctx.afterSettingsClose=null;telegram.ontoggle=fullButton.onclick=copyButton.onclick=null;telegram.remove();doc.defaultView.removeEventListener('telegram-viewport-change',refreshTelegram);doc.defaultView.removeEventListener('telegram-sdk-ready',refreshTelegram);doc.defaultView.removeEventListener('telegram-sdk-error',refreshTelegram);controlMode.onchange=null;panel.hidden=true;tutorialButton.onclick=menuButton.onclick=null;for(const trigger of buttons)trigger.onclick=null;closeButton.onclick=panel.onclick=creditsOpen.onclick=creditsBack.onclick=null;doc.removeEventListener('keydown',onKey);dispose();};
 }
 
 function winStorage(doc){try{return doc.defaultView.localStorage;}catch{return null;}}

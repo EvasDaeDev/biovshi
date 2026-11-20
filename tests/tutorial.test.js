@@ -14,7 +14,9 @@ import {togglePause,toggleSpeed} from '../src/ui/controls.js';
 import {betNewSession} from '../src/betting/ledger.js';
 import {bettingOpen,bettingSetup} from '../src/betting/ui.js';
 import {garageOpen} from '../src/garage/ui.js';
-import {installTowerUI,openMenu} from '../src/tower/ui.js';
+import {installTowerUI,openMenu,towerPreparation,towerResults,settleTower} from '../src/tower/ui.js';
+import {ensureTowerFloorPlan} from '../src/tower/floors.js';
+import {towerCycleWins} from '../src/tower/cycles.js';
 import {towerFor} from '../src/tower/model.js';
 import {earnedStats} from '../src/garage/model.js';
 import {BOSS_FLOOR_INTERVAL} from '../src/build-channel.js';
@@ -37,7 +39,7 @@ function setup({saved=null,tower=false,legacyRects=false,floor=1}={}){
  if(saved)writeTutorial(localStorage,saved);
  const session=tower?betNewSession(['Игрок'],100):null;
  ctx.towerPlayer=0;
- if(tower){const run=towerFor(session,0);run.level=floor;run.wins=floor-1;run.record=floor-1;run.stats=earnedStats(run.wins);}
+ if(tower){const run=towerFor(session,0);run.level=floor;run.wins=floor-1;run.record=floor-1;run.stats=earnedStats(towerCycleWins(run.level));}
  initializeGame({entry:tower?'tower':'auto',session,tower:tower?structuredClone(towerFor(session,0)):null});
  installTowerUI();initializeModalFocus();
  const api=initializeTutorial(),doc=dom.window.document;
@@ -91,6 +93,10 @@ test('insurance gets a dedicated preparation target and reads the live policy ra
   const step=TUTORIAL_CHAPTERS['tower-ready'].steps.find(step=>step.target==='#tower-insurance');
   assert.ok(step);assert.ok(ctx.root.querySelector(step.target));
   const before=step.text(ctx);ctx.root.querySelector('#tower-insurance').click();
+  const confirmation=s.doc.querySelector('#game-action-confirm');
+  assert.ok(confirmation,'DMS purchase requires confirmation');
+  assert.equal(ctx.betting.towers[0].insurance.checkpoint,null,'opening confirmation never buys a policy');
+  confirmation.querySelector('.game-action-confirm-submit').click();
   assert.equal(ctx.towerRun.insurance.checkpoint,null,'arena snapshot is intentionally unchanged');
   assert.notEqual(step.text(ctx),before,'tutorial follows the policy purchased in the current window');
   assert.equal(ctx.betting.towers[0].insurance.checkpoint.level,1);
@@ -180,7 +186,7 @@ test('skip is reversible, disables all remaining chapters, survives reload and c
  s.doc.dispatchEvent(new s.dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
  s.next();assert.equal(s.api.active,false);assert.equal(readTutorial(localStorage).enabled,false);
  s.doc.querySelector('#launch-overlay').hidden=true;bettingSetup();s.api.sync();assert.equal(s.api.active,false);
- s.doc.querySelector('#arena-settings-button').click();assert.equal(ctx.settingsOpen,true);
+ s.doc.querySelector('#game-nav-settings').click();assert.equal(ctx.settingsOpen,true);
  s.doc.querySelector('#tutorial-start').click();assert.equal(ctx.settingsOpen,false);assert.equal(s.api.active,true);
  assert.equal(tutorialChapter(ctx),'setup');assert.equal(readTutorial(localStorage).enabled,true);
  s.cleanup();
@@ -296,4 +302,65 @@ for(const legacyRects of [false,true])test(`phone tutorial spotlight matches a s
  assert.equal(spot.style.left,'276px');assert.equal(spot.style.top,'56px');assert.equal(spot.style.width,'168px');assert.equal(spot.style.height,'48px');
  assert.equal(win.scrollX,0);assert.equal(win.scrollY,0);assert.equal(panel.scrollTop,0);
  s.cleanup();
+});
+
+
+test('saved learners get the boss odds and the automatic reward at the relevant screens',()=>{
+ const saved=freshTutorial();saved.completed=['menu','tower-ready','tower','tower-boss'];
+ const s=setup({tower:true,floor:5,saved});
+ const random=Math.random;
+ try{
+  s.doc.querySelector('#launch-overlay').hidden=true;
+  ensureTowerFloorPlan(towerFor(ctx.betting,0),()=>.2);
+  towerPreparation();
+  assert.equal(tutorialChapter(ctx),'tower-boss-ready');
+  s.api.sync();assert.equal(s.api.active,true);
+  assert.ok(s.doc.querySelector('.tower-arena-map .tower-boss-drop'));
+  s.finish();assert.ok(readTutorial(localStorage).completed.includes('tower-ready'));
+  s.doc.querySelector('#tower-fight').click();advanceStartup(10);
+  Math.random=()=>0;
+  ctx.combat.winner=0;ctx.combat.finished=true;
+  settleTower(0);towerResults();
+  assert.equal(tutorialChapter(ctx),'tower-loot');
+  s.api.sync();assert.equal(s.api.active,true);
+  assert.match(s.doc.querySelector('#tutorial-text').textContent,/склад/);
+  s.finish();assert.ok(readTutorial(localStorage).completed.includes('tower-loot'));
+ }finally{Math.random=random;s.cleanup();}
+});
+
+test('Shelter training follows the existing window and waits behind a confirmation',()=>{
+ const saved=freshTutorial();saved.completed=['menu','tower-ready'];
+ const s=setup({tower:true,saved});
+ try{
+  s.doc.querySelector('#launch-overlay').hidden=true;
+  s.doc.querySelector('#tower-upgrade-open').click();
+  assert.equal(tutorialChapter(ctx),'tower-shelter');
+  for(const step of TUTORIAL_CHAPTERS['tower-shelter'].steps)assert.ok(ctx.root.querySelector(step.target));
+  const blocker=s.doc.createElement('dialog');blocker.id='game-action-confirm';blocker.setAttribute('open','');
+  ctx.root.append(blocker);
+  s.api.sync();assert.equal(s.api.active,false);
+  blocker.remove();s.api.sync();assert.equal(s.api.active,true);
+  s.finish();assert.ok(readTutorial(localStorage).completed.includes('tower-shelter'));
+  assert.ok(s.doc.querySelector('#tower-upgrade-window[open]'));
+  s.doc.querySelector('#tower-upgrade-window .tower-upgrade-close').click();
+  assert.equal(tutorialChapter(ctx),'tower-ready');
+ }finally{s.cleanup();}
+});
+
+test('the late lesson introduces the soft limit and leaves a cycle notice in control',()=>{
+ const saved=freshTutorial();saved.completed=['menu','tower-ready'];
+ const s=setup({tower:true,floor:19,saved});
+ try{
+  s.doc.querySelector('#launch-overlay').hidden=true;
+  assert.equal(tutorialChapter(ctx),'tower-late');
+  s.api.sync();assert.match(s.doc.querySelector('#tutorial-text').textContent,/9 очков/);
+  s.finish();assert.ok(readTutorial(localStorage).completed.includes('tower-late'));
+  const run=ctx.betting.towers[0];run.level=31;run.wins=30;run.stats=earnedStats(0);run.cycleNotice=31;
+  towerPreparation();
+  const notice=s.doc.querySelector('#tower-cycle-notice[open]');assert.ok(notice);
+  assert.match(notice.textContent,/зелёная/);
+  s.api.sync();assert.equal(s.api.active,false);
+  notice.querySelector('button').click();
+  assert.equal(tutorialChapter(ctx),'tower-ready');
+ }finally{s.cleanup();}
 });

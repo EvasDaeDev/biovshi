@@ -1,8 +1,7 @@
 import {limbKey} from './body.js';
 import {pendingStrikes} from '../systems/strikes.js';
 import {resolveSurfaceContacts} from '../systems/surface-contact.js';
-import {patientCombatStats} from '../game/patients.js';
-import {statMultiplier} from '../garage/model.js';
+import {patientMovementMultiplier} from '../game/patients.js';
 import { clamp, wrap, smooth } from '../utils/math.js';
 import { planPath } from "../systems/navigation.js";
 import { CONFIG } from "../config.js";
@@ -76,7 +75,7 @@ export function retreatFromBoundary(robotState, dt) {
   const nx = surface.nx,
     ny = surface.ny;
   const heading = Math.atan2(ny, nx),
-    distance = CONFIG.movement.boundaryRetreatSpeedCm * CONFIG.movement.speedMultiplier * statMultiplier(patientCombatStats(robotState.id,robotState.api).effective[0]) * dt;
+    distance = CONFIG.movement.boundaryRetreatSpeedCm * CONFIG.movement.speedMultiplier * patientMovementMultiplier(robotState.id,robotState.api,0) * dt;
   let best = null,
     bestScore = -Infinity;
   const peerBodies = robotState.peerRobots().flatMap(r => r.capsules.filter(isSolidBody));
@@ -283,6 +282,37 @@ export function watchProgress(robotState, dt, previous) {
     }
   } else robotState.stuckFor = 0;
 }
+// Moving feet used to land on the rest position of the body at swing START.
+// At chase speed the body travels several centimeters during the swing, so
+// the new support was already behind and immediately had to step again.
+// Plan a forward point using actual velocity; collision and IK still have
+// the final say, and calm walking keeps its existing landing position.
+export function fastGaitFactor(robotState){
+ const speed=Math.hypot(robotState.vx??0,robotState.vy??0);
+ return clamp((speed-CONFIG.movement.stepLeadStartSpeedCm)/
+   (CONFIG.movement.stepLeadFullSpeedCm-CONFIG.movement.stepLeadStartSpeedCm),0,1);
+}
+export function stepLandingTarget(robotState,l,home=robotState.rest(l)){
+ const vx=robotState.vx??0,vy=robotState.vy??0;
+ const speed=Math.hypot(vx,vy),factor=fastGaitFactor(robotState);
+ if(speed<1||factor===0)return home;
+ const scale=robotState.scale??ctx.scale;
+ const advance=Math.min(speed*CONFIG.movement.stepLeadTimeSec,
+   CONFIG.movement.stepLeadMaxCm*scale)*factor;
+ if(advance<.1)return home;
+ const previous=l.foot;
+ try{
+  // Each candidate must be reachable and collision-free with the REAL
+  // joint geometry. Shorten the lead instead of forcing a foot through walls.
+  for(const fraction of [1,.75,.5,.25]){
+   const candidate={x:home.x+vx/speed*advance*fraction,
+     y:home.y+vy/speed*advance*fraction};
+   l.foot=candidate;
+   if(robotState.validContact(l)&&robotState.limbClear(l))return candidate;
+  }
+ }finally{l.foot=previous;}
+ return home;
+}
 export function contacts(robotState, dt, previous) {
   const limbs = robotState.allLimbs(),
     candidate = robotState.savePose();
@@ -309,12 +339,12 @@ export function contacts(robotState, dt, previous) {
   }).sort((a, b) => (b.urgent ? 1000 : 0) + b.error - ((a.urgent ? 1000 : 0) + a.error));
   for (const p of pending) {
     const nearFood = robotState.hasGoal() && robotState.currentTargetVisible() && Math.hypot(robotState.target.x - robotState.x, robotState.target.y - robotState.y) < 50 * (robotState.scale??ctx.scale),
-      normal = robotState.mode !== 'eat' && (robotState.behavior === 'follow' || robotState.behavior === 'wander' || robotState.behavior === 'search') && !nearFood && p.error > 12 && p.cycle < .4;
+      normal = robotState.mode !== 'eat' && (robotState.behavior === 'follow' || robotState.behavior === 'wander' || robotState.behavior === 'search') && !nearFood && p.error > CONFIG.movement.stepReplantErrorCm && p.cycle < .4;
     if (airborne < 2 && (p.urgent || normal)) {
       p.l.from = {
         ...p.l.foot
       };
-      p.l.to = p.r;
+      p.l.to = stepLandingTarget(robotState,p.l,p.r);
       p.l.phase = 0;
       p.l.stall = 0;
       airborne++;
@@ -350,7 +380,7 @@ export function contacts(robotState, dt, previous) {
         ...l.foot
       },
       oldPhase = l.phase;
-    l.phase = Math.min(1, l.phase + dt * 5 / (robotState.scale??ctx.scale));
+    l.phase = Math.min(1, l.phase + dt * CONFIG.movement.stepSwingRate / (robotState.scale??ctx.scale));
     const q = smooth(l.phase),
       arc = Math.sin(l.phase * Math.PI) * (l.kind === 'leg' ? 5 : 3) * (robotState.scale??ctx.scale),
       frame = robotState.limbFrame(l);
@@ -361,7 +391,11 @@ export function contacts(robotState, dt, previous) {
     // Only a lifted limb may adjust its landing position to stay reachable.
     const rx = ((desired.x - frame.x) * Math.cos(frame.angle) + (desired.y - frame.y) * Math.sin(frame.angle)) / (robotState.scale??ctx.scale),
       ry = (-(desired.x - frame.x) * Math.sin(frame.angle) + (desired.y - frame.y) * Math.cos(frame.angle)) / (robotState.scale??ctx.scale);
-    desired = robotState.local(frame, l.kind === 'extra' ? clamp(rx, -14, 18) : l.kind === 'arm' ? Math.max(7, rx) : clamp(rx, -44, -7), l.side * Math.max(l.kind === 'arm' ? 5 : 23, ry * l.side));
+    // The old -7 cm leg bound cut off even safe forward landing targets.
+    // Relax it only while moving fast; the true IK/obstacle tests below
+    // still reject unsafe placements and restore the previous pose.
+    const legFront=-7+CONFIG.movement.stepLegForwardGainCm*fastGaitFactor(robotState);
+    desired = robotState.local(frame, l.kind === 'extra' ? clamp(rx, -14, 18) : l.kind === 'arm' ? Math.max(7, rx) : clamp(rx, -44, legFront), l.side * Math.max(l.kind === 'arm' ? 5 : 23, ry * l.side));
     const a = robotState.origin(l),
       [u, v] = robotState.lengths(l),
       dx = desired.x - a.x,
@@ -568,12 +602,12 @@ export function robotTick(robotState, dt, intent) {
     dy = waypoint.y - robotState.y,
     heading = navigationRecovering?robotState.angle:intent.manual || robotState.t >= robotState.recoveryUntil ? headingForIntent(robotState.angle, robotState, waypoint, intent) : robotState.angle,
     turn = wrap(heading - robotState.angle),
-    speed = intent.speed * CONFIG.movement.speedMultiplier * statMultiplier(patientCombatStats(robotState.id,robotState.api).effective[0]) * robotState.locomotion() * clamp(Math.hypot(intent.navigate?dx:goal.x - robotState.x, intent.navigate?dy:goal.y - robotState.y) / 18, 0, 1) * (intent.navigate?Math.max(0,Math.cos(turn)):1) * (robotState.reduced ? 1 : .86 + .14 * Math.sin(robotState.gait * 2 - .5));
+    speed = intent.speed * CONFIG.movement.speedMultiplier * patientMovementMultiplier(robotState.id,robotState.api,0) * robotState.locomotion() * clamp(Math.hypot(intent.navigate?dx:goal.x - robotState.x, intent.navigate?dy:goal.y - robotState.y) / 18, 0, 1) * (intent.navigate?Math.max(0,Math.cos(turn)):1) * (robotState.reduced ? 1 : .86 + .14 * Math.sin(robotState.gait * 2 - .5));
   const flinching = robotState.hitReaction && ctx.game.time < robotState.hitReaction.start + robotState.hitReaction.duration;
   const flinchTime = flinching ? (ctx.game.time - robotState.hitReaction.start) / robotState.hitReaction.duration : 1;
   const flinchSlow = flinching ? .18 + .82 * smooth(flinchTime) : 1;
   robotState.requestedSpeed = speed * flinchSlow;
-  const turning = robotState.turnAbility() * flinchSlow * CONFIG.movement.turnSpeedMultiplier * statMultiplier(patientCombatStats(robotState.id,robotState.api).effective[2]);
+  const turning = robotState.turnAbility() * flinchSlow * CONFIG.movement.turnSpeedMultiplier * patientMovementMultiplier(robotState.id,robotState.api,2);
   const rotate = clamp(turn * dt * 5 * turning, -3.4 * dt * turning, 3.4 * dt * turning);
   robotState.angle += rotate;
   robotState.turnRate += (rotate / dt - robotState.turnRate) * (1 - Math.exp(-dt * 8));
@@ -607,8 +641,8 @@ export function robotTick(robotState, dt, intent) {
       ny = surface.ny;
     }
     const d = Math.hypot(nx, ny) || 1;
-    tx = nx / d * 22 * CONFIG.movement.speedMultiplier * statMultiplier(patientCombatStats(robotState.id,robotState.api).effective[0]);
-    ty = ny / d * 22 * CONFIG.movement.speedMultiplier * statMultiplier(patientCombatStats(robotState.id,robotState.api).effective[0]);
+    tx = nx / d * 22 * CONFIG.movement.speedMultiplier * patientMovementMultiplier(robotState.id,robotState.api,0);
+    ty = ny / d * 22 * CONFIG.movement.speedMultiplier * patientMovementMultiplier(robotState.id,robotState.api,0);
   }
   if (intent.brake) tx = ty = 0;
   tx *= flinchSlow;
@@ -624,7 +658,7 @@ export function robotTick(robotState, dt, intent) {
   if (!flinching && robotState.hitReaction) robotState.hitReaction = null;
   robotState.x += robotState.vx * dt;
   robotState.y += robotState.vy * dt;
-  robotState.gait += Math.hypot(robotState.vx, robotState.vy) * dt / (7 * (robotState.scale??ctx.scale));
+  robotState.gait += Math.hypot(robotState.vx, robotState.vy) * dt / (CONFIG.movement.stepCycleDistanceCm * (robotState.scale??ctx.scale));
   robotState.layoutBody(dt);
   resolveSurfaceContacts(robotState);
   robotState.contacts(dt, old);

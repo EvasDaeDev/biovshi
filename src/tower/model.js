@@ -1,17 +1,44 @@
 import {newInsurance,validInsurance,purchaseInsurance} from './insurance.js';
+import {awardTowerSegments,normalizeTowerSegmentInventory,validTowerSegmentInventory} from './segments.js';
+import {validTowerMutationState,grantTowerMutationDraft,normalizeTowerMutationInventory} from './mutations.js';
+import {validTowerSurgeries,validTowerSurgicalStock,normalizeTowerSurgicalStock,purchaseTowerSurgery} from './surgery.js';
+import {normalizeTowerGraftProsthetics} from './anatomy.js';
+import {validTowerDonorState,awardTowerDonors} from './donors.js';
+import {selectedTowerFloor,towerFloorCount,validTowerFloorPlan} from './floors.js';
 import {TEST_BUILD} from '../build-channel.js';
+import {validTowerRerolls} from './economy.js';
 import {isBossFloor,hasBoss} from '../boss/config.js';
 import {ensureBossEncounter,validBossEncounter,bossFloorReward} from '../boss/encounter.js';
-import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
-import {BASE_STATS,patientVictory,validStats,normalizeProsthetics} from '../garage/model.js';
+import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,bossRepeatDropChance,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
+import {BASE_STATS,earnedStats,validStats,normalizeProsthetics} from '../garage/model.js';
+import {towerCycleInfo,towerCycleWins} from './cycles.js';
 export const TOWER_REWARD=10;
+export const towerEnemyReward=(t,victim=1)=>{
+ const standard=bossFloorReward(t,victim);
+ return selectedTowerFloor(t)?.kind==='danger'?standard+5:standard;
+};
 export const floorEnemyCount=floor=>1+Math.floor(floor/2);
-export const towerEnemyCount=t=>t.legacyEnemyCount??(hasBoss(t)?3:floorEnemyCount(t.level));
-export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
+export const towerEnemyCount=t=>t.legacyEnemyCount??towerFloorCount(t)??(hasBoss(t)?3:floorEnemyCount(t.level));
+export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],graftProsthetics:[],donorTissues:[],mutations:[],mutationInventory:[],equippedMutations:[],nextMutationId:1,modInstallations:0,segmentInventory:[],equippedSegments:[],nextSegmentId:1,unseenSegmentIds:[],statChanges:0,surgeries:[],surgicalStock:[],nextSurgicalStockId:1,consumedDonorIds:[],arenaRerolls:0,arenaRerollLocked:false,rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
 export function normalizeTower(t){
  if(!t||typeof t!=='object'||Array.isArray(t))return t;
  const previousBossInterval=t.artifacts?.bossEvery??(TEST_BUILD?2:5);
  t.prosthetics=normalizeProsthetics(t.prosthetics);
+ t.mutations??=[];
+ normalizeTowerMutationInventory(t);
+ normalizeTowerSegmentInventory(t);
+ t.statChanges??=0;
+ t.surgeries??=[];
+ normalizeTowerSurgicalStock(t);
+ if(t.insurance?.checkpoint){
+  const checkpoint=t.insurance.checkpoint;
+  checkpoint.surgeries??=[];
+  normalizeTowerSurgicalStock(checkpoint);
+ }
+ t.graftProsthetics=normalizeTowerGraftProsthetics(t.graftProsthetics,t);
+ t.donorTissues??=[];
+ t.arenaRerolls??=0;
+ t.arenaRerollLocked??=false;
  t.insurance??=newInsurance();
  if(isBossFloor(t.level)&&!t.bossEncounter&&t.rewarded?.length&&t.legacyEnemyCount===undefined)t.legacyBossFloor=true;
  if(t.version===undefined||t.version===1){
@@ -36,9 +63,13 @@ export function towerFor(session,player){
 export function validTower(t){
  if(!t||typeof t!=='object')return false;
  const count=towerEnemyCount(t),optionalCount=n=>n===null||Number.isSafeInteger(n)&&n>=0;
- return validBossEncounter(t.bossEncounter,t.level)&&t&&t.version===2&&Number.isSafeInteger(t.level)&&t.level>=1&&Number.isSafeInteger(t.wins)&&t.wins===t.level-1
-  &&Number.isInteger(t.patient)&&t.patient>=0&&t.patient<4&&validStats(t.stats,t.wins)
-  &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&validArtifactCollection(t.artifacts,t.record)&&optionalCount(t.runKills)&&optionalCount(t.runCoins)&&validInsurance(t.insurance,t.record)
+ return validBossEncounter(t.bossEncounter,t.level)&&validTowerFloorPlan(t.floorPlan,t.level)&&t&&t.version===2&&Number.isSafeInteger(t.level)&&t.level>=1&&Number.isSafeInteger(t.wins)&&t.wins===t.level-1
+  &&Number.isInteger(t.patient)&&t.patient>=0&&t.patient<4&&validStats(t.stats,towerCycleWins(t.level))
+  &&(t.cycleNotice===undefined||t.cycleNotice===t.level&&t.level>30&&(t.level-1)%30===0)
+  &&Number.isSafeInteger(t.statChanges)&&t.statChanges>=0
+  &&(t.segmentRewardsEnabled===undefined||typeof t.segmentRewardsEnabled==='boolean')
+  &&Number.isSafeInteger(t.record)&&t.record>=t.wins&&validArtifactCollection(t.artifacts,t.record)&&optionalCount(t.runKills)&&optionalCount(t.runCoins)&&validInsurance(t.insurance,t.record)&&validTowerMutationState(t)&&validTowerSegmentInventory(t)&&validTowerSurgeries(t.surgeries,t.level)&&validTowerSurgicalStock(t)&&validTowerDonorState(t)&&validTowerRerolls(t)&&typeof t.arenaRerollLocked==='boolean'
+  &&Array.isArray(t.graftProsthetics)&&JSON.stringify(t.graftProsthetics)===JSON.stringify(normalizeTowerGraftProsthetics(t.graftProsthetics,t))
   &&(t.legacyEnemyCount===undefined||(t.legacyEnemyCount===t.level||t.legacyEnemyCount===1))
   &&(t.legacyBossFloor===undefined||t.legacyBossFloor===true&&isBossFloor(t.level)&&t.bossEncounter===undefined)
   &&typeof t.preparing==='boolean'&&Array.isArray(t.rewarded)&&t.rewarded.length<=count
@@ -47,10 +78,12 @@ export function validTower(t){
 export function rewardTower(session,player,victim,by){
  const t=towerFor(session,player);
  if(by!==0||!Number.isInteger(victim)||victim<1||victim>towerEnemyCount(t)||t.preparing||t.rewarded.includes(victim))return false;
- const reward=bossFloorReward(t,victim);
+ const reward=towerEnemyReward(t,victim);
  const issued=session.players.length*session.capital+(session.topUps??0)+(session.towerEarned??0);
  if(issued+reward>16000000)return false;
- t.rewarded.push(victim);session.players[player].balance+=reward;session.towerEarned=(session.towerEarned??0)+reward;
+ t.rewarded.push(victim);
+ awardTowerDonors(t,victim,selectedTowerFloor(t)?.profiles?.[victim-1]??(hasBoss(t)&&victim===1?'boss':'basic'));
+ session.players[player].balance+=reward;session.towerEarned=(session.towerEarned??0)+reward;
  if(t.runKills!==null)t.runKills++;if(t.runCoins!==null)t.runCoins+=reward;return true;
 }
 function creditArtifactRewards(session,player,t){
@@ -66,17 +99,79 @@ function creditArtifactRewards(session,player,t){
 }
 export function completeTower(session,player,won,random=Math.random){
  const t=towerFor(session,player);
- if(won){if(hasBoss(t))awardBossArtifact(t.artifacts,t.level,random);creditArtifactRewards(session,player,t);t.record=Math.max(t.record,t.level);patientVictory(t);t.level++;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;}
+ if(won){const bossWon=hasBoss(t);
+  // Snapshot prior wins BEFORE the artifact roll increments bossWins.
+  // Both loot systems use the same per-boss cumulative replay penalty.
+  const previousBossWins=bossWon?(t.artifacts.bossWins[t.level]??0):0;
+  if(bossWon)awardBossArtifact(t.artifacts,t.level,random);
+  creditArtifactRewards(session,player,t);t.record=Math.max(t.record,t.level);
+  // Earned skill points restart every 30 floors without resetting history.
+  // Remember the player's manual skill allocation, independently of the
+  // points automatically earned in the current 30-floor cycle.
+  const earned=earnedStats(towerCycleWins(t.level));
+  const allocation=t.stats.map((value,i)=>value-earned[i]);
+  t.wins++;t.level++;
+  // New earned point follows the standard progression, while the patient's
+  // manually selected +1/-1 redistribution remains attached to its skills.
+  // In particular, a boosted mobility skill stays boosted after every victory.
+  const nextBase=earnedStats(towerCycleWins(t.level));
+  t.stats=nextBase.map((value,i)=>value+allocation[i]);
+  if(towerCycleWins(t.level)===0){
+   // Starting a new cycle resets earned points only, not the chosen allocation.
+   // Death without DMS and manual reset still restore the standard baseline.
+   t.insurance=newInsurance();t.cycleNotice=t.level;
+  }
+  t.arenaRerolls=0;t.arenaRerollLocked=false;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;delete t.floorPlan;
+  if(bossWon){
+   // Transitional implementation: new segment warehouse is populated while
+   // the legacy reward UI remains enabled until its full replacement lands.
+   if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random,bossRepeatDropChance(previousBossWins),previousBossWins);
+   else grantTowerMutationDraft(t,random,previousBossWins);
+  }}
  else {
   const c=t.insurance.checkpoint,next=newTower(undefined,t.record,t.artifacts,t.insurance);
   if(c){
-   Object.assign(next,structuredClone(c),{runKills:t.runKills,runCoins:t.runCoins});
+   Object.assign(next,structuredClone(c),{runKills:t.runKills,runCoins:t.runCoins,preparing:Boolean(c.mutationDraft)});
    next.insurance.checkpoint=null;
   }
+  // The warehouse survives uninsured death; only the installed parts are lost.
+  // A DMS checkpoint restores the patient build, but the latest warehouse
+  // remains current even if its snapshot was taken earlier.
+  const insuredIds=new Set(c?.equippedSegments??[]);
+  const uninsuredIds=new Set(t.equippedSegments??[]);
+  const surviving=t.segmentInventory.filter(item=>!uninsuredIds.has(item.id));
+  const insured=(c?.segmentInventory??[]).filter(item=>insuredIds.has(item.id));
+  next.segmentInventory=structuredClone([...surviving,...insured.filter(item=>
+   !surviving.some(existing=>existing.id===item.id))]);
+  next.equippedSegments=[...insuredIds];
+  next.nextSegmentId=Math.max(t.nextSegmentId,c?.nextSegmentId??1);
+  next.statChanges=c?.statChanges??0;
+  next.unseenSegmentIds=(t.unseenSegmentIds??[]).filter(id=>next.segmentInventory.some(item=>item.id===id));
+  // Death without DMS starts a genuinely new patient/run. An older saved
+  // segmentRewardsEnabled=false flag must not trap that fresh run in the
+  // obsolete whole-modification reward path (which hides segment rewards).
+  // A restored DMS checkpoint retains its original reward system.
+  if(c){
+   if(t.segmentRewardsEnabled!==undefined)next.segmentRewardsEnabled=t.segmentRewardsEnabled;
+  }else next.segmentRewardsEnabled=true;
+  // A surviving warehouse must be usable immediately on the replacement patient.
+  // Likewise, DMS restores the patient to a configurable preparation phase.
+  if(next.segmentRewardsEnabled)next.preparing=true;
+  delete next.lastBossSegments;
+  normalizeTowerMutationInventory(next);
   session.towers[player]=next;
  }
  return session.towers[player];
 }
-export function resetTower(session,player){const t=towerFor(session,player);return session.towers[player]=newTower(undefined,t.record,t.artifacts,t.insurance);}
+export function resetTower(session,player){
+ const t=towerFor(session,player);
+ // A voluntary run reset abandons the insured checkpoint as well as the build.
+ // Retain the earned artifact collection, personal record and escalated DMS tariff.
+ return session.towers[player]=newTower(undefined,t.record,t.artifacts,{price:t.insurance.price,checkpoint:null});
+}
 
+export function buyTowerSurgery(session,player,procedure,site,donorId=null,replaceSite=null,stockId=null){
+ const t=towerFor(session,player);
+ return purchaseTowerSurgery(session,player,t,procedure,site,donorId,replaceSite,stockId);
+}
 export function buyTowerInsurance(session,player){const t=towerFor(session,player);return purchaseInsurance(session,player,t);}

@@ -55,18 +55,23 @@
 <link rel="stylesheet" href="./styles/responsive.css">
 <link rel="stylesheet" href="./styles/tutorial.css">
 <link rel="stylesheet" href="./styles/telegram.css">
+<link rel="stylesheet" href="./styles/ui-redesign.css">
 </head>
 <body>
-<div id="texture-loading" role="status">Подготовка арены…</div>
+<div id="texture-loading" role="status"><div class="loading-center"><h1 class="loading-title">БИОВШИ</h1><p class="loading-status">Запуск клиники…</p></div></div>
 
 
 <div id="robot-tag-hops-v22">
+  <nav id="game-navigation" class="game-navigation" aria-label="Навигация по экранам">
+    <button id="game-nav-back" class="game-nav-back-control" type="button" aria-label="Назад на предыдущий экран" hidden>← НАЗАД</button>
+    <button id="game-nav-settings" type="button" aria-label="Настройки" aria-controls="arena-settings" aria-expanded="false" title="Настройки"></button>
+  </nav>
   <div id="launch-overlay" class="launch-overlay" role="dialog" aria-modal="true" aria-labelledby="launch-title">
     <div class="launch-paper">
-      <button id="launch-settings-button" class="btn settings-button launch-settings-button" type="button" aria-label="Настройки" aria-controls="arena-settings" aria-expanded="false" title="Настройки"></button>
+      <button id="launch-settings-button" class="btn settings-button launch-settings-button" type="button" aria-label="Настройки" aria-controls="arena-settings" aria-expanded="false" title="Настройки" tabindex="-1" aria-hidden="true"></button>
       <p class="launch-stamp">ПРОТОКОЛ № 001 · ДОПУСК НА АРЕНУ</p>
       <h1 id="launch-title">БИОВШИ</h1>
-      <p class="launch-subtitle">ГЛАДИАТОРСКИЕ БОИ</p>
+      <p class="launch-subtitle" aria-live="off"></p>
       <div class="launch-divider" aria-hidden="true"></div>
       <p class="launch-instruction">Выберите режим. Игроки и банк общие.</p>
       <button id="launch-game" type="button" autofocus>ПОСМОТРЕТЬ БОЙ!</button>
@@ -74,6 +79,7 @@
         <div class="tower-menu-player">
           <label for="menu-player">ИГРОК</label>
           <select id="menu-player" aria-label="Игрок"></select>
+          <span id="menu-patient-preview" class="menu-patient-preview" aria-label="Пациент выбранного игрока"></span>
           <span id="menu-bank" aria-label="Баланс выбранного игрока"></span>
         </div>
         <p id="menu-tower-progress"></p>
@@ -86,10 +92,11 @@
     </div>
   </div>
   <div id="tower-preparation" class="bet-overlay" role="dialog" aria-modal="true" aria-labelledby="tower-prep-title" hidden><div class="bet-panel">
-    <h2 id="tower-prep-title">БАШНЯ</h2><p id="tower-prep-name" class="tower-player-wallet"></p><div id="tower-floor-preview"></div>
-    <p>Все конечности восстановлены. Распределите навыки перед боем.</p><div id="tower-stats" class="bet-fields"></div>
-    <details id="tower-artifact-view"><summary>КОЛЛЕКЦИЯ АРТЕФАКТОВ</summary><div id="tower-prep-artifacts"></div></details>
-    <p id="tower-prep-error" role="status"></p><div class="bet-actions"><button id="tower-insurance" type="button" aria-live="polite">ДМС · 50</button><button id="tower-fight" class="bet-primary" type="button">НА АРЕНУ</button></div>
+    <header class="tower-prep-header"><button id="tower-prep-back" class="tower-nav-button" type="button" aria-label="Назад" tabindex="-1" aria-hidden="true">← НАЗАД</button><h2 id="tower-prep-title">БАШНЯ</h2><button id="tower-prep-settings" class="tower-nav-button" type="button" aria-label="Настройки" aria-controls="arena-settings" aria-expanded="false" tabindex="-1" aria-hidden="true">НАСТРОЙКИ ⚙</button></header><p id="tower-prep-name" class="tower-player-wallet"></p><div class="tower-prep-workspace"><section class="tower-prep-arena" aria-label="Арена и испытания"><div id="tower-floor-preview"></div></section><section class="tower-prep-patient" aria-label="Подготовка пациента">
+    <div id="tower-stats" class="bet-fields"></div>
+    <div id="tower-prep-artifacts" hidden></div>
+    <p id="tower-insurance-status" role="status" hidden></p>
+    </section></div><p id="tower-prep-error" role="status"></p><div class="bet-actions"><button id="tower-insurance" type="button" aria-live="polite">ДМС · 50</button><button id="tower-fight" class="bet-primary" type="button">НА ЭТАЖ</button></div>
   </div></div>
   <div id="tower-controls" hidden><div id="tower-stick" role="group" aria-label="Джойстик движения"><span></span></div></div>
   <div class="viz-controls atmosphere-controls">
@@ -100,7 +107,7 @@
 <output id="tower-wallet" hidden></output>
 <output id="render-fps" aria-label="Частота отрисовки">— FPS</output>
 <span id="tag7hop-status" class="text-small" aria-live="polite">Гладиаторы · каждый сам за себя</span>
-<button id="arena-settings-button" class="btn settings-button" type="button" aria-label="Настройки" aria-controls="arena-settings" aria-expanded="false" title="Настройки">
+<button id="arena-settings-button" class="btn settings-button" type="button" aria-label="Настройки" aria-controls="arena-settings" aria-expanded="false" title="Настройки" tabindex="-1" aria-hidden="true">
 </button>
 </div>
 

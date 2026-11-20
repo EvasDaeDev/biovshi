@@ -3,6 +3,8 @@ import {SESSION_STORAGE} from '../build-channel.js';
 import {initializeKeyboardViewport} from '../ui/keyboard-viewport.js';
 import {initializeStreamerMascot} from '../ui/streamer-mascot.js';
 import {towerEnemyCount} from '../tower/model.js';
+import {selectedTowerFloor} from '../tower/floors.js';
+import {towerEnemyProfile} from '../tower/profiles.js';
 import {arenaDefinition} from './arenas.js';
 import {initializeCombatLog} from '../ui/combat-log.js';
 import {bettingLoad,bettingSave} from '../betting/storage.js';
@@ -39,6 +41,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   // Reusing mutated SVG definitions can bake the previous arena into new layers.
   const root=document.getElementById('robot-tag-hops-v22');
   root.__disposeTag?.();
+  root.querySelector('#tower-floor-selector')?.remove();
   const svg=root.querySelector('#tag7hop-field');
   if(root.__arenaSvgTemplate===undefined)root.__arenaSvgTemplate=svg.innerHTML;
   else svg.innerHTML=root.__arenaSvgTemplate;
@@ -47,7 +50,17 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   // Body creation must see this session's prostheses, including on a fresh load.
   ctx.betting=session;
   ctx.towerRun=tower;
-  ctx.towerGarage=tower?Array.from({length:towerEnemyCount(tower)+1},(_,id)=>({stats:id===0?[...tower.stats]:[3,3,3],head:null,prosthetics:id===0?[...(tower.prosthetics??[])]:[]})):null;
+  ctx.towerGarage=tower?Array.from({length:towerEnemyCount(tower)+1},(_,id)=>{
+    const profile=id>0?towerEnemyProfile(selectedTowerFloor(tower)?.profiles[id-1]):null;
+    return {stats:id===0?[...tower.stats]:[...profile.stats],head:null,
+      prosthetics:id===0?[...(tower.prosthetics??[]),...(tower.graftProsthetics??[])]:[],
+      ...(id===0?{mutations:[...(tower.mutations??[])],mutationInventory:structuredClone(tower.mutationInventory??[]),
+        equippedMutations:[...(tower.equippedMutations??[])],
+        segmentInventory:structuredClone(tower.segmentInventory??[]),equippedSegments:[...(tower.equippedSegments??[])],
+        surgeries:structuredClone(tower.surgeries??[])}:{}),
+      ...(id>0?{profileId:selectedTowerFloor(tower)?.profiles[id-1]??'basic',
+        skinKey:profile.skinKey,voice:profile.voice}:{})};
+   }):null;
   ctx.textureAssets=textures;
   ctx.root = root;
   ctx.svg = ctx.root.querySelector('#tag7hop-field');
@@ -128,6 +141,16 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.scale = CONFIG.robot.scale;
   ctx.w = 700;
   ctx.h = 700;
+  // The original SVG template is 7m square; resize its floor and darkness masks.
+  const {left:floorLeft,top:floorTop,size:floorSize}=ctx.arenaDefinition;
+  for(const node of [
+    ctx.arenaContent.querySelector(':scope > rect'),
+    ctx.svg.querySelector('#tag7hop-darkness'),
+    ctx.svg.querySelector('#tag7hop-darkness-mask'),
+    ctx.svg.querySelector('#tag7hop-darkness-mask > rect'),
+  ])if(node)for(const [key,value] of Object.entries({
+    x:floorLeft,y:floorTop,width:floorSize,height:floorSize
+  }))attr(node,key,value);
   ctx.HEAD_LIMIT = CONFIG.vision.headScanDeg * Math.PI / 180;
   ctx.SCAN_SPEED = CONFIG.vision.scanSpeedDeg * Math.PI / 180;
   ctx.TRACK_SPEED = CONFIG.vision.trackingSpeedDeg * Math.PI / 180;
@@ -171,10 +194,10 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.ambientBlur = el('filter', {
     id: 'tag7hop-ambient-filter',
     filterUnits: 'userSpaceOnUse',
-    x: -180,
-    y: -180,
-    width: 1060,
-    height: 1060
+    x: floorLeft-180,
+    y: floorTop-180,
+    width: floorSize+360,
+    height: floorSize+360
   }, ctx.defs);
   el('feGaussianBlur', {
     stdDeviation: 5
@@ -406,14 +429,14 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   globalThis.addEventListener?.('resize', fitField);
   globalThis.visualViewport?.addEventListener('resize', fitField);
   fitField();
-  // Smooth group-following camera. World units are centimeters; all collision,
+  // Smooth camera framing. World units are centimeters; all collision,
   // pathfinding and damage checks continue to use unchanged 0..700 coordinates.
   createWalls();
   createObstacleLights();
   // The clock is a screen-space overlay, not part of the clipped floor.
   ctx.svg.appendChild(ctx.timerOutput);
   ctx.CAMERA_OUTSET = Math.max(0, CONFIG.arena.wallThicknessCm) + Math.max(0, CONFIG.arena.outerWallDepthCm) + CONFIG.arena.wallViewMarginCm;
-  ctx.CAMERA_FULL = ctx.arenaDefinition.size + 2 * ctx.CAMERA_OUTSET;
+  ctx.CAMERA_FULL = (ctx.arenaDefinition.size + 2 * ctx.CAMERA_OUTSET) * CONFIG.arena.cameraMaxDistanceFactor;
   ctx.CAMERA_MIN = 200;
   ctx.CAMERA_MARGIN = 200;
   ctx.camera = {

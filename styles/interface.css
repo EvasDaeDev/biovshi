@@ -417,7 +417,24 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 
 /* The speed switch stays visibly latched while double time is active. */
 
-#texture-loading {position:fixed;inset:0;z-index:2000;display:grid;place-items:center;background:#090f0c;color:#d3cead;font:18px system-ui;}
+#texture-loading{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(ellipse at center,#29312b,#101713 65%,#070a09);color:#e9dfc4;font-family:Arial,sans-serif}
+#texture-loading .loading-center{box-sizing:border-box;width:min(600px,82vw);text-align:center;padding:24px 10px;z-index:1}
+#texture-loading .loading-title{margin:0;font-size:clamp(54px,12vw,124px);font-weight:1000;line-height:1;letter-spacing:.09em;color:#f0ca83;text-shadow:0 5px #54392b}
+#texture-loading .loading-subtitle{margin:18px 0 50px;font-size:clamp(11px,1.55vw,16px);font-weight:800;letter-spacing:.2em;color:#a5a690}
+#texture-loading .loading-status{font-size:clamp(14px,2vw,20px);font-weight:800;min-height:1.6em;margin:0 0 14px}
+#texture-loading .loading-track{height:9px;border:1px solid #7e775d;background:#080e0b;overflow:hidden;border-radius:3px}
+#texture-loading .loading-fill{height:100%;width:0;background:linear-gradient(90deg,#a56a2c,#ffcd6b);transition:width .18s}
+#texture-loading .loading-percent{font-size:13px;letter-spacing:.15em;color:#d5ba7b;margin-top:10px}
+#texture-loading .loading-streamer{position:absolute;bottom:2%;left:3vw;display:flex;align-items:flex-end;gap:8px;max-width:80vw}
+#texture-loading .loading-streamer canvas{width:clamp(115px,22vw,230px);height:auto;flex:none;image-rendering:pixelated}
+#texture-loading .loading-tip{margin:0 0 90px;max-width:330px;min-height:3em;padding:14px 17px;background:#282d25ee;border:1px solid #918067;border-radius:9px;color:#f7ce7e;font-size:clamp(12px,1.7vw,18px);font-weight:800;line-height:1.3}
+#texture-loading .loading-dismiss{display:inline-flex;align-items:center;justify-content:center;min-width:150px;min-height:44px;margin-top:18px;padding:10px 18px;background:#874433;color:#fff0d9;border:1px solid #bd7854;border-radius:0;font:800 14px Arial,sans-serif;cursor:pointer}
+#texture-loading .loading-dismiss[hidden]{display:none}
+#texture-loading .loading-dismiss:focus-visible{outline:3px solid #fbd17a;outline-offset:3px}
+#texture-loading[role="alert"] .loading-status{color:#ffaba0}
+#texture-loading .loading-streamer.without-art canvas{visibility:hidden}
+@media(max-width:700px){#texture-loading .loading-center{width:88vw}#texture-loading .loading-subtitle{margin:12px 0 28px}#texture-loading .loading-streamer{bottom:4%;left:2vw;max-width:96vw}#texture-loading .loading-streamer canvas{width:clamp(110px,34vw,190px)}#texture-loading .loading-tip{margin-bottom:30px;max-width:52vw;padding:10px;font-size:13px}}
+@media(prefers-reduced-motion:reduce){#texture-loading .loading-fill{transition:none}}
 
 #landscape-required:not([hidden]) {position:fixed;inset:0;z-index:1500;display:grid;place-items:center;padding:24px;background:#090f0c;color:#d3cead;text-align:center;}
 #landscape-required[hidden] {display:none;}
@@ -495,6 +512,7 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 #robot-tag-hops-v22 .patient-skills>div{display:flex;align-items:center;gap:6px;white-space:nowrap}
 #robot-tag-hops-v22 .patient-skills>div>span:first-child{width:19px;text-align:center;font-size:16px}
 .biovshi-hint{position:fixed;padding:5px 7px;font:8.6667px/1.45 Arial,sans-serif;pointer-events:none;white-space:normal}
+.biovshi-hint.is-modifier-reward{font:12px/1.5 Arial,sans-serif;white-space:pre-line;max-width:min(340px,calc(100vw - 24px));padding:9px 12px}
 /* Shared alignment and patient identity. */
 #robot-tag-hops-v22 h1,#robot-tag-hops-v22 h2,#robot-tag-hops-v22 h3,#robot-tag-hops-v22 th,#robot-tag-hops-v22 .gladiator-results-summary{text-align:center}
 #robot-tag-hops-v22 .patient-name{font-weight:700;white-space:nowrap}
@@ -517,3 +535,34 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 #robot-tag-hops-v22 .audio-controls label{display:grid;grid-template-columns:65px minmax(0,1fr) 45px;align-items:center;gap:12px;margin:12px 0;font-size:14px}
 #robot-tag-hops-v22 .audio-controls input{width:100%;min-width:0}
 #robot-tag-hops-v22 .audio-controls output{text-align:right;font-variant-numeric:tabular-nums}
+
+/* Keep the loading status and progress bar clear of the streamer on compact screens. */
+@media(max-height:650px){
+  #texture-loading{flex-direction:column;justify-content:flex-start;align-items:center;overflow:hidden}
+  #texture-loading .loading-center{
+    width:min(680px,92vw);
+    padding:clamp(6px,1.6vh,16px) 10px 0;
+    flex:none;
+  }
+  #texture-loading .loading-title{font-size:clamp(40px,15vh,92px);letter-spacing:.055em}
+  #texture-loading .loading-subtitle{margin:7px 0 clamp(10px,3vh,18px);font-size:clamp(10px,2vh,14px)}
+  #texture-loading .loading-status{font-size:clamp(14px,2.8vh,18px);margin:0 0 9px;min-height:1.3em}
+  #texture-loading .loading-percent{margin:7px 0}
+  #texture-loading .loading-streamer{
+    position:absolute;left:clamp(8px,2vw,24px);bottom:0;
+    max-width:calc(100% - 16px);align-items:flex-end;gap:10px;
+  }
+  #texture-loading .loading-streamer canvas{width:clamp(75px,23vh,150px)}
+  #texture-loading .loading-tip{
+    box-sizing:border-box;width:min(310px,55vw);max-width:none;
+    min-height:0;margin:0 0 16px;padding:9px 11px;
+    font-size:clamp(12px,2.4vh,15px);line-height:1.3;
+  }
+}
+@media(max-width:700px) and (min-height:651px){
+  #texture-loading .loading-center{padding-top:clamp(32px,8vh,90px)}
+  #texture-loading .loading-title{font-size:clamp(48px,13vw,88px)}
+  #texture-loading .loading-subtitle{margin:12px 0 30px}
+  #texture-loading .loading-streamer{left:3vw;bottom:3%;gap:8px}
+  #texture-loading .loading-tip{margin:0 0 24px;width:min(55vw,310px);max-width:none}
+}

@@ -1,6 +1,8 @@
 import {pendingStrikes,setPendingStrikes} from './strikes.js';
 import {settleTower} from '../tower/ui.js';
 import {patientCombatStats} from '../game/patients.js';
+import {towerAttackInterval} from '../tower/mutations.js';
+import {towerAllies} from '../tower/relations.js';
 import {critChance} from '../garage/model.js';
 import {random} from '../utils/random.js';
 import { clamp, wrap, smooth } from '../utils/math.js';
@@ -42,7 +44,9 @@ function strikeProgress(p) {
 }
 // Legs strike away from the pelvis: their own side and a shared rear cone.
 export function inStrikeSector(attacker, source, point) {
-  const frame = source.kind === 'leg' ? source.frame??attacker.actualPose.pelvis : attacker;
+  // Grafted and second-pair arms pivot on a spine vertebra, not on the
+  // leading shoulder. Use each actual anchor's facing for its strike sector.
+  const frame = source.frame??(source.kind === 'leg' ? attacker.actualPose.pelvis : attacker);
   const angle = wrap(Math.atan2(point.y-frame.y, point.x-frame.x)-frame.angle);
   if (source.kind !== 'leg') return Math.abs(angle) <= (source.kind === 'head' ? .48 : 1.28);
   // Own side from 60 degrees back; the rear 40-degree cone is shared.
@@ -62,6 +66,7 @@ export function kickPathClear(attacker, pending) {
   return true;
 }
 export function strikeCandidates(attacker, victim, source) {
+  if(ctx.mode==='tower'&&towerAllies(ctx.towerRun,attacker.id,victim.id,ctx.game.time))return [];
   if (!attacker.attackSources.some(s => s.key === source.key)) return [];
   const facing = attacker.angle;
   if (!sightClear(attacker.center, victim.center)) return [];
@@ -143,10 +148,30 @@ export function compareStrikeCandidates(a,b,{moving=false}={}) {
   const tier=c=>/^(arm|leg)-/.test(c.segment)?0:c.segment==='head'?2:1;
   return tier(a)-tier(b) || strikePriority(a)-strikePriority(b);
 }
+// Extra surgical arms and boss second-pair arms should actually participate
+// when independently reachable. Alternate with the ordinary best source, not
+// a free second hit against the same patient or a magically extended reach.
+export const isAdditionalAttackArm=key=>typeof key==='string'&&
+ /-(?:graft|pair2)-(?:upper|lower)$/.test(key);
+export function prioritizeAdditionalArm(candidates,lastSource=null){
+ if(!lastSource||isAdditionalAttackArm(lastSource))return candidates;
+ const extra=candidates.find(c=>c.source.kind==='arm'&&isAdditionalAttackArm(c.source.key));
+ return extra?[extra,...candidates.filter(c=>c!==extra)]:candidates;
+}
 // Prefer two independently reachable limb strikes at distinct opponents. If the
 // best limb is the only one reaching the second opponent, try another pairing.
-export function selectSimultaneousStrikes(candidates,{moving=false}={}){
- const sorted=[...candidates].sort((a,b)=>compareStrikeCandidates(a,b,{moving}));
+export function selectSimultaneousStrikes(candidates,{moving=false,lastSource=null}={}){
+ const sorted=prioritizeAdditionalArm(
+  [...candidates].sort((a,b)=>compareStrikeCandidates(a,b,{moving})),lastSource);
+ // The head is a real striking source, not a permanent last-resort weapon.
+ // Alternate a physically reachable headbutt with limb attacks, preserving
+ // the two-distinct-opponents limit and never double-hitting the same target.
+ const head=lastSource!=='head'&&sorted.find(c=>c.source.kind==='head');
+ if(head){
+  const partner=sorted.find(c=>c.victim.id!==head.victim.id&&
+   (c.source.kind==='arm'||c.source.kind==='leg'));
+  return partner?[head,partner]:[head];
+ }
  const limbs=sorted.filter(c=>c.source.kind==='arm'||c.source.kind==='leg');
  const limb=key=>key.replace(/-(upper|lower)$/,'');
  for(const first of limbs){
@@ -197,6 +222,9 @@ function resolvePounceImpacts() {
     // Shifting the body back over planted feet is preparation, not impact.
     if(!leap.soundStarted)continue;
     const victim=ctx.robots[leap.victim];
+    if(ctx.mode==='tower'&&towerAllies(ctx.towerRun,attacker.id,victim?.id,ctx.game.time)){
+      leap.impactDone=true;continue;
+    }
     if(!victim?.mobile||!victim.visible||!attacker.hasHead)return;
     const touched=pounceContactSegment(previous,current,victim.capsules,
       segment=>victim.isDamageable(segment),13*(attacker.scale??ctx.scale)+.5);
@@ -253,6 +281,11 @@ export function finishingPounceInProgress(robot,time) {
   return kind==='combat-pounce'||kind==='combat-retreat'
     || time<(robot?.combatRecoverUntil??0);
 }
+export function towerFighterCombatBonus(id){
+ if(ctx.mode!=='tower'||id!==0)return {crit:0,cooldownMultiplier:1};
+ const {crit,cooldownMultiplier}=patientCombatStats(0).combat;
+ return {crit,cooldownMultiplier};
+}
 export function combatAttacks() {
   if (ctx.combat.finished) return;
   resolvePounceImpacts();
@@ -265,9 +298,11 @@ export function combatAttacks() {
         pending.resolved = true;
         const victim = ctx.robots[pending.victim];
         const src = attacker.attackSources.find(s => s.key === pending.source);
-        if (attacker.visible && attacker.mobile && src && victim?.visible && victim.hasHead && victim.segmentCount > 0) {
+        if (attacker.visible && attacker.mobile && src && victim?.visible && victim.hasHead && victim.segmentCount > 0
+          &&(ctx.mode!=='tower'||!towerAllies(ctx.towerRun,id,victim.id,ctx.game.time))) {
           const touched = struckSegment(attacker, victim, pending);
-          const damage=touched&&random()<critChance(patientCombatStats(id,attacker).effective[1])?2:1;
+          const stats=touched?patientCombatStats(id,attacker):null;
+          const damage=touched&&random()<(stats.effects?.[1]??critChance(stats.effective[1]))?2:1;
           if (touched && victim.damage(touched, id, damage)) {
             if (victim.mobile) victim.reactToHit(attacker, touched);
             ctx.combat.hits++;
@@ -310,19 +345,25 @@ export function combatAttacks() {
       const best=strikeCandidates(attacker,v,source)[0];
       if(best)candidates.push(best);
     }
-    const selected=selectSimultaneousStrikes(candidates,{moving});
+    const selected=selectSimultaneousStrikes(candidates,{moving,lastSource:ctx.agentAI[id]?.lastAttackSource});
     if(selected.length){
+      if(ctx.agentAI[id])ctx.agentAI[id].lastAttackSource=selected[0].source.key;
       const timing=attacker.body?.combat??CONFIG.combat;
+      const towerCombat=ctx.mode==='tower'&&id===0?patientCombatStats(id,attacker).combat:null;
+      const recoveryReduction=towerCombat?.recoveryReduction??0;
+      const spine=attacker.spineCount/(attacker.spineSegmentTotal??4);
       setPendingStrikes(id,selected.map(best=>({
         victim:best.victim.id,segment:best.segment,source:best.source.key,aim:{...best.aim},
         started:ctx.game.time,
         impactAt:ctx.game.time+timing.windupSec+timing.thrustSec,
-        endsAt:ctx.game.time+timing.windupSec+timing.thrustSec+timing.recoverSec,
-        at:ctx.game.time+timing.windupSec,resolved:false,...(attacker.body?.combat?{timing}:{})
+        endsAt:ctx.game.time+timing.windupSec+timing.thrustSec+timing.recoverSec-recoveryReduction,
+        at:ctx.game.time+timing.windupSec,resolved:false,
+        ...(attacker.body?.combat||recoveryReduction?{timing:{...timing,recoverSec:timing.recoverSec-recoveryReduction}}:{})
       })));
       ctx.combat.strikes+=selected.length;
       ctx.combat.fighterSwings[id]+=selected.length;
-      ctx.combat.nextStrike[id]=ctx.game.time+timing.attackCooldownSec*(1+.16*4*(1-attacker.spineCount/(attacker.spineSegmentTotal??4)));
+      ctx.combat.nextStrike[id]=ctx.game.time+(towerCombat?towerAttackInterval(towerCombat,{timing,spine}):
+       timing.attackCooldownSec*(1+.64*(1-spine)));
       for(const best of selected)note('combat-windup',{from:id,to:best.victim.id,source:best.source.key});
     }
   }

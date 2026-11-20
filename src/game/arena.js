@@ -1,4 +1,7 @@
-import {bossSpawn} from '../boss/spawn.js';
+import {planNeutralRigSpawns} from '../boss/spawn.js';
+import {bossAnatomy} from '../boss/anatomy.js';
+import {towerPatientAnatomy} from '../tower/anatomy.js';
+import {BOSS_CONFIG} from '../boss/config.js';
 import {standardLimbs} from '../robot/body.js';
 import {createBoss} from '../boss/boss.js';
 import {ensureBossEncounter} from '../boss/encounter.js';
@@ -148,9 +151,23 @@ export function rebuildRobots() {
   for (const group of [ctx.conesG, ctx.flashlightsG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG]) group.replaceChildren();
   ctx.robots.length = 0;
   const encounter=ctx.mode==='tower'?ensureBossEncounter(ctx.towerRun):null;
-  layout.forEach((p,id)=>{
-    const start=encounter&&id>1?bossSpawn(p,{spineSegments:4,pelvisKey:'spine-3',limbs:standardLimbs()},1):p;
-    ctx.robots.push(encounter&&id===1?createBoss(id,start,encounter):createRobot(id,start));
+  // Newly generated floor plans guarantee collision-free FULL bodies, not
+  // merely clear centre points. Preserve historical unplanned tower layouts.
+  const plannedFloor=ctx.mode==='tower'&&ctx.towerRun?.floorPlan?.floor===ctx.towerRun?.level;
+  const preflight=Boolean(encounter||plannedFloor);
+  const normalRig=preflight?{spineSegments:4,pelvisKey:'spine-3',limbs:standardLimbs()}:null;
+  const playerBody=ctx.mode==='tower'?towerPatientAnatomy(ctx.towerRun):null;
+  const rigs=preflight?layout.map((_,id)=>encounter&&id===1
+    ?{body:bossAnatomy(encounter.variant),scaleMultiplier:BOSS_CONFIG.scale}
+    :{body:id===0&&playerBody?playerBody:normalRig,scaleMultiplier:1}):null;
+  const starts=preflight?planNeutralRigSpawns(layout,rigs):layout;
+  if(!starts)throw Error('Не удалось разместить всех пациентов без пересечений арены');
+  // Reserve space for the patient's grafted anatomy in the exact same
+  // preflight used by the longer boss rigs.
+  starts.forEach((start,id)=>{
+    const skinKey=ctx.mode==='tower'&&id>0?ctx.towerGarage?.[id]?.skinKey:null;
+    ctx.robots.push(encounter&&id===1?createBoss(id,start,encounter):createRobot(id,start,
+      id===0&&playerBody?playerBody:skinKey?{skinKey}:{}));
   });
   ctx.robots.forEach(r => r.setVisible(false));
 }

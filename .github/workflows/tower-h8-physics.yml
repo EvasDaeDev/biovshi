@@ -1,0 +1,70 @@
+name: Tower H8 - paired physical rarity scenarios
+
+on:
+  push:
+    branches:
+      - experiment/tower-bosses
+    paths:
+      - .github/workflows/tower-h8-physics.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  physics:
+    name: H8 physical rarity ${{ matrix.step }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        step: ['0', '0.08', '0.1', '0.12']
+    steps:
+      - name: Checkout experimental branch
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Fight 12 paired scenarios with actual physics and temporary bonuses
+        run: node scripts/experiment-tower-fights.mjs --rarityCompare=true --rarityStep=${{ matrix.step }} --policy=orbit --seeds=2 --limit=65 --offset=81121926 --out=artifacts/h8-step-${{ matrix.step }}.json
+      - name: Archive individual fights even if a simulation regresses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tower-h8-step-${{ matrix.step }}
+          path: artifacts/h8-step-${{ matrix.step }}.json
+          if-no-files-found: warn
+
+  report:
+    name: Check actual rarity bonuses and paired outcomes
+    needs: physics
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout reporter
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download all physics variants
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tower-h8-step-*
+          merge-multiple: true
+          path: artifacts
+      - name: Verify shared seeds and report measured outcomes
+        run: node scripts/report-tower-rarity-physics.mjs
+      - name: Publish H8 audit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: tower-h8-rarity-physics-report
+          path: |
+            artifacts/h8-step-*.json
+            artifacts/h8-rarity-physical-report.*
+          if-no-files-found: error

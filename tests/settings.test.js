@@ -16,6 +16,9 @@ import {segmentDisplayState} from '../src/ui/telemetry.js';
 import {paintTelemetry} from '../src/ui/paint-telemetry.js';
 import {installTowerUI} from '../src/tower/ui.js';
 import {initializeModalFocus} from '../src/ui/modal-focus.js';
+import {initializeGameNavigation} from '../src/ui/game-navigation.js';
+import {bettingOpen,bettingSetup} from '../src/betting/ui.js';
+import {garageOpen} from '../src/garage/ui.js';
 import {betCommit} from '../src/betting/ledger.js';
 import {bettingCancel} from '../src/betting/ui.js';
 
@@ -29,7 +32,7 @@ function setup(start=true){
   if(start)advanceStartup(3);initializeDiagnostics();
   return dom;
 }
-const open=()=>document.querySelector('#arena-settings-button').click();
+const open=()=>document.querySelector('#game-nav-settings').click();
 const close=()=>document.querySelector('#arena-settings-close').click();
 
 test('launch menu Settings opens before choosing a mode and returns focus to its own button',async()=>{
@@ -49,7 +52,7 @@ test('Settings opens above every game sheet, keeps its focus and returns to the 
   const dom=setup();installTowerUI();
   for(const other of ['launch-overlay','tower-preparation','bet-overlay','gladiator-results'])document.getElementById(other).hidden=other!==id;
   initializeModalFocus();
-  const sheet=document.getElementById(id),settings=document.getElementById('arena-settings-button');
+  const sheet=document.getElementById(id),settings=document.getElementById('game-nav-settings');
   assert.equal(Boolean(settings.closest('[inert]')),false);
   assert.equal(Boolean(settings.inert),false);assert.equal(ctx.button.inert,true);
   let expanded=false;const expandButton=document.getElementById('arena-expand-button');
@@ -108,7 +111,7 @@ test('Settings pauses an active fight, blocks background controls and restores s
   close();assert.equal(ctx.settingsOpen,false);assert.equal(ctx.paused,false);assert.equal(ctx.timeScale,2);
   assert.equal(ctx.root.querySelector('.tag7hop-layout').inert,false);assert.equal(ctx.last,null);assert.equal(ctx.debt,0);
   frame(16000);assert.equal(ctx.game.time,time,'first resumed frame cannot replay time spent in Settings');
-  assert.equal(document.activeElement.id,'arena-settings-button');ctx.root.__disposeTag();dom.window.close();
+  assert.equal(document.activeElement.id,'game-nav-settings');ctx.root.__disposeTag();dom.window.close();
 });
 
 test('Settings preserves an existing manual pause and closes with Escape or backdrop; startup is also frozen',()=>{
@@ -125,6 +128,9 @@ test('rules are removed, graphics and display options live in Settings and the r
   const dom=setup();assert.equal(document.getElementById('tag7hop-info'),null);
   assert.equal(document.querySelectorAll('.render-diagnostics').length,1);
   assert.ok(document.querySelector('#arena-settings-content .render-diagnostics'));
+  assert.equal(document.querySelectorAll('#arena-settings-content input[type="checkbox"]').length,1);
+  assert.equal(document.querySelector('#arena-settings-content .post-effects-control')!==null,true);
+  assert.equal(document.querySelector('#arena-settings').textContent.includes('Карточки пациентов'),false);
   const main=ctx.root.querySelector('.tag7hop-main');main.getBoundingClientRect=()=>({width:1220});
   const boundary=JSON.stringify(ctx.arenaBoundary.points);
   fitField();assert.equal(ctx.fieldWidth,1220);assert.equal(ctx.stage.style.width,'1220px');
@@ -214,15 +220,15 @@ test('expand fills the available viewport without pausing, changing time scale o
   ctx.arenaRenderer=null;ctx.root.__disposeTag();dom.window.close();
 });
 
-test('Escape closes Settings before collapsing the arena and preserves a manual pause and telemetry preference',()=>{
+test('Escape closes Settings before collapsing the arena and preserves manual pause and visible patient cards',()=>{
   const dom=setup();togglePause();
-  const toggle=document.querySelector('.render-diagnostics input');toggle.checked=false;toggle.dispatchEvent(new Event('change'));
   document.getElementById('arena-expand-button').click();open();
   document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
   assert.equal(ctx.settingsOpen,false);assert.equal(ctx.arenaExpanded,true);assert.equal(ctx.paused,true);
   document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
-  assert.equal(ctx.arenaExpanded,false);assert.equal(ctx.paused,true);assert.equal(ctx.telemetryEnabled,false);
-  assert.equal(toggle.checked,false);assert.equal(ctx.root.querySelector('.tag7hop-sidebar-wrap').style.visibility,'hidden');
+  assert.equal(ctx.arenaExpanded,false);assert.equal(ctx.paused,true);assert.equal(ctx.telemetryEnabled,true);
+  assert.equal(ctx.root.classList.contains('cards-hidden'),false);
+  assert.equal(ctx.root.querySelector('.tag7hop-sidebar-wrap').style.visibility,'');
   assert.equal(ctx.betHud.hidden,false,'layout mode does not overwrite ledger visibility');
   ctx.root.__disposeTag();dom.window.close();
 });
@@ -249,11 +255,85 @@ test('phone field uses logical layout sizes even if Safari reports unscaled clie
 });
 
 
-test('the arena Settings button has a clear layer above betting dimming and below Settings',()=>{
- const tower=fs.readFileSync(new URL('../styles/tower.css',import.meta.url),'utf8');
- assert.match(tower,/#robot-tag-hops-v22 #arena-settings-button\s*\{position:relative;z-index:1150\}/);
+test('global fixed navigation stays above betting and below open Settings',()=>{
+ const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
+ assert.match(css,/#robot-tag-hops-v22 #game-navigation\s*\{\s*position:fixed;/);
+ assert.match(css,/#robot-tag-hops-v22 #game-nav-back\s*\{\s*left:12px;/);
+ assert.match(css,/#robot-tag-hops-v22 #game-nav-settings\s*\{\s*right:12px;/);
+ assert.match(css,/#robot-tag-hops-v22 #arena-settings\s*\{\s*z-index:2050;/);
  const waste=fs.readFileSync(new URL('../styles/wasteland.css',import.meta.url),'utf8');
  assert.match(waste,/\.bet-overlay\s*\{position:fixed;inset:0;z-index:1100/);
- const ui=fs.readFileSync(new URL('../styles/interface.css',import.meta.url),'utf8');
- assert.match(ui,/\.settings-overlay\s*\{position:fixed;inset:0;z-index:1200/);
+ // Under a native Shelter top layer, the gear is still in the same
+ // viewport corner rather than in the content header.
+ assert.match(css,/#robot-tag-hops-v22 #tower-upgrade-window \.tower-upgrade-heading-actions \.tower-upgrade-settings\s*\{\s*position:fixed;\s*top:12px;\s*right:12px;/);
 });
+
+test('betting screen keeps Back and Settings at fixed global corners, Back returns to menu',async()=>{
+ const dom=setup();installTowerUI();initializeModalFocus();
+ const navigation=initializeGameNavigation();
+ const launch=document.getElementById('launch-overlay');
+ launch.hidden=false;
+ navigation.update();
+ assert.equal(document.getElementById('game-nav-back').hidden,true);
+ launch.hidden=true;
+ bettingOpen();
+ navigation.update();
+ const back=document.getElementById('game-nav-back');
+ const settings=document.getElementById('game-nav-settings');
+ assert.equal(back.hidden,false);
+ assert.equal(back.parentElement.id,'game-navigation');
+ assert.equal(settings.parentElement,back.parentElement);
+ assert.equal(document.querySelector('#arena-settings').hidden,true);
+ settings.click();
+ assert.equal(ctx.settingsOpen,true);
+ assert.equal(document.querySelector('#bet-overlay').hidden,false);
+ close();
+ assert.equal(ctx.settingsOpen,false);
+ assert.equal(document.querySelector('#bet-overlay').hidden,false);
+ globalThis.confirm=()=>true;
+ back.click();
+ await Promise.resolve();
+ assert.equal(launch.hidden,false);
+ assert.equal(document.querySelector('#bet-overlay').hidden,true);
+ ctx.root.__disposeTag();dom.window.close();
+});
+
+test('Back traverses betting and procedure history without losing drafted stakes',()=>{
+ const dom=setup();installTowerUI();initializeModalFocus();
+ const nav=initializeGameNavigation();
+ const launch=document.querySelector('#launch-overlay'),back=document.querySelector('#game-nav-back');
+ launch.hidden=false;nav.update();
+ launch.hidden=true;bettingOpen();nav.update();
+ assert.equal(nav.update instanceof Function,true);
+ const stake=document.querySelector('#bet-stakes-form [data-bet-player="0"] input');
+ stake.value='23';stake.dispatchEvent(new Event('input',{bubbles:true}));
+ document.querySelector('#bet-procedure').click();nav.update();
+ assert.equal(document.querySelector('#bet-overlay').dataset.view,'garage');
+ assert.equal(back.getAttribute('aria-label'),'Назад к ставкам');
+ back.click();nav.update();
+ assert.equal(document.querySelector('#bet-overlay').dataset.view,'betting');
+ assert.equal(Number(document.querySelector('#bet-stakes-form [data-bet-player="0"] input').value),23);
+ assert.equal(back.getAttribute('aria-label'),'Назад в главное меню');
+ back.click();nav.update();
+ assert.equal(launch.hidden,false);
+ assert.equal(back.hidden,true);
+ ctx.root.__disposeTag();dom.window.close();
+});
+
+test('Back returns from creation form to the actual previous betting screen',()=>{
+ const dom=setup();installTowerUI();initializeModalFocus();
+ const nav=initializeGameNavigation();
+ const launch=document.querySelector('#launch-overlay'),back=document.querySelector('#game-nav-back');
+ launch.hidden=false;nav.update();
+ launch.hidden=true;bettingOpen();nav.update();
+ const session=ctx.betting;
+ bettingSetup();nav.update();
+ assert.equal(document.querySelector('#bet-setup-form')!==null,true);
+ assert.equal(back.getAttribute('aria-label'),'Назад к ставкам');
+ back.click();nav.update();
+ assert.equal(document.querySelector('#bet-stakes-form')!==null,true);
+ assert.equal(ctx.betting,session,'return does not replace the existing game');
+ assert.equal(back.getAttribute('aria-label'),'Назад в главное меню');
+ ctx.root.__disposeTag();dom.window.close();
+});
+

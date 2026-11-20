@@ -132,7 +132,9 @@ test('hints open by tap and keyboard, refresh while visible, dismiss outside and
   assert.equal(document.querySelectorAll('#tower-stats .is-prosthetic').length,3);
   const select=document.querySelector('[data-tower-stat="0"]');
   const space=new tower.dom.window.KeyboardEvent('keydown',{key:' ',bubbles:true,cancelable:true});select.dispatchEvent(space);assert.equal(space.defaultPrevented,false);
-  select.value='4';select.dispatchEvent(new Event('change'));near(patientCombatStats(0).effective[0],4.24);
+  const before=patientCombatStats(0).effective[0];
+  select.value='4';select.dispatchEvent(new Event('change'));near(patientCombatStats(0).effective[0],before);
+  assert.match(document.querySelector('#tower-stats .garage-stat-effects').textContent,/ПРЕДПРОСМОТР/);
   assert.ok(ctx.towerRun.stats.every(Number.isInteger));
  }finally{tower.close();}
 });
@@ -177,5 +179,27 @@ test('detached mixed limbs leave separate biological and prosthetic puddles exac
   ctx.game.time+=3;paintDetachedAnatomy();
   assert.deepEqual(new Set(ctx.combat.oilDrops.map(d=>d.fluid)),new Set(['blood','coolant']));
   const count=ctx.combat.oilDrops.length;paintDetachedAnatomy();assert.equal(ctx.combat.oilDrops.length,count);
+ }finally{f.close();}
+});
+
+test('rare Tower cooldown parts shorten the live recovery without moving the impact',()=>{
+ const f=setup([],{tower:true});
+ try{
+  const inventory=Array.from({length:4},(_,i)=>({id:'seg'+(i+1),type:'metronome',site:'spine-'+i,rarity:5}));
+  Object.assign(ctx.towerGarage[0],{segmentInventory:inventory,equippedSegments:inventory.map(item=>item.id)});
+  ctx.robots=[];ctx.obstacles=[];ctx.game.time=10;
+  const player=createRobot(0,{x:350,y:350,angle:0});ctx.robots=[player];player.setVisible(true);
+  ctx.agentAI[0].nextPounceDecisionAt=Infinity;
+  const arm=player.attackSources.find(source=>source.kind==='arm');
+  const point={x:arm.point.x+20,y:arm.point.y};
+  ctx.robots.push({id:1,...point,center:point,visible:true,mobile:true,hasHead:true,segmentCount:1,movementLimbs:4,
+   actualPose:{leap:null,scene:null},combatRecoverUntil:0,attackSources:[],canSee:()=>false,
+   capsules:[{a:point,b:point,r:4,segment:'head'}],isDamageable:()=>true});
+  combatAttacks();
+  const strike=pendingStrikes(0)[0];assert.ok(strike);
+  near(strike.impactAt-strike.started,.52);
+  near(strike.timing.recoverSec,.224);
+  near(strike.endsAt-strike.started,.744);
+  near(ctx.combat.nextStrike[0]-strike.started,.744);
  }finally{f.close();}
 });

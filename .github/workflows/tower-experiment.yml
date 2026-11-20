@@ -1,0 +1,43 @@
+name: Tower II experimental validation
+
+on:
+  push:
+    branches:
+      - experiment/tower-bosses
+  workflow_dispatch:
+
+concurrency:
+  group: tower-experiment-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tower-part-two:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out experimental code only
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Test ownership, equipment, DMS, surgery and infinite cycles
+        run: node --test tests/tower-part2.test.js tests/tower-surgical-stock.test.js tests/tower-surgical-stock-ui.test.js
+      - name: Run current game regression suite
+        run: npm test
+      - name: Simulate Tower-only economy
+        run: node scripts/simulate-tower-economy.mjs
+      - name: Analyze multi-cycle economy and 8-10-12 rarity hypotheses offline
+        run: node scripts/simulate-tower-progression.mjs --seeds=160 --max-fights=420
+      - name: Build playable game
+        run: npm run build
+      - name: Verify standalone HTML embeds upgrade textures
+        run: |
+          npm run standalone
+          node --input-type=module -e "import fs from 'node:fs';const html=fs.readFileSync('dist/biovshi.html','utf8');for(const id of ['ar_surg_impact.png','ar_mod_turbo.png','ar_mod_quiet.png'])if(!html.includes(id))throw new Error('Missing inline atlas '+id);console.log('Upgrade textures embedded in offline HTML')"

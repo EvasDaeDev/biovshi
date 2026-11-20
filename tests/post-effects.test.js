@@ -80,19 +80,22 @@ test('post effect preference persists and blocked storage does not block startup
   globalThis.localStorage=storage;post.destroy();app.stage.destroy({children:true});dom.window.close();
 });
 
-test('the master switch sits below telemetry, works on pause and never changes cards or game time',()=>{
+test('post-effects switch works on pause while patient cards remain visible and game time unchanged',()=>{
   const dom=setup(),{p,app,filters}=engine(),post=new ArenaPostEffects(p,app,ctx.root);let renders=0;
   ctx.arenaRenderer={postEffects:post,render(){renders++;}};
   initializeDiagnostics();
-  const [telemetry,effects]=document.querySelectorAll('.render-diagnostics input');
-  assert.equal(effects.closest('label').previousElementSibling,telemetry.closest('label'));
+  const controls=document.querySelectorAll('.render-diagnostics input');
+  assert.equal(controls.length,1,'patient cards do not have a visibility switch');
+  const effects=controls[0];
+  assert.ok(effects.closest('label').classList.contains('post-effects-control'));
   assert.equal(effects.checked,true);assert.equal(effects.disabled,false);
   const cards=document.getElementById('tag7hop-roles').outerHTML;
   const game=JSON.stringify(ctx.game),seed=ctx.seed;
   effects.checked=false;effects.dispatchEvent(new dom.window.Event('change'));
   assert.equal(app.stage.filters,null);assert.equal(ctx.root.dataset.postEffects,'off');
   assert.equal(localStorage.getItem(POST_EFFECTS_STORAGE),'off');assert.equal(renders,1);
-  assert.equal(telemetry.checked,true);assert.equal(ctx.telemetryEnabled,true);
+  assert.equal(ctx.telemetryEnabled,true);
+  assert.equal(ctx.root.querySelector('.tag7hop-sidebar-wrap').style.visibility,'');
   effects.checked=true;effects.dispatchEvent(new dom.window.Event('change'));
   assert.equal(post.enabled,true);assert.equal(filters.length,1);assert.equal(renders,2);
   assert.equal(JSON.stringify(ctx.game),game);assert.equal(ctx.seed,seed);assert.equal(ctx.paused,true);

@@ -500,6 +500,8 @@ function createRobot(id, start, body = {}) {
       if (robotState.hasHead()) result.push({
         kind: 'head',
         side: 0,
+        // Follow the actual facing of the head, not just the torso.
+        frame: robotState.headFrame,
         point: robotState.api.eye,
         key: 'head'
       });
