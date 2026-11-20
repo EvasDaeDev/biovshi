@@ -25,8 +25,8 @@ test('second segment drops at 35 percent after winning the segment batch',()=>{
  assert.equal(awardTowerSegments(below,5,()=>.649999).length,1);
  assert.equal(awardTowerSegments(atBoundary,5,()=>.65).length,2);
  // The second-segment probability is independent of the repeat-boss drop roll.
- const repeat=newTower(),rolls=[.69,.65,.4,.3,.8];
- assert.equal(awardTowerSegments(repeat,5,()=>rolls.shift(),.7).length,2);
+ const repeat=newTower(),rolls=[.69,.65];
+ assert.equal(awardTowerSegments(repeat,5,()=>rolls.shift()??.4,.7).length,2);
  assert.ok(validTowerSegmentInventory(repeat));
 });
 
