@@ -39,7 +39,9 @@ export function awardTowerSegments(run,clearedFloor,random=Math.random,dropChanc
   run.lastBossSegments=[];
   return [];
  }
- const count=random()<.5?1:2;
+ // After a successful batch roll, the SECOND segment has a 35% chance
+ // (down from 50%). The repeat-boss batch chance is independent.
+ const count=random()<.65?1:2;
  const issued=[];
  for(let i=0;i<count;i++){
   const type=TOWER_MUTATION_IDS[Math.min(TOWER_MUTATION_IDS.length-1,Math.floor(random()*TOWER_MUTATION_IDS.length))];
