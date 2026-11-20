@@ -74,11 +74,11 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
   const count=document.createElement('span');count.textContent=`ПРОТИВНИКОВ: ${selected?.profiles.length??towerEnemyCount(run)}`;
   meta.append(name,count);
   if(run.preparing){const recovered=document.createElement('b');recovered.textContent='+1 ОЧКО НАВЫКОВ за победу';meta.append(recovered);}
+  overview.append(diagram,meta);
   if(hasBoss(run)){
    const drop=bossDropSummary(run);
-   if(drop)meta.append(drop);
+   if(drop)overview.append(drop);
   }
-  overview.append(diagram,meta);
   const dice=document.createElement('div');dice.className='tower-arena-dice';
   const reroll=document.createElement('button');reroll.type='button';reroll.className='tower-reroll-button';
   reroll.setAttribute('aria-label','Сменить арену');

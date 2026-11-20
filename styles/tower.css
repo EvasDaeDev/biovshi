@@ -313,7 +313,10 @@
 }
 
 
-#robot-tag-hops-v22 .tower-boss-drop{cursor:help;line-height:1.45}
+#robot-tag-hops-v22 #tower-floor-preview .tower-arena-map:has(>.tower-boss-drop){
+  display:grid;grid-template-columns:auto minmax(0,1fr);row-gap:8px;
+}
+#robot-tag-hops-v22 .tower-boss-drop{grid-column:1/-1;text-align:left;cursor:help;line-height:1.45}
 #robot-tag-hops-v22 .tower-boss-drop [data-artifact-chance],
 #robot-tag-hops-v22 .tower-boss-drop [data-rarity]{white-space:nowrap}
 #robot-tag-hops-v22 .tower-boss-drop [data-rarity]{color:var(--tower-rarity-color,#e7daba);font-weight:700}

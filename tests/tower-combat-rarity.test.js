@@ -65,7 +65,7 @@ test('boss preparation shows actual drop chances in one row and details in its h
   run.floorPlan={floor:5,selected:0,options:[{arenaId:'ward',kind:'boss',profiles:['boss','basic','basic']}]};
   const container=document.getElementById('floor');
   const view=renderTowerFloorChoices({container,session:{players:[{balance:1000}]},player:0,run});
-  const summary=()=>container.querySelector('.tower-arena-map .tower-boss-drop');
+  const summary=()=>container.querySelector('.tower-arena-map > .tower-boss-drop');
   const odds=()=>Array.from(summary().querySelectorAll('[data-rarity]'));
   assert.equal(summary().textContent,'ДРОП С БОССА: артефакт 100%, модификатор 92%, 7%, 1%');
   assert.equal(container.querySelectorAll('.tower-boss-drop').length,1);
