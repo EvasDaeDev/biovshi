@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
-import {renderMenuPatient,menuPatientTransform,menuPatientPose} from '../src/ui/menu-patient-preview.js';
+import {renderMenuPatient,menuPatientTransform,menuPatientPose,menuPatientFramePose,startMenuPatientIdle,stopMenuPatientIdle} from '../src/ui/menu-patient-preview.js';
 import {towerUpgradePose} from '../src/tower/upgrade-pose.js';
 
 const svgSetup=()=>new JSDOM('<main id="menu-patient-preview"></main>',{url:'https://test.local/'});
@@ -87,6 +87,54 @@ test('menu placement and idle style integrate with existing CSS; reduced motion 
  assert.doesNotMatch(css,/#robot-tag-hops-v22 #launch-overlay \.menu-patient-preview svg\s*\{[^}]*overflow:visible;/,
   'never expose full 4x4 atlases inside a menu patient');
  assert.match(css,/grid-template-columns:auto minmax\(0,1fr\) 146px auto/,'preview has room to display the full patient');
- assert.match(css,/\.menu-patient-idle\s*\{[\s\S]*?animation:menu-patient-idle/);
- assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+ assert.match(css,/\.menu-patient-idle\s*\{[^}]*transform:none;/);
+ assert.doesNotMatch(css,/@keyframes\s+menu-patient-idle/,'full-body motion would unpin hands and feet');
+});
+
+test('idle locks every hand and foot tip including grafts while torso moves',()=>{
+ const run={surgeries:[{site:'arm-1-upper',procedure:'graft_arm'},{site:'leg--1-upper',procedure:'graft_leg'},
+  {site:'spine-2',procedure:'extend_spine'}]};
+ const base=menuPatientPose(run),moving=menuPatientFramePose(base,Math.PI/2);
+ assert.notDeepEqual(moving['spine-0'][0],base['spine-0'][0]);
+ for(const site of Object.keys(base).filter(s=>/^(arm|leg)-.*-lower$/.test(s))){
+  assert.deepEqual(moving[site][1],base[site][1],site+' contact stays planted');
+  const upperKey=site.slice(0,-5)+'upper';
+  assert.deepEqual(moving[upperKey][1],moving[site][0],'joint stays connected: '+site);
+  for(const key of [site,upperKey]){
+   const length=points=>Math.hypot(points[1][0]-points[0][0],points[1][1]-points[0][1]);
+   assert.ok(Math.abs(length(base[key])-length(moving[key]))<1e-6,'bone length preserved: '+key);
+  }
+ }
+});
+
+test('menu idle only updates existing bone transforms and stops when menu is hidden',()=>{
+ const dom=svgSetup(),prior=globalThis.document;
+ const oldFrame=globalThis.requestAnimationFrame,oldCancel=globalThis.cancelAnimationFrame,oldMedia=globalThis.matchMedia;
+ const frames=new Map();let serial=0;
+ globalThis.document=dom.window.document;
+ globalThis.requestAnimationFrame=fn=>{frames.set(++serial,fn);return serial;};
+ globalThis.cancelAnimationFrame=id=>frames.delete(id);
+ globalThis.matchMedia=()=>({matches:false});
+ try{
+  const menu=document.createElement('section');
+  const host=document.getElementById('menu-patient-preview');
+  menu.append(host);document.body.append(menu);
+  const svg=renderMenuPatient(host,{patient:0,surgeries:[]});
+  const before=svg.querySelector('[data-menu-site="spine-0"]').getAttribute('transform');
+  const contact=svg.querySelector('[data-menu-site="arm--1-lower"]');
+  const imageCount=svg.querySelectorAll('image').length;
+  startMenuPatientIdle(host,menu);
+  assert.equal(frames.size,1);
+  const fn=[...frames.values()][0];frames.clear();fn(performance.now()+1200);
+  assert.notEqual(svg.querySelector('[data-menu-site="spine-0"]').getAttribute('transform'),before);
+  assert.equal(svg.querySelectorAll('image').length,imageCount,'no duplicate SVG/atlas resources');
+  assert.ok(contact.isConnected,'existing limb image is reused');
+  menu.hidden=true;
+  const next=[...frames.values()][0];frames.clear();next(performance.now()+1600);
+  assert.equal(frames.size,0,'menu hidden stops scheduling animation frames');
+ }finally{
+  stopMenuPatientIdle();globalThis.document=prior;
+  globalThis.requestAnimationFrame=oldFrame;globalThis.cancelAnimationFrame=oldCancel;
+  globalThis.matchMedia=oldMedia;dom.window.close();
+ }
 });
