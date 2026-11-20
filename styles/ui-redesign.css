@@ -1086,17 +1086,10 @@
 #robot-tag-hops-v22 #launch-overlay .menu-patient-preview svg svg{
   overflow:hidden;
 }
+/* The idle is animated by per-bone IK transforms in JavaScript.
+   Never transform the whole group: hands and feet are fixed contacts. */
 #robot-tag-hops-v22 #launch-overlay .menu-patient-idle{
-  transform-box:fill-box;
-  transform-origin:center center;
-  animation:menu-patient-idle 3.6s ease-in-out infinite;
-}
-@keyframes menu-patient-idle{
-  0%,100%{transform:translateY(0) rotate(-1deg)}
-  50%{transform:translateY(-1.2px) rotate(1deg)}
-}
-@media(prefers-reduced-motion:reduce){
-  #robot-tag-hops-v22 #launch-overlay .menu-patient-idle{animation:none}
+  transform:none;
 }
 @media(max-width:690px){
   #robot-tag-hops-v22 #launch-overlay .tower-menu-player{
