@@ -69,6 +69,18 @@ function browserContext(){
   return sharedContext??=AudioContext?new AudioContext():null;
 }
 const clamp=value=>Math.max(0,Math.min(100,Number(value)||0));
+// Gain at 2, 4, 6, 8 and 10 metres, in the arena's centimetre coordinates.
+const TOWER_DISTANCE_GAINS=[1,.6,.3,.15,.1];
+function distanceGain(state,origin){
+  const camera=state.camera;
+  if(state.mode!=='tower'||!camera||!origin)return 1;
+  const distance=Math.hypot(origin.x-(camera.x+camera.size/2),origin.y-(camera.y+camera.size/2));
+  if(!Number.isFinite(distance)||distance<=200)return 1;
+  if(distance>=1000)return .1;
+  const step=(distance-200)/200,index=Math.floor(step);
+  const near=TOWER_DISTANCE_GAINS[index],far=TOWER_DISTANCE_GAINS[index+1];
+  return near+(far-near)*(step-index);
+}
 export function loadAudioSettings(storage=globalThis.localStorage){
   try{
     const saved=JSON.parse(storage?.getItem(STORAGE)||'null');
@@ -123,7 +135,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     if(key.startsWith('manPain')||key.startsWith('womanPain'))return painLevelGain(buffer);
     return 1;
   }
-  function play(key,{patient,slot,priority=2,delaySec=0}={}){
+  function play(key,{patient,origin=state.robots?.[patient],slot,priority=2,delaySec=0}={}){
     if(disposed||state.appInactive||!unlocked||!context||context.state!=='running'||!ASSETS.sounds[key]||warnings.has(key))return;
     if(slot&&loops.has(slot))return;
     if((key!=='music'&&settings.sounds===0)||(key==='music'&&settings.music===0))return;
@@ -132,13 +144,16 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       const replace=effects.find(v=>!v.slot&&v.priority<priority);
       if(replace)stop(replace);else return;
     }
-    const voice={key,slot,priority,cancelled:false};voices.add(voice);if(slot)loops.set(slot,voice);
+    const initialDistanceGain=slot?null:distanceGain(state,origin);
+    const voice={key,slot,origin,priority,cancelled:false};voices.add(voice);if(slot)loops.set(slot,voice);
     bufferLoader(context,ASSETS.sounds[key]).then(buffer=>{
       if(disposed||voice.cancelled)return;
       const source=context.createBufferSource(),gain=context.createGain();voice.source=source;voice.gain=gain;
       source.buffer=buffer;source.loop=Boolean(slot);
       source.playbackRate.value=key==='music'||key==='victory'?1:playbackRate(patient,slot?0:(Math.random()-.5)*.4);
-      gain.gain.value=gainFor(key,buffer);source.connect(gain);
+      voice.baseGain=gainFor(key,buffer);
+      voice.targetGain=voice.baseGain*(initialDistanceGain??distanceGain(state,origin));
+      gain.gain.value=voice.targetGain;source.connect(gain);
       gain.connect(key==='music'?musicBus:soundBus);
       const wet=wetFor(key);
       if(roomConvolver&&wet>0){
@@ -194,7 +209,16 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
         const slot='drag-'+robot.id;movementLoops.add(slot);play('drag',{patient:robot.id,slot,priority:1});
       }
     }
-    for(const [slot,voice] of loops)if(slot!=='music'&&!movementLoops.has(slot))stop(voice);
+    for(const [slot,voice] of loops){
+      if(slot==='music')continue;
+      if(!movementLoops.has(slot)){stop(voice);continue;}
+      if(!voice.gain)continue;
+      const targetGain=voice.baseGain*distanceGain(state,voice.origin);
+      if(targetGain!==voice.targetGain){
+        voice.targetGain=targetGain;
+        voice.gain.gain.setTargetAtTime(targetGain,context.currentTime,.08);
+      }
+    }
   }
   function unlock(){
     if(disposed)return;
@@ -203,8 +227,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       if(!soundBus){
         soundBus=context.createGain();musicBus=context.createGain();
         soundBus.connect(context.destination);musicBus.connect(context.destination);
-        // One shared room effect for combat only; no new files, per-frame work,
-        // or changes to music and footstep dynamics.
+        // One shared room effect for combat only, prepared once at unlock.
         if(context.createConvolver&&context.createBuffer&&context.sampleRate){
           try{
             roomConvolver=context.createConvolver();
@@ -278,16 +301,17 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     if(state.startup?.phase!=='running'||state.combat?.finished||effectsPaused)return;
     if(type==='pounce-launch'){play('pounce',{patient:event.robot,priority:4});return;}
     if(type==='hit'||type==='segment-broken'){
-      play(event.damage===2?'crit':'hit',{patient,priority:3});
+      const origin=event.point??state.robots?.[event.robot];
+      play(event.damage===2?'crit':'hit',{patient,origin,priority:3});
       // The injured patient reacts 100 ms after the impact. This is an
       // additional voice, never a replacement for hit/crit/detach effects.
       const voice=state.mode==='tower'&&!state.robots[event.robot]?.isBoss?state.towerGarage?.[event.robot]?.voice:null;
       const painKey=painSoundKey(voice==='male'?0:voice==='female'?2:patientSkin(event.robot));
       if(painKey)play(painKey,{patient:event.robot,priority:2,delaySec:.1});
-      if(type==='segment-broken')play(Math.random()<.5?'detach1':'detach2',{patient:event.robot,priority:4});
+      if(type==='segment-broken')play(Math.random()<.5?'detach1':'detach2',{patient:event.robot,origin,priority:4});
     }else if(type==='combat-miss')play(Math.random()<.5?'miss1':'miss2',{patient,priority:1});
     else if(type==='robot-immobilized'&&event.reason==='погиб')play('death',{patient:event.robot,priority:4});
-    else if(type==='footstep')play('step',{patient:event.robot,priority:0});
+    else if(type==='footstep')play('step',{patient:event.robot,origin:event.point,priority:0});
   });
   eventTarget.addEventListener('pointerdown',unlock);eventTarget.addEventListener('keydown',unlock);
   const clickTarget=state.root??eventTarget;

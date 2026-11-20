@@ -275,12 +275,14 @@ export function robotDamage(robotState, key, by, damage=1) {
       robot: robotState.id,
       segment: key,
       detached: attached,
+      point: pivot,
       by,damage
     });
   } else note('hit', {
     robot: robotState.id,
     segment: key,
     hp: robotState.hp.get(key),
+    point: pivot,
     by,damage
   });
   // Finish anatomical destruction first: a lethal head hit remains a death.

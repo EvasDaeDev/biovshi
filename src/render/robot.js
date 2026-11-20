@@ -194,7 +194,7 @@ export function robotPaint(robotState) {
       previous = robotState.lastFootTouches.get(l);
     const p = robotState.visiblePoint(robotState.handEnd(l));
     if(grounded&&!previous?.grounded&&l.kind==='leg'&&robotState.mobile()){
-      emitGameEvent('footstep',{robot:robotState.id,time:ctx.game.time});
+      emitGameEvent('footstep',{robot:robotState.id,point:p,time:ctx.game.time});
     }
     if (grounded && !previous?.grounded && (!previous?.point || Math.hypot(p.x - previous.point.x, p.y - previous.point.y) > .25)) {
       robotState.trail.push({

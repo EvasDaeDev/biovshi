@@ -13,7 +13,7 @@ function setup(){
  const context={state:'suspended',currentTime:0,sampleRate:48000,destination:{},resume(){this.state='running';return Promise.resolve();},
   createBuffer(channels,length,rate){const data=Array.from({length:channels},()=>new Float32Array(length));return {numberOfChannels:channels,length,sampleRate:rate,getChannelData:i=>data[i]};},
   createConvolver(){const node={connect(destination){this.destination=destination;},disconnect(){this.disconnected=true;}};convolvers.push(node);return node;},
-  createGain(){const param={value:1,events:[],cancelScheduledValues(t){this.events.push(['cancel',t]);},setValueAtTime(v,t){this.value=v;this.events.push(['set',v,t]);},linearRampToValueAtTime(v,t){this.events.push(['ramp',v,t]);},exponentialRampToValueAtTime(v,t){this.events.push(['exp',v,t]);}};const gain={gain:param,connections:[],connect(node){this.connections.push(node);},disconnect(){this.disconnected=true;}};gains.push(gain);return gain;},
+  createGain(){const param={value:1,events:[],cancelScheduledValues(t){this.events.push(['cancel',t]);},setValueAtTime(v,t){this.value=v;this.events.push(['set',v,t]);},linearRampToValueAtTime(v,t){this.events.push(['ramp',v,t]);},exponentialRampToValueAtTime(v,t){this.events.push(['exp',v,t]);},setTargetAtTime(v,t,tau){this.events.push(['target',v,t,tau]);}};const gain={gain:param,connections:[],connect(node){this.connections.push(node);},disconnect(){this.disconnected=true;}};gains.push(gain);return gain;},
   createBufferSource(){const source={playbackRate:{value:1},connect(node){this.gain=node;},disconnect(){},start(...args){this.started=true;this.startArgs=args;},stop(){this.stopped=true;}};sources.push(source);return source;}};
  context.createOscillator=()=>{const oscillator={frequency:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){},start(){this.started=true;},stop(){this.stopped=true;this.onended?.();}};sources.push(oscillator);return oscillator;};
  const state={root:dom.window.document.querySelector('#robot-tag-hops-v22'),startup:{phase:'running'},paused:false,combat:{finished:false,unarmedDeadline:[null,null]},robots:[{id:0,visible:true,mobile:true},{id:1,visible:true,mobile:true}]};
@@ -115,6 +115,64 @@ test('foot contact uses step_1 at 70%; legless movement loops it at 100% and sto
  f.finish();
 });
 
+
+test('Tower combat audio falls off from the camera centre in arena metres',async()=>{
+ const f=setup();
+ try{
+  Object.assign(f.state,{mode:'tower',camera:{x:200,y:100,size:400}});
+  Object.assign(f.state.robots[0],{x:400,y:300});
+  Object.assign(f.state.robots[1],{x:1000,y:300});
+  await f.unlock();
+  const near=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-9,`${actual} != ${expected}`);
+  for(const [distance,multiplier] of [[0,1],[200,1],[300,.8],[400,.6],[600,.3],[800,.15],[1000,.1],[1400,.1]]){
+   // Deliberately separate the foot contact from the patient's body.
+   emitGameEvent('footstep',{robot:0,point:{x:400,y:300+distance}});
+   await flush();
+   near(live(f.sources,'step').at(-1).gain.gain.value,.7*multiplier);
+  }
+  // Zoom in without moving the centre.
+  Object.assign(f.state.camera,{x:300,y:200,size:200});
+  emitGameEvent('hit',{by:0,robot:1,damage:1,point:{x:640,y:620}});
+  // The victim and the camera can move before the buffer resolves.
+  f.state.robots[1].x=400;f.state.camera.x=500;
+  await flush();
+  const hit=live(f.sources,'hit')[0];
+  near(hit.gain.gain.value,.95*.6);
+  near(hit.gain.connections[1].gain.value,.07);
+  const pain=f.sources.find(s=>s.started&&String(s.buffer).includes('/man_pain/'));
+  near(pain.gain.gain.value,.3);
+  near(live(f.sources,'music')[0].gain.gain.value,1);
+
+  f.state.mode='spectator';
+  emitGameEvent('footstep',{robot:1,point:{x:1400,y:300}});
+  await flush();
+  near(live(f.sources,'step').at(-1).gain.gain.value,.7);
+ }finally{f.finish();}
+});
+
+test('Tower movement loops smoothly track changes in camera and patient position',async()=>{
+ const f=setup();
+ try{
+  Object.assign(f.state,{mode:'tower',camera:{x:0,y:0,size:400}});
+  const robot=f.state.robots[1];
+  Object.assign(robot,{x:800,y:200,velocity:{x:3,y:0},limbs:[]});
+  f.state.combat.unarmedDeadline[1]=10;
+  await f.unlock();
+  const drag=live(f.sources,'drag')[0],crawl=live(f.sources,'crawl')[0];
+  assert.equal(drag.gain.gain.value,.3);
+  assert.equal(crawl.gain.gain.value,.55*.3);
+  f.context.currentTime=.2;
+  f.state.camera.x=200;f.audio.sync();
+  assert.deepEqual(drag.gain.gain.events,[['target',.6,.2,.08]]);
+  assert.deepEqual(crawl.gain.gain.events,[['target',.55*.6,.2,.08]]);
+  f.context.currentTime=.4;
+  robot.x=500;f.audio.sync();f.audio.sync();
+  assert.deepEqual(drag.gain.gain.events.at(-1),['target',1,.4,.08]);
+  assert.equal(drag.gain.gain.events.length,2,'an unchanged target is not rescheduled');
+  assert.deepEqual(live(f.sources,'drag'),[drag]);
+  assert.deepEqual(live(f.sources,'crawl'),[crawl]);
+ }finally{f.finish();}
+});
 
 test('next round resumes soundtrack at the paused offset after a complete fade',async()=>{
  const f=setup();await f.unlock();const first=live(f.sources,'music')[0];
