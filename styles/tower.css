@@ -66,7 +66,7 @@
 #robot-tag-hops-v22 .tower-enemy-marker{
  position:absolute;top:0;left:0;
  width:var(--tower-enemy-marker-size);height:var(--tower-enemy-marker-size);
- clip-path:polygon(100% 50%,0 0,0 100%);background:#56e6fb;opacity:.6;
+ clip-path:polygon(100% 50%,0 0,0 100%);background:#56e6fb;opacity:.4;
 }
 #robot-tag-hops-v22 .tower-enemy-marker.is-boss{background:#ff982e;z-index:1}
 
