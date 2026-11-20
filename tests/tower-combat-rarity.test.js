@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {newTower,completeTower} from '../src/tower/model.js';
 import {awardTowerSegments} from '../src/tower/segments.js';
@@ -57,13 +58,18 @@ test('boss odds and awarded rarity agree at boundaries and on repeat kills',()=>
 });
 
 test('boss preparation shows actual drop chances in one row and details in its hint',()=>{
- const dom=new JSDOM('<div id="floor"></div>');
+ const dom=new JSDOM(readFileSync(new URL('../index.html',import.meta.url),'utf8'));
  const previous=globalThis.document;
  globalThis.document=dom.window.document;
  try{
   const run=newTower();run.level=5;run.segmentRewardsEnabled=true;
   run.floorPlan={floor:5,selected:0,options:[{arenaId:'ward',kind:'boss',profiles:['boss','basic','basic']}]};
-  const container=document.getElementById('floor');
+  for(const link of document.querySelectorAll('link[rel="stylesheet"]')){
+   const style=document.createElement('style');
+   style.textContent=readFileSync(new URL('../'+link.getAttribute('href'),import.meta.url),'utf8');
+   link.replaceWith(style);
+  }
+  const container=document.getElementById('tower-floor-preview');
   const view=renderTowerFloorChoices({container,session:{players:[{balance:1000}]},player:0,run});
   const summary=()=>container.querySelector('.tower-arena-map > .tower-boss-drop');
   const odds=()=>Array.from(summary().querySelectorAll('[data-rarity]'));
@@ -72,8 +78,9 @@ test('boss preparation shows actual drop chances in one row and details in its h
   assert.ok(summary().hasAttribute('data-hint-tap'));
   assert.doesNotMatch(container.textContent,/35%/);
   assert.match(summary().dataset.hint,/Вторая выпадает с шансом 35%/);
-  assert.equal(odds()[2].style.getPropertyValue('--tower-rarity-color'),'#4b94d2');
-  assert.equal(odds()[0].style.getPropertyValue('--tower-rarity-color'),'');
+  assert.deepEqual(odds().map(node=>node.textContent),['92%','7%','1%']);
+  const colours=()=>odds().map(node=>dom.window.getComputedStyle(node).color);
+  assert.deepEqual(colours(),['rgb(231, 218, 186)','rgb(96, 169, 91)','rgb(75, 148, 210)']);
   run.artifacts.bossWins[5]=2;view.render();
   assert.equal(summary().textContent,'ДРОП С БОССА: артефакт 49%, модификатор 49%');
   assert.deepEqual(odds().map(node=>node.dataset.rarity),['0']);
@@ -86,5 +93,10 @@ test('boss preparation shows actual drop chances in one row and details in its h
   delete run.segmentRewardsEnabled;view.render();
   assert.equal(summary().textContent,'ДРОП С БОССА: модификатор 100%','old saves still receive the guaranteed draft');
   assert.doesNotMatch(summary().dataset.hint,/35%/);
+  for(const [floor,expected] of [[95,['rgb(155, 106, 205)','rgb(229, 164, 75)','rgb(216, 74, 62)']],
+   [155,['rgb(216, 74, 62)']]]){
+   run.level=floor;view.render();
+   assert.deepEqual(colours(),expected);
+  }
  }finally{globalThis.document=previous;dom.window.close();}
 });
