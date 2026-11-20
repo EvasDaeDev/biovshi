@@ -107,3 +107,37 @@ test('Shelter modal places a working back button in its own top layer',()=>{
  assert.match(css,/#robot-tag-hops-v22 \.game-nav-back-control\s*\{[\s\S]*?height:44px;/);
  assert.match(html,/id="game-nav-back" class="game-nav-back-control"/);
 });
+
+test('totalizator result table overrides paper-theme text with readable dark-dialog contrast',()=>{
+ const dom=new JSDOM(html);
+ try{
+  const result=dom.window.document.querySelector('#gladiator-results #bet-result-summary');
+  assert.ok(result);
+  const cssRule=selector=>{
+   const escaped=selector.replace(/[.*+?^\x24{}()|[\]\\]/g,'\\$&');
+   const match=css.match(new RegExp(escaped+'\\s*\\{([^}]+)\\}'));
+   assert.ok(match,'missing results-only contrast rule: '+selector);
+   return match[1];
+  };
+  const tableRule=cssRule('#robot-tag-hops-v22 #gladiator-results #bet-result-summary .bet-table :is(th,td)');
+  const headerRule=cssRule('#robot-tag-hops-v22 #gladiator-results #bet-result-summary .bet-table th');
+  const nestedRule=cssRule('#robot-tag-hops-v22 #gladiator-results #bet-result-summary .bet-table :is(strong,summary,summary span,details>span,details>strong)');
+  const color=rule=>{
+   const value=rule.match(/color:\s*(#[0-9a-fA-F]{6})\s*;/)?.[1];
+   assert.ok(value,'explicit text color required');
+   return value;
+  };
+  const luminance=hex=>{
+   const channels=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
+   const linear=channels.map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);
+   return .2126*linear[0]+.7152*linear[1]+.0722*linear[2];
+  };
+  const background=luminance('#20241e');
+  for(const rule of [tableRule,headerRule,nestedRule]){
+   const foreground=luminance(color(rule));
+   assert.ok((foreground+.05)/(background+.05)>=4.5,'result text must meet 4.5:1 contrast');
+  }
+  assert.match(css,/#robot-tag-hops-v22 #gladiator-results #bet-result-summary \.bet-table \.bet-net-win\s*\{[^}]*color:var\(--ui-positive\)!important;/);
+  assert.match(css,/#robot-tag-hops-v22 #gladiator-results #bet-result-summary \.bet-table \.bet-net-loss\s*\{[^}]*color:var\(--ui-negative\)!important;/);
+ }finally{dom.window.close();}
+});
