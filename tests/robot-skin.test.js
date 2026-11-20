@@ -31,7 +31,7 @@ test('ordinary damage tints only the exact struck segment, not its descendants o
  assert.equal(robot.segmentHitTints.has('arm-1-lower'),false,'child bone is not tinted');
  assert.equal(robot.segmentHitTints.has('arm--1-upper'),false,'opposite limb is not tinted');
  assert.equal(segmentHitTint(2,robot.segmentHitTints.get('arm-1-upper')),SEGMENT_HIT_TINT);
- assert.ok(Math.abs(segmentHitTint(2+SEGMENT_HIT_TINT_SEC/2,2)-.075)<1e-10);
+ assert.ok(Math.abs(segmentHitTint(2+SEGMENT_HIT_TINT_SEC/2,2)-.15)<1e-10);
  assert.equal(segmentHitTint(2+SEGMENT_HIT_TINT_SEC,2),0);
  recordSegmentHitTint(robot,'head',3,1);
  assert.deepEqual([...robot.segmentHitTints.keys()],['arm-1-upper','head']);
@@ -42,15 +42,26 @@ test('ordinary damage tints only the exact struck segment, not its descendants o
  assert.equal(robot.segmentHitTints.has('arm-1-upper'),true,'other segments stay independent');
 });
 
-test('red tint blends source colour at exactly 15 percent without changing alpha',()=>{
- assert.equal(SEGMENT_HIT_TINT,.15);
+test('red tint blends source colour at exactly 30 percent without changing alpha',()=>{
+ assert.equal(SEGMENT_HIT_TINT,.30);
  const matrix=segmentHitTintMatrix(SEGMENT_HIT_TINT);
  const rgba=[.4,.6,.8,1];
  const apply=row=>rgba.reduce((sum,v,i)=>sum+matrix[row*5+i]*v,0)+matrix[row*5+4];
- assert.ok(Math.abs(apply(0)-(.4*.85+.15))<1e-12);
- assert.ok(Math.abs(apply(1)-(.6*.85))<1e-12);
- assert.ok(Math.abs(apply(2)-(.8*.85))<1e-12);
+ assert.ok(Math.abs(apply(0)-(.4*.7+.30))<1e-12);
+ assert.ok(Math.abs(apply(1)-(.6*.7))<1e-12);
+ assert.ok(Math.abs(apply(2)-(.8*.7))<1e-12);
  assert.equal(apply(3),1,'source transparency is unchanged');
  const untouched=segmentHitTintMatrix(0);
  assert.deepEqual(untouched,[1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0]);
+});
+
+test('hit tint targets the clipped texture viewport and Pixi filter, never its bone group',async()=>{
+ const fs=await import('node:fs');
+ const source=fs.readFileSync(new URL('../src/render/robot-skin.js',import.meta.url),'utf8');
+ assert.match(source,/attr\(piece\.viewport,'data-hit-tint',strength\.toFixed\(4\)\)/);
+ assert.match(source,/attr\(piece\.viewport,'filter','url\(#'\+piece\.hitFilter\.id\+'\)'\)/);
+ assert.doesNotMatch(source,/attr\(piece\.group,'data-hit-tint'/);
+ const pixi=fs.readFileSync(new URL('../src/render/pixi-scene.js',import.meta.url),'utf8');
+ assert.match(pixi,/const hitStrength=Math\.max\(0,Math\.min\(SEGMENT_HIT_TINT,number\('data-hit-tint'\)\)\)/);
+ assert.match(pixi,/record\.hitTintFilter\.matrix=segmentHitTintMatrix\(hitStrength\)/);
 });
