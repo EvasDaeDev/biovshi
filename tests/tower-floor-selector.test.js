@@ -36,7 +36,8 @@ test('difficulty and arena selection live in the original preparation panel and 
   assert.ok(container.querySelector('.tower-reroll-line .chip-icon'));
   const reroll=container.querySelector('.tower-reroll-button');
   assert.equal(reroll.disabled,false);
-  assert.ok(reroll.contains(container.querySelector('.tower-reroll-line')),'caption and price must be inside clickable button');
+  assert.equal(reroll.contains(container.querySelector('.tower-reroll-line')),false,'price is separate from die image to preserve its size');
+  assert.equal(container.querySelector('.tower-reroll-line').tagName,'BUTTON');
   container.querySelector('.tower-reroll-caption').click();reroll.click();
   assert.equal(session.players[0].balance,290,'stale button cannot double-charge');
   assert.equal(run.arenaRerolls,1);
