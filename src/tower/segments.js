@@ -30,8 +30,15 @@ export function towerSegmentStacks(run){
  }
  return [...counts.values()];
 }
-export function awardTowerSegments(run,clearedFloor,random=Math.random){
+export function awardTowerSegments(run,clearedFloor,random=Math.random,dropChance=1){
  normalizeTowerSegmentInventory(run);
+ // On repeats the chance to receive a 1-2 segment batch decreases by
+ // 30% of its CURRENT value. The first boss victory is guaranteed.
+ // A missed roll grants no segments and clears the latest reward marker.
+ if(dropChance<1&&random()>=dropChance){
+  run.lastBossSegments=[];
+  return [];
+ }
  const count=random()<.5?1:2;
  const issued=[];
  for(let i=0;i<count;i++){
