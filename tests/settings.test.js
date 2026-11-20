@@ -265,7 +265,7 @@ test('global fixed navigation stays above betting and below open Settings',()=>{
  assert.match(waste,/\.bet-overlay\s*\{position:fixed;inset:0;z-index:1100/);
  // Under a native Shelter top layer, the gear is still in the same
  // viewport corner rather than in the content header.
- assert.match(css,/#robot-tag-hops-v22 #tower-upgrade-window \.tower-upgrade-heading-actions \.tower-upgrade-settings\s*\{\s*position:fixed;\s*top:12px;\s*right:12px;/);
+ assert.match(css,/#robot-tag-hops-v22 #tower-upgrade-window \.tower-upgrade-heading-actions \.tower-upgrade-settings\s*\{\s*position:fixed;\s*top:calc\(var\(--telegram-layout-top,0px\) \+ 12px\);\s*right:calc\(var\(--telegram-layout-right,0px\) \+ 12px\);/);
 });
 
 test('betting screen keeps Back and Settings at fixed global corners, Back returns to menu',async()=>{

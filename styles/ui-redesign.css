@@ -195,19 +195,17 @@
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-paper{
   display:grid;
   grid-template-columns:minmax(0,.95fr) minmax(0,1.1fr);
-  grid-template-rows:auto auto auto minmax(0,1fr) auto auto;
+  grid-template-rows:auto auto minmax(auto,1fr) auto;
   grid-template-areas:
     "heading heading"
     "wallet wallet"
-    "patient tabs"
-    "patient content"
-    "stats content"
+    "patient inventory"
     "feedback feedback";
   column-gap:14px;
   row-gap:9px;
   width:min(1100px,100%);
   max-height:calc(var(--game-height,100dvh) - 20px);
-  overflow:hidden;
+  overflow:auto;
   padding:14px;
 }
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-heading{
@@ -222,12 +220,17 @@
   margin:0;
   padding:8px 10px;
 }
-#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-table{
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-patient-panel{
   grid-area:patient;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
   min-width:0;
-  min-height:0;
-  padding:5px;
   align-self:start;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-table{
+  min-width:0;
+  padding:5px;
 }
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-drawing{
   width:100%;
@@ -238,31 +241,31 @@
   max-height:235px;
 }
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-stats{
-  grid-area:stats;
   min-width:0;
-  min-height:0;
-  align-self:start;
   padding:10px;
 }
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-stat{
+  overflow-wrap:anywhere;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-inventory{
+  grid-area:inventory;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  min-width:0;
+  min-height:0;
+}
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-tabs{
-  grid-area:tabs;
   margin:0;
   min-width:0;
 }
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-content{
-  grid-area:content;
   min-width:0;
   min-height:0;
-  height:100%;
+  flex:1;
   overflow:auto;
   overscroll-behavior:contain;
   border:1px solid #625b46;
-}
-#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-paper.is-artifacts .tower-upgrade-tabs{
-  grid-area:3 / 1 / 4 / -1;
-}
-#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-paper.is-artifacts .tower-upgrade-content{
-  grid-area:4 / 1 / 6 / -1;
 }
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-feedback{
   grid-area:feedback;
@@ -320,11 +323,14 @@
   }
   #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-content{
     overflow:visible;
-    height:auto;
     flex:none;
   }
-  #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-table{
+  #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-inventory{
+    flex:none;
+  }
+  #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-patient-panel{
     align-self:stretch;
+    flex:none;
   }
   #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-tabs{
     position:sticky;
@@ -423,8 +429,8 @@
    exact same screen corner as the global navigation gear behind it. */
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-heading-actions .tower-upgrade-settings{
   position:fixed;
-  top:12px;
-  right:12px;
+  top:calc(var(--telegram-layout-top,0px) + 12px);
+  right:calc(var(--telegram-layout-right,0px) + 12px);
   z-index:10;
   display:grid;
   place-items:center;
@@ -446,7 +452,9 @@
 /* Stable global landscape navigation: identical screen coordinates everywhere. */
 #robot-tag-hops-v22 #game-navigation{
   position:fixed;
-  inset:0 0 auto 0;
+  top:var(--telegram-layout-top,0px);
+  right:var(--telegram-layout-right,0px);
+  left:var(--telegram-layout-left,0px);
   z-index:1900;
   height:0;
   pointer-events:none;
@@ -539,8 +547,8 @@
    .game-nav-back-control component as the global back button. */
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-back{
   position:fixed;
-  top:12px;
-  left:12px;
+  top:calc(var(--telegram-layout-top,0px) + 12px);
+  left:calc(var(--telegram-layout-left,0px) + 12px);
   z-index:11;
 }
 @media(max-width:540px){
@@ -550,14 +558,14 @@
     padding:7px 9px;
   }
   #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-back{
-    top:8px;
-    left:8px;
+    top:calc(var(--telegram-layout-top,0px) + 8px);
+    left:calc(var(--telegram-layout-left,0px) + 8px);
   }
 }
 @media(pointer:coarse){
   #robot-tag-hops-v22.mobile-layout #tower-upgrade-window .tower-upgrade-back{
-    top:calc(10px / var(--interface-scale,1));
-    left:calc(10px / var(--interface-scale,1));
+    top:calc(var(--telegram-layout-top,0px) + 10px / var(--interface-scale,1));
+    left:calc(var(--telegram-layout-left,0px) + 10px / var(--interface-scale,1));
   }
   #robot-tag-hops-v22.mobile-layout .game-nav-back-control{
     min-width:calc(84px / var(--interface-scale,1));
@@ -1345,8 +1353,8 @@
   /* The Shelter lives in the top layer, but its gear has the same physical
      corner position and size as global Settings. */
   #robot-tag-hops-v22.mobile-layout #tower-upgrade-window .tower-upgrade-heading-actions .tower-upgrade-settings{
-    top:calc(10px / var(--interface-scale,1));
-    right:calc(10px / var(--interface-scale,1));
+    top:calc(var(--telegram-layout-top,0px) + 10px / var(--interface-scale,1));
+    right:calc(var(--telegram-layout-right,0px) + 10px / var(--interface-scale,1));
     width:var(--ui-touch-target);
     height:var(--ui-touch-target);
     min-height:var(--ui-touch-target);

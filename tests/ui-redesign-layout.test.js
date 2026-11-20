@@ -60,7 +60,7 @@ test('small landscape touch devices keep global controls fixed and full combat t
  assert.match(rootCss,/--ui-touch-target:calc\(44px \/ var\(--interface-scale,1\)\)/);
  assert.match(rootCss,/#robot-tag-hops-v22\.mobile-layout #game-nav-back\s*\{\s*left:calc\(10px \/ var\(--interface-scale,1\)\)/);
  assert.match(rootCss,/#robot-tag-hops-v22\.mobile-layout #game-nav-settings\s*\{\s*right:calc\(10px \/ var\(--interface-scale,1\)\)/);
- assert.match(rootCss,/#robot-tag-hops-v22\.mobile-layout #tower-upgrade-window \.tower-upgrade-heading-actions \.tower-upgrade-settings\s*\{\s*top:calc\(10px \/ var\(--interface-scale,1\)\);\s*right:calc\(10px \/ var\(--interface-scale,1\)\)/);
+ assert.match(rootCss,/#robot-tag-hops-v22\.mobile-layout #tower-upgrade-window \.tower-upgrade-heading-actions \.tower-upgrade-settings\s*\{\s*top:calc\(var\(--telegram-layout-top,0px\) \+ 10px \/ var\(--interface-scale,1\)\);\s*right:calc\(var\(--telegram-layout-right,0px\) \+ 10px \/ var\(--interface-scale,1\)\)/);
  assert.doesNotMatch(rootCss,/(?:\.robot-card|\.robot-card-metrics|\.patient-skills)\s*\{[^}]*display:none/);
 });
 
@@ -102,7 +102,7 @@ test('Shelter modal places a working back button in its own top layer',()=>{
  assert.match(source,/create\('button','tower-upgrade-back game-nav-back-control','← НАЗАД'\)/);
  assert.match(source,/overlay\.append\(backButton\)/);
  assert.match(source,/backButton\.onclick=close/);
- assert.match(css,/#robot-tag-hops-v22 #tower-upgrade-window \.tower-upgrade-back\s*\{[\s\S]*?position:fixed;[\s\S]*?top:12px;[\s\S]*?left:12px;/);
+ assert.match(css,/#robot-tag-hops-v22 #tower-upgrade-window \.tower-upgrade-back\s*\{\s*position:fixed;\s*top:calc\(var\(--telegram-layout-top,0px\) \+ 12px\);\s*left:calc\(var\(--telegram-layout-left,0px\) \+ 12px\);/);
  assert.match(css,/#robot-tag-hops-v22 \.game-nav-back-control:focus-visible/);
  assert.match(css,/#robot-tag-hops-v22 \.game-nav-back-control\s*\{[\s\S]*?height:44px;/);
  assert.match(html,/id="game-nav-back" class="game-nav-back-control"/);

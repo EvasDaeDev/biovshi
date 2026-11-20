@@ -82,7 +82,9 @@ export function initializeTutorial(){
   target=root.querySelector(resolve(step.target));
   if(target){
    // The game sheet itself owns scrolling. Never scroll the entire game root.
-   const panel=target.closest('.bet-panel,.launch-paper,.gladiator-results-card,.tower-upgrade-content');
+   const workspace=target.closest('.tower-prep-workspace,.tower-upgrade-content');
+   if(workspace)scrollPanelToTarget(workspace,target);
+   const panel=target.closest('.bet-panel,.launch-paper,.gladiator-results-card,.tower-upgrade-paper');
    if(panel)scrollPanelToTarget(panel,target);
    resize.observe(target);
   }

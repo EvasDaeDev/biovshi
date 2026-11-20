@@ -327,6 +327,21 @@ for(const marker of ['telegram-app','telegram-launch'])test(`full stylesheet cas
   };
   assert.deepEqual(padding(),{top:56,right:44,bottom:21,left:44});
   for(const side of ['top','right','bottom','left'])assert.equal(padding()[side],ctx.layoutViewport[side],'page offset and available geometry must use the same physical inset');
+  const style=selector=>f.win.getComputedStyle(f.doc.querySelector(selector));
+  for(const selector of ['#game-navigation','#tower-preparation','#tower-upgrade-window']){
+   const positioned=style(selector);
+   for(const side of ['top','right','left']){
+    assert.ok(Math.abs(parseFloat(positioned.getPropertyValue(side))*ctx.layoutScale-padding()[side])<.01,selector+' respects the '+side+' inset');
+   }
+  }
+  assert.equal(style('#tower-preparation .bet-panel').maxHeight,'100%');
+  assert.equal(style('.tower-reroll-line').flexWrap,'wrap');
+  assert.equal(style('.tower-upgrade-paper').maxHeight,'100%');
+  assert.equal(style('.tower-upgrade-paper').overflow,'auto');
+  assert.equal(style('.tower-upgrade-content').overflow,'visible');
+  const patient=f.doc.querySelector('.tower-upgrade-table');
+  assert.equal(patient.parentElement.className,'tower-upgrade-patient-panel');
+  assert.equal(patient.nextElementSibling.id,'tower-upgrade-stats');
   // Expanded arena has its own positioning; the page padding must not displace it again.
   ctx.setArenaExpanded(true);assert.deepEqual(padding(),{top:56,right:44,bottom:21,left:44});
   const rootStyle=f.win.getComputedStyle(ctx.root);

@@ -53,13 +53,16 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  headerActions.append(settingsButton,closeButton);
  top.append(heading,headerActions);paper.append(top);
  const wallet=create('div','tower-upgrade-wallet');paper.append(wallet);
+ const patientPanel=create('div','tower-upgrade-patient-panel');
  const table=create('div','tower-upgrade-table');
  const drawing=create('div','tower-upgrade-drawing');
  drawing.id='tower-upgrade-patient';
  const siteLabel=create('p','tower-upgrade-site');siteLabel.hidden=true;
- table.append(drawing,siteLabel);paper.append(table);
+ table.append(drawing,siteLabel);
  const stats=create('section','tower-upgrade-stats');stats.id='tower-upgrade-stats';
- stats.setAttribute('aria-live','polite');paper.append(stats);
+ stats.setAttribute('aria-live','polite');
+ patientPanel.append(table,stats);paper.append(patientPanel);
+ const inventory=create('div','tower-upgrade-inventory');
  const nav=create('div','tower-upgrade-tabs');nav.setAttribute('role','tablist');
  const mutationTab=create('button','tower-upgrade-tab','МОДИФИКАЦИИ');
  const surgeryTab=create('button','tower-upgrade-tab','ХИРУРГИЯ');
@@ -69,7 +72,6 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   tab.type='button';tab.dataset.upgradeTab=id;tab.setAttribute('role','tab');
   nav.append(tab);
  }
- paper.append(nav);
  const content=create('div','tower-upgrade-content');
  const modsContainer=create('div','tower-upgrade-page');modsContainer.id='tower-upgrade-mutation-page';
  const surgeryContainer=create('div','tower-upgrade-page');surgeryContainer.id='tower-upgrade-surgery-page';
@@ -82,7 +84,8 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  const collection=artifactPanel??create('div','');
  collection.id='tower-prep-artifacts';collection.hidden=false;
  artifactsContainer.append(collection);
- content.append(modsContainer,surgeryContainer,artifactsContainer);paper.append(content);
+ content.append(modsContainer,surgeryContainer,artifactsContainer);
+ inventory.append(nav,content);paper.append(inventory);
  const feedback=create('p','tower-upgrade-feedback');feedback.id='tower-upgrade-feedback';
  feedback.setAttribute('role','status');paper.append(feedback);
  root.append(overlay);
@@ -285,10 +288,11 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   if(typeof overlay.showModal==='function')overlay.showModal();
   else overlay.setAttribute('open','');
   setTab(tab);
+  paper.scrollTop=0;
   // Do not preview the first reward merely because keyboard focus is moved
   // into a newly opened dialog. Preview starts on an intentional item focus
   // or pointer hover, and installed items otherwise show one value only.
-  (activeTab==='artifacts'?artifactTab:activeTab==='surgery'?surgeryTab:mutationTab).focus();
+  (activeTab==='artifacts'?artifactTab:activeTab==='surgery'?surgeryTab:mutationTab).focus({preventScroll:true});
   // Some browsers first focus an item when showModal() enters the top layer.
   // Discard that incidental hover/focus preview until the player interacts.
   hoverMutation=null;

@@ -24,9 +24,44 @@ html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22 #tower-stick {
 }
 /* Fixed sheets use logical pixels inside the scaled root. Native tutorial and
    orientation dialogs use screen pixels and are handled independently. */
-html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22 :is(.settings-overlay,.bet-overlay,.launch-overlay) {
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22 :is(.settings-overlay,.bet-overlay,.launch-overlay,#tower-upgrade-window) {
  top:var(--telegram-layout-top,0px);right:var(--telegram-layout-right,0px);
  bottom:var(--telegram-layout-bottom,0px);left:var(--telegram-layout-left,0px);
+}
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22 #tower-upgrade-window {
+ width:auto;height:auto;
+}
+
+/* Keep the sheets below the in-game controls, which in turn sit below Telegram's
+   header. Cap the sheets to their overlay's content box including on rotation. */
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout {
+ --tower-nav-space:calc(60px / var(--interface-scale,1));
+}
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout :is(#tower-preparation,#tower-upgrade-window) {
+ padding-top:var(--tower-nav-space);
+}
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout :is(#tower-preparation,#tower-upgrade-window) > :is(.bet-panel,.tower-upgrade-paper) {
+ max-height:100%;
+}
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower-preparation #tower-stats {
+ margin:0;
+}
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower-floor-preview .tower-arena-dice .tower-reroll-line {
+ flex-wrap:wrap;
+}
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower-floor-preview .tower-reroll-line .tower-reroll-caption {
+ white-space:normal;
+ text-align:center;
+}
+/* Use one scroll region for the Shelter on phones. Its rows must size to
+   their content so the inventory and patient don't cover the next row. */
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower-upgrade-window .tower-upgrade-paper {
+ grid-template-rows:auto auto auto auto;
+ align-content:start;
+}
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower-upgrade-window .tower-upgrade-content {
+ flex:none;
+ overflow:visible;
 }
 html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22 #landscape-required:not([hidden]) {
  padding:calc(24px + var(--telegram-inset-top,0px)) calc(24px + var(--telegram-inset-right,0px)) calc(24px + var(--telegram-inset-bottom,0px)) calc(24px + var(--telegram-inset-left,0px));
