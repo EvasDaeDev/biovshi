@@ -192,7 +192,7 @@ export class PixiArena {
     if(record){
       for(const child of [...record.children])this.release(child.node);
       this.dirty.delete(record);this.records.delete(node);
-      record.rarityFilter?.destroy();record.hitTintFilter?.destroy();record.object.destroy({children:true});
+      record.rarityFilter?.destroy();record.hitTintFilter?.destroy();record.critRedFilter?.destroy();record.object.destroy({children:true});
     }else for(const child of [...node.children])this.release(child);
   }
   cropped(source,x,y,width,height) {
@@ -236,12 +236,22 @@ export class PixiArena {
     // Only the hit bone carries this attribute. Compose AFTER rarity to keep
     // texture rarity colours intact, and do not tint a whole patient container.
     const hitStrength=Math.max(0,Math.min(SEGMENT_HIT_TINT,number('data-hit-tint')));
+    const critOverlay=node.getAttribute('data-hit-crit-overlay')==='true';
     if(hitStrength>0){
       record.hitTintFilter??=new this.p.ColorMatrixFilter();
       record.hitTintFilter.matrix=segmentHitTintMatrix(hitStrength);
     }else if(record.hitTintFilter){record.hitTintFilter.destroy();record.hitTintFilter=null;}
-    const filters=[record.rarityFilter,record.hitTintFilter].filter(Boolean);
-    object.filters=filters.length?filters:null;
+    if(critOverlay){
+      // The duplicate atlas cell is a full-red silhouette over the original,
+      // blended additively. It fades via the node's animated opacity.
+      record.critRedFilter??=new this.p.ColorMatrixFilter();
+      record.critRedFilter.matrix=segmentHitTintMatrix(1);
+    }
+    const filters=[record.rarityFilter,record.hitTintFilter,record.critRedFilter].filter(Boolean);
+    // Apply filters to the actual sprite, never to the bone/container.
+    object.filters=null;
+    if(visual)visual.filters=filters.length?filters:null;
+    if(critOverlay&&visual)visual.blendMode='add';
 
     object.setFromMatrix(new this.p.Matrix(...transformMatrix(node.getAttribute('transform')??'')));
     const s=record.style;
