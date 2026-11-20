@@ -56,7 +56,7 @@ test('boss odds and awarded rarity agree at boundaries and on repeat kills',()=>
  assert.deepEqual(repeat.segmentInventory.map(item=>item.rarity),[0,0]);
 });
 
-test('boss preparation shows colored rarity odds separately from the repeat drop chance',()=>{
+test('boss preparation shows actual drop chances in one row and details in its hint',()=>{
  const dom=new JSDOM('<div id="floor"></div>');
  const previous=globalThis.document;
  globalThis.document=dom.window.document;
@@ -65,11 +65,26 @@ test('boss preparation shows colored rarity odds separately from the repeat drop
   run.floorPlan={floor:5,selected:0,options:[{arenaId:'ward',kind:'boss',profiles:['boss','basic','basic']}]};
   const container=document.getElementById('floor');
   const view=renderTowerFloorChoices({container,session:{players:[{balance:1000}]},player:0,run});
-  const odds=()=>Array.from(container.querySelectorAll('.tower-boss-rarity-odds [data-rarity]'));
-  assert.deepEqual(odds().map(node=>node.textContent),['ОБЫЧНАЯ 92%','ЗЕЛЁНАЯ 7%','СИНЯЯ 1%']);
+  const summary=()=>container.querySelector('.tower-arena-map .tower-boss-drop');
+  const odds=()=>Array.from(summary().querySelectorAll('[data-rarity]'));
+  assert.equal(summary().textContent,'ДРОП С БОССА: артефакт 100%, модификатор 92%, 7%, 1%');
+  assert.equal(container.querySelectorAll('.tower-boss-drop').length,1);
+  assert.ok(summary().hasAttribute('data-hint-tap'));
+  assert.doesNotMatch(container.textContent,/35%/);
+  assert.match(summary().dataset.hint,/Вторая выпадает с шансом 35%/);
   assert.equal(odds()[2].style.getPropertyValue('--tower-rarity-color'),'#4b94d2');
+  assert.equal(odds()[0].style.getPropertyValue('--tower-rarity-color'),'');
   run.artifacts.bossWins[5]=2;view.render();
-  assert.deepEqual(odds().map(node=>node.textContent),['ОБЫЧНАЯ 100%']);
-  assert.match(container.querySelector('.tower-boss-rarity-odds').textContent,/ШАНС ДРОПА: 49\s*%/);
+  assert.equal(summary().textContent,'ДРОП С БОССА: артефакт 49%, модификатор 49%');
+  assert.deepEqual(odds().map(node=>node.dataset.rarity),['0']);
+  run.artifacts.pieces=Array.from({length:16},(_,index)=>index);view.render();
+  assert.equal(summary().textContent,'ДРОП С БОССА: модификатор 49%');
+  run.artifacts.bossWins[5]=60;view.render();
+  assert.equal(summary().textContent,'ДРОП С БОССА: модификатор <0,01%');
+  run.artifacts.bossWins[5]=3000;view.render();
+  assert.equal(summary(),null,'a row with no positive drop chance is omitted');
+  delete run.segmentRewardsEnabled;view.render();
+  assert.equal(summary().textContent,'ДРОП С БОССА: модификатор 100%','old saves still receive the guaranteed draft');
+  assert.doesNotMatch(summary().dataset.hint,/35%/);
  }finally{globalThis.document=previous;dom.window.close();}
 });

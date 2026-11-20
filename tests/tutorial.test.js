@@ -315,7 +315,7 @@ test('saved learners get the boss odds and the automatic reward at the relevant 
   towerPreparation();
   assert.equal(tutorialChapter(ctx),'tower-boss-ready');
   s.api.sync();assert.equal(s.api.active,true);
-  assert.ok(s.doc.querySelector('.tower-boss-rarity-odds'));
+  assert.ok(s.doc.querySelector('.tower-arena-map .tower-boss-drop'));
   s.finish();assert.ok(readTutorial(localStorage).completed.includes('tower-ready'));
   s.doc.querySelector('#tower-fight').click();advanceStartup(10);
   Math.random=()=>0;

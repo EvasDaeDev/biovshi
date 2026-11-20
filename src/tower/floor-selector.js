@@ -6,12 +6,61 @@ import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
 import {towerRelationLabel} from './relations.js';
 import {purchaseTowerArenaReroll,towerRerollCandidates,towerRerollPrice} from './economy.js';
 import {towerEnemyCount} from './model.js';
-import {artifactDropChance,bossRepeatDropChance,ARTIFACT_PIECE_COUNT} from './artifacts.js';
+import {artifactDropChance,bossRepeatDropChance} from './artifacts.js';
 import {towerBossRarityOdds,TOWER_RARITIES} from './mutations.js';
 import {TOWER_SECOND_SEGMENT_CHANCE} from './segments.js';
 import {hasBoss} from '../boss/config.js';
 import {formatChips} from '../ui/currency.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
+
+const dropPercent=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2});
+const formatDropChance=chance=>chance>0&&chance<.0001?'<0,01%':dropPercent.format(chance*100)+'%';
+
+function bossDropSummary(run){
+ const previousWins=run.artifacts.bossWins[run.level]??0;
+ const fragment=artifactDropChance(run.artifacts,run.level);
+ const segments=Boolean(run.segmentRewardsEnabled);
+ const batch=segments?bossRepeatDropChance(previousWins):1;
+ if(!fragment&&!batch)return null;
+
+ const summary=document.createElement('span');summary.className='tower-boss-drop';
+ summary.tabIndex=0;
+ summary.setAttribute('data-hint-tap','');
+ const heading=document.createElement('strong');heading.textContent='ДРОП С БОССА:';
+ summary.append(heading,' ');
+ const hints=[];
+ if(fragment){
+  const artifact=document.createElement('span');artifact.dataset.artifactChance='';
+  artifact.textContent='артефакт '+formatDropChance(fragment);
+  summary.append(artifact);
+  hints.push('Фрагмент артефакта: '+formatDropChance(fragment)+'. Его выпадение разыгрывается отдельно от модификации.');
+ }
+ if(batch){
+  if(fragment)summary.append(', ');
+  summary.append('модификатор ');
+  const ranks=[];
+  for(const {rarity,percent} of towerBossRarityOdds(run.level,previousWins)){
+   const chance=batch*percent/100;
+   const {name,colour}=TOWER_RARITIES[rarity];
+   const item=document.createElement('span');item.dataset.rarity=String(rarity);
+   if(colour)item.style.setProperty('--tower-rarity-color',colour);
+   item.textContent=formatDropChance(chance);
+   if(ranks.length)summary.append(', ');
+   summary.append(item);
+   ranks.push(name.toLowerCase()+' '+item.textContent);
+  }
+  hints.push((segments?'Шансы получить первую деталь после победы: ':'Шансы ранга предложения после победы: ')+ranks.join(', ')+'.');
+  if(segments){
+   if(previousWins>0)hints.push('Шанс получить набор деталей при повторной победе: '+formatDropChance(batch)+'.');
+   hints.push('Если набор выпал, первая деталь гарантирована. Вторая выпадает с шансом '+formatDropChance(TOWER_SECOND_SEGMENT_CHANCE)+'.');
+   hints.push(previousWins?'Обе детали получают ранг текущего цикла.':'Ранг второй детали разыгрывается отдельно.');
+  }else{
+   hints.push('Варианты выбора получают один общий ранг.');
+  }
+ }
+ summary.dataset.hint=hints.join('\n');
+ return summary;
+}
 
 export function renderTowerFloorChoices({container,session,player,run,fallbackArenaId='ward',onSave,onChange=()=>{},onError=()=>{}}){
  function render(){
@@ -25,10 +74,10 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
   const count=document.createElement('span');count.textContent=`ПРОТИВНИКОВ: ${selected?.profiles.length??towerEnemyCount(run)}`;
   meta.append(name,count);
   if(run.preparing){const recovered=document.createElement('b');recovered.textContent='+1 ОЧКО НАВЫКОВ за победу';meta.append(recovered);}
-  if(hasBoss(run)){const chance=document.createElement('span');chance.dataset.artifactChance='';
-   chance.textContent=run.artifacts.pieces.length===ARTIFACT_PIECE_COUNT?'КОЛЛЕКЦИЯ СОБРАНА':
-    'ШАНС ФРАГМЕНТА: '+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(artifactDropChance(run.artifacts,run.level)*100)+'%';
-   meta.append(chance);}
+  if(hasBoss(run)){
+   const drop=bossDropSummary(run);
+   if(drop)meta.append(drop);
+  }
   overview.append(diagram,meta);
   const dice=document.createElement('div');dice.className='tower-arena-dice';
   const reroll=document.createElement('button');reroll.type='button';reroll.className='tower-reroll-button';
@@ -77,30 +126,6 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
     const name=document.createElement('strong');name.textContent=label+':';
     const info=document.createElement('span');if(label==='Награда за голову')info.innerHTML=value;else info.textContent=value;
     line.append(name,info);button.append(line);
-   }
-   if(option.kind==='boss'){
-    const previousWins=run.artifacts.bossWins[run.level]??0;
-    const odds=document.createElement('span');odds.className='tower-boss-rarity-odds';
-    const label=document.createElement('strong');label.textContent=run.segmentRewardsEnabled===false?'РЕДКОСТЬ НАГРАДЫ':'РЕДКОСТЬ КАЖДОЙ ДЕТАЛИ';
-    const ranks=document.createElement('span');
-    for(const {rarity,percent} of towerBossRarityOdds(run.level,previousWins)){
-     const item=document.createElement('span');item.dataset.rarity=String(rarity);
-     const {name,colour}=TOWER_RARITIES[rarity];
-     if(colour)item.style.setProperty('--tower-rarity-color',colour);
-     item.textContent=name+' '+percent+'%';
-     ranks.append(item);
-    }
-    odds.append(label,ranks);
-    if(run.segmentRewardsEnabled!==false){
-     const percent=new Intl.NumberFormat('ru-RU',{style:'percent',maximumFractionDigits:2});
-     if(previousWins>0){
-      const batch=document.createElement('small');batch.textContent='ШАНС ДРОПА: '+percent.format(bossRepeatDropChance(previousWins));
-      odds.append(batch);
-     }
-     const extra=document.createElement('small');extra.textContent='ВТОРАЯ ДЕТАЛЬ: '+percent.format(TOWER_SECOND_SEGMENT_CHANCE);
-     odds.append(extra);
-    }
-    button.append(odds);
    }
    if(option.relations){const relation=document.createElement('small');relation.className='tower-relation-banner';
     relation.textContent='ОСОБОЕ ИСПЫТАНИЕ · '+towerRelationLabel(option.relations);button.append(relation);}

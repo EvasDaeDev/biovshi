@@ -3,7 +3,7 @@ import {TOWER_REWARD} from '../tower/model.js';
 import {towerBossRarityOdds} from '../tower/mutations.js';
 import {towerFloorLabel} from '../tower/cycles.js';
 import {towerRerollPrice} from '../tower/economy.js';
-import {TOWER_SECOND_SEGMENT_CHANCE,TOWER_SEGMENT_INSTALL_PRICE} from '../tower/segments.js';
+import {TOWER_SEGMENT_INSTALL_PRICE} from '../tower/segments.js';
 import {TOWER_SURGERY_MIN_LEVEL} from '../tower/surgery.js';
 import {ARTIFACT_COMPLETION_REWARD} from '../tower/artifacts.js';
 
@@ -49,22 +49,22 @@ export const TUTORIAL_CHAPTERS={
   step('#tower-upgrade-open','Убежище пациента','Здесь хранятся детали, операции и артефакты. Красная точка на входе означает, что на складе есть новые детали.',{emotion:'admire'})
  ]},
  'tower-boss-ready':{name:'Подготовка к боссу',steps:[
-  step('.tower-boss-rarity-odds','Посмотри на цвета награды',c=>{
+  step(c=>c.root.querySelector('.tower-boss-drop')?'.tower-boss-drop':'#tower-floor-preview','Посмотри на цвета награды',c=>{
    const run=activeTower(c),repeat=(run?.artifacts?.bossWins?.[run.level]??0)>0;
-   if(repeat)return run.segmentRewardsEnabled===false
+   if(repeat)return !run.segmentRewardsEnabled
     ?'При повторной победе варианты выбора получают ранг текущего цикла.'
-    :'При повторной победе детали получают ранг текущего цикла. Шанс получить сам набор указан отдельно.';
+    :'При повторной победе выпадают детали текущего ранга. В строке «Дроп с босса» уже учтён шанс самого дропа.';
    const ranks=towerBossRarityOdds(run?.level??5).length;
    if(ranks===1)return 'Красный — высший ранг. Награда этого босса всегда красная, если она выпала.';
    return 'Цвет и процент показывают шанс каждого ранга. При первой победе ранг награды иногда повышается '+(ranks===2?'на один.':'на один или два.');
   }),
-  step('#tower-floor-preview','Награда за пройденный этаж',c=>activeTower(c)?.segmentRewardsEnabled===false
+  step('#tower-floor-preview','Награда за пройденный этаж',c=>!activeTower(c)?.segmentRewardsEnabled
    ?'В этом забеге босс предлагает выбрать модификацию. Ранг видно на итогах, а варианты ждут в убежище. Фрагмент артефакта разыгрывается отдельно.'
-   :`При первой победе выпадет одна деталь, с шансом ${Math.round(TOWER_SECOND_SEGMENT_CHANCE*100)}% — ещё одна. Ранги деталей разыгрываются отдельно. Фрагмент артефакта проверяется отдельным броском.`)
+   :`При первой победе выпадет как минимум одна деталь. Подсказка к строке «Дроп с босса» объясняет шанс второй. Фрагмент артефакта разыгрывается отдельно.`)
  ]},
  'tower-shelter':{name:'Убежище',steps:[
   step('#tower-upgrade-window .tower-upgrade-tabs','Три вкладки убежища',()=>`В «Модификациях» лежат детали с боссов. Хирургия открывается с ${TOWER_SURGERY_MIN_LEVEL}-го этажа. Собранный артефакт приносит ${ARTIFACT_COMPLETION_REWARD} монеты, а коллекция сохраняется между попытками.`),
-  step('#tower-upgrade-stats','Смотри на эффект сборки',c=>activeTower(c)?.segmentRewardsEnabled===false
+  step('#tower-upgrade-stats','Смотри на эффект сборки',c=>!activeTower(c)?.segmentRewardsEnabled
    ?'Выбери модификацию, чтобы увидеть предпросмотр. Применение боевого эффекта требует отдельной установки. Чем выше ранг, тем сильнее основное свойство.'
    :`Выбери деталь и сравни боевые показатели. На каждом сегменте помещается одна деталь, установка стоит ${TOWER_SEGMENT_INSTALL_PRICE} монет, снятие бесплатно. Высокий ранг усиливает основное свойство детали.`),
   step('#tower-upgrade-window .tower-upgrade-wallet','Что останется после поражения','Неустановленные сегментные детали остаются на складе. Установленную сборку и операции можно защитить ДМС. Полис вернёт то, что было на пациенте в момент его оформления.')
