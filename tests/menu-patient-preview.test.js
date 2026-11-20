@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
-import {renderMenuPatient,menuPatientTransform} from '../src/ui/menu-patient-preview.js';
+import {renderMenuPatient,menuPatientTransform,menuPatientPose} from '../src/ui/menu-patient-preview.js';
 import {towerUpgradePose} from '../src/tower/upgrade-pose.js';
 
 const svgSetup=()=>new JSDOM('<main id="menu-patient-preview"></main>',{url:'https://test.local/'});
@@ -52,6 +52,30 @@ test('menu preview updates with selected player and does not use stale atlas ref
  }finally{globalThis.document=old;dom.window.close();}
 });
 
+test('menu sketch pose spreads limbs while preserving actual bone lengths and graft anchors',()=>{
+ const run={surgeries:[{site:'arm-1-upper',procedure:'graft_arm'},{site:'leg--1-upper',procedure:'graft_leg'}]};
+ const base=towerUpgradePose(run),pose=menuPatientPose(run);
+ const length=segment=>Math.hypot(segment[1][0]-segment[0][0],segment[1][1]-segment[0][1]);
+ for(const [site,points] of Object.entries(base)){
+  assert.ok(pose[site],'all real bones remain in the menu');
+  assert.ok(Math.abs(length(pose[site])-length(points))<1e-8,'unchanged segment length: '+site);
+  if(/^(arm|leg)-.*-upper$/.test(site))
+   assert.deepEqual(pose[site][0],points[0],'shoulder or hip attachment stays fixed: '+site);
+ }
+ // Evaluate the displayed directions after the same -30 degree rotation used
+ // by menuPatientTransform. Right arm reaches right, left arm points up-left.
+ const angle=site=>{
+  const [a,b]=pose[site],dx=b[0]-a[0],dy=b[1]-a[1];
+  return Math.atan2(dy,dx)*180/Math.PI-30;
+ };
+ assert.ok(angle('arm--1-upper')<-110,'left arm points above and left of the body');
+ assert.ok(angle('arm-1-upper')>-15&&angle('arm-1-upper')<50,'right arm stretches out');
+ assert.ok(angle('leg--1-upper')>105,'left leg extends down-left');
+ assert.ok(angle('leg-1-upper')>10&&angle('leg-1-upper')<90,'right leg extends down-right');
+ assert.ok(pose['arm-1-graft-upper'],'additional graft follows the display pose');
+ assert.ok(pose['leg--1-graft-lower'],'surgical graft remains visible');
+});
+
 test('menu placement and idle style integrate with existing CSS; reduced motion supported',()=>{
  const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
@@ -62,6 +86,7 @@ test('menu placement and idle style integrate with existing CSS; reduced motion 
   'nested per-part atlas viewports must clip to their 64x64 texture cell');
  assert.doesNotMatch(css,/#robot-tag-hops-v22 #launch-overlay \.menu-patient-preview svg\s*\{[^}]*overflow:visible;/,
   'never expose full 4x4 atlases inside a menu patient');
+ assert.match(css,/grid-template-columns:auto minmax\(0,1fr\) 146px auto/,'preview has room to display the full patient');
  assert.match(css,/\.menu-patient-idle\s*\{[\s\S]*?animation:menu-patient-idle/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
