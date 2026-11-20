@@ -19,6 +19,22 @@ test('boss generates one or two independent segments and preserves duplicates',(
  assert.equal(towerSegmentStacks(run).reduce((n,x)=>n+x.count,0),3);
  assert.ok(validTowerSegmentInventory(run));
 });
+test('a repeat boss segment batch has a 70%, then 49% chance; misses grant nothing',()=>{
+ const run=newTower();
+ const first=awardTowerSegments(run,5,()=>.99,1);
+ assert.equal(first.length,2,'first victory still guarantees a 1-2 segment batch');
+ const next=run.nextSegmentId;
+ const missed=awardTowerSegments(run,5,()=>.7,.7);
+ assert.deepEqual(missed,[]);
+ assert.deepEqual(run.lastBossSegments,[],'no stale reward indication after a miss');
+ assert.equal(run.nextSegmentId,next,'miss does not consume inventory identifiers');
+ assert.equal(run.segmentInventory.length,2);
+ assert.equal(awardTowerSegments(run,5,()=>.5,.49).length,0,'49 percent does not include a 50 percent roll');
+ assert.equal(awardTowerSegments(run,5,()=>0,.49).length,1,'successful roll grants a normal segment batch');
+ assert.equal(run.segmentInventory.length,3);
+ assert.ok(validTowerSegmentInventory(run));
+});
+
 test('install, replace, remove and sell operate on individual inventory items',()=>{
  const run=newTower(),session={players:[{balance:1000}],mutationSpent:0};
  run.preparing=true;
