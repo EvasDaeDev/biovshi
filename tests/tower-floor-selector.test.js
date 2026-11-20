@@ -36,7 +36,8 @@ test('difficulty and arena selection live in the original preparation panel and 
   assert.ok(container.querySelector('.tower-reroll-line .chip-icon'));
   const reroll=container.querySelector('.tower-reroll-button');
   assert.equal(reroll.disabled,false);
-  reroll.click();reroll.click();
+  assert.ok(reroll.contains(container.querySelector('.tower-reroll-line')),'caption and price must be inside clickable button');
+  container.querySelector('.tower-reroll-caption').click();reroll.click();
   assert.equal(session.players[0].balance,290,'stale button cannot double-charge');
   assert.equal(run.arenaRerolls,1);
   assert.equal(run.floorPlan.options[0].arenaId,run.floorPlan.options[1].arenaId);
@@ -47,3 +48,33 @@ test('difficulty and arena selection live in the original preparation panel and 
  }finally{dom.window.close();}
 });
 
+
+
+test('late-floor crowded fight can reroll from columns to ward without changing opponents',async()=>{
+ const {ensureTowerFloorPlan}=await import('../src/tower/floors.js');
+ const {towerRerollCandidates,purchaseTowerArenaReroll}=await import('../src/tower/economy.js');
+ const dom=new JSDOM('<div id="tower-floor-preview"></div>',{url:'https://tower.test/'});
+ const oldDocument=globalThis.document;
+ globalThis.document=dom.window.document;
+ try{
+  const session=betNewSession(['Игрок'],300),run=newTower(0);
+  run.level=13;
+  ensureTowerFloorPlan(run,()=>.4);
+  run.floorPlan={
+   floor:13,selected:0,options:[
+    {arenaId:'columns',kind:'standard',profiles:Array(7).fill('basic')},
+    {arenaId:'columns',kind:'danger',style:'crowd',profiles:Array(8).fill('fast')}
+   ]
+  };
+  assert.ok(towerRerollCandidates(run).includes('ward'));
+  const before=run.floorPlan.options.map(o=>[...o.profiles]);
+  const view=renderTowerFloorChoices({container:document.getElementById('tower-floor-preview'),session,player:0,run});
+  const reroll=document.querySelector('.tower-reroll-button');
+  assert.equal(reroll.disabled,false);
+  reroll.querySelector('.tower-reroll-caption').click();
+  assert.equal(run.floorPlan.options[0].arenaId,'ward');
+  assert.deepEqual(run.floorPlan.options.map(o=>o.profiles),before);
+  assert.equal(session.players[0].balance,290);
+  assert.ok(view);
+ }finally{globalThis.document=oldDocument;dom.window.close();}
+});
