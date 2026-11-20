@@ -35,7 +35,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  overlay.setAttribute('role','dialog');
  overlay.setAttribute('aria-modal','true');
  overlay.setAttribute('aria-labelledby','tower-upgrade-title');
- const backButton=create('button','tower-upgrade-back','← НАЗАД');
+ const backButton=create('button','tower-upgrade-back game-nav-back-control','← НАЗАД');
  backButton.type='button';
  backButton.setAttribute('aria-label','Назад к подготовке');
  // Native modal dialogs occupy the top layer, above global navigation.
