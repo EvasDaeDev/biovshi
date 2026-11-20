@@ -37,10 +37,19 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
   reroll.title=reroll.disabled?'Недостаточно монет или нет другой подходящей арены':'Сменить арену до загрузки уровня';
   const cost=document.createElement('span');cost.className='tower-reroll-price';cost.innerHTML=Number.isFinite(price)?formatChips(price):'—';
   const caption=document.createElement('small');caption.className='tower-reroll-caption';caption.textContent='СМЕНИТЬ АРЕНУ ·';
-  const priceLine=document.createElement('span');priceLine.className='tower-reroll-line';priceLine.append(caption,cost);
-  // The entire dice tile, including its caption and price, is one click target.
-  reroll.append(priceLine);
-  dice.append(reroll);map.append(overview,dice);
+  const priceLine=document.createElement('button');priceLine.type='button';priceLine.className='tower-reroll-line';
+  priceLine.setAttribute('aria-label','Сменить арену за '+price+' монет');
+  priceLine.disabled=reroll.disabled;
+  priceLine.append(caption,cost);
+  // Keep currency icons outside the dice button: its image styles must only
+  // affect the die, never the chip icon in the price caption.
+  priceLine.onclick=()=>reroll.click();
+  dice.append(reroll,priceLine);map.append(overview,dice);
+  reroll.onclick=()=>{
+   if(!reroll.isConnected||reroll.disabled)return;
+   try{purchaseTowerArenaReroll(session,player,run);onSave();onChange();render();}
+   catch(error){onError(error.message);}
+  };
   if(!selected||!run.floorPlan?.options){container.replaceChildren(map);return;}
   const choices=document.createElement('div');choices.className='tower-challenge-options';
   run.floorPlan.options.forEach((option,index)=>{
@@ -82,11 +91,7 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
    };
    choices.append(button);
   });
-  reroll.onclick=()=>{
-   if(!reroll.isConnected||reroll.disabled)return;
-   try{purchaseTowerArenaReroll(session,player,run);onSave();onChange();render();}
-   catch(error){onError(error.message);}
-  };
+
   container.replaceChildren(map,choices);
  }
  render();return {render};
