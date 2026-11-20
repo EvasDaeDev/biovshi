@@ -30,15 +30,17 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
   overview.append(diagram,meta);
   const dice=document.createElement('div');dice.className='tower-arena-dice';
   const reroll=document.createElement('button');reroll.type='button';reroll.className='tower-reroll-button';
-  reroll.setAttribute('aria-label','Другая арена');
+  reroll.setAttribute('aria-label','Сменить арену');
   const diceImage=document.createElement('img');diceImage.src=assetUrl(ASSETS.textures.uiDice);diceImage.alt='';diceImage.setAttribute('aria-hidden','true');reroll.append(diceImage);
   const price=towerRerollPrice(run.arenaRerolls);
   reroll.disabled=!towerRerollCandidates(run).length||session.players[player].balance<price;
   reroll.title=reroll.disabled?'Недостаточно монет или нет другой подходящей арены':'Сменить арену до загрузки уровня';
   const cost=document.createElement('span');cost.className='tower-reroll-price';cost.innerHTML=Number.isFinite(price)?formatChips(price):'—';
   const caption=document.createElement('small');caption.className='tower-reroll-caption';caption.textContent='СМЕНИТЬ АРЕНУ ·';
-  const priceLine=document.createElement('div');priceLine.className='tower-reroll-line';priceLine.append(caption,cost);
-  dice.append(reroll,priceLine);map.append(overview,dice);
+  const priceLine=document.createElement('span');priceLine.className='tower-reroll-line';priceLine.append(caption,cost);
+  // The entire dice tile, including its caption and price, is one click target.
+  reroll.append(priceLine);
+  dice.append(reroll);map.append(overview,dice);
   if(!selected||!run.floorPlan?.options){container.replaceChildren(map);return;}
   const choices=document.createElement('div');choices.className='tower-challenge-options';
   run.floorPlan.options.forEach((option,index)=>{
