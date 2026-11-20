@@ -5,13 +5,32 @@ import {bossAnatomy} from '../src/boss/anatomy.js';
 import {ensureBossEncounter} from '../src/boss/encounter.js';
 import {BOSS_FLOOR_INTERVAL} from '../src/build-channel.js';
 import {newTower,towerEnemyCount,towerEnemyReward,validTower,towerFor} from '../src/tower/model.js';
-import {ensureTowerFloorPlan,selectedTowerFloor,selectTowerFloor,validTowerFloorPlan,TOWER_ARENA_CAPACITY,TOWER_DANGER_STYLES} from '../src/tower/floors.js';
+import {ensureTowerFloorPlan,selectedTowerFloor,selectTowerFloor,validTowerFloorPlan,TOWER_ARENA_CAPACITY,TOWER_DANGER_STYLES,towerStandardSpecialistRate,towerStandardSpecialist} from '../src/tower/floors.js';
 import {towerTacticalProfile,TOWER_TACTICAL_BIASES} from '../src/tower/tactics.js';
 import {fighterTacticalProfile} from '../src/systems/ai.js';
 import {ctx} from '../src/game/state.js';
 import {TOWER_ENEMY_PROFILES,towerEnemyProfile,towerProfileEffect,towerProfileDifference} from '../src/tower/profiles.js';
 import {betNewSession} from '../src/betting/ledger.js';
 import {purchaseInsurance,validInsurance} from '../src/tower/insurance.js';
+
+test('ordinary difficulty has 30 percent fewer specialists and 50 percent fewer strong enemies',()=>{
+ for(const floor of [1,2,4,6,9,10,20,30]){
+  const original=Math.min(.55,.12+floor*.045);
+  const newRate=towerStandardSpecialistRate(floor);
+  assert.ok(Math.abs(newRate-original*.7)<1e-12,'total specialist likelihood falls 30 percent: floor '+floor);
+  // A profile had 1/3 of the old specialist probability. New strong
+  // conditional share = 5/21, so the overall occurrence is exactly half.
+  const newStrong=newRate*5/21;
+  assert.ok(Math.abs(newStrong-original/6)<1e-12,'strong occurrence falls 50 percent: floor '+floor);
+ }
+ assert.equal(towerStandardSpecialist(()=>0),'fast');
+ assert.equal(towerStandardSpecialist(()=>8/21),'strong');
+ assert.equal(towerStandardSpecialist(()=>13/21),'agile');
+ // Exact deterministic sampling verifies all three conditional weights.
+ const counts={fast:0,strong:0,agile:0};
+ for(let i=0;i<21000;i++)counts[towerStandardSpecialist(()=>(i+.5)/21000)]++;
+ assert.deepEqual(counts,{fast:8000,strong:5000,agile:8000});
+});
 
 test('four specialist profiles have distinct atlases and the intended voice groups',()=>{
  assert.deepEqual(TOWER_ENEMY_PROFILES.fast.stats,[7,2,3]);
