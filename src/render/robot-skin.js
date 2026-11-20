@@ -157,12 +157,10 @@ export function paintRobotSkin(robot,strikePoses=[]) {
       }
       attr(piece.viewport,'filter','url(#'+piece.hitFilter.id+')');
       const m=segmentHitTintMatrix(strength);
-      const values=[...m.slice(0,5).map((v,i)=>i===4?v*255:v),
-        ...m.slice(5,10),...m.slice(10,15),...m.slice(15,20)];
-      attr(piece.hitFilter.matrix,'values',values.join(' '));
+      attr(piece.hitFilter.matrix,'values',m.join(' '));
     }else{
-      attr(piece.group,'data-hit-tint',null);
-      if(piece.hitFilter)attr(piece.viewport,'filter',null);
+      if(piece.group.getAttribute('data-hit-tint')!=='0')attr(piece.group,'data-hit-tint','0');
+      if(piece.hitFilter&&piece.viewport.getAttribute('filter')!=='none')attr(piece.viewport,'filter','none');
       if(until!==undefined)robot.segmentHitTints.delete(key);
     }
   };
