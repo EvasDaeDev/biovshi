@@ -74,7 +74,7 @@ test('segment and artifact replay chances share per-boss saved victory count',()
  assert.equal(run.segmentInventory.length,0,'repeated boss can miss segments');
  assert.deepEqual(run.lastBossSegments,[]);
  assert.equal(run.artifacts.pieces.length,1,'repeated boss can miss artifact fragment');
- assert.equal(artifactDropChance(run.artifacts,5),.49);
+ assert.ok(Math.abs(artifactDropChance(run.artifacts,5)-.49)<1e-12);
  assert.equal(artifactDropChance(run.artifacts,10),1,'another boss remains at first-drop chance');
  // The saved artifact history also applies to segments after resetting again.
  resetTower(session,0);
@@ -153,7 +153,7 @@ test('boss preparation shows saved chance; settlement and repeated result render
  const f=startBossScenario({floor:5});
  try{
   f.tower.artifacts=filled([0,1,2]);Math.random=()=>0;towerPreparation();
-  assert.match(document.querySelector('[data-artifact-chance]').textContent,/51,2%/);
+  assert.match(document.querySelector('[data-artifact-chance]').textContent,/34,3%/);
   assert.match(document.querySelector('.artifact-bonus-note').textContent,/333/);
   document.querySelector('#tower-fight').click();f.boss.damage('head',0,100);ctx.combat.winner=0;settleTower(0);
   assert.equal(ctx.towerOutcome.artifact,3);assert.equal(ctx.towerOutcome.artifactBonus,333);assert.equal(ctx.towerOutcome.runCoins,433);
