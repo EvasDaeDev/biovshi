@@ -96,3 +96,12 @@ test('retired per-window navigation hooks cannot be reached by keyboard or scree
   assert.match(modalFocus,/!node\.closest\('\[aria-hidden="true"\]'\)/);
  }finally{dom.window.close();}
 });
+
+test('Shelter modal places a working back button in its own top layer',()=>{
+ const source=fs.readFileSync(new URL('../src/tower/upgrade-modal.js',import.meta.url),'utf8');
+ assert.match(source,/create\('button','tower-upgrade-back','← НАЗАД'\)/);
+ assert.match(source,/overlay\.append\(backButton\)/);
+ assert.match(source,/backButton\.onclick=close/);
+ assert.match(css,/#robot-tag-hops-v22 #tower-upgrade-window \.tower-upgrade-back\s*\{[\s\S]*?position:fixed;[\s\S]*?top:12px;[\s\S]*?left:12px;/);
+ assert.match(css,/#robot-tag-hops-v22 #tower-upgrade-window \.tower-upgrade-back:focus-visible/);
+});
