@@ -228,10 +228,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   surgeryTab.textContent=surgeryTab.disabled?'ХИРУРГИЯ 🔒':'ХИРУРГИЯ';
   surgeryTab.title=surgeryTab.disabled?'Откроется после победы над вторым боссом на 10-м этаже':'Операции и пересадки';
   if(hoverMutation&&(![...mutationPanel.querySelectorAll('[data-mutation-type]')].some(button=>button.dataset.mutationType===hoverMutation.type)||(!run.mutationDraft&&!hoverMutation.id)))hoverMutation=null;
-  launch.textContent=run.segmentRewardsEnabled?'УБЕЖИЩЕ · ИНВЕНТАРЬ '+towerInstalledSegments(run).length:
-   run.mutationDraft?'УБЕЖИЩЕ · ВЫБРАТЬ НАГРАДУ':
-   'УБЕЖИЩЕ · МОДУЛИ '+run.mutations.length+
-   ' · ОПЕРАЦИИ '+run.surgeries.length+'/'+towerSurgeryCapacity(run.level);
+  launch.textContent=run.mutationDraft?'УБЕЖИЩЕ · ВЫБРАТЬ НАГРАДУ':'УБЕЖИЩЕ';
   const hasNew=run.segmentRewardsEnabled&&towerUnreadSegments(run).size>0;
   launch.classList.toggle('has-reward',Boolean(run.mutationDraft));
   launch.classList.toggle('has-new-items',hasNew);
