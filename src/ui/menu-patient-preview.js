@@ -8,13 +8,47 @@ import {towerPatientAnatomy} from '../tower/anatomy.js';
 import {towerUpgradePose} from '../tower/upgrade-pose.js';
 
 const NS='http://www.w3.org/2000/svg';
-const WIDTH=160,HEIGHT=90,ANGLE=-Math.PI/3.2;
+const WIDTH=190,HEIGHT=104,ANGLE=-Math.PI/6;
 const make=(tag,attrs={},parent)=>{
  const node=document.createElementNS(NS,tag);
  for(const [name,value] of Object.entries(attrs))node.setAttribute(name,String(value));
  parent?.append(node);
  return node;
 };
+
+// Display-only relaxed pose, calibrated against the menu silhouette sketch.
+// The torso, head, graft anchors and bone lengths come from the actual rig.
+// Only the direction of limb bones changes; surgery does not lose segments.
+const deg=value=>value*Math.PI/180;
+const polar=(point,length,angle)=>[
+ point[0]+Math.cos(deg(angle)-ANGLE)*length,
+ point[1]+Math.sin(deg(angle)-ANGLE)*length
+];
+const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+
+export function menuPatientPose(run){
+ const pose=towerUpgradePose(run);
+ for(const site of Object.keys(pose)){
+  const match=/^(arm|leg)-(-?1)(?:-graft(?:-\\d+)?)?-upper$/.exec(site);
+  if(!match)continue;
+  const lowerKey=site.slice(0,-5)+'lower';
+  const upper=pose[site],lower=pose[lowerKey];
+  if(!lower)continue;
+  const [,kind,sideText]=match,side=Number(sideText);
+  const graft=site.includes('-graft');
+  const spread=graft?(side<0?-7:7):0;
+  // Left arm reaches upward-left, right arm extends outward. Legs open
+  // downward to either side, reproducing the asymmetrical sketch pose.
+  const angles=kind==='arm'
+   ?(side<0?[-151,-190]:[20,-4])
+   :(side<0?[144,110]:[48,65]);
+  const joint=polar(upper[0],distance(upper[0],upper[1]),angles[0]+spread);
+  const tip=polar(joint,distance(lower[0],lower[1]),angles[1]+spread);
+  pose[site]=[upper[0],joint];
+  pose[lowerKey]=[joint,tip];
+ }
+ return pose;
+}
 
 // Rotate the existing horizontal neutral pose into the tilted display pose;
 // keep graft attachment points and lengths as defined by the real anatomy.
@@ -24,9 +58,9 @@ export function menuPatientTransform(pose){
  const cos=Math.cos(ANGLE),sin=Math.sin(ANGLE);
  const rotated=points.map(([x,y])=>[x*cos-y*sin,x*sin+y*cos]);
  const xs=rotated.map(p=>p[0]),ys=rotated.map(p=>p[1]);
- const minX=Math.min(...xs)-12,maxX=Math.max(...xs)+12;
- const minY=Math.min(...ys)-12,maxY=Math.max(...ys)+12;
- const scale=Math.min((WIDTH-12)/(maxX-minX),(HEIGHT-10)/(maxY-minY));
+ const minX=Math.min(...xs)-11,maxX=Math.max(...xs)+11;
+ const minY=Math.min(...ys)-11,maxY=Math.max(...ys)+11;
+ const scale=Math.min((WIDTH-8)/(maxX-minX),(HEIGHT-6)/(maxY-minY));
  const x=WIDTH/2-scale*(minX+maxX)/2;
  const y=HEIGHT/2-scale*(minY+maxY)/2;
  return `translate(${x} ${y}) scale(${scale}) rotate(${ANGLE*180/Math.PI})`;
@@ -41,7 +75,7 @@ export function renderMenuPatient(target,run){
   role:'img','aria-label':'Текущий пациент с установленными модификациями и хирургией',
   'data-menu-patient':'true'
  },target);
- const pose=towerUpgradePose(run);
+ const pose=menuPatientPose(run);
  const body=towerPatientAnatomy(run);
  const prosthetics=new Set([...(run.prosthetics??[]),...(run.graftProsthetics??[])]);
  const original=ASSETS.textures[['robotA','robotB','robotC','robotD'][(run.patient??0)%4]];
