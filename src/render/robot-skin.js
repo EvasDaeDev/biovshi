@@ -10,6 +10,24 @@ import {createSkinReadiness} from './skin-readiness.js';
 // r_01..r_04: 256×256, 4×4 cells. All joint axes use y=32.
 // Head and chest anchors are explicitly calibrated in atlas pixels;
 // their span also controls texture scale through skinMatrix.
+// An ordinary hit gives only the exact contacted bone a subtle red flash.
+// A critical hit keeps the existing crit/sever VFX instead of stacking tints.
+export const SEGMENT_HIT_TINT=.15;
+export const SEGMENT_HIT_TINT_SEC=.28;
+export function segmentHitTint(time,hitAt){
+ if(!Number.isFinite(hitAt)||!Number.isFinite(time))return 0;
+ const age=time-hitAt;
+ return age>=0&&age<SEGMENT_HIT_TINT_SEC?
+  SEGMENT_HIT_TINT*(1-age/SEGMENT_HIT_TINT_SEC):0;
+}
+export function segmentHitTintMatrix(strength){
+ const keep=1-strength;
+ return [keep,0,0,0,strength,
+         0,keep,0,0,0,
+         0,0,keep,0,0,
+         0,0,0,1,0];
+}
+
 export const ROBOT_PARTS = {
   head: {col:0,row:0,from:33,to:8},
   // Translate the entire chest 22 px right; preserve its 24 px anchor span.
@@ -51,7 +69,7 @@ function createPiece(key,url,parent,part=ROBOT_PARTS[key],rarity=0) {
     href:url,x:0,y:0,width:256,height:256,preserveAspectRatio:'none',
     style:CONFIG.rendering.texturePixelated?'image-rendering:crisp-edges;image-rendering:pixelated':'',
   },viewport);
-  return {group,image,part,url,rarity};
+  return {group,viewport,image,part,url,rarity};
 }
 
 export function createRobotSkin(robot) {
@@ -119,9 +137,34 @@ export function paintRobotSkin(robot,strikePoses=[]) {
   const strikePose=strikePoses.find(p=>p.kind==='head');
   const position=(key,a,b)=>{
     const piece=robot.skin.pieces.get(key);
-    attr(piece.group,'display',robot.healthy(key)?'':'none');
-    if (robot.healthy(key))attr(piece.group,'transform',
-      'matrix('+skinMatrix(a,b,piece.part).join(' ')+')');
+    if(!piece)return;
+    const healthy=robot.healthy(key);
+    attr(piece.group,'display',healthy?'':'none');
+    if(!healthy)return;
+    attr(piece.group,'transform','matrix('+skinMatrix(a,b,piece.part).join(' ')+')');
+    const until=robot.segmentHitTints?.get(key);
+    const strength=segmentHitTint(ctx.game.time,until);
+    if(strength>0){
+      // Pixi reads the group attribute; SVG uses its own colour-matrix on
+      // the nested (clipped) atlas viewport. Neither affects other segments.
+      attr(piece.group,'data-hit-tint',strength.toFixed(4));
+      if(!piece.hitFilter){
+        const id='tag7hop-hit-tint-'+robot.id+'-'+key.replace(/[^a-z0-9-]/gi,'_');
+        const filter=el('filter',{id,x:'-10%',y:'-10%',width:'120%',height:'120%'},ctx.defs);
+        const matrix=el('feColorMatrix',{type:'matrix'},filter);
+        piece.hitFilter={filter,matrix,id};
+        attr(piece.viewport,'filter','url(#'+id+')');
+      }
+      attr(piece.viewport,'filter','url(#'+piece.hitFilter.id+')');
+      const m=segmentHitTintMatrix(strength);
+      const values=[...m.slice(0,5).map((v,i)=>i===4?v*255:v),
+        ...m.slice(5,10),...m.slice(10,15),...m.slice(15,20)];
+      attr(piece.hitFilter.matrix,'values',values.join(' '));
+    }else{
+      attr(piece.group,'data-hit-tint',null);
+      if(piece.hitFilter)attr(piece.viewport,'filter',null);
+      if(until!==undefined)robot.segmentHitTints.delete(key);
+    }
   };
   for(let i=0;i<(robot.spineSegmentTotal??4);i++) {
     position('spine-'+i,robot.spine[i],robot.spine[i+1]);
