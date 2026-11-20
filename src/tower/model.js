@@ -9,7 +9,7 @@ import {TEST_BUILD} from '../build-channel.js';
 import {validTowerRerolls} from './economy.js';
 import {isBossFloor,hasBoss} from '../boss/config.js';
 import {ensureBossEncounter,validBossEncounter,bossFloorReward} from '../boss/encounter.js';
-import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
+import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,bossRepeatDropChance,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
 import {BASE_STATS,earnedStats,validStats,normalizeProsthetics} from '../garage/model.js';
 import {towerCycleInfo,towerCycleWins} from './cycles.js';
 export const TOWER_REWARD=10;
@@ -100,6 +100,9 @@ function creditArtifactRewards(session,player,t){
 export function completeTower(session,player,won,random=Math.random){
  const t=towerFor(session,player);
  if(won){const bossWon=hasBoss(t);
+  // Snapshot prior wins BEFORE the artifact roll increments bossWins.
+  // Both loot systems use the same per-boss cumulative replay penalty.
+  const previousBossWins=bossWon?(t.artifacts.bossWins[t.level]??0):0;
   if(bossWon)awardBossArtifact(t.artifacts,t.level,random);
   creditArtifactRewards(session,player,t);t.record=Math.max(t.record,t.level);
   // Earned skill points restart every 30 floors without resetting history.
@@ -122,7 +125,7 @@ export function completeTower(session,player,won,random=Math.random){
   if(bossWon){
    // Transitional implementation: new segment warehouse is populated while
    // the legacy reward UI remains enabled until its full replacement lands.
-   if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random);
+   if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random,bossRepeatDropChance(previousBossWins));
    else grantTowerMutationDraft(t,random);
   }}
  else {
