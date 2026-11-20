@@ -1140,7 +1140,8 @@ test('Shelter and unviewed segment cards show red badges until the stack is open
  const dom=setup(session,run);
  try{
   const launch=document.querySelector('#tower-upgrade-open');
-  assert.match(launch.textContent,/ИНВЕНТАРЬ 0/);
+  assert.equal(launch.textContent.trim(),'УБЕЖИЩЕ');
+  assert.doesNotMatch(launch.textContent,/ИНВЕНТАРЬ\\s*\\d+/,'Shelter button must not display inventory totals');
   assert.ok(launch.querySelector('.tower-new-dot'),'unread badge is visible on Shelter button');
   launch.click();
   assert.ok(launch.querySelector('.tower-new-dot'),'opening Shelter does not mark a part read');
