@@ -429,7 +429,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   globalThis.addEventListener?.('resize', fitField);
   globalThis.visualViewport?.addEventListener('resize', fitField);
   fitField();
-  // Smooth group-following camera. World units are centimeters; all collision,
+  // Smooth camera framing. World units are centimeters; all collision,
   // pathfinding and damage checks continue to use unchanged 0..700 coordinates.
   createWalls();
   createObstacleLights();

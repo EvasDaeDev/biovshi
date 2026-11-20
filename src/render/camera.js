@@ -68,6 +68,10 @@ export function cameraTargetBounds(robots, silhouetteMargin=42) {
   return {left,right,top,bottom};
 }
 
+// Tower starts wide, then centres on the player. Nearby opponents share the
+// normal framing calculation with padding proportional to the closer view.
+const towerFollowFraction = .5;
+
 export function cameraUpdate(dt) {
   if (
     ctx.startup.phase !== 'running' ||
@@ -79,19 +83,22 @@ export function cameraUpdate(dt) {
   const active = ctx.robots.filter(r => r.visible && r.mobile);
   if (!active.length) return;
 
-  // Follow patients' body positions, not their animated bone capsules.
-  // Head turns, strikes and limb gestures used to make the framing "breathe"
-  // even when every fighter was stationary. Allow a fixed silhouette margin
-  // for the whole rig while keeping the existing arena-space framing margins.
-  const {left,right,top,bottom}=cameraTargetBounds(active);
-  if(!Number.isFinite(left))return;
-
   const width=ctx.fieldWidth||ctx.fieldSide||700,height=ctx.fieldHeight||ctx.fieldSide||700,short=Math.min(width,height);
-  // Screen-axis margins: two metres horizontally and one vertically.
-  const targetSize=clamp(Math.max((right-left+400)*short/width,(bottom-top+200)*short/height),ctx.CAMERA_MIN,ctx.CAMERA_FULL);
+  const player=ctx.mode==='tower'?active.find(r=>r.id===0&&Number.isFinite(r.x)&&Number.isFinite(r.y)):null;
+  const followSize=Math.max(ctx.CAMERA_MIN,ctx.CAMERA_FULL*towerFollowFraction);
+  const framed=player?active.filter(r=>
+    Math.abs(r.x-player.x)<=followSize*width/(2*short)&&
+    Math.abs(r.y-player.y)<=followSize*height/(2*short)):active;
 
-  const cx = (left + right) / 2,
-    cy = (top + bottom) / 2;
+  // Body positions keep head turns, attacks and limb motion from changing framing.
+  const {left,right,top,bottom}=cameraTargetBounds(framed);
+  if(!Number.isFinite(left))return;
+  const padding=player?towerFollowFraction:1;
+  const fit=Math.max((right-left+400*padding)*short/width,(bottom-top+200*padding)*short/height);
+  const targetSize=player
+    ?(framed.length>1?clamp(fit,ctx.CAMERA_MIN,followSize):followSize)
+    :clamp(fit,ctx.CAMERA_MIN,ctx.CAMERA_FULL);
+  const cx=player?.x??(left+right)/2,cy=player?.y??(top+bottom)/2;
 
   // Zoom out faster than zooming in so that escaping fighters stay visible.
   const zoomTau = targetSize > ctx.camera.size ? .28 : .95;
@@ -104,7 +111,7 @@ export function cameraUpdate(dt) {
     ctx.camera.size = targetSize;
   }
 
-  // Follow the fighters without arena boundary restrictions.
+  // Follow the chosen centre without arena boundary restrictions.
   const moveX = cx - ctx.camera.size / 2;
   const moveY = cy - ctx.camera.size / 2;
 
