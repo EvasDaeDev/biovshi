@@ -755,7 +755,7 @@ test('player elimination ends attempt immediately even while several AI remain a
  const ended=ctx.game.events.findLast(event=>event.type==='combat-end');
  assert.equal(ended.outcome,'defeat');assert.equal(ended.loser,0);assert.equal(quipCategory(ended),'defeat');
  assert.equal(ctx.combat.finished,true);assert.equal(ctx.combat.winner,null);assert.equal(towerFor(s,0).level,1);assert.equal(s.garage[0].wins,0);
- showResults();assert.equal(ctx.resultsPanel.hidden,false);assert.equal(ctx.resultsTitle.textContent,'ПРОПАЛ НА ЭТАЖЕ: 1');close(dom);
+ showResults();assert.equal(ctx.resultsPanel.hidden,false);assert.equal(ctx.resultsTitle.textContent,'ПРОПАЛ НА ЭТАЖЕ: 4','heading shows the floor of defeat, not the reset floor');close(dom);
 });
 test('real final strikes pay once and victory unlocks next floor with one skill point and full recovery',()=>{
  const s=betNewSession(['Первый'],100);let dom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.paused=false;
