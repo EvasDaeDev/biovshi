@@ -58,6 +58,28 @@ test('only bosses drop fragments; losses and resets preserve counts, collections
  assert.deepEqual(legacy.artifacts,newArtifactCollection(),'a legacy ordinary floor cannot masquerade as a boss');
 });
 
+test('losing the boss first, then winning it gives both guaranteed first-victory loot types',()=>{
+ const session=betNewSession(['Игрок'],1000);
+ let run=atFloor(session,0,5);
+ // An old saved run can still contain a legacy whole-modification flag.
+ run.segmentRewardsEnabled=false;
+ // Boss can be paid for a kill before its fight ultimately ends in defeat.
+ assert.equal(rewardTower(session,0,1,0),true);
+ completeTower(session,0,false,()=>.99);
+ run=towerFor(session,0);
+ assert.equal(run.artifacts.bossWins[5],undefined,'defeat must not count as a boss victory');
+ assert.deepEqual(run.artifacts.pieces,[],'defeat never consumes the fragment reward');
+ assert.equal(run.segmentRewardsEnabled,true,'a new uninsured run upgrades legacy rewards');
+ run=atFloor(session,0,5);
+ assert.equal(rewardTower(session,0,1,0),true);
+ completeTower(session,0,true,()=>.99);
+ assert.equal(run.artifacts.bossWins[5],1,'only the victory increments the penalty counter');
+ assert.equal(run.artifacts.pieces.length,1,'first victory guarantees one fragment');
+ assert.equal(run.segmentInventory.length,2,'first victory guarantees segments even with high RNG');
+ assert.equal(run.lastBossSegments.length,2);
+ assert.ok(validTower(towerFor(session,0)));
+});
+
 test('segment and artifact replay chances share per-boss saved victory count',()=>{
  const session=betNewSession(['Первый','Второй'],500);
  let run=atFloor(session,0,5);
