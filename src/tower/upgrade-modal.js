@@ -1,6 +1,6 @@
 // Dedicated Tower modernization dialog. Reuses the existing mutation and
 // surgical control panels so purchases and save validation stay authoritative.
-import {towerMutationSnapshot,towerMutationCombatBonus,towerMutationSynergies,towerInstalledItems,TOWER_MUTATIONS,TOWER_MUTATION_LIMIT} from './mutations.js';
+import {towerMutationSnapshot,towerAttackInterval,towerMutationSynergies,towerInstalledItems,TOWER_MUTATIONS,TOWER_MUTATION_LIMIT} from './mutations.js';
 import {towerInstalledSegments,towerUnreadSegments} from './segments.js';
 import {towerSurgeryAvailableSites,towerSurgerySiteLabel,towerSurgeryCapacity,TOWER_SURGERY_MIN_LEVEL,
  towerSurgeryPrice,towerSurgeryReplacePrice,TOWER_SURGERY_OPERATIONS} from './surgery.js';
@@ -127,13 +127,17 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   const canPreview=Boolean(candidate&&!equipped&&(run.segmentRewardsEnabled||installed.length<TOWER_MUTATION_LIMIT||conflict));
   const proposedMutation=canPreview&&!run.segmentRewardsEnabled?candidate.type:null;
   const nextMutations=proposedMutation?[...run.mutations.filter(type=>type!==candidate.type),candidate.type]:run.mutations;
-  const before=towerMutationSnapshot(run).effective;
+  const initial=towerMutationSnapshot(run);
+  const before=initial.effective;
   const proposedSegments=segmentCandidate&&!segmentEquipped?
     [...(run.equippedSegments??[]).filter(id=>run.segmentInventory.find(item=>item.id===id)?.site!==segmentCandidate.site),segmentCandidate.id]:run.equippedSegments;
   const draft=proposedSurgery?{...run,surgeries:[...run.surgeries.filter(op=>op.site!==surgeryReplace),proposedSurgery]}:
    run.segmentRewardsEnabled?{...run,equippedSegments:proposedSegments}:
-   proposedMutation?{...run,mutations:nextMutations}:run;
-  const after=towerMutationSnapshot(draft).effective;
+   proposedMutation?{...run,mutations:nextMutations,
+    mutationInventory:[...run.mutationInventory,{id:'preview',type:candidate.type,rarity:candidate.rarity}],
+    equippedMutations:[...run.equippedMutations.filter(id=>id!==conflict?.id),'preview']}:run;
+  const preview=towerMutationSnapshot(draft);
+  const after=preview.effective;
   stats.replaceChildren();
   const title=create('div','tower-upgrade-stats-head');
   title.append(create('strong','','ПАРАМЕТРЫ'));
@@ -165,21 +169,23 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
        'Шесть мест заняты: сначала выбери модуль для замены':
        'Установлено '+run.mutations.length+' модулей · активных синергий '+towerMutationSynergies(run.mutations).length;
   stats.append(create('small','tower-upgrade-stats-note',detail));
-  const equippedTypes=patient=>[...(patient.mutations??[]),...towerInstalledSegments(patient).map(item=>item.type)];
-  const currentCombat=towerMutationCombatBonus(equippedTypes(run)),nextCombat=towerMutationCombatBonus(equippedTypes(draft));
   const combatLine=create('small','tower-upgrade-stats-note tower-combat-preview');
-  const combatValue=(label,before,after,higherIsBetter)=>{
-   combatLine.append(document.createTextNode(label+format(before)+'%'));
+  const combatValue=(label,before,after,higherIsBetter,unit='%')=>{
+   combatLine.append(document.createTextNode(label+format(before)+unit));
    if(Math.abs(after-before)>.0001){
     combatLine.append(document.createTextNode(' → '));
-    const changed=create('strong',(after>before)===higherIsBetter?'is-positive':'is-negative',format(after)+'%');
+    const changed=create('strong',(after>before)===higherIsBetter?'is-positive':'is-negative',format(after)+unit);
     changed.textContent+=((after>before)===higherIsBetter?' ▲':' ▼');
     combatLine.append(changed);
    }
   };
-  combatValue('КРИТ: ',currentCombat.crit*100,nextCombat.crit*100,true);
+  combatValue('СКОРОСТЬ: ',initial.effects[0]*100,preview.effects[0]*100,true);
   combatLine.append(document.createTextNode(' · '));
-  combatValue('ОТКАТ АТАК: ',currentCombat.cooldownMultiplier*100,nextCombat.cooldownMultiplier*100,false);
+  combatValue('КРИТ: ',initial.effects[1]*100,preview.effects[1]*100,true);
+  combatLine.append(document.createTextNode(' · '));
+  combatValue('РАЗВОРОТ: ',initial.effects[2]*100,preview.effects[2]*100,true);
+  combatLine.append(document.createTextNode(' · '));
+  combatValue('ИНТЕРВАЛ АТАК: ',towerAttackInterval(initial.combat)*1000,towerAttackInterval(preview.combat)*1000,false,' мс');
   stats.append(combatLine);
   const anatomySummary=run=>{
    const body=towerPatientAnatomy(run);

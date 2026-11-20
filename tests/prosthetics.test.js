@@ -181,3 +181,25 @@ test('detached mixed limbs leave separate biological and prosthetic puddles exac
   const count=ctx.combat.oilDrops.length;paintDetachedAnatomy();assert.equal(ctx.combat.oilDrops.length,count);
  }finally{f.close();}
 });
+
+test('rare Tower cooldown parts shorten the live recovery without moving the impact',()=>{
+ const f=setup([],{tower:true});
+ try{
+  const inventory=Array.from({length:4},(_,i)=>({id:'seg'+(i+1),type:'metronome',site:'spine-'+i,rarity:5}));
+  Object.assign(ctx.towerGarage[0],{segmentInventory:inventory,equippedSegments:inventory.map(item=>item.id)});
+  ctx.robots=[];ctx.obstacles=[];ctx.game.time=10;
+  const player=createRobot(0,{x:350,y:350,angle:0});ctx.robots=[player];player.setVisible(true);
+  ctx.agentAI[0].nextPounceDecisionAt=Infinity;
+  const arm=player.attackSources.find(source=>source.kind==='arm');
+  const point={x:arm.point.x+20,y:arm.point.y};
+  ctx.robots.push({id:1,...point,center:point,visible:true,mobile:true,hasHead:true,segmentCount:1,movementLimbs:4,
+   actualPose:{leap:null,scene:null},combatRecoverUntil:0,attackSources:[],canSee:()=>false,
+   capsules:[{a:point,b:point,r:4,segment:'head'}],isDamageable:()=>true});
+  combatAttacks();
+  const strike=pendingStrikes(0)[0];assert.ok(strike);
+  near(strike.impactAt-strike.started,.52);
+  near(strike.timing.recoverSec,.224);
+  near(strike.endsAt-strike.started,.744);
+  near(ctx.combat.nextStrike[0]-strike.started,.744);
+ }finally{f.close();}
+});

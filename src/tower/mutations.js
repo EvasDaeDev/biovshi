@@ -1,6 +1,8 @@
 // First playable Tower build-modification set. Bonuses are expressed as
 // fractional EFFECTIVE skill points so existing movement, turning, and combat
 // curves remain authoritative. Never mutate earned/base stats or prosthetics.
+import {CONFIG} from '../config.js';
+import {statMultiplier,critChance} from '../garage/model.js';
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {towerSurgeryBonus} from './surgery.js';
 
@@ -25,13 +27,18 @@ export const TOWER_MUTATIONS=Object.freeze({
  quiet:Object.freeze({name:'Тихий импульс',family:'neural',description:'Точный контроль: +2,5% шанса крита',bonus:[0,.15,.35],combat:{crit:.025}})
 });
 // Game UI reads the same numeric bonuses as combat; prose alone is not a stat sheet.
-export function towerMutationEffectText(id){
+export function towerMutationEffectText(id,rarity=0){
  const mod=TOWER_MUTATIONS[id];if(!mod)return '';
  const names=['скорость','сила','манёвр'];
  const format=n=>Number(n.toFixed(2)).toLocaleString('ru-RU',{maximumFractionDigits:2});
  const effects=mod.bonus.flatMap((amount,i)=>amount?[names[i]+' +'+format(amount)+(i===1?' (шанс крита)':'')]:[]);
  if(mod.combat?.crit)effects.push('крит +'+format(mod.combat.crit*100)+'% (прямой бонус)');
  if(mod.combat?.cooldown)effects.push('откат атак −'+format(mod.combat.cooldown*100)+'%');
+ const {kind,step}=rarityEffect(id);
+ if(rarity>0){
+  const amount=format(step*rarity*(kind===3?1000:100));
+  effects.push('Редкость: '+(kind===3?'восстановление −'+amount+' мс':(kind===1?'крит':names[kind])+' +'+amount+' п. п.'));
+ }
  return effects.join(' · ');
 }
 export const TOWER_MUTATION_IDS=Object.freeze(Object.keys(TOWER_MUTATIONS));
@@ -42,6 +49,51 @@ export const TOWER_RARITIES=Object.freeze([
  {name:'ОРАНЖЕВАЯ',colour:'#e5a44b'},{name:'КРАСНАЯ',colour:'#d84a3e'}
 ]);
 export const towerMutationRarity=clearedFloor=>Math.min(5,Math.max(0,Math.floor((clearedFloor-1)/30)));
+// Single source of truth for the preview and for each awarded detail.
+export function towerBossRarityOdds(floor,previousWins=0){
+ const rarity=towerMutationRarity(floor),highest=TOWER_RARITIES.length-1;
+ if(previousWins>0||rarity===highest)return [{rarity,percent:100}];
+ if(rarity===highest-1)return [{rarity,percent:93},{rarity:rarity+1,percent:7}];
+ return [{rarity,percent:92},{rarity:rarity+1,percent:7},{rarity:rarity+2,percent:1}];
+}
+export function rollTowerBossRarity(floor,previousWins,random){
+ const odds=towerBossRarityOdds(floor,previousWins);
+ if(odds.length===1)return odds[0].rarity;
+ const roll=random();
+ let cumulative=0;
+ for(const {rarity,percent} of odds){
+  cumulative+=percent;
+  if(roll<cumulative/100)return rarity;
+ }
+ return odds.at(-1).rarity;
+}
+const rarityWeights=[1,.4,.2];
+const towerCurves=[statMultiplier,critChance,statMultiplier];
+const towerOverflowSlopes=[.02,.005,.02];
+const towerEquipmentCaps=[.08,.02,.08];
+const towerEffectCaps=Object.freeze([2,.75,2]);
+const rarityEffect=(type)=>{
+ const mod=TOWER_MUTATIONS[type];
+ if(mod.combat?.cooldown)return {kind:3,step:.0045};
+ if(mod.combat?.crit)return {kind:1,step:.005};
+ const kind=mod.bonus.indexOf(Math.max(...mod.bonus));
+ return {kind,step:kind===1?.005:.0075};
+};
+function towerRarityBonuses(items){
+ const byEffect=[[],[],[],[]];
+ for(const {type,rarity} of items){
+  if(!TOWER_MUTATIONS[type]||!(rarity>0))continue;
+  const {kind,step}=rarityEffect(type);
+  byEffect[kind].push(step*rarity);
+ }
+ return byEffect.map(bonuses=>bonuses.sort((a,b)=>b-a).slice(0,3)
+  .reduce((sum,bonus,i)=>sum+bonus*rarityWeights[i],0));
+}
+export function towerAttackInterval(combat,{timing=CONFIG.combat,spine=1}={}){
+ const cycle=timing.windupSec+timing.thrustSec+timing.recoverSec;
+ const cooldown=timing.attackCooldownSec*(1+.64*(1-spine))*combat.cooldownMultiplier;
+ return Math.max(cycle,cooldown)-(combat.recoveryReduction??0);
+}
 // Simulation-only; does not modify active combat bonuses until balancing is approved.
 export const towerRarityMultiplier=(rarity,step=.12)=>1+Math.min(5,Math.max(0,rarity))*step;
 export const towerMutationInstallPrice=run=>Math.ceil(100*Math.pow(1.55,run?.modInstallations??0));
@@ -158,14 +210,26 @@ export function towerMutationSnapshot(patient,robot=null){
  // transient garage entry. A real run/save never serializes this field.
  // No rarity multiplier is enabled in player-facing game rules.
  const equippedParts=new Set(patient?.equippedSegments??[]);
- const segmentTypes=(patient?.segmentInventory??[]).filter(item=>equippedParts.has(item.id)).map(item=>item.type);
- const mutationBonus=patient?.rarityPhysics?.effective??
-  towerMutationBonus([...(patient?.mutations??[]),...segmentTypes]);
+ const segments=(patient?.segmentInventory??[]).filter(item=>equippedParts.has(item.id));
+ const types=[...(patient?.mutations??[]),...segments.map(item=>item.type)];
+ const offline=patient?.rarityPhysics;
+ const mutationBonus=offline?.effective??towerMutationBonus(types);
  const surgeryBonus=towerSurgeryBonus(patient?.surgeries,robot);
- return {...snapshot,mutationBonus,surgeryBonus,
-  effective:snapshot.effective.map((n,i)=>n+mutationBonus[i]+surgeryBonus[i])};
+ const effective=snapshot.effective.map((n,i)=>n+mutationBonus[i]+surgeryBonus[i]);
+ const combat=offline?{crit:offline.crit,cooldownMultiplier:offline.cooldownMultiplier}:towerMutationCombatBonus(types);
+ const rarity=offline?[0,0,0,0]:towerRarityBonuses([...towerInstalledItems(patient??{}),...segments]);
+ const slopes=towerOverflowSlopes;
+ const baseEffects=snapshot.base.map((points,index)=>towerCurves[index](points)+(offline?0:Math.max(0,points-9)*slopes[index]));
+ const effects=effective.map((points,index)=>{
+  const baseOverflow=Math.max(0,snapshot.base[index]-9);
+  const equipmentOverflow=Math.max(0,points-9)-baseOverflow;
+  const growth=offline?0:baseOverflow*slopes[index]+Math.min(towerEquipmentCaps[index],equipmentOverflow*slopes[index]);
+  return Math.min(towerEffectCaps[index],towerCurves[index](points)+growth+rarity[index]+(index===1?combat.crit:0));
+ });
+ combat.recoveryReduction=rarity[3];
+ return {...snapshot,mutationBonus,surgeryBonus,effective,effects,baseEffects,effectCaps:towerEffectCaps,combat};
 }
-export function grantTowerMutationDraft(run,random=Math.random){
+export function grantTowerMutationDraft(run,random=Math.random,previousBossWins=0){
  if(!validTowerMutations(run.mutations)||run.mutationDraft)return false;
  if(run.level<6||(run.level-1)%5!==0)return false;
  // Prefer unseen kinds, but after collecting all eighteen allow copies with
@@ -187,7 +251,7 @@ export function grantTowerMutationDraft(run,random=Math.random){
  const matching=candidates.filter(id=>families.includes(TOWER_MUTATIONS[id].family));
  if(matching.length)pick(matching);
  while(candidates.length&&options.length<3)pick([...candidates]);
- run.mutationDraft={floor:run.level,options,rarity:towerMutationRarity(run.level-1)};
+ run.mutationDraft={floor:run.level,options,rarity:rollTowerBossRarity(run.level-1,previousBossWins,random)};
  return true;
 }
 export function chooseTowerMutation(run,id){

@@ -1,9 +1,10 @@
 // Segment-based Tower mutation inventory (new economy, independent of old whole-kit UI).
 // Each object is one owned item. Equipped parts are at risk on uninsured death.
-import {TOWER_MUTATION_IDS,TOWER_MUTATIONS,towerMutationRarity} from './mutations.js';
+import {TOWER_MUTATION_IDS,TOWER_MUTATIONS,rollTowerBossRarity} from './mutations.js';
 import {towerUpgradeApplies} from './upgrade-appearance.js';
 import {towerPatientAnatomy} from './anatomy.js';
 
+export const TOWER_SECOND_SEGMENT_CHANCE=.35;
 export const TOWER_SEGMENT_INSTALL_PRICE=75;
 export const TOWER_SEGMENT_SELL_BASE=50;
 export const towerSegmentSellPrice=rarity=>Math.round(TOWER_SEGMENT_SELL_BASE*(1+.12*rarity));
@@ -30,7 +31,7 @@ export function towerSegmentStacks(run){
  }
  return [...counts.values()];
 }
-export function awardTowerSegments(run,clearedFloor,random=Math.random,dropChance=1){
+export function awardTowerSegments(run,clearedFloor,random=Math.random,dropChance=1,previousBossWins=dropChance<1?1:0){
  normalizeTowerSegmentInventory(run);
  // On repeats the chance to receive a 1-2 segment batch decreases by
  // 30% of its CURRENT value. The first boss victory is guaranteed.
@@ -41,13 +42,13 @@ export function awardTowerSegments(run,clearedFloor,random=Math.random,dropChanc
  }
  // After a successful batch roll, the SECOND segment has a 35% chance
  // (down from 50%). The repeat-boss batch chance is independent.
- const count=random()<.65?1:2;
+ const count=random()<1-TOWER_SECOND_SEGMENT_CHANCE?1:2;
  const issued=[];
  for(let i=0;i<count;i++){
   const type=TOWER_MUTATION_IDS[Math.min(TOWER_MUTATION_IDS.length-1,Math.floor(random()*TOWER_MUTATION_IDS.length))];
   const sites=towerSegmentSites(type,run);
   const site=sites[Math.min(sites.length-1,Math.floor(random()*sites.length))];
-  const item={id:'seg'+run.nextSegmentId++,type,site,rarity:towerMutationRarity(clearedFloor)};
+  const item={id:'seg'+run.nextSegmentId++,type,site,rarity:rollTowerBossRarity(clearedFloor,previousBossWins,random)};
   run.segmentInventory.push(item);issued.push(item);
  }
  run.lastBossSegments=issued.map(item=>item.id);

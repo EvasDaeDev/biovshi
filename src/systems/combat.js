@@ -1,8 +1,7 @@
 import {pendingStrikes,setPendingStrikes} from './strikes.js';
 import {settleTower} from '../tower/ui.js';
-import {patientCombatStats,patientGarage} from '../game/patients.js';
-import {towerMutationCombatBonus} from '../tower/mutations.js';
-import {towerInstalledSegments} from '../tower/segments.js';
+import {patientCombatStats} from '../game/patients.js';
+import {towerAttackInterval} from '../tower/mutations.js';
 import {towerAllies} from '../tower/relations.js';
 import {critChance} from '../garage/model.js';
 import {random} from '../utils/random.js';
@@ -284,12 +283,8 @@ export function finishingPounceInProgress(robot,time) {
 }
 export function towerFighterCombatBonus(id){
  if(ctx.mode!=='tower'||id!==0)return {crit:0,cooldownMultiplier:1};
- const patient=patientGarage()?.[0];
- // Offline H8 injection lives solely in a transient, simulator-created
- // garage entry. Production loads never set this field; defaults are intact.
- const offline=patient?.rarityPhysics;
- return offline?{crit:offline.crit,cooldownMultiplier:offline.cooldownMultiplier}:
-  towerMutationCombatBonus([...(patient?.mutations??[]),...towerInstalledSegments(patient).map(item=>item.type)]);
+ const {crit,cooldownMultiplier}=patientCombatStats(0).combat;
+ return {crit,cooldownMultiplier};
 }
 export function combatAttacks() {
   if (ctx.combat.finished) return;
@@ -306,7 +301,8 @@ export function combatAttacks() {
         if (attacker.visible && attacker.mobile && src && victim?.visible && victim.hasHead && victim.segmentCount > 0
           &&(ctx.mode!=='tower'||!towerAllies(ctx.towerRun,id,victim.id,ctx.game.time))) {
           const touched = struckSegment(attacker, victim, pending);
-          const damage=touched&&random()<Math.min(.75,critChance(patientCombatStats(id,attacker).effective[1])+towerFighterCombatBonus(id).crit)?2:1;
+          const stats=touched?patientCombatStats(id,attacker):null;
+          const damage=touched&&random()<(stats.effects?.[1]??critChance(stats.effective[1]))?2:1;
           if (touched && victim.damage(touched, id, damage)) {
             if (victim.mobile) victim.reactToHit(attacker, touched);
             ctx.combat.hits++;
@@ -353,16 +349,21 @@ export function combatAttacks() {
     if(selected.length){
       if(ctx.agentAI[id])ctx.agentAI[id].lastAttackSource=selected[0].source.key;
       const timing=attacker.body?.combat??CONFIG.combat;
+      const towerCombat=ctx.mode==='tower'&&id===0?patientCombatStats(id,attacker).combat:null;
+      const recoveryReduction=towerCombat?.recoveryReduction??0;
+      const spine=attacker.spineCount/(attacker.spineSegmentTotal??4);
       setPendingStrikes(id,selected.map(best=>({
         victim:best.victim.id,segment:best.segment,source:best.source.key,aim:{...best.aim},
         started:ctx.game.time,
         impactAt:ctx.game.time+timing.windupSec+timing.thrustSec,
-        endsAt:ctx.game.time+timing.windupSec+timing.thrustSec+timing.recoverSec,
-        at:ctx.game.time+timing.windupSec,resolved:false,...(attacker.body?.combat?{timing}:{})
+        endsAt:ctx.game.time+timing.windupSec+timing.thrustSec+timing.recoverSec-recoveryReduction,
+        at:ctx.game.time+timing.windupSec,resolved:false,
+        ...(attacker.body?.combat||recoveryReduction?{timing:{...timing,recoverSec:timing.recoverSec-recoveryReduction}}:{})
       })));
       ctx.combat.strikes+=selected.length;
       ctx.combat.fighterSwings[id]+=selected.length;
-      ctx.combat.nextStrike[id]=ctx.game.time+timing.attackCooldownSec*(1+.16*4*(1-attacker.spineCount/(attacker.spineSegmentTotal??4)))*towerFighterCombatBonus(id).cooldownMultiplier;
+      ctx.combat.nextStrike[id]=ctx.game.time+(towerCombat?towerAttackInterval(towerCombat,{timing,spine}):
+       timing.attackCooldownSec*(1+.64*(1-spine)));
       for(const best of selected)note('combat-windup',{from:id,to:best.victim.id,source:best.source.key});
     }
   }

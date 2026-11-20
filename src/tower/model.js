@@ -125,8 +125,8 @@ export function completeTower(session,player,won,random=Math.random){
   if(bossWon){
    // Transitional implementation: new segment warehouse is populated while
    // the legacy reward UI remains enabled until its full replacement lands.
-   if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random,bossRepeatDropChance(previousBossWins));
-   else grantTowerMutationDraft(t,random);
+   if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random,bossRepeatDropChance(previousBossWins),previousBossWins);
+   else grantTowerMutationDraft(t,random,previousBossWins);
   }}
  else {
   const c=t.insurance.checkpoint,next=newTower(undefined,t.record,t.artifacts,t.insurance);

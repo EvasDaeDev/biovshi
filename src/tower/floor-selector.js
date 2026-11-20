@@ -6,7 +6,9 @@ import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
 import {towerRelationLabel} from './relations.js';
 import {purchaseTowerArenaReroll,towerRerollCandidates,towerRerollPrice} from './economy.js';
 import {towerEnemyCount} from './model.js';
-import {artifactDropChance,ARTIFACT_PIECE_COUNT} from './artifacts.js';
+import {artifactDropChance,bossRepeatDropChance,ARTIFACT_PIECE_COUNT} from './artifacts.js';
+import {towerBossRarityOdds,TOWER_RARITIES} from './mutations.js';
+import {TOWER_SECOND_SEGMENT_CHANCE} from './segments.js';
 import {hasBoss} from '../boss/config.js';
 import {formatChips} from '../ui/currency.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
@@ -75,6 +77,30 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
     const name=document.createElement('strong');name.textContent=label+':';
     const info=document.createElement('span');if(label==='Награда за голову')info.innerHTML=value;else info.textContent=value;
     line.append(name,info);button.append(line);
+   }
+   if(option.kind==='boss'){
+    const previousWins=run.artifacts.bossWins[run.level]??0;
+    const odds=document.createElement('span');odds.className='tower-boss-rarity-odds';
+    const label=document.createElement('strong');label.textContent=run.segmentRewardsEnabled===false?'РЕДКОСТЬ НАГРАДЫ':'РЕДКОСТЬ КАЖДОЙ ДЕТАЛИ';
+    const ranks=document.createElement('span');
+    for(const {rarity,percent} of towerBossRarityOdds(run.level,previousWins)){
+     const item=document.createElement('span');item.dataset.rarity=String(rarity);
+     const {name,colour}=TOWER_RARITIES[rarity];
+     if(colour)item.style.setProperty('--tower-rarity-color',colour);
+     item.textContent=name+' '+percent+'%';
+     ranks.append(item);
+    }
+    odds.append(label,ranks);
+    if(run.segmentRewardsEnabled!==false){
+     const percent=new Intl.NumberFormat('ru-RU',{style:'percent',maximumFractionDigits:2});
+     if(previousWins>0){
+      const batch=document.createElement('small');batch.textContent='ШАНС ДРОПА: '+percent.format(bossRepeatDropChance(previousWins));
+      odds.append(batch);
+     }
+     const extra=document.createElement('small');extra.textContent='ВТОРАЯ ДЕТАЛЬ: '+percent.format(TOWER_SECOND_SEGMENT_CHANCE);
+     odds.append(extra);
+    }
+    button.append(odds);
    }
    if(option.relations){const relation=document.createElement('small');relation.className='tower-relation-banner';
     relation.textContent='ОСОБОЕ ИСПЫТАНИЕ · '+towerRelationLabel(option.relations);button.append(relation);}

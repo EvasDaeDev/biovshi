@@ -212,3 +212,24 @@ test('boss results explain failed independent loot rolls instead of showing only
   assert.match(explanation,/ФРАГМЕНТ: НЕ ВЫПАЛ · ШАНС: 70%/);
  }finally{f.close();}
 });
+
+test('rare automatic boss rewards tint the segment and its cell on the existing victory screen',()=>{
+ const f=startBossScenario({floor:5});
+ try{
+  f.tower.segmentRewardsEnabled=true;
+  towerPreparation();document.querySelector('#tower-fight').click();
+  f.boss.damage('head',0,100);
+  ctx.combat.winner=0;
+  // Artifact, fragment index, quantity, segment type, slot, rarity.
+  const rolls=[0,0,0,0,0,.995];
+  Math.random=()=>rolls.shift()??0;
+  settleTower(0);towerResults();
+  const reward=document.querySelector('#bet-result-summary .tower-segment-reward');
+  assert.equal(reward.dataset.mutationRarity,'2');
+  assert.match(reward.textContent,/СИНЯЯ/);
+  assert.equal(reward.style.getPropertyValue('--tower-rarity-color'),'#4b94d2');
+  assert.ok(reward.querySelector('image[filter]'),'matrix is applied to the texture');
+  assert.equal(f.tower.mutationDraft,undefined,'no new selection for an automatic boss');
+  assert.equal(bettingLoad().towers[0].segmentInventory[0].rarity,2);
+ }finally{f.close();}
+});

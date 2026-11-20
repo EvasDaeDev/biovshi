@@ -311,3 +311,12 @@
 @media(prefers-reduced-motion:reduce){
   #robot-tag-hops-v22 .robot-card.tower-card-exiting{animation:none}
 }
+
+
+#robot-tag-hops-v22 .tower-boss-rarity-odds{display:grid;gap:4px;margin-top:5px}
+#robot-tag-hops-v22 .tower-boss-rarity-odds>span{display:flex;flex-wrap:wrap;gap:4px 10px}
+#robot-tag-hops-v22 .tower-boss-rarity-odds [data-rarity]{color:var(--tower-rarity-color,#e7daba);font-weight:700}
+#robot-tag-hops-v22 :is(.tower-inventory-item,.tower-mutation-option)[data-mutation-rarity]:not([data-mutation-rarity="0"]){
+  background-color:color-mix(in srgb,#292b23 85%,var(--tower-rarity-color,#e7daba));
+}
+#robot-tag-hops-v22 svg.tower-mod-icon{overflow:hidden}

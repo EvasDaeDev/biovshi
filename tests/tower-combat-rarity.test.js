@@ -1,0 +1,75 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+import {newTower,completeTower} from '../src/tower/model.js';
+import {awardTowerSegments} from '../src/tower/segments.js';
+import {towerMutationSnapshot,towerAttackInterval,rollTowerBossRarity,towerBossRarityOdds,grantTowerMutationDraft} from '../src/tower/mutations.js';
+import {renderTowerFloorChoices} from '../src/tower/floor-selector.js';
+
+const approx=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-10,`${actual} != ${expected}`);
+function equipped(stats,types,ranks){
+ const segments=types.map((type,index)=>({id:'seg'+index,type,rarity:ranks[index]}));
+ return towerMutationSnapshot({stats,segmentInventory:segments,equippedSegments:segments.map(item=>item.id)});
+}
+
+test('Tower baseline grows past 9 and equipment has separate overflow and final caps',()=>{
+ assert.deepEqual(towerMutationSnapshot({stats:[3,3,3]}).effects,[1,.15,1]);
+ const late=towerMutationSnapshot({stats:[13,13,12]});
+ late.effects.forEach((value,index)=>approx(value,[1.88,.62,1.86][index]));
+ const stats=[14,14,14];
+ const gear=equipped(stats,Array(12).fill('piston'),Array(12).fill(5));
+ approx(gear.effects[1],.685); // 60% + 2.5 pp base + 2 pp from equipped points + 4 pp rarity
+ approx(equipped(stats,Array(7).fill('focus'),Array(7).fill(5)).effects[1],.75);
+ approx(equipped(stats,Array(10).fill('turbo'),Array(10).fill(5)).effects[0],2);
+ const withProsthetic=towerMutationSnapshot({stats,prosthetics:['arm-1-upper']});
+ approx(withProsthetic.effects[2],1.8944); // Maneuver penalty is kept when points exceed 9.
+});
+
+test('rarity uses the three highest rolls per effect and speeds recovery beyond the ordinary limit',()=>{
+ const stats=[9,9,9],types=['metronome','metronome','metronome','metronome'];
+ const normal=equipped(stats,types,[0,0,0,0]);
+ const ranked=equipped(stats,types,[1,5,4,3]);
+ approx(towerAttackInterval(normal.combat),.78);
+ approx(ranked.combat.recoveryReduction,.0045*(5+.4*4+.2*3));
+ approx(towerAttackInterval(ranked.combat),.7476);
+ approx(towerAttackInterval(equipped(stats,types,[5,5,5,5]).combat),.744);
+});
+
+test('boss odds and awarded rarity agree at boundaries and on repeat kills',()=>{
+ assert.deepEqual(towerBossRarityOdds(5).map(item=>[item.rarity,item.percent]),[[0,92],[1,7],[2,1]]);
+ assert.deepEqual([0,.91999,.92,.98999,.99,.999].map(roll=>rollTowerBossRarity(5,0,()=>roll)),[0,0,1,1,2,2]);
+ assert.deepEqual(towerBossRarityOdds(125).map(item=>item.percent),[93,7]);
+ assert.equal(rollTowerBossRarity(125,0,()=>.92999),4);
+ assert.equal(rollTowerBossRarity(125,0,()=>.93),5);
+ assert.equal(rollTowerBossRarity(155,0,()=>.999),5);
+ const rolls=[.65,0,0,.94,0,0,.995],run=newTower();
+ assert.deepEqual(awardTowerSegments(run,5,()=>rolls.shift()).map(x=>x.rarity),[1,2]);
+ assert.equal(awardTowerSegments(run,5,()=>0,.7)[0].rarity,0);
+ const draft={...newTower(),level:6};
+ assert.ok(grantTowerMutationDraft(draft,()=>.995));
+ assert.equal(draft.mutationDraft.rarity,2);
+ const repeat={...newTower(),level:5,segmentRewardsEnabled:true};
+ repeat.artifacts.bossWins[5]=1;
+ // Consume artifact and batch rolls, then pick the second item count.
+ const replay=[.99,0,.65,.995,.995,.995,.995];
+ completeTower({players:[{balance:1000}],towers:{0:repeat}},0,true,()=>replay.shift());
+ assert.deepEqual(repeat.segmentInventory.map(item=>item.rarity),[0,0]);
+});
+
+test('boss preparation shows colored rarity odds separately from the repeat drop chance',()=>{
+ const dom=new JSDOM('<div id="floor"></div>');
+ const previous=globalThis.document;
+ globalThis.document=dom.window.document;
+ try{
+  const run=newTower();run.level=5;run.segmentRewardsEnabled=true;
+  run.floorPlan={floor:5,selected:0,options:[{arenaId:'ward',kind:'boss',profiles:['boss','basic','basic']}]};
+  const container=document.getElementById('floor');
+  const view=renderTowerFloorChoices({container,session:{players:[{balance:1000}]},player:0,run});
+  const odds=()=>Array.from(container.querySelectorAll('.tower-boss-rarity-odds [data-rarity]'));
+  assert.deepEqual(odds().map(node=>node.textContent),['ОБЫЧНАЯ 92%','ЗЕЛЁНАЯ 7%','СИНЯЯ 1%']);
+  assert.equal(odds()[2].style.getPropertyValue('--tower-rarity-color'),'#4b94d2');
+  run.artifacts.bossWins[5]=2;view.render();
+  assert.deepEqual(odds().map(node=>node.textContent),['ОБЫЧНАЯ 100%']);
+  assert.match(container.querySelector('.tower-boss-rarity-odds').textContent,/ШАНС ДРОПА: 49\s*%/);
+ }finally{globalThis.document=previous;dom.window.close();}
+});

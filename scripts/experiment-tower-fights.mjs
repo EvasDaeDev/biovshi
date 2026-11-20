@@ -153,12 +153,10 @@ function runScenario(scenario,seed){
    const live=towerMutationBonus(patient.mutations),liveCombat=towerMutationCombatBonus(patient.mutations);
    const proposal=rarityStep===0?{effective:live,crit:liveCombat.crit,
      cooldownMultiplier:liveCombat.cooldownMultiplier}:towerRarityScenario(installed,rarityStep);
-   if(rarityStep!==0){
-    // Ephemeral arena data ONLY; never attached to towerRun, insurance, or
-    // any other serialized patient data.
-    patient.rarityPhysics=Object.freeze({effective:Object.freeze([...proposal.effective]),
-     crit:proposal.crit,cooldownMultiplier:proposal.cooldownMultiplier});
-   }
+   // Freeze the historical comparison, including its rank-neutral control.
+   // This override lives only in the transient arena.
+   patient.rarityPhysics=Object.freeze({effective:Object.freeze([...proposal.effective]),
+    crit:proposal.crit,cooldownMultiplier:proposal.cooldownMultiplier});
    row.rarityCompare.live=Object.freeze({effective:live,crit:liveCombat.crit,
      cooldownMultiplier:liveCombat.cooldownMultiplier});
    row.rarityCompare.proposed=Object.freeze({effective:[...proposal.effective],

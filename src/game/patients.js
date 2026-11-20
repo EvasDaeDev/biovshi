@@ -1,5 +1,5 @@
 import {ctx} from './state.js';
-import {BASE_STATS,patientGeneration} from '../garage/model.js';
+import {BASE_STATS,patientGeneration,statMultiplier} from '../garage/model.js';
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {towerMutationSnapshot} from '../tower/mutations.js';
 export const patientGarage=()=>ctx.mode==='tower'?ctx.towerGarage:ctx.betting?.garage;
@@ -10,18 +10,23 @@ export function patientCombatStats(id,robot=ctx.robots?.[id]){
  const patient=patientGarage()?.[id],base=patient?.stats??BASE_STATS;
  if(!robot||!Number.isFinite(robot.segmentCount))return snapshotFor(patient,robot,id);
  const cached=combatStatsCache.get(robot);
+ const loadout=JSON.stringify([patient?.equippedSegments,patient?.segmentInventory,patient?.equippedMutations,patient?.mutationInventory]);
  if(cached&&cached.parts===patient?.prosthetics&&cached.segments===robot.segmentCount
    &&cached.hasHead===robot.hasHead&&cached.mutations===(patient?.mutations??[]).join(',')
-   &&cached.segmentEquipment===JSON.stringify([patient?.equippedSegments??[],patient?.segmentInventory??[]])
+   &&cached.loadout===loadout
    &&cached.surgeries===JSON.stringify(patient?.surgeries??[])
    &&cached.rarityPhysics===patient?.rarityPhysics
    &&cached.snapshot.base.every((value,index)=>value===base[index]))return cached.snapshot;
  const snapshot=snapshotFor(patient,robot,id);
  combatStatsCache.set(robot,{parts:patient?.prosthetics,segments:robot.segmentCount,hasHead:robot.hasHead,
   mutations:(patient?.mutations??[]).join(','),surgeries:JSON.stringify(patient?.surgeries??[]),
-  segmentEquipment:JSON.stringify([patient?.equippedSegments??[],patient?.segmentInventory??[]]),
+  loadout,
   rarityPhysics:patient?.rarityPhysics,snapshot});
  return snapshot;
+}
+export function patientMovementMultiplier(id,robot,index){
+ const snapshot=patientCombatStats(id,robot);
+ return snapshot.effects?.[index]??statMultiplier(snapshot.effective[index]);
 }
 export const patientSkin=id=>ctx.mode==='tower'&&id===0?ctx.towerRun.patient:id%4;
 // Spreadsheet-style letters keep large tower floors readable after Z.
