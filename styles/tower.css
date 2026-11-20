@@ -83,6 +83,23 @@
 
 /* Dark result sheets override the paper theme's paragraph colors. */
 #robot-tag-hops-v22 #bet-result-summary .tower-run-summary p{color:#f3e1ae}
+/* Results always disclose the saved number of boss wins and the actual
+   item roll chances, including the case where both rolls miss. */
+#robot-tag-hops-v22 #bet-result-summary .tower-boss-loot-chances{
+ margin:12px 0 4px;
+ padding:10px 8px;
+ border-top:1px solid #76684d;
+ text-align:center;
+ font-size:12px;
+ line-height:1.6;
+ font-weight:700;
+ color:#f3e1ae;
+}
+#robot-tag-hops-v22 #bet-result-summary .tower-boss-loot-chances span{
+ display:block;
+ color:#e9dcc1;
+ font-weight:500;
+}
 #robot-tag-hops-v22 #bet-result-summary .tower-run-summary :is(.artifact-award-note,.artifact-completed){color:#f3d884}
 
 #robot-tag-hops-v22 .artifact-bonus-note{color:#f3d884;font-size:12px;text-align:center;margin:10px 0}
