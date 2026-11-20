@@ -12,19 +12,32 @@ import {createSkinReadiness} from './skin-readiness.js';
 // their span also controls texture scale through skinMatrix.
 // An ordinary hit gives only the exact contacted bone a subtle red flash.
 // A critical hit keeps the existing crit/sever VFX instead of stacking tints.
+// The damage event writes ONLY the directly hit segment; neither child nor
+// sibling segments inherit this effect. Criticals are tracked separately.
+export const SEGMENT_HIT_TINT=.40;
+export const SEGMENT_HIT_TINT_SEC=.30;
+export const SEGMENT_CRIT_TINT_SEC=.48;
 export function recordSegmentHitTint(robot,key,time,damage){
- if(damage>=2){robot.segmentHitTints?.delete(key);return;}
- // Exact key only; the hierarchy and severing cascade are deliberately
- // not traversed. A repeated ordinary hit restarts only this segment's fade.
- (robot.segmentHitTints??=new Map()).set(key,time);
+ if(damage>=2){
+  robot.segmentHitTints?.delete(key);
+  (robot.segmentCritTints??=new Map()).set(key,time);
+ }else{
+  robot.segmentCritTints?.delete(key);
+  (robot.segmentHitTints??=new Map()).set(key,time);
+ }
 }
-export const SEGMENT_HIT_TINT=.30;
-export const SEGMENT_HIT_TINT_SEC=.28;
+// Flat ordinary flash: 40% for 300 ms, then immediately off.
 export function segmentHitTint(time,hitAt){
  if(!Number.isFinite(hitAt)||!Number.isFinite(time))return 0;
  const age=time-hitAt;
- return age>=0&&age<SEGMENT_HIT_TINT_SEC?
-  SEGMENT_HIT_TINT*(1-age/SEGMENT_HIT_TINT_SEC):0;
+ return age>=0&&age<SEGMENT_HIT_TINT_SEC?SEGMENT_HIT_TINT:0;
+}
+// Critical flash: 100% additive red at impact, smoothly fades to zero.
+export function segmentCritTint(time,hitAt){
+ if(!Number.isFinite(hitAt)||!Number.isFinite(time))return 0;
+ const age=time-hitAt;
+ return age>=0&&age<SEGMENT_CRIT_TINT_SEC?
+  1-age/SEGMENT_CRIT_TINT_SEC:0;
 }
 export function segmentHitTintMatrix(strength){
  const keep=1-strength;
@@ -75,7 +88,7 @@ function createPiece(key,url,parent,part=ROBOT_PARTS[key],rarity=0) {
     href:url,x:0,y:0,width:256,height:256,preserveAspectRatio:'none',
     style:CONFIG.rendering.texturePixelated?'image-rendering:crisp-edges;image-rendering:pixelated':'',
   },viewport);
-  return {group,viewport,image,part,url,rarity};
+  return {group,viewport,image,part,url,rarity,critOverlay:null};
 }
 
 export function createRobotSkin(robot) {
@@ -148,26 +161,54 @@ export function paintRobotSkin(robot,strikePoses=[]) {
     attr(piece.group,'display',healthy?'':'none');
     if(!healthy)return;
     attr(piece.group,'transform','matrix('+skinMatrix(a,b,piece.part).join(' ')+')');
-    const until=robot.segmentHitTints?.get(key);
-    const strength=segmentHitTint(ctx.game.time,until);
+    const normalAt=robot.segmentHitTints?.get(key);
+    const strength=segmentHitTint(ctx.game.time,normalAt);
+    // The 40% tint is applied to the cropped texture viewport, not its
+    // bone group (which could also hold ornaments / other geometry).
+    attr(piece.viewport,'data-hit-tint',strength.toFixed(4));
     if(strength>0){
-      // Both renderers colour the actual clipped atlas texture viewport.
-      // Do not filter the parent bone group or its descendant bones.
-      attr(piece.viewport,'data-hit-tint',strength.toFixed(4));
       if(!piece.hitFilter){
         const id='tag7hop-hit-tint-'+robot.id+'-'+key.replace(/[^a-z0-9-]/gi,'_');
         const filter=el('filter',{id,x:'-10%',y:'-10%',width:'120%',height:'120%'},ctx.defs);
         const matrix=el('feColorMatrix',{type:'matrix'},filter);
-        piece.hitFilter={filter,matrix,id};
-        attr(piece.viewport,'filter','url(#'+id+')');
+        piece.hitFilter={matrix,id};
       }
       attr(piece.viewport,'filter','url(#'+piece.hitFilter.id+')');
-      const m=segmentHitTintMatrix(strength);
-      attr(piece.hitFilter.matrix,'values',m.join(' '));
+      attr(piece.hitFilter.matrix,'values',segmentHitTintMatrix(strength).join(' '));
     }else{
-      if(piece.viewport.getAttribute('data-hit-tint')!=='0')attr(piece.viewport,'data-hit-tint','0');
-      if(piece.hitFilter&&piece.viewport.getAttribute('filter')!=='none')attr(piece.viewport,'filter','none');
-      if(until!==undefined)robot.segmentHitTints.delete(key);
+      if(piece.hitFilter)attr(piece.viewport,'filter','none');
+      if(normalAt!==undefined)robot.segmentHitTints.delete(key);
+    }
+    const critAt=robot.segmentCritTints?.get(key);
+    const crit=segmentCritTint(ctx.game.time,critAt);
+    if(crit>0){
+      if(!piece.critOverlay){
+        // A second clipped atlas sprite draws in additive mode. For SVG the
+        // plus-lighter blend works on the actual image; Pixi maps this
+        // special viewport to a native sprite with blendMode='add'.
+        const overlay=el('svg',{
+          x:0,y:0,width:64,height:64,
+          viewBox:`${piece.part.col*64} ${piece.part.row*64} 64 64`,
+          overflow:'hidden',preserveAspectRatio:'none',
+          'data-hit-crit-overlay':'true',
+          'data-fallback-src':piece.viewport.getAttribute('data-fallback-src')??piece.url,
+          style:'mix-blend-mode:plus-lighter'
+        },piece.group);
+        const id='tag7hop-crit-tint-'+robot.id+'-'+key.replace(/[^a-z0-9-]/gi,'_');
+        const filter=el('filter',{id,x:'-10%',y:'-10%',width:'120%',height:'120%'},ctx.defs);
+        el('feColorMatrix',{type:'matrix',values:segmentHitTintMatrix(1).join(' ')},filter);
+        const image=el('image',{href:piece.image.getAttribute('href'),x:0,y:0,width:256,height:256,
+          preserveAspectRatio:'none',filter:'url(#'+id+')',
+          style:CONFIG.rendering.texturePixelated?'image-rendering:crisp-edges;image-rendering:pixelated':''},overlay);
+        piece.critOverlay={viewport:overlay,image};
+      }
+      // Follow fallback skin changes: overlay must use the same atlas cell.
+      attr(piece.critOverlay.image,'href',piece.image.getAttribute('href'));
+      attr(piece.critOverlay.viewport,'opacity',crit.toFixed(4));
+      attr(piece.critOverlay.viewport,'display','');
+    }else{
+      if(piece.critOverlay)attr(piece.critOverlay.viewport,'display','none');
+      if(critAt!==undefined)robot.segmentCritTints.delete(key);
     }
   };
   for(let i=0;i<(robot.spineSegmentTotal??4);i++) {
