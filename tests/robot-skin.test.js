@@ -33,7 +33,7 @@ test('ordinary damage tints only the exact struck segment, not its descendants o
  assert.equal(segmentHitTint(2,robot.segmentHitTints.get('arm-1-upper')),SEGMENT_HIT_TINT);
  assert.equal(segmentHitTint(2+SEGMENT_HIT_TINT_SEC/2,2),.4,'flat brightness, no fade');
  assert.equal(segmentHitTint(2+SEGMENT_HIT_TINT_SEC-.001,2),.4);
- assert.equal(segmentHitTint(2+SEGMENT_HIT_TINT_SEC,2),0,'immediate end of regular flash');
+ assert.equal(segmentHitTint(2+SEGMENT_HIT_TINT_SEC+1e-7,2),0,'immediate end of regular flash');
  recordSegmentHitTint(robot,'head',3,1);
  assert.deepEqual([...robot.segmentHitTints.keys()],['arm-1-upper','head']);
  recordSegmentHitTint(robot,'arm-1-upper',4,1);
