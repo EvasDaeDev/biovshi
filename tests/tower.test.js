@@ -330,7 +330,7 @@ test('Tower II upgrade screen displays coin art, real equipped bonuses and one r
  try{
   const modal=document.querySelector('#tower-upgrade-window');
   const stats=modal.querySelector('#tower-upgrade-stats');
-  assert.match(document.querySelector('[data-tower-apply]').textContent,/БЕСПЛАТНО/,'first skill transfer is free');
+  assert.match(document.querySelector('[data-tower-apply]').textContent,/БЕСПЛАТНО/,'skill transfers are free');
    assert.equal(document.querySelector('[data-tower-apply] img.chip-icon'),null);
   assert.match(modal.querySelector('.tower-upgrade-wallet').textContent,/БАНК:/);
   assert.ok(modal.querySelector('.tower-upgrade-wallet img.chip-icon'));
@@ -819,7 +819,7 @@ test('Tower preparation uses compact icon-only controls, fixed preview slot and 
  }finally{close(dom);}
 });
 
-test('tower skill selection is a preview until free first confirmation',()=>{
+test('tower skill transfers remain free on repeated confirmation and reload',()=>{
  const session=betNewSession(['Игрок'],200),run=towerFor(session,0);
  const dom=setup(session,run);
  try{
@@ -844,10 +844,16 @@ test('tower skill selection is a preview until free first confirmation',()=>{
   assert.equal(document.querySelector('[data-tower-apply]').disabled,true);
   assert.deepEqual(bettingLoad().towers[0].stats,[4,2,3]);
   assert.match(document.querySelector('#tower-stats .tower-stat-message').textContent,/подтверждено/);
+  document.querySelector('[data-tower-base]').click();
+  document.querySelector('[data-tower-apply]').click();
+  assert.equal(document.querySelector('#game-action-confirm .chip-icon'),null);
+  confirmPaidAction();
+  assert.deepEqual(bettingLoad().towers[0].stats,[3,3,3]);
+  assert.equal(session.players[0].balance,200);assert.equal(session.towerEconomySpent,0);
   const strength=document.querySelector('[data-tower-stat="1"]');strength.value='4';strength.dispatchEvent(new Event('change'));
-  assert.deepEqual(run.stats,[4,2,3],'next change is still only a preview');
+  assert.deepEqual(run.stats,[3,3,3],'next change is still only a preview');
   document.querySelector('#tower-fight').click();
-  assert.deepEqual(ctx.towerRun.stats,[4,2,3],'unpaid preview is discarded at fight entry');
+  assert.deepEqual(ctx.towerRun.stats,[3,3,3],'unconfirmed preview is discarded at fight entry');
  }finally{close(dom);}
 });
 

@@ -6,7 +6,7 @@ import {bossFloorReward} from '../boss/encounter.js';
 import {selectedTowerFloor} from './floors.js';
 import {TOWER_RELATION_NAMES} from './relations.js';
 import {towerMutationSnapshot,towerAttackInterval,TOWER_MUTATIONS,TOWER_MUTATION_IDS,TOWER_MUTATION_FAMILIES,TOWER_MUTATION_SYNERGIES,towerMutationSynergies,towerMutationEffectText,chooseTowerMutation,
- equipTowerMutation,removeTowerMutation,towerInstalledItems,towerMutationInstallPrice,TOWER_MUTATION_LIMIT,TOWER_RARITIES} from './mutations.js';
+ equipTowerMutation,removeTowerMutation,towerInstalledItems,towerMutationInstallPrice,TOWER_MUTATION_LIMIT,TOWER_RARITIES,towerMutationRarity} from './mutations.js';
 import {towerCycleWins,towerCycleInfo,towerCycleTitle,towerFloorLabel} from './cycles.js';
 import {TOWER_MUTATION_ATLAS,towerUpgradeApplies,towerRaritySvgFilter} from './upgrade-appearance.js';
 import {towerSegmentStacks,towerInstalledSegments,towerUnreadSegments,markTowerSegmentSeen,towerSegmentSellPrice,TOWER_SEGMENT_INSTALL_PRICE,equipTowerSegment,removeTowerSegment,sellTowerSegment} from './segments.js';
@@ -27,7 +27,7 @@ import {SKILLS,skillHintAttributes,formatSkillPoints} from '../ui/patient.js';
 import {renderTowerFloorChoices} from './floor-selector.js';
 import {artifactCollectionMarkup} from './artifact-ui.js';
 import {formatChips} from '../ui/currency.js';
-import {purchaseTowerStatChange,towerStatChangePrice} from './economy.js';
+import {applyTowerStatChange} from './economy.js';
 import {installTowerUpgradeWindow} from './upgrade-modal.js';
 import {chooseTowerModuleReplacement} from './replacement-dialog.js';
 import {confirmGameAction} from '../ui/confirm-action.js';
@@ -212,17 +212,15 @@ export function towerPreparation(){
       return '<span class="tower-stat-preview"><span>'+label+'</span> <strong class="'+cls+'">'+formatSkillPoints(value*100)+'%'+(diff>0?' ▲':diff<0?' ▼':'')+'</strong></span>';
     };
     const current=snapshot.effects,original=initial.effects;
-    const changePrice=towerStatChangePrice(t);
     fields.innerHTML=`<div class="garage-stat-list"><small>Побед: ${t.wins} · очков в текущем цикле: ${9+towerCycleWins(t.level)}</small>
       ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)} aria-label="${skill.name}"><span class="tower-skill-icon" aria-hidden="true">${skill.icon}</span><select data-tower-stat="${i}" class="${draftStats[i]>earnedStats(towerCycleWins(t.level))[i]?'tower-stat-boosted':draftStats[i]<earnedStats(towerCycleWins(t.level))[i]?'tower-stat-reduced':''}" aria-label="${skill.name}">${[earnedStats(towerCycleWins(t.level))[i]-1,earnedStats(towerCycleWins(t.level))[i],earnedStats(towerCycleWins(t.level))[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===draftStats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
       <div class="garage-stat-effects tower-stat-previews"><span class="tower-preview-label ${draftStats.some((v,i)=>v!==t.stats[i])?'is-active':''}">ПРЕДПРОСМОТР</span>${comparison('СКОРОСТЬ',current[0],original[0])}${comparison('МОБИЛЬНОСТЬ',current[2],original[2])}${comparison('КРИТ',current[1],original[1])}<span class="tower-stat-preview"><span>ИНТЕРВАЛ АТАК</span> <strong>${Math.round(towerAttackInterval(snapshot.combat)*1000)} мс</strong></span></div>
-      <div class="tower-stat-confirm"><button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button><button type="button" data-tower-apply>ПРИМЕНИТЬ · ${changePrice?formatChips(changePrice):'БЕСПЛАТНО'}</button></div><small class="tower-stat-message" role="status"></small>`;
+      <div class="tower-stat-confirm"><button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button><button type="button" data-tower-apply>ПРИМЕНИТЬ · БЕСПЛАТНО</button></div><small class="tower-stat-message" role="status"></small>`;
     const changed=draftStats.some((v,i)=>v!==t.stats[i]);
     const transfer=draftStats.reduce((sum,v,i)=>sum+Math.max(0,v-t.stats[i]),0);
     const apply=fields.querySelector('[data-tower-apply]');
     apply.disabled=!changed||transfer!==1||!validStats(draftStats,towerCycleWins(t.level))
-      ||t.arenaRerollLocked||Boolean(t.rewarded?.length)
-      ||ctx.betting.players[ctx.towerPlayer].balance<changePrice;
+      ||t.arenaRerollLocked||Boolean(t.rewarded?.length);
     fields.querySelector('.tower-stat-message').textContent=lastStatReceipt?'✓ '+lastStatReceipt:'';
     fields.querySelectorAll('select').forEach(select=>select.onchange=()=>{
       const index=Number(select.dataset.towerStat);
@@ -242,16 +240,15 @@ export function towerPreparation(){
       confirmGameAction({
         root:ctx.root,
         title:'ПЕРЕРАСПРЕДЕЛЕНИЕ НАВЫКОВ',
-        details:[...changed,changePrice?'Изменения вступят в силу после списания монет.':'Первое перераспределение навыков бесплатно.'],
-        ...(changePrice?{cost:changePrice}:{}),
+        details:[...changed,'Перераспределение навыков бесплатно.'],
         confirmLabel:'ПРИМЕНИТЬ',
         onConfirm:()=>{
           if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
           try{
-            const spent=purchaseTowerStatChange(ctx.betting,ctx.towerPlayer,t,proposed);
+            applyTowerStatChange(t,proposed);
             ctx.towerGarage[0].stats=[...t.stats];
-            lastStatReceipt=spent?'Перераспределение подтверждено · −'+spent+' монет':'Первое перераспределение подтверждено бесплатно';
-            bettingSave();renderTowerPlayerWallet(ctx.root.querySelector('#tower-prep-name'));
+            lastStatReceipt='Перераспределение подтверждено бесплатно';
+            bettingSave();
             renderInsurance();renderSkills();upgradeModal?.refresh();upgradeMessage(lastStatReceipt);
           }catch(error){upgradeMessage(error.message);renderSkills();}
         }
@@ -669,11 +666,14 @@ export function towerPreparation(){
     dialog.className='tower-cycle-dialog';
     const index=towerCycleInfo(t.level).index;
     const heading=document.createElement('h2');heading.textContent='ЛЕЧЕНИЕ НЕ УВЕНЧАЛОСЬ ВЫПИСКОЙ';
-    const summary=document.createElement('p');summary.textContent='30 этажей пройдены. Навыки возвращены к 3/3/3, всё имущество и проведённые операции остаются у пациента. ДМС аннулирована, следующий полис снова стоит 50 монет.';
+    const summary=document.createElement('p');summary.textContent='30 этажей пройдены. База навыков снова 3/3/3, выбранный перенос очка сохраняется. Экипировка, склад и операции переходят с тобой. ДМС аннулирована, следующий полис снова стоит 50 монет.';
     const next=document.createElement('p');next.textContent='НОВОЕ НАЗНАЧЕНИЕ: '+towerCycleTitle(index)+' · '+towerFloorLabel(t.level);
+    const reward=document.createElement('p');
+    const rank=TOWER_RARITIES[towerMutationRarity(t.level)];
+    reward.textContent='Базовая редкость наград следующего цикла — '+rank.name.toLowerCase()+'. Цвет шансов указан на карточке босса.';
     const proceed=document.createElement('button');proceed.type='button';proceed.textContent='ПРОДОЛЖИТЬ ЛЕЧЕНИЕ';
     proceed.onclick=()=>{delete t.cycleNotice;bettingSave();dialog.close?.();dialog.remove();};
-    dialog.append(heading,summary,next,proceed);ctx.root.append(dialog);
+    dialog.append(heading,summary,next,reward,proceed);ctx.root.append(dialog);
     upgradeModal?.close();if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
     proceed.focus();
   }

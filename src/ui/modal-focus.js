@@ -15,7 +15,7 @@ export function initializeModalFocus(){
  // the game root. Treat its content as part of the active Tower sheet.
  const activeTowerUpgrade=()=>root.querySelector('#tower-upgrade-window[open]:not([hidden])');
  const activeReplacement=()=>root.querySelector('#tower-module-replacement[open]');
- const activeActionConfirm=()=>root.querySelector('#game-action-confirm[open]');
+ const activeActionConfirm=()=>root.querySelector('#game-action-confirm[open], #tower-cycle-notice[open]');
  function sync(){
   if(ctx.tutorial?.active)return;
   const next=sheets.find(sheet=>!sheet.hidden)??null;
@@ -27,7 +27,7 @@ export function initializeModalFocus(){
   if(current){
    background=[...root.querySelector('.atmosphere-controls').children,root.querySelector('.tag7hop-sidebar-wrap'),ctx.svg,ctx.betHud].filter(node=>node&&node!==settings&&!node.contains(current)).map(node=>[node,Boolean(node.inert)]);
    for(const [node] of background)node.inert=true;
-   if(!ownsFocus(current)&&!activeTowerUpgrade())controls(current)[0]?.focus();
+   if(!ownsFocus(current)&&!activeTowerUpgrade()&&!activeActionConfirm())controls(current)[0]?.focus();
   }else if(previous?.isConnected&&!previous.closest('[hidden]'))previous.focus();
  }
  const key=event=>{

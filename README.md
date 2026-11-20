@@ -527,4 +527,4 @@ Lens Correction приближённо переведены в параметр�
 
 Накопленная травма: параметры, сравнительные прогоны и команды воспроизведения находятся в [docs/TRAUMA_EXPERIMENT.md](docs/TRAUMA_EXPERIMENT.md). Порог потери сознания — 24, вес повреждений головы — ×1,5.
 
-Боссы каждого пятого этажа, артефакты и правила наград: [docs/BOSSES.md](docs/BOSSES.md).
+[Правила Башни](docs/TOWER.md), [сегментные детали и редкость](docs/tower-segment-modifiers.md), [боссы и артефакты](docs/BOSSES.md), [обучение](docs/TUTORIAL.md).

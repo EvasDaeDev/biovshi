@@ -1,4 +1,5 @@
 import {storageKey} from '../build-channel.js';
+import {towerCycleInfo} from '../tower/cycles.js';
 import {hasBoss} from '../boss/config.js';
 export const TUTORIAL_STORAGE=storageKey('biovshi.tutorial.v1');
 export const freshTutorial=()=>({version:1,enabled:true,completed:[],steps:{},seen:{}});
@@ -14,14 +15,23 @@ export function writeTutorial(storage,state){try{storage?.setItem(TUTORIAL_STORA
 
 export function tutorialChapter(c,{ignoreBlocked=false}={}){
  const root=c.root,visible=id=>{const node=root.querySelector(id);return node&&!node.hidden;};
- if(!ignoreBlocked&&(c.settingsOpen||c.orientationBlocked||root.inert))return null;
+ if(!ignoreBlocked&&(c.settingsOpen||c.orientationBlocked||root.inert||root.querySelector('#tower-cycle-notice[open], #game-action-confirm[open], #tower-module-replacement[open]')))return null;
  if(visible('#launch-overlay'))return 'menu';
- if(visible('#tower-preparation'))return 'tower-ready';
+ if(visible('#tower-preparation')){
+  if(visible('#tower-upgrade-window[open]'))return 'tower-shelter';
+  const run=c.betting?.towers?.[c.towerPlayer]??c.towerRun;
+  if(run&&hasBoss(run))return 'tower-boss-ready';
+  if(run&&towerCycleInfo(run.level).floor>=19)return 'tower-late';
+  return 'tower-ready';
+ }
  if(visible('#bet-overlay')){
   if(root.querySelector('#bet-setup-form'))return 'setup';
   return c.betOverlay.dataset.view==='garage'?'garage':'betting';
  }
- if(visible('#gladiator-results'))return c.mode==='tower'?'tower-results':'betting-results';
+ if(visible('#gladiator-results')){
+  if(c.mode!=='tower')return 'betting-results';
+  return root.querySelector('.tower-segment-reward')?'tower-loot':'tower-results';
+ }
  if(c.startup.phase==='running'&&!c.combat.finished){
   if(c.mode!=='tower')return 'spectator';
   return c.towerRun&&hasBoss(c.towerRun)?'tower-boss':'tower';

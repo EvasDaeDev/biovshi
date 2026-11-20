@@ -6,8 +6,6 @@ import {ARENAS} from '../game/arenas.js';
 import {hasBoss} from '../boss/config.js';
 import {TOWER_ARENA_CAPACITY,validTowerFloorPlan} from './floors.js';
 
-export const TOWER_STAT_CHANGE_PRICE=50;
-export const towerStatChangePrice=run=>(run?.statChanges??0)===0?0:TOWER_STAT_CHANGE_PRICE;
 export const TOWER_REROLL_MAX=60;
 export const towerRerollPrice=count=>Number.isSafeInteger(count)&&count>=0&&count<TOWER_REROLL_MAX
  ?10:Infinity;
@@ -22,16 +20,13 @@ function charge(session,player,price){
   throw Error('Недопустимый расход монет.');
  buyer.balance-=price;session.towerEconomySpent=spent+price;
 }
-export function purchaseTowerStatChange(session,player,run,stats){
+export function applyTowerStatChange(run,stats){
  if(!run||run.arenaRerollLocked||run.rewarded?.length||!validStats(run.stats,towerCycleWins(run.level))||!validStats(stats,towerCycleWins(run.level))
   ||run.stats.every((v,i)=>v===stats[i])
   ||stats.reduce((sum,v,i)=>sum+Math.max(0,v-run.stats[i]),0)!==1)
   throw Error('Выбери допустимый перенос одного очка для подтверждения.');
- const price=towerStatChangePrice(run);
- if(price)charge(session,player,price);
  run.stats=[...stats];
  run.statChanges=(run.statChanges??0)+1;
- return price;
 }
 
 // Both challenge cards have to fit the *same* new arena, so that changing
