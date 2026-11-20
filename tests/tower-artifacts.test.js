@@ -27,22 +27,29 @@ test('draw selects equally among missing fragments, never repeats and stops at a
  assert.deepEqual(all.pieces,Array.from({length:16},(_,n)=>n));assert.equal(drawArtifactPiece(all),null);
 });
 
-test('drop chance is per boss floor, falls multiplicatively after every victory and floors at 20 percent',()=>{
+test('drop chance decreases by 30 percent of the current chance per boss win, without floor',()=>{
  const c=newArtifactCollection();
  for(let wins=0;wins<20;wins++){
-  const expected=Math.max(.2,.8**wins);assert.equal(artifactDropChance(c,5),expected);assert.equal(artifactDropChance(c,10),1);
-  const before=c.pieces.length;assert.equal(awardBossArtifact(c,5,()=>.99999)!==null,wins===0);
-  assert.equal(c.bossWins[5],wins+1);assert.equal(c.pieces.length,before+(wins===0?1:0));
+  const expected=.7**wins;
+  assert.equal(artifactDropChance(c,5),expected);
+  assert.equal(artifactDropChance(c,10),1,'each boss floor has its own history');
+  const before=c.pieces.length;
+  assert.equal(awardBossArtifact(c,5,()=>.99999)!==null,wins===0);
+  assert.equal(c.bossWins[5],wins+1);
+  assert.equal(c.pieces.length,before+(wins===0?1:0));
  }
- const boundary=newArtifactCollection();awardBossArtifact(boundary,5,()=>0);assert.equal(awardBossArtifact(boundary,5,()=>.8),null);
- assert.ok(Number.isInteger(awardBossArtifact(boundary,5,()=>.63999)));
+ assert.ok(artifactDropChance(c,5)<.01,'no artificial 20 percent floor');
+ const boundary=newArtifactCollection();
+ awardBossArtifact(boundary,5,()=>0);
+ assert.equal(awardBossArtifact(boundary,5,()=>.7),null,'roll equal to 70 percent fails');
+ assert.ok(Number.isInteger(awardBossArtifact(boundary,5,()=>.48999)),'49 percent chance on third victory');
 });
 
 test('only bosses drop fragments; losses and resets preserve counts, collections and chances per player',()=>{
  const s=betNewSession(['Первый','Второй'],100);
  completeTower(s,0,true,()=>0);assert.deepEqual(towerFor(s,0).artifacts,newArtifactCollection());
  const t=atFloor(s,0,5);completeTower(s,0,false,()=>0);assert.equal(towerFor(s,0).artifacts.bossWins[5],undefined);
- atFloor(s,0,5);completeTower(s,0,true,()=>0);assert.equal(t.artifacts.pieces.length,1);assert.equal(artifactDropChance(t.artifacts,5),.8);
+ atFloor(s,0,5);completeTower(s,0,true,()=>0);assert.equal(t.artifacts.pieces.length,1);assert.equal(artifactDropChance(t.artifacts,5),.7);
  resetTower(s,0);assert.deepEqual(towerFor(s,0).artifacts,t.artifacts);
  atFloor(s,0,5);completeTower(s,0,true,()=>.99);assert.equal(t.artifacts.pieces.length,1);assert.equal(t.artifacts.bossWins[5],2);
  assert.equal(artifactDropChance(t.artifacts,10),1);assert.ok(validTower(towerFor(s,0)));
