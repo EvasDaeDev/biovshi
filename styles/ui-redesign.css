@@ -528,6 +528,59 @@
   #robot-tag-hops-v22 #game-nav-settings{right:8px;width:42px}
 }
 
+/* The Shelter is a native modal in the browser top layer. Mirror the global
+   back control inside that same layer so it is not darkened by the dialog. */
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-back{
+  position:fixed;
+  top:12px;
+  left:12px;
+  z-index:11;
+  display:grid;
+  place-items:center;
+  box-sizing:border-box;
+  min-width:90px;
+  min-height:44px;
+  padding:9px 12px;
+  border:1px solid #887957;
+  background:#282e25;
+  color:#e7ddc6;
+  font-size:12px;
+  font-weight:800;
+  line-height:1;
+  letter-spacing:.025em;
+  white-space:nowrap;
+  cursor:pointer;
+  box-shadow:0 3px 10px #0008;
+  touch-action:manipulation;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-back:hover{
+  background:#3d4734;
+  border-color:#b3a074;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-back:focus-visible{
+  outline:2px solid var(--ui-selected);
+  outline-offset:2px;
+}
+@media(max-width:540px){
+  #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-back{
+    top:8px;
+    left:8px;
+    min-width:80px;
+    min-height:42px;
+    padding:7px 9px;
+  }
+}
+@media(pointer:coarse){
+  #robot-tag-hops-v22.mobile-layout #tower-upgrade-window .tower-upgrade-back{
+    top:calc(10px / var(--interface-scale,1));
+    left:calc(10px / var(--interface-scale,1));
+    min-width:calc(84px / var(--interface-scale,1));
+    min-height:var(--ui-touch-target);
+    padding:calc(6px / var(--interface-scale,1)) calc(10px / var(--interface-scale,1));
+    font-size:var(--ui-touch-type);
+  }
+}
+
 /* A single high-contrast, non-neon purchase/renewal confirmation. */
 #robot-tag-hops-v22 .game-action-confirm{
  box-sizing:border-box;width:min(92vw,520px);max-height:calc(var(--game-height,100dvh) - 18px);margin:auto;padding:18px;
