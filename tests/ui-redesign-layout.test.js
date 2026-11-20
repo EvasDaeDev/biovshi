@@ -103,5 +103,7 @@ test('Shelter modal places a working back button in its own top layer',()=>{
  assert.match(source,/overlay\.append\(backButton\)/);
  assert.match(source,/backButton\.onclick=close/);
  assert.match(css,/#robot-tag-hops-v22 #tower-upgrade-window \.tower-upgrade-back\s*\{[\s\S]*?position:fixed;[\s\S]*?top:12px;[\s\S]*?left:12px;/);
- assert.match(css,/#robot-tag-hops-v22 #tower-upgrade-window \.tower-upgrade-back:focus-visible/);
+ assert.match(css,/#robot-tag-hops-v22 \.game-nav-back-control:focus-visible/);
+ assert.match(css,/#robot-tag-hops-v22 \.game-nav-back-control\s*\{[\s\S]*?height:44px;/);
+ assert.match(html,/id="game-nav-back" class="game-nav-back-control"/);
 });
