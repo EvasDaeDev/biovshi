@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
+import fs from 'node:fs';
 import {newTower} from '../src/tower/model.js';
 import {renderTowerFloorChoices} from '../src/tower/floor-selector.js';
 import {betNewSession} from '../src/betting/ledger.js';
@@ -38,6 +39,9 @@ test('difficulty and arena selection live in the original preparation panel and 
   assert.equal(reroll.disabled,false);
   assert.equal(reroll.contains(container.querySelector('.tower-reroll-line')),false,'price is separate from die image to preserve its size');
   assert.equal(container.querySelector('.tower-reroll-line').tagName,'BUTTON');
+  const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
+  assert.match(css,/#robot-tag-hops-v22 #tower-floor-preview \.tower-arena-dice \.tower-reroll-button\s*\{[\s\S]*?width:94px;[\s\S]*?height:94px;/);
+  assert.match(css,/#robot-tag-hops-v22 #tower-floor-preview \.tower-arena-dice \.tower-reroll-price img\s*\{[\s\S]*?width:1em;[\s\S]*?height:1em;/);
   container.querySelector('.tower-reroll-caption').click();reroll.click();
   assert.equal(session.players[0].balance,290,'stale button cannot double-charge');
   assert.equal(run.arenaRerolls,1);
