@@ -192,7 +192,7 @@ export class PixiArena {
     if(record){
       for(const child of [...record.children])this.release(child.node);
       this.dirty.delete(record);this.records.delete(node);
-      record.rarityFilter?.destroy();record.object.destroy({children:true});
+      record.rarityFilter?.destroy();record.hitTintFilter?.destroy();record.object.destroy({children:true});
     }else for(const child of [...node.children])this.release(child);
   }
   cropped(source,x,y,width,height) {
