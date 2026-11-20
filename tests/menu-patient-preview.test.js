@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
-import {renderMenuPatient,menuPatientTransform,menuPatientPose,menuPatientFramePose,startMenuPatientIdle,stopMenuPatientIdle} from '../src/ui/menu-patient-preview.js';
+import {renderMenuPatient,menuPatientTransform,menuPatientPose,menuPatientFramePose,menuRaisedContactOffset,startMenuPatientIdle,stopMenuPatientIdle} from '../src/ui/menu-patient-preview.js';
 import {towerUpgradePose} from '../src/tower/upgrade-pose.js';
 
 const svgSetup=()=>new JSDOM('<main id="menu-patient-preview"></main>',{url:'https://test.local/'});
@@ -137,4 +137,53 @@ test('menu idle only updates existing bone transforms and stops when menu is hid
   globalThis.requestAnimationFrame=oldFrame;globalThis.cancelAnimationFrame=oldCancel;
   globalThis.matchMedia=oldMedia;dom.window.close();
  }
+});
+
+test('both feet and right hand rise exactly 15 cm in display coordinates',()=>{
+ const patient={surgeries:[
+  {site:'arm-1-upper',procedure:'graft_arm'},
+  {site:'leg--1-upper',procedure:'graft_leg'}
+ ]};
+ const neutral=towerUpgradePose(patient),pose=menuPatientPose(patient);
+ const offset=menuRaisedContactOffset();
+ const angle=-Math.PI/6;
+ const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+ const toDisplay=([x,y])=>[x*Math.cos(angle)-y*Math.sin(angle),
+                            x*Math.sin(angle)+y*Math.cos(angle)];
+ const length=seg=>dist(seg[0],seg[1]);
+ const expectedRises=['leg--1','leg-1','arm-1','arm-1-graft','leg--1-graft'];
+ for(const prefix of expectedRises){
+  const upper=neutral[prefix+'-upper'],lower=neutral[prefix+'-lower'];
+  assert.ok(upper&&lower,'test patient includes '+prefix);
+  const side=prefix.includes('--1')?-1:1;
+  const graft=prefix.includes('graft');
+  const spread=graft?(side<0?-7:7):0;
+  const angles=prefix.startsWith('arm')?(side<0?[-151,-190]:[20,-4]):
+                                       (side<0?[144,110]:[48,65]);
+  const end=([x,y],len,deg)=>[
+   x+len*Math.cos(deg*Math.PI/180-angle),
+   y+len*Math.sin(deg*Math.PI/180-angle)
+  ];
+  const originalJoint=end(upper[0],length(upper),angles[0]+spread);
+  const originalTip=end(originalJoint,length(lower),angles[1]+spread);
+  const actualTip=pose[prefix+'-lower'][1];
+  assert.ok(Math.abs(actualTip[0]-(originalTip[0]+offset[0]))<1e-7,prefix+' horizontal component');
+  assert.ok(Math.abs(actualTip[1]-(originalTip[1]+offset[1]))<1e-7,prefix+' vertical component');
+  const onscreen=toDisplay(offset);
+  assert.ok(Math.abs(onscreen[0])<1e-7,'no sideways change');
+  assert.ok(Math.abs(onscreen[1]+24)<1e-7,'raised 15 cm at 1.6 neutral units/cm');
+  assert.ok(Math.abs(length(pose[prefix+'-upper'])-length(upper))<1e-6,prefix+' upper bone length');
+  assert.ok(Math.abs(length(pose[prefix+'-lower'])-length(lower))<1e-6,prefix+' lower bone length');
+ }
+ // Left hand contact and its original spread stay unchanged.
+ const left=neutral['arm--1-upper'],leftLower=neutral['arm--1-lower'];
+ const j=[left[0][0]+length(left)*Math.cos(-151*Math.PI/180-angle),
+          left[0][1]+length(left)*Math.sin(-151*Math.PI/180-angle)];
+ const tip=[j[0]+length(leftLower)*Math.cos(-190*Math.PI/180-angle),
+            j[1]+length(leftLower)*Math.sin(-190*Math.PI/180-angle)];
+ assert.ok(dist(tip,pose['arm--1-lower'][1])<1e-7,'left hand is not raised');
+ // Planted ends must remain stable throughout the IK idle.
+ const animated=menuPatientFramePose(pose,Math.PI/2);
+ for(const prefix of expectedRises)
+  assert.deepEqual(animated[prefix+'-lower'][1],pose[prefix+'-lower'][1]);
 });
