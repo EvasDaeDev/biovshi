@@ -32,7 +32,7 @@ import {installTowerUpgradeWindow} from './upgrade-modal.js';
 import {chooseTowerModuleReplacement} from './replacement-dialog.js';
 import {confirmGameAction} from '../ui/confirm-action.js';
 import {playerBalanceMarkup} from '../ui/currency-animation.js';
-import {renderMenuPatient} from '../ui/menu-patient-preview.js';
+import {renderMenuPatient,startMenuPatientIdle,stopMenuPatientIdle} from '../ui/menu-patient-preview.js';
 
 function renderTowerPlayerWallet(target){
   const player=ctx.betting.players[ctx.towerPlayer];
@@ -53,7 +53,9 @@ export function refreshMenu(){
   for(const p of s?.players??[]){const option=document.createElement('option');option.value=p.id;option.textContent=p.name;option.selected=p.id===ctx.menuPlayer;select.append(option);}
   select.disabled=!s;
   const t=s?towerFor(s,ctx.menuPlayer):null;
-  renderMenuPatient(ctx.root.querySelector('#menu-patient-preview'),t);
+  const menuPreview=ctx.root.querySelector('#menu-patient-preview');
+  renderMenuPatient(menuPreview,t);
+  startMenuPatientIdle(menuPreview,ctx.root.querySelector('#launch-overlay'));
   ctx.root.querySelector('#menu-bank').innerHTML=s?playerBalanceMarkup(ctx.menuPlayer,s.players[ctx.menuPlayer].balance):'';
   ctx.root.querySelector('#launch-tower').textContent=`РЕЖИМ БАШНЯ · ЭТАЖ ${towerFloorLabel(t?.level??1)}`;
   ctx.root.querySelector('#menu-tower-progress').textContent=`ПРОЙДЕНО ЭТАЖЕЙ: ${t?.wins??0} · РЕКОРД: ${t?.record??0}`;
@@ -133,6 +135,7 @@ export function openMenu(){
   ctx.root.querySelector('#tower-controls').hidden=true;
   ctx.root.dataset.gameMode='menu';ctx.deferTowerArena=false;
   refreshMenu();rotateMenuDescription();ctx.root.querySelector('#launch-overlay').hidden=false;
+  startMenuPatientIdle(ctx.root.querySelector('#menu-patient-preview'),ctx.root.querySelector('#launch-overlay'));
   ctx.root.querySelector('#launch-tower').focus();
   return true;
 }
