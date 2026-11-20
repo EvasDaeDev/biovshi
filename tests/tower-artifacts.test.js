@@ -58,6 +58,36 @@ test('only bosses drop fragments; losses and resets preserve counts, collections
  assert.deepEqual(legacy.artifacts,newArtifactCollection(),'a legacy ordinary floor cannot masquerade as a boss');
 });
 
+test('segment and artifact replay chances share per-boss saved victory count',()=>{
+ const session=betNewSession(['Первый','Второй'],500);
+ let run=atFloor(session,0,5);
+ run.segmentRewardsEnabled=true;
+ completeTower(session,0,true,()=>.99);
+ assert.equal(run.artifacts.bossWins[5],1);
+ assert.equal(run.segmentInventory.length,2,'first boss drops segments even on a high roll');
+ assert.equal(run.artifacts.pieces.length,1,'first artifact fragment guaranteed');
+ resetTower(session,0);
+ run=atFloor(session,0,5);
+ run.segmentRewardsEnabled=true;
+ completeTower(session,0,true,()=>.8);
+ assert.equal(run.artifacts.bossWins[5],2);
+ assert.equal(run.segmentInventory.length,0,'repeated boss can miss segments');
+ assert.deepEqual(run.lastBossSegments,[]);
+ assert.equal(run.artifacts.pieces.length,1,'repeated boss can miss artifact fragment');
+ assert.equal(artifactDropChance(run.artifacts,5),.49);
+ assert.equal(artifactDropChance(run.artifacts,10),1,'another boss remains at first-drop chance');
+ // The saved artifact history also applies to segments after resetting again.
+ resetTower(session,0);
+ run=atFloor(session,0,5);
+ run.segmentRewardsEnabled=true;
+ completeTower(session,0,true,()=>.48);
+ assert.equal(run.artifacts.bossWins[5],3);
+ assert.equal(run.segmentInventory.length,1,'below 49 percent earns a segment batch');
+ assert.equal(run.artifacts.pieces.length,2,'below 49 percent also grants a fragment');
+ assert.deepEqual(towerFor(session,1).artifacts,newArtifactCollection(),
+  'another player does not inherit boss defeats');
+});
+
 test('each complete artifact pays exactly 333 once, while every replay still pays 100 boss coins',()=>{
  const s=betNewSession(['Первый','Второй'],100);
  for(let victory=1;victory<=16;victory++){
