@@ -103,7 +103,18 @@ function rotateMenuDescription() {
 export function openMenu(){
   const active=['spawning','running'].includes(ctx.startup.phase)&&!ctx.combat.finished;
   if(active&&!confirm('Вернуться в главное меню? Текущий бой будет отменён.'))return false;
-  if(active)bettingCancel();
+  if(active){
+    bettingCancel();
+    if(ctx.mode==='tower'){
+      // Abandoning an unfinished Tower fight returns to preparation. The
+      // fight button locked arena changes before combat started; restore that
+      // permission only when no enemy rewards were already collected.
+      const run=towerFor(ctx.betting,ctx.towerPlayer);
+      run.preparing=true;
+      if(!run.rewarded?.length)run.arenaRerollLocked=false;
+      bettingSave();
+    }
+  }
   if(!ctx.betOverlay.hidden&&ctx.betContent.querySelector('#bet-stakes-form')){
     ctx.betDraft={session:ctx.betting,round:ctx.betting.round,bets:bettingReadDraft(),arenaId:ctx.selectedArenaId};
   }
