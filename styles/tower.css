@@ -235,7 +235,6 @@
 #robot-tag-hops-v22 .tower-stat-confirm button{min-height:44px;padding:9px 12px;cursor:pointer}
 #robot-tag-hops-v22 .tower-stat-confirm [data-tower-apply]{font-weight:800;flex:1;background:#725733;color:#fceabe;border:1px solid #3f3020}
 #robot-tag-hops-v22 .tower-stat-confirm [data-tower-apply]:disabled{opacity:.45;cursor:not-allowed}
-#robot-tag-hops-v22 .tower-stat-message{display:block;font-weight:700;font-size:12px;line-height:1.4}
 @media(max-width:450px){#robot-tag-hops-v22 #tower-floor-preview .tower-arena-overview{grid-template-columns:minmax(0,1fr) 94px;gap:8px}#robot-tag-hops-v22 #tower-floor-preview .tower-arena-map{gap:6px}#robot-tag-hops-v22 #tower-floor-preview .tower-arena-map>svg{width:62px;height:62px}#robot-tag-hops-v22 .tower-reroll-button{width:80px;height:80px}#robot-tag-hops-v22 #tower-floor-preview .tower-reroll-button svg{width:65px;height:65px}}
 @media(prefers-reduced-motion:reduce){#robot-tag-hops-v22 .tower-reroll-button{transition:none}}
 

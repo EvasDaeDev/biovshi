@@ -330,7 +330,7 @@ test('Tower II upgrade screen displays coin art, real equipped bonuses and one r
  try{
   const modal=document.querySelector('#tower-upgrade-window');
   const stats=modal.querySelector('#tower-upgrade-stats');
-  assert.match(document.querySelector('[data-tower-apply]').textContent,/БЕСПЛАТНО/,'skill transfers are free');
+  assert.equal(document.querySelector('[data-tower-apply]').textContent,'ПРИМЕНИТЬ');
    assert.equal(document.querySelector('[data-tower-apply] img.chip-icon'),null);
   assert.match(modal.querySelector('.tower-upgrade-wallet').textContent,/БАНК:/);
   assert.ok(modal.querySelector('.tower-upgrade-wallet img.chip-icon'));
@@ -806,10 +806,10 @@ test('Tower preparation uses compact icon-only controls, fixed preview slot and 
   const preview=()=>root.querySelector('.tower-preview-label');
   assert.ok(preview());
   assert.equal(preview().classList.contains('is-active'),false);
-  assert.equal(root.querySelector('.tower-stat-message').textContent,'');
+  assert.equal(root.querySelector('.tower-stat-message'),null);
   const speed=root.querySelector('[data-tower-stat="0"]');speed.value='4';speed.dispatchEvent(new Event('change'));
   assert.equal(preview().classList.contains('is-active'),true);
-  assert.equal(root.querySelector('.tower-stat-message').textContent,'');
+  assert.equal(root.querySelector('.tower-stat-message'),null);
   assert.equal(root.querySelectorAll('.tower-stat-preview').length,4);
   const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
   assert.match(css,/\.tower-challenge-option\.is-selected\.is-danger\s*\{[\s\S]*?border-color:#ff6c68/);
@@ -827,8 +827,7 @@ test('tower skill transfers remain free on repeated confirmation and reload',()=
   assert.deepEqual(run.stats,[3,3,3]);assert.deepEqual(ctx.towerGarage[0].stats,[3,3,3]);
   assert.deepEqual([...document.querySelectorAll('[data-tower-stat]')].map(n=>Number(n.value)),[4,2,3]);
   assert.match(document.querySelector('#tower-stats .garage-stat-effects').textContent,/ПРЕДПРОСМОТР/);
-  assert.match(document.querySelector('[data-tower-apply]').textContent,/ПРИМЕНИТЬ/);
-  assert.match(document.querySelector('[data-tower-apply]').textContent,/БЕСПЛАТНО/);
+  assert.equal(document.querySelector('[data-tower-apply]').textContent,'ПРИМЕНИТЬ');
   assert.equal(session.players[0].balance,200);
   document.querySelector('[data-tower-base]').click();
   assert.equal(document.querySelector('[data-tower-apply]').disabled,true);
@@ -837,13 +836,15 @@ test('tower skill transfers remain free on repeated confirmation and reload',()=
   document.querySelector('[data-tower-apply]').click();
   assert.deepEqual(run.stats,[3,3,3],'preview does not purchase before dialog confirmation');
   assert.match(document.querySelector('#game-action-confirm .game-action-confirm-submit').textContent,/ПРИМЕНИТЬ/);
+  assert.doesNotMatch(document.querySelector('#game-action-confirm').textContent,/бесплатно/i);
   assert.equal(document.querySelector('#game-action-confirm .game-action-confirm-submit .chip-icon'),null);
   confirmPaidAction();
   assert.deepEqual(run.stats,[4,2,3]);assert.deepEqual(ctx.towerGarage[0].stats,[4,2,3]);
   assert.equal(session.players[0].balance,200);assert.equal(session.towerEconomySpent,0);
   assert.equal(document.querySelector('[data-tower-apply]').disabled,true);
   assert.deepEqual(bettingLoad().towers[0].stats,[4,2,3]);
-  assert.match(document.querySelector('#tower-stats .tower-stat-message').textContent,/подтверждено/);
+  assert.equal(document.querySelector('#tower-stats .tower-stat-message'),null);
+  assert.equal(document.querySelector('#tower-prep-error').textContent,'');
   document.querySelector('[data-tower-base]').click();
   document.querySelector('[data-tower-apply]').click();
   assert.equal(document.querySelector('#game-action-confirm .chip-icon'),null);

@@ -196,7 +196,7 @@ export function towerPreparation(){
     onError:message=>{ctx.root.querySelector('#tower-prep-error').textContent=message;}});
   const fields=ctx.root.querySelector('#tower-stats');fields.replaceChildren();
   let upgradeModal=null;
-  let lastSurgeryReceipt=null,lastMutationReceipt=null,lastStatReceipt=null;
+  let lastSurgeryReceipt=null,lastMutationReceipt=null;
   let draftStats=[...t.stats];
   const upgradeMessage=message=>{
     ctx.root.querySelector('#tower-prep-error').textContent=message;
@@ -215,22 +215,21 @@ export function towerPreparation(){
     fields.innerHTML=`<div class="garage-stat-list"><small>Побед: ${t.wins} · очков в текущем цикле: ${9+towerCycleWins(t.level)}</small>
       ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)} aria-label="${skill.name}"><span class="tower-skill-icon" aria-hidden="true">${skill.icon}</span><select data-tower-stat="${i}" class="${draftStats[i]>earnedStats(towerCycleWins(t.level))[i]?'tower-stat-boosted':draftStats[i]<earnedStats(towerCycleWins(t.level))[i]?'tower-stat-reduced':''}" aria-label="${skill.name}">${[earnedStats(towerCycleWins(t.level))[i]-1,earnedStats(towerCycleWins(t.level))[i],earnedStats(towerCycleWins(t.level))[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===draftStats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
       <div class="garage-stat-effects tower-stat-previews"><span class="tower-preview-label ${draftStats.some((v,i)=>v!==t.stats[i])?'is-active':''}">ПРЕДПРОСМОТР</span>${comparison('СКОРОСТЬ',current[0],original[0])}${comparison('МОБИЛЬНОСТЬ',current[2],original[2])}${comparison('КРИТ',current[1],original[1])}<span class="tower-stat-preview"><span>ИНТЕРВАЛ АТАК</span> <strong>${Math.round(towerAttackInterval(snapshot.combat)*1000)} мс</strong></span></div>
-      <div class="tower-stat-confirm"><button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button><button type="button" data-tower-apply>ПРИМЕНИТЬ · БЕСПЛАТНО</button></div><small class="tower-stat-message" role="status"></small>`;
+      <div class="tower-stat-confirm"><button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button><button type="button" data-tower-apply>ПРИМЕНИТЬ</button></div>`;
     const changed=draftStats.some((v,i)=>v!==t.stats[i]);
     const transfer=draftStats.reduce((sum,v,i)=>sum+Math.max(0,v-t.stats[i]),0);
     const apply=fields.querySelector('[data-tower-apply]');
     apply.disabled=!changed||transfer!==1||!validStats(draftStats,towerCycleWins(t.level))
       ||t.arenaRerollLocked||Boolean(t.rewarded?.length);
-    fields.querySelector('.tower-stat-message').textContent=lastStatReceipt?'✓ '+lastStatReceipt:'';
     fields.querySelectorAll('select').forEach(select=>select.onchange=()=>{
       const index=Number(select.dataset.towerStat);
-      try{draftStats=redistributeStat({...t,wins:towerCycleWins(t.level),stats:draftStats},index,Number(select.value));lastStatReceipt=null;}
+      try{draftStats=redistributeStat({...t,wins:towerCycleWins(t.level),stats:draftStats},index,Number(select.value));}
       catch(error){upgradeMessage(error.message);}
       renderSkills();
       fields.querySelector(`[data-tower-stat="${index}"]`)?.focus();
     });
     fields.querySelector('[data-tower-base]').onclick=()=>{
-      draftStats=earnedStats(towerCycleWins(t.level));lastStatReceipt=null;renderSkills();
+      draftStats=earnedStats(towerCycleWins(t.level));renderSkills();
     };
     apply.onclick=()=>{
       if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||apply.disabled)return;
@@ -240,16 +239,15 @@ export function towerPreparation(){
       confirmGameAction({
         root:ctx.root,
         title:'ПЕРЕРАСПРЕДЕЛЕНИЕ НАВЫКОВ',
-        details:[...changed,'Перераспределение навыков бесплатно.'],
+        details:changed,
         confirmLabel:'ПРИМЕНИТЬ',
         onConfirm:()=>{
           if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen)return;
           try{
             applyTowerStatChange(t,proposed);
             ctx.towerGarage[0].stats=[...t.stats];
-            lastStatReceipt='Перераспределение подтверждено бесплатно';
             bettingSave();
-            renderInsurance();renderSkills();upgradeModal?.refresh();upgradeMessage(lastStatReceipt);
+            renderInsurance();renderSkills();upgradeModal?.refresh();upgradeMessage('');
           }catch(error){upgradeMessage(error.message);renderSkills();}
         }
       });
