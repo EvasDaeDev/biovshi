@@ -15,6 +15,17 @@ const standardCount=floor=>1+Math.floor(floor/2);
 const roll=(random,max)=>Math.floor(random()*max);
 const pool=['basic','fast','strong','agile'];
 const ELITE_FROM_FLOOR=8;
+// Ordinary difficulty has a deliberately wider gap from danger.
+// Total specialist incidence is 70% of its previous chance. Strong
+// opponents are HALF as likely overall as before (old: rate / 3).
+// To satisfy both constraints simultaneously, redistribute the remaining
+// specialist probability to fast/agile at weights 8 : 5 : 8.
+export const towerStandardSpecialistRate=floor=>Math.min(.55,.12+floor*.045)*.7;
+export function towerStandardSpecialist(random=Math.random){
+ const choice=random();
+ return choice<8/21?'fast':choice<13/21?'strong':'agile';
+}
+
 // Risk variants are generated once, then stored with the floor plan.
 export const TOWER_DANGER_STYLES=Object.freeze({
  trial:Object.freeze({name:'Отбор',description:'Столько же врагов, но все специализированные'}),
@@ -29,8 +40,9 @@ function opponents(floor,count,danger,random,style=null){
   if(eliteEligible&&random()<(style==='trial' ? .28 : .18))return 'elite';
   // At least one specialist makes the higher risk perceptible.
   if(danger&&i===0)return pool[1+roll(random,3)];
-  const specialRate=style==='trial' ? 1 : style==='crowd' ? .30 : danger ? .80 : Math.min(.55,.12+floor*.045);
-  return random()<specialRate?pool[1+roll(random,3)]:'basic';
+  const specialRate=style==='trial' ? 1 : style==='crowd' ? .30 : danger ? .80 : towerStandardSpecialistRate(floor);
+  if(random()>=specialRate)return 'basic';
+  return danger?pool[1+roll(random,3)]:towerStandardSpecialist(random);
  });
  if(style==='mixed'&&count>=2){
   // Guarantee two visibly different approaches to the fight.
