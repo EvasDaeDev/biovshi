@@ -9,6 +9,7 @@ import { ArenaPostEffects } from './post-effects.js';
 import { victoryGold, goldMatrix } from './victory-glow.js';
 import { transformMatrix } from './pixi-math.js';
 import {towerRarityMatrix} from '../tower/rarity-tint.js';
+import {segmentHitTintMatrix,SEGMENT_HIT_TINT} from './robot-skin.js';
 
 // The hidden SVG is a scene description for the existing animation code, not a
 // second renderer. Only changed nodes are synchronized; atlases become native
@@ -231,8 +232,16 @@ export class PixiArena {
     if(rarity>0){
       record.rarityFilter??=new this.p.ColorMatrixFilter();
       record.rarityFilter.matrix=towerRarityMatrix(rarity);
-      object.filters=[record.rarityFilter];
-    }else if(record.rarityFilter){object.filters=null;record.rarityFilter.destroy();record.rarityFilter=null;}
+    }else if(record.rarityFilter){record.rarityFilter.destroy();record.rarityFilter=null;}
+    // Only the hit bone carries this attribute. Compose AFTER rarity to keep
+    // texture rarity colours intact, and do not tint a whole patient container.
+    const hitStrength=Math.max(0,Math.min(SEGMENT_HIT_TINT,number('data-hit-tint')));
+    if(hitStrength>0){
+      record.hitTintFilter??=new this.p.ColorMatrixFilter();
+      record.hitTintFilter.matrix=segmentHitTintMatrix(hitStrength);
+    }else if(record.hitTintFilter){record.hitTintFilter.destroy();record.hitTintFilter=null;}
+    const filters=[record.rarityFilter,record.hitTintFilter].filter(Boolean);
+    object.filters=filters.length?filters:null;
 
     object.setFromMatrix(new this.p.Matrix(...transformMatrix(node.getAttribute('transform')??'')));
     const s=record.style;
