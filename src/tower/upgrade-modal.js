@@ -35,6 +35,12 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  overlay.setAttribute('role','dialog');
  overlay.setAttribute('aria-modal','true');
  overlay.setAttribute('aria-labelledby','tower-upgrade-title');
+ const backButton=create('button','tower-upgrade-back','← НАЗАД');
+ backButton.type='button';
+ backButton.setAttribute('aria-label','Назад к подготовке');
+ // Native modal dialogs occupy the top layer, above global navigation.
+ // Mirror the global back control inside the modal instead of letting it dim.
+ overlay.append(backButton);
  const paper=create('div','tower-upgrade-paper');
  overlay.append(paper);
  const top=create('div','tower-upgrade-heading');
@@ -307,6 +313,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
    if(!root.querySelector('#tower-preparation')?.hidden)open(rememberedTab);
   };
  };
+ backButton.onclick=close;
  closeButton.onclick=close;
  mutationTab.onclick=()=>setTab('mutations');
  surgeryTab.onclick=()=>setTab('surgery');
