@@ -681,11 +681,33 @@ test('leaving a spawning or running tower battle confirms cancellation without r
   assert.equal(document.querySelector('#launch-overlay').hidden,true);
   globalThis.confirm=()=>true;
   assert.equal(openMenu(),true);assert.equal(ctx.startup.phase,'menu');assert.equal(ctx.paused,true);
-  assert.deepEqual(towerFor(s,0),before);assert.equal(ctx.towerSettled,false);
+  const abandoned=towerFor(s,0);
+  assert.equal(before.arenaRerollLocked,true,'entering a fight locks the arena');
+  assert.equal(abandoned.arenaRerollLocked,false,'abandoning an unrewarded fight unlocks the arena');
+  assert.equal(abandoned.preparing,true,'the saved floor is back in preparation');
+  assert.deepEqual({...abandoned,preparing:before.preparing,arenaRerollLocked:before.arenaRerollLocked},before,
+   'floor, opponents, economy and existing reroll count are not reset');
+  assert.equal(ctx.towerSettled,false);
   step(1);advanceStartup(10);assert.equal(ctx.game.time,time);assert.equal(ctx.startup.phase,'menu');
   close(dom);
  }
 });
+test('abandoning a Tower fight preserves reroll lock after an enemy reward',()=>{
+ const s=betNewSession(['Первый'],100),dom=setup(s,towerFor(s,0));
+ try{
+  document.querySelector('#tower-fight').click();advanceStartup(10);
+  const run=towerFor(s,0);
+  assert.equal(run.arenaRerollLocked,true);
+  assert.equal(rewardTower(s,0,1,0),true);
+  const balance=s.players[0].balance;
+  assert.equal(openMenu(),true);
+  assert.equal(run.preparing,true);
+  assert.equal(run.arenaRerollLocked,true,'a reward earned before leaving keeps reroll blocked');
+  assert.equal(s.players[0].balance,balance,'abandoning does not revoke earned rewards');
+  assert.deepEqual(run.rewarded,[1]);
+ }finally{close(dom);}
+});
+
 test('rewards survive restart and defeat, are once per enemy per floor and isolated per player',()=>{
  const s=betNewSession(['Первый','Второй'],100);
  assert.equal(rewardTower(s,0,1,1),false);assert.equal(rewardTower(s,0,1,0),true);assert.equal(rewardTower(s,0,1,0),false);
