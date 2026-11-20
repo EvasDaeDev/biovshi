@@ -755,7 +755,7 @@ test('player elimination ends attempt immediately even while several AI remain a
  const ended=ctx.game.events.findLast(event=>event.type==='combat-end');
  assert.equal(ended.outcome,'defeat');assert.equal(ended.loser,0);assert.equal(quipCategory(ended),'defeat');
  assert.equal(ctx.combat.finished,true);assert.equal(ctx.combat.winner,null);assert.equal(towerFor(s,0).level,1);assert.equal(s.garage[0].wins,0);
- showResults();assert.equal(ctx.resultsPanel.hidden,false);assert.match(ctx.resultsTitle.textContent,/ПРОЙДЕНО ЭТАЖЕЙ/);close(dom);
+ showResults();assert.equal(ctx.resultsPanel.hidden,false);assert.equal(ctx.resultsTitle.textContent,'ПРОПАЛ НА ЭТАЖЕ: 1');close(dom);
 });
 test('real final strikes pay once and victory unlocks next floor with one skill point and full recovery',()=>{
  const s=betNewSession(['Первый'],100);let dom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.paused=false;
@@ -1018,7 +1018,7 @@ test('floor result distinguishes a cleared floor from a reached floor and marks 
  assert.match(css,/\.tower-result-numbers\.has-skill-reward\s*\{[\s\S]*?repeat\(4,minmax\(0,1fr\)\)/);
  openMenu();assert.match(document.querySelector('#menu-tower-progress').textContent,/ПРОЙДЕНО ЭТАЖЕЙ: 1 · РЕКОРД: 1/);close(dom);
  const lossDom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.robots[0].damage('head',1,100);ctx.combat.finished=true;ctx.combat.winner=null;settleTower(null);showResults();
- assert.equal(ctx.resultsTitle.textContent,'ПРОЙДЕНО ЭТАЖЕЙ: 1');assert.match(ctx.resultsSummary.textContent,/на этаже 2/);
+ assert.equal(ctx.resultsTitle.textContent,'ПРОПАЛ НА ЭТАЖЕ: 2');assert.match(ctx.resultsSummary.textContent,/на этаже 2/);
  assert.equal(document.querySelector('.tower-skill-reward'),null,'a loss grants no skill point');
  assert.equal(document.querySelector('#gladiator-results .tower-artifacts'),null,'no artifact reward on defeat');
  const floorCoins=document.querySelector('.tower-result-numbers').children[2];
