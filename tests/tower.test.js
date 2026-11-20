@@ -1189,8 +1189,10 @@ test('normal-floor victory does not repeat the previous boss reward caption',()=
   run.segmentRewardsEnabled=true;
   run.lastBossSegments=['seg1']; // Still present after an earlier boss floor.
   ctx.combat.winner=0;
-  ctx.towerOutcome={won:true,floor:16,cleared:16,record:16,newRecord:true,floorCoins:60};
+  ctx.towerOutcome={won:true,floor:16,cleared:16,record:16,newRecord:true,floorCoins:60,runKills:4};
   towerResults();
+  assert.match(document.querySelector('.tower-run-summary').textContent,/ВСЕГО ПРОТИВНИКОВ ВЫРУБЛЕНО: 4/);
+  assert.doesNotMatch(document.querySelector('.tower-run-summary').textContent,/ЛИЧНЫХ ПОБЕД/);
   assert.equal(ctx.resultsSummary.textContent,'','regular floor must not inherit the boss message');
   assert.equal(document.querySelector('.tower-segment-rewards'),null);
   ctx.towerOutcome={won:true,floor:15,cleared:15,record:15,newRecord:true,floorCoins:60};
