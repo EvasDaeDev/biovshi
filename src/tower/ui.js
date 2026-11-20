@@ -1,4 +1,4 @@
-import {artifactDropChance,ARTIFACT_COMPLETION_REWARD,ARTIFACT_PIECE_COUNT} from './artifacts.js';
+import {artifactDropChance,bossRepeatDropChance,ARTIFACT_COMPLETION_REWARD,ARTIFACT_PIECE_COUNT} from './artifacts.js';
 import {bossName} from '../boss/names.js';
 import {setPaused} from '../ui/controls.js';
 import {hasBoss,isBossFloor} from '../boss/config.js';
@@ -760,6 +760,13 @@ export function settleTower(winner){
   if(won){patientRecovery(t,ctx.robots[0]);recoverTowerGrafts(t,ctx.robots[0]);}
   const insuredFloor=!won?t.insurance.checkpoint?.level:null;
   ctx.towerOutcome.insuranceFloor=insuredFloor;
+  // Record the odds BEFORE the victory increments bossWins. In particular,
+  // a death is not a previous victory and must never reduce either chance.
+  const bossLoot=won&&hasBoss(t)?{
+   previousWins:t.artifacts.bossWins[t.level]??0,
+   segmentChance:t.segmentRewardsEnabled?bossRepeatDropChance(t.artifacts.bossWins[t.level]??0):null,
+   fragmentChance:artifactDropChance(t.artifacts,t.level)
+  }:null;
   const priorPieces=[...t.artifacts.pieces];
   const balanceBefore=ctx.betting.players[ctx.towerPlayer].balance;
   const next=completeTower(ctx.betting,ctx.towerPlayer,won);
@@ -767,12 +774,16 @@ export function settleTower(winner){
   ctx.towerOutcome.artifactBonus=bonus;
   if(bonus){ctx.towerFloorCoins=(ctx.towerFloorCoins??0)+bonus;ctx.towerOutcome.floorCoins=ctx.towerFloorCoins;ctx.towerOutcome.runCoins=t.runCoins;}
   ctx.towerOutcome.artifact=won?next.artifacts.pieces.find(id=>!priorPieces.includes(id))??null:null;
+  if(bossLoot)ctx.towerOutcome.bossLoot={
+   ...bossLoot,segments:next.lastBossSegments?.length??0,
+   fragment:ctx.towerOutcome.artifact!=null
+  };
   bettingSave();ctx.clearTowerInput?.();ctx.clearTowerDestination?.();
 }
 export function towerResults(){
   const won=ctx.combat.winner===0,t=towerFor(ctx.betting,ctx.towerPlayer),o=ctx.towerOutcome??{floor:ctx.towerRun.level,cleared:won?ctx.towerRun.level:ctx.towerRun.level-1,record:t.record};
   ctx.resultsTitle.textContent=won?`ЭТАЖ ${towerFloorLabel(o.floor)} ПРОЙДЕН`:`ПРОПАЛ НА ЭТАЖЕ: ${towerFloorLabel(o.floor)}`;
-  ctx.resultsSummary.textContent=won?(isBossFloor(o.floor)?(t.segmentRewardsEnabled&&t.lastBossSegments?.length?'БОСС ПОБЕЖДЁН · НОВЫЕ ЧАСТИ ДОБАВЛЕНЫ НА СКЛАД.':t.mutationDraft?'БОСС ПОБЕЖДЁН · ВЫБЕРИ НАГРАДУ.':''):''):`${o.reason??'Поражение'} на этаже ${o.floor}. ${o.insuranceFloor?`ДМС сработала: возврат на этаж ${o.insuranceFloor} с застрахованными навыками. Страховка использована.`:'Заработанные монеты сохранены.'}`;
+  ctx.resultsSummary.textContent=won?(isBossFloor(o.floor)?(t.segmentRewardsEnabled&&t.lastBossSegments?.length?'БОСС ПОБЕЖДЁН · НОВЫЕ ЧАСТИ ДОБАВЛЕНЫ НА СКЛАД.':t.mutationDraft?'БОСС ПОБЕЖДЁН · ВЫБЕРИ НАГРАДУ.':'БОСС ПОБЕЖДЁН · СЕГМЕНТЫ НЕ ВЫПАЛИ.'):''):`${o.reason??'Поражение'} на этаже ${o.floor}. ${o.insuranceFloor?`ДМС сработала: возврат на этаж ${o.insuranceFloor} с застрахованными навыками. Страховка использована.`:'Заработанные монеты сохранены.'}`;
   const coins=o.floorCoins??0;
   const resultWallet=ctx.root.querySelector('#tower-results-player');
   renderTowerPlayerWallet(resultWallet);resultWallet.hidden=false;
@@ -781,6 +792,7 @@ export function towerResults(){
     ${won&&o.cleared%5===0?`<strong class="tower-milestone">РУБЕЖ: ${o.cleared} ЭТАЖЕЙ</strong>`:''}
     <div class="tower-result-numbers${won?' has-skill-reward':''}"><div><strong>${o.cleared}</strong><span>ЭТАЖЕЙ ПРОЙДЕНО</span></div><div><strong>${o.record}</strong><span>ЛИЧНЫЙ РЕКОРД</span></div><div><strong>${formatChips(coins)}</strong><span>МОНЕТ ЗА ЭТАЖ</span></div>${won?'<div class="tower-skill-reward"><strong>+1</strong><span>ПОЛУЧЕНО ОЧКО НАВЫКОВ</span></div>':''}</div>
     ${won&&o.artifact!=null?artifactCollectionMarkup(t.artifacts,o.artifact,o.artifactBonus):''}
+    ${won&&o.bossLoot?`<p class="tower-boss-loot-chances">ПОБЕДА НАД ЭТИМ БОССОМ: №${o.bossLoot.previousWins+1}<span>СЕГМЕНТЫ: ${o.bossLoot.segmentChance===null?'ВЫБОР МОДИФИКАЦИИ':o.bossLoot.segments?'ПОЛУЧЕНЫ: '+o.bossLoot.segments:'НЕ ВЫПАЛИ'} · ШАНС: ${o.bossLoot.segmentChance===null?'—':(o.bossLoot.segmentChance*100).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%'}</span><span>ФРАГМЕНТ: ${o.bossLoot.fragment?'ПОЛУЧЕН':o.bossLoot.fragmentChance===0?'КОЛЛЕКЦИЯ СОБРАНА':'НЕ ВЫПАЛ'} · ШАНС: ${(o.bossLoot.fragmentChance*100).toLocaleString('ru-RU',{maximumFractionDigits:1})}%</span></p>`:''}
     ${o.runKills==null?'':`<p>ЛИЧНЫХ ПОБЕД: ${o.runKills}</p>`}
   </div>`;
   if(won&&t.segmentRewardsEnabled&&t.lastBossSegments?.length&&isBossFloor(o.floor)){
