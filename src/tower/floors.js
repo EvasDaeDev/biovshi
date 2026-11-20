@@ -6,7 +6,9 @@ import {validTowerProfile} from './profiles.js';
 import {towerRelationPlan,validTowerRelations} from './relations.js';
 
 export const TOWER_ARENA_CAPACITY=Object.freeze({
- ward:8, ring:3, annulus:4, sluice:5, zigzag:7, columns:10, throat:6
+ // The ward must also fit late-floor offers (up to 9 enemies plus player),
+ // otherwise columns is the only candidate and the arena reroll is disabled.
+ ward:10, ring:3, annulus:4, sluice:5, zigzag:7, columns:10, throat:6
 });
 const cap=id=>Math.min(10,Math.max(2,TOWER_ARENA_CAPACITY[id]??6));
 const standardCount=floor=>1+Math.floor(floor/2);
