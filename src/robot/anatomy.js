@@ -10,7 +10,7 @@ import { ik } from "../utils/math.js";
 import { burst, flashSeveredParts } from "../render/effects.js";
 import { note } from "../game/events.js";
 import { random } from "../utils/random.js";
-import { snapshotRobotSkin } from '../render/robot-skin.js';
+import { snapshotRobotSkin,recordSegmentHitTint } from '../render/robot-skin.js';
 import { createInertia } from '../render/inertia.js';
 import { spawnHitEffect } from '../render/hit-effects.js';
 export
@@ -194,8 +194,7 @@ export function robotDamage(robotState, key, by, damage=1) {
   robotState.hitAt.set(key, ctx.game.time);
   // Only the contacted bone receives a soft visual hit tint. Never mark
   // descendants; critical-hit visuals keep their existing stronger effect.
-  if(damage<2)(robotState.segmentHitTints??=new Map()).set(key,ctx.game.time);
-  else robotState.segmentHitTints?.delete(key);
+  recordSegmentHitTint(robotState,key,ctx.game.time,damage);
   const actualDamage = Math.min(robotState.hp.get(key), damage);
   robotState.hp.set(key, robotState.hp.get(key) - actualDamage);
   if (CONFIG.combat.trauma.enabled && robotState.body?.traumaEnabled!==false) {
