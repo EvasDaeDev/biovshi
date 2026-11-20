@@ -1724,8 +1724,13 @@
    disables another purchase. The active class follows the saved policy. */
 #robot-tag-hops-v22 #tower-preparation>.bet-panel>.bet-actions #tower-insurance.is-active,
 #robot-tag-hops-v22 #tower-preparation>.bet-panel>.bet-actions #tower-insurance.is-active:disabled{
-  background:#315b38;
-  border-color:#69bd78;
-  color:#eaffdf;
+  background:#465f2c;
+  border:1px solid #9cb747;
+  color:#f3edcd;
   opacity:1;
+  box-shadow:none;
+  -webkit-text-fill-color:#f3edcd;
+}
+#robot-tag-hops-v22 #tower-preparation>.bet-panel>.bet-actions #tower-insurance.is-active:hover{
+  background:#4e6931;
 }
