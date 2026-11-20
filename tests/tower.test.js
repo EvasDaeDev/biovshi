@@ -6,6 +6,7 @@ import {TOWER_ARENA_CAPACITY,validTowerFloorPlan} from '../src/tower/floors.js';
 import {createRobot} from '../src/robot/robot.js';
 import {lightPolygon} from '../src/render/lighting.js';
 import {paint} from '../src/render/frame.js';
+import {cameraApply} from '../src/render/camera.js';
 import {combatAttacks} from '../src/systems/combat.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -790,6 +791,63 @@ function manualFixture(arenaId='ring'){
  ctx.robots=[];const r=createRobot(0,{x:arenaId==='annulus'?170:350,y:350,angle:0}),foe=createRobot(1,{x:450,y:450,angle:0});ctx.robots=[r,foe];r.setVisible(true);foe.setVisible(false);
  return {s,dom,r};
 }
+test('Tower battle shows head-sized edge markers for active off-screen enemies',()=>{
+ const s=betNewSession(['Навигация'],100),run=towerFor(s,0);
+ run.floorPlan={floor:1,selected:0,options:[
+  {arenaId:'ward',kind:'standard',profiles:['fast','agile']},
+  {arenaId:'ward',kind:'danger',style:'crowd',profiles:['strong','elite']}
+ ]};
+ const dom=setup(s,run);
+ const layer=document.querySelector('#tower-enemy-markers');
+ try{
+  assert.equal(layer.hidden,true,'preparation');
+  document.querySelector('#tower-fight').click();
+  ctx.paintTowerMarker();
+  assert.equal(layer.hidden,true,'countdown');
+  advanceStartup(10);
+  const player=createRobot(0,{x:350,y:350,angle:0});
+  const enemy=createRobot(1,{x:350,y:650,angle:0});
+  const boss=createRobot(2,{x:660,y:350,angle:0},{isBoss:true});
+  ctx.robots=[player,enemy,boss];
+  for(const robot of ctx.robots)robot.setVisible(true);
+  Object.assign(ctx.camera,{x:200,y:200,size:300});
+  ctx.fieldWidth=900;ctx.fieldHeight=600;
+  cameraApply();ctx.paintTowerMarker();
+  const markers=()=>[...layer.querySelectorAll('.tower-enemy-marker:not([hidden])')];
+  assert.equal(markers().length,2);
+  assert.equal(parseFloat(layer.style.getPropertyValue('--tower-enemy-marker-size')),40*player.scale);
+  const pose=marker=>marker.style.transform.match(/translate\(([\d.]+)px,\s*([\d.]+)px\).*rotate\(([\d.]+)rad\)/).slice(1).map(Number);
+  const [bottomX,bottomY,bottomAngle]=pose(markers()[0]);
+  const [rightX,rightY,rightAngle]=pose(markers()[1]);
+  assert.equal(bottomX,450);
+  assert.ok(bottomY>560&&bottomY<600);
+  assert.ok(Math.abs(bottomAngle-Math.PI/2)<.001);
+  assert.equal(rightY,300);
+  assert.ok(rightX>860&&rightX<900);
+  assert.equal(rightAngle,0);
+  assert.equal(markers()[1].classList.contains('is-boss'),true);
+  const bossLeft=Math.min(...boss.capsules.map(part=>part.minX-part.r));
+  ctx.fieldWidth=4*((bossLeft+boss.x)/2-350);
+  ctx.paintTowerMarker();
+  assert.equal(markers().length,1,'a partly visible boss needs no marker');
+  ctx.fieldWidth=1700;ctx.paintTowerMarker();
+  assert.equal(markers().length,1,'wide arena reveals the boss');
+  ctx.fieldWidth=900;ctx.paintTowerMarker();
+  for(const kind of ['arm','leg'])for(const side of [-1,1])enemy.damage(`${kind}-${side}-upper`,0,100);
+  enemy.failFromOilLoss();
+  assert.equal(enemy.unconscious,true);
+  ctx.paintTowerMarker();
+  assert.equal(markers().length,1);
+  assert.equal(markers()[0].classList.contains('is-boss'),true);
+  assert.equal(boss.damage('head',0,100),true);
+  assert.equal(boss.mobile,false);
+  ctx.paintTowerMarker();
+  assert.equal(markers().length,0);
+  ctx.combat.finished=true;ctx.paintTowerMarker();
+  assert.equal(layer.hidden,true);
+ }finally{close(dom);}
+ assert.equal(layer.parentElement,null);
+});
 test('Tower preparation uses compact icon-only controls, fixed preview slot and clean action labels',()=>{
  const session=betNewSession(['Оформление Башни'],200),run=towerFor(session,0);
  const dom=setup(session,run);

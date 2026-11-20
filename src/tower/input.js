@@ -1,5 +1,6 @@
 import {screenRect} from '../ui/geometry.js';
 import {fittedCamera} from '../render/camera.js';
+import {installTowerEnemyMarkers} from '../render/tower-enemy-markers.js';
 import {planPath} from '../systems/navigation.js';
 import {coreClearCircle} from '../systems/collision.js';
 import {ctx} from '../game/state.js';
@@ -25,6 +26,7 @@ export function installTowerInput(){
   const stick=doc.getElementById('tower-stick'),knob=stick.querySelector('span');let pointer=null;
   stick.hidden=ctx.towerControlMode==='direction';
   const marker=doc.createElement('div');marker.id='tower-direction-marker';marker.hidden=true;marker.setAttribute('aria-hidden','true');ctx.stage.append(marker);
+  const enemyMarkers=installTowerEnemyMarkers();
   const clearDestination=()=>{ctx.towerDestination=null;marker.hidden=true;const robot=ctx.robots[0];robot?.cancelNavigation();};
   ctx.clearTowerDestination=clearDestination;
   const active=()=>!ctx.appInactive&&ctx.mode==='tower'&&ctx.startup.phase==='running'&&!ctx.paused&&!ctx.settingsOpen&&!ctx.orientationBlocked&&!ctx.tutorial?.active&&!ctx.combat.finished;
@@ -73,18 +75,24 @@ export function installTowerInput(){
     clearDestination();ctx.towerDestination={x:goal.x,y:goal.y,arrived:false};
     paintMarker();
   };
-  const paintMarker=()=>{
+  const paintMarker=(projection)=>{
     const goal=ctx.towerDestination;
     marker.hidden=ctx.towerControlMode!=='direction'||!goal||goal.arrived||ctx.combat.finished;
     if(marker.hidden)return;
-    const projection=currentProjection(),diameter=20*ctx.scale*projection.scale;
+    projection??=currentProjection();
+    const diameter=20*ctx.scale*projection.scale;
     marker.style.left=(goal.x*projection.scale+projection.x)+'px';
     marker.style.top=(goal.y*projection.scale+projection.y)+'px';
     marker.style.width=marker.style.height=diameter+'px';
   };
-  ctx.paintTowerMarker=paintMarker;ctx.stage.addEventListener('click',click);
+  ctx.paintTowerMarker=()=>{
+    const projection=currentProjection();
+    paintMarker(projection);
+    enemyMarkers.paint(projection);
+  };
+  ctx.stage.addEventListener('click',click);
   doc.addEventListener('keydown',key);doc.addEventListener('keyup',key);win.addEventListener('blur',reset);doc.addEventListener('visibilitychange',reset);
-  const dispose=ctx.root.__disposeTag;ctx.root.__disposeTag=()=>{reset();clearDestination();marker.remove();ctx.stage.removeEventListener('click',click);ctx.paintTowerMarker=null;ctx.clearTowerDestination=null;ctx.clearTowerInput=null;stick.removeEventListener('touchstart',preventPan);stick.removeEventListener('touchmove',preventPan);doc.removeEventListener('keydown',key);doc.removeEventListener('keyup',key);win.removeEventListener('blur',reset);doc.removeEventListener('visibilitychange',reset);stick.onpointerdown=stick.onpointermove=stick.onpointerup=stick.onpointercancel=stick.onlostpointercapture=null;dispose();};
+  const dispose=ctx.root.__disposeTag;ctx.root.__disposeTag=()=>{reset();clearDestination();marker.remove();enemyMarkers.remove();ctx.stage.removeEventListener('click',click);ctx.paintTowerMarker=null;ctx.clearTowerDestination=null;ctx.clearTowerInput=null;stick.removeEventListener('touchstart',preventPan);stick.removeEventListener('touchmove',preventPan);doc.removeEventListener('keydown',key);doc.removeEventListener('keyup',key);win.removeEventListener('blur',reset);doc.removeEventListener('visibilitychange',reset);stick.onpointerdown=stick.onpointermove=stick.onpointerup=stick.onpointercancel=stick.onlostpointercapture=null;dispose();};
   ctx.clearTowerInput=reset;
 }
 
