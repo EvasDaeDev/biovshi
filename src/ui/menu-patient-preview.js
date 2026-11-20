@@ -6,6 +6,7 @@ import {ASSETS,assetUrl} from '../assets/manifest.js';
 import {towerUpgradeAtlas,towerUpgradeRarity,towerRaritySvgFilter} from '../tower/upgrade-appearance.js';
 import {towerPatientAnatomy} from '../tower/anatomy.js';
 import {towerUpgradePose} from '../tower/upgrade-pose.js';
+import {CONFIG} from '../config.js';
 
 const NS='http://www.w3.org/2000/svg';
 const WIDTH=190,HEIGHT=104,ANGLE=-Math.PI/6;
@@ -25,6 +26,17 @@ const polar=(point,length,angle)=>[
  point[1]+Math.sin(deg(angle)-ANGLE)*length
 ];
 const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+// Centimetres -> neutral pose units (the same scale as towerUpgradePose).
+// Convert an upward screen-space displacement back through the -30deg
+// display rotation before applying it to the unrotated skeleton.
+const RAISED_CONTACT_CM=15;
+const CONTACT_RISE=RAISED_CONTACT_CM*CONFIG.robot.scale*3.2;
+const RAISED_CONTACT_OFFSET=[
+ -Math.sin(ANGLE)*CONTACT_RISE,
+ -Math.cos(ANGLE)*CONTACT_RISE
+];
+export function menuRaisedContactOffset(){return [...RAISED_CONTACT_OFFSET];}
+
 
 // Find the joint of a two-bone chain while keeping its contact point fixed.
 // Bend direction comes from the original drawing, so elbows and knees never flip.
@@ -57,6 +69,29 @@ const menuStaticPose=run=>{
   const joint=polar(upper[0],distance(upper[0],upper[1]),angles[0]+spread);
   const tip=polar(joint,distance(lower[0],lower[1]),angles[1]+spread);
   pose[site]=[upper[0],joint];
+  pose[lowerKey]=[joint,tip];
+ }
+ // Lift both feet and the right hand by 15 cm in displayed vertical space.
+ // Surgical grafts on these limbs follow their corresponding contacts.
+ // Solve both bones again instead of simply translating the extremities:
+ // shoulder/hip roots and real atlas segment lengths remain unchanged.
+ for(const site of Object.keys(pose)){
+  const match=/^(arm|leg)-(-?1)(?:-graft(?:-\\d+)?)?-upper$/.exec(site);
+  if(!match)continue;
+  const [,kind,sideText]=match;
+  if(kind!=='leg'&&!(kind==='arm'&&Number(sideText)===1))continue;
+  const lowerKey=site.slice(0,-5)+'lower';
+  const upper=pose[site],lower=pose[lowerKey];
+  if(!lower)continue;
+  const root=upper[0],target=[
+   lower[1][0]+RAISED_CONTACT_OFFSET[0],
+   lower[1][1]+RAISED_CONTACT_OFFSET[1]
+  ];
+  const cross=(lower[1][0]-root[0])*(upper[1][1]-root[1])-
+              (lower[1][1]-root[1])*(upper[1][0]-root[0]);
+  const {joint,tip}=solveMenuLimb(root,target,
+   distance(root,upper[1]),distance(lower[0],lower[1]),cross>=0?1:-1);
+  pose[site]=[root,joint];
   pose[lowerKey]=[joint,tip];
  }
  return pose;
