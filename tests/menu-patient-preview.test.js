@@ -56,6 +56,12 @@ test('menu placement and idle style integrate with existing CSS; reduced motion 
  const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
  assert.match(html,/<select id="menu-player"[^>]*><\/select>\s*<span id="menu-patient-preview"/);
+ assert.match(css,/#robot-tag-hops-v22 #launch-overlay \.menu-patient-preview > svg\s*\{[^}]*overflow:hidden;/,
+  'the main patient SVG is kept inside its menu viewport');
+ assert.match(css,/#robot-tag-hops-v22 #launch-overlay \.menu-patient-preview svg svg\s*\{[^}]*overflow:hidden;/,
+  'nested per-part atlas viewports must clip to their 64x64 texture cell');
+ assert.doesNotMatch(css,/#robot-tag-hops-v22 #launch-overlay \.menu-patient-preview svg\s*\{[^}]*overflow:visible;/,
+  'never expose full 4x4 atlases inside a menu patient');
  assert.match(css,/\.menu-patient-idle\s*\{[\s\S]*?animation:menu-patient-idle/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
