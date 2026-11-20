@@ -1073,11 +1073,18 @@
 #robot-tag-hops-v22 #launch-overlay .menu-patient-preview[hidden]{
   display:none;
 }
-#robot-tag-hops-v22 #launch-overlay .menu-patient-preview svg{
+/* Only the root SVG may extend to its preview box edges.
+   Nested 64x64 atlas viewports MUST stay clipped to a single part.
+   Styling every descendant SVG as overflow:visible exposes the entire
+   4x4 atlas for each bone and makes the patient look fragmented. */
+#robot-tag-hops-v22 #launch-overlay .menu-patient-preview > svg{
   display:block;
   width:100%;
   height:100%;
-  overflow:visible;
+  overflow:hidden;
+}
+#robot-tag-hops-v22 #launch-overlay .menu-patient-preview svg svg{
+  overflow:hidden;
 }
 #robot-tag-hops-v22 #launch-overlay .menu-patient-idle{
   transform-box:fill-box;
