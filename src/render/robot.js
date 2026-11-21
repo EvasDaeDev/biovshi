@@ -1,4 +1,4 @@
-import {limbKey} from '../robot/body.js';
+import {limbKey,limbRig} from '../robot/body.js';
 import {pendingStrikes} from '../systems/strikes.js';
 import {fighterLabel} from '../game/patients.js';
 import { clamp, smooth } from '../utils/math.js';
@@ -87,9 +87,12 @@ export function draw(robotState, dt) {
       dot(robotState.spineDots[i], robotState.spine[i]);
       attr(robotState.spineDots[i], 'opacity', i === 0 ? Number(robotState.healthy('spine-0')) : Number(robotState.healthy('spine-' + Math.min((robotState.spineSegmentTotal??4)-1, i - 1))));
     }
-    attr(robotState.pelvicBar, 'd', robotState.healthy(robotState.pelvisKey??'spine-3') ? path([robotState.local(robotState.pelvis, -5, -12), robotState.local(robotState.pelvis, -5, 12)]) : '');
-    // Shoulder girdle belongs to the unbreakable chest and joins both arm roots.
-    attr(robotState.shoulderBar, 'd', path([robotState.local(robotState.chest, 3, -15), robotState.local(robotState.chest, 3, 15)]));
+    const bar=(frame,kind)=>{
+      const [x,y]=limbRig(robotState.body,{kind}).root;
+      return path([robotState.local(frame,x,-y),robotState.local(frame,x,y)]);
+    };
+    attr(robotState.pelvicBar,'d',robotState.healthy(robotState.pelvisKey??'spine-3')?bar(robotState.pelvis,'leg'):'');
+    attr(robotState.shoulderBar,'d',bar(robotState.chest,'arm'));
   }
   attr(robotState.neck, 'd', path([robotState.local(robotState.chest, 3, 0), robotState.local(robotState.headFrame, 18 + robotState.headMotion, 0)]));
   robotState.headCenter = robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0);
@@ -137,13 +140,12 @@ export function draw(robotState, dt) {
   }
   for (const l of [...robotState.arms, ...robotState.legs]) {
     const strikePose=strikePoses.find(p=>p.limb===l);
-    const attackEnd = (strikePose?.kind === 'arm' || strikePose?.kind === 'leg') && strikePose.limb === l ? strikePose.tip : robotState.handEnd(l);
-    const a = robotState.origin(l),
-      solved = ik(a, attackEnd, ...robotState.lengths(l), l.kind === 'arm' ? l.side : -l.side);
+    const a=robotState.origin(l),
+      solved=strikePose?{joint:strikePose.joint,end:strikePose.tip}
+        :ik(a,robotState.handEnd(l),...robotState.lengths(l),l.kind==='arm'?l.side:-l.side);
     const prefix = `${limbKey(l)}-`;
-    const stumpStrike = (strikePose?.kind === 'arm' || strikePose?.kind === 'leg') && strikePose.limb === l && !strikePose.complete;
     if (!skinned || l.kind === 'extra') {
-      attr(l.upper, 'd', robotState.healthy(prefix + 'upper') ? path([a, stumpStrike ? strikePose.tip : solved.joint]) : '');
+      attr(l.upper, 'd', robotState.healthy(prefix + 'upper') ? path([a, solved.joint]) : '');
       attr(l.lower, 'd', robotState.healthy(prefix + 'lower') ? path([solved.joint, solved.end]) : '');
       attr(l.joint, 'display', robotState.healthy(prefix + 'upper') || robotState.healthy(prefix + 'lower') ? '' : 'none');
       attr(l.endShape, 'display', robotState.healthy(prefix + 'lower') ? '' : 'none');

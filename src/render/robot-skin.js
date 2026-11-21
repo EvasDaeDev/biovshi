@@ -225,9 +225,7 @@ export function paintRobotSkin(robot,strikePoses=[]) {
   for(const limb of [...robot.arms,...robot.legs]) {
     if (!limb.pose) continue;
     const [a,joint,end]=limb.pose,key=`${limbKey(limb)}-`;
-    const limbStrike=strikePoses.find(p=>p.limb===limb);
-    const stump=(limbStrike?.kind==='arm'||limbStrike?.kind==='leg')&&limbStrike.limb===limb&&!limbStrike.complete;
-    position(key+'upper',a,stump?limbStrike.tip:joint);
+    position(key+'upper',a,joint);
     position(key+'lower',joint,end);
   }
 }

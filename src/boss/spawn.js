@@ -1,27 +1,8 @@
+import {neutralCapsules} from '../robot/neutral-pose.js';
 import {ctx} from '../game/state.js';
-import {CONFIG} from '../config.js';
 import {BOSS_CONFIG} from './config.js';
-import {ik,segmentDistance} from '../utils/math.js';
+import {segmentDistance} from '../utils/math.js';
 import {staticContacts,isLimb} from '../systems/surface-contact.js';
-// Validate the full neutral rig before creating any live DOM or physics state.
-function neutralCapsules(start,body,scaleMultiplier){
- const scale=CONFIG.robot.scale*scaleMultiplier,c=Math.cos(start.angle),s=Math.sin(start.angle);
- const world=(x,y)=>({x:start.x+(x*c-y*s)*scale,y:start.y+(x*s+y*c)*scale});
- const capsules=[],push=(a,b,r,segment)=>capsules.push({a,b,r:r*scale,segment});
- const stride=CONFIG.robot.vertebraBaseCm,end=body.spineSegments*stride;
- for(let i=0;i<body.spineSegments;i++)push(world(-i*stride,0),world(-(i+1)*stride,0),17,`spine-${i}`);
- push(world(0,0),world(0,0),19,'spine-0');push(world(-end,0),world(-end,0),24,body.pelvisKey);
- const headSize=body.headSizeFactor??1,head=body.headOffset??25,front=head+14*headSize;
- push(world(head,0),world(head,0),13*headSize,'head');push(world(front,0),world(front,0),2.5*headSize,'head');
- for(const l of body.limbs){
-  const index=l.anchor??(l.kind==='arm'?0:body.spineSegments),x=-index*stride;
-  const a=world(x+(l.kind==='arm'?3:-5),l.side*(l.kind==='arm'?15:12));
-  const tip=world(x+(l.kind==='arm'?30:-28),l.side*(l.anchor!==undefined?(l.kind==='arm'?35:40):(l.kind==='arm'?27:31)));
-  const lengths=l.kind==='arm'?[27,29]:[32,33],factor=l.lengthScale??1,pose=ik(a,tip,lengths[0]*scale*factor,lengths[1]*scale*factor,l.kind==='arm'?l.side:-l.side);
-  push(a,pose.joint,(l.kind==='arm'?4.8:6.8)*(l.massScale??1),l.key+'-upper');push(pose.joint,pose.end,(l.kind==='arm'?3.8:4.8)*(l.massScale??1),l.key+'-lower');push(pose.end,pose.end,(l.kind==='arm'?4.8:5.8)*(l.massScale??1),l.key+'-lower');
- }
- return capsules;
-}
 // Search uses only already known arena geometry and is deterministic: re-entering
 // the same encounter cannot change the boss's shape or create a new RNG dependency.
 // Pure selector: the caller supplies collision testing for the complete neutral rig.
@@ -89,6 +70,9 @@ export function planNeutralRigSpawns(layout,rigs){
  for(let attempt=0;attempt<3;attempt++){
   const points=new Array(layout.length),occupied=[];
   const order=layout.map((_,id)=>id).sort((a,b)=>{
+   const authored=Number(Boolean(layout[b].authored))-Number(Boolean(layout[a].authored));
+   if(authored)return authored;
+   if(layout[a].authored&&(a===0||b===0))return a-b;
    const difference=rigs[b].body.spineSegments*rigs[b].scaleMultiplier-
     rigs[a].body.spineSegments*rigs[a].scaleMultiplier;
    if(difference)return difference;

@@ -1,3 +1,5 @@
+import {limbKey,limbRig,PATIENT_HEAD_OFFSET,standardLimbs} from '../robot/body.js';
+import {CONFIG} from '../config.js';
 import {patientSkin,patientGarage} from '../game/patients.js';
 import {ctx} from '../game/state.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
@@ -12,50 +14,34 @@ import {TOWER_RARITIES} from '../tower/mutations.js';
 export const PORTRAIT_WIDTH=260,PORTRAIT_HEIGHT=112;
 // Same neutral kinematics, atlas anchors and spine width as the arena. No second
 // robot simulation or animation loop is created for the cards.
-export function portraitBones() {
-  const bones=[];
-  for(const side of [-1,1])for(const kind of ['arm','leg']){
-    const a={x:kind==='arm'?3:-45,y:side*(kind==='arm'?15:12)};
-    const end={x:kind==='arm'?30:-68,y:side*(kind==='arm'?27:31)};
-    const solved=ik(a,end,...(kind==='arm'?[27,29]:[32,33]),kind==='arm'?side:-side);
-    bones.push({key:`${kind}-${side}-upper`,a,b:solved.joint},{key:`${kind}-${side}-lower`,a:solved.joint,b:solved.end});
-  }
-  for(const i of [3,2,1,0])bones.push({key:'spine-'+i,a:{x:-i*10,y:0},b:{x:-(i+1)*10,y:0}});
-  bones.push({key:'head',a:{x:15,y:0},b:{x:35,y:0}});
-  return bones.map(bone=>({...bone,part:ROBOT_PARTS[bone.key],matrix:skinMatrix(bone.a,bone.b,ROBOT_PARTS[bone.key])}));
+export function portraitBones(body) {
+ const {limbs=standardLimbs(),spineSegments:count=4,skinParts=ROBOT_PARTS}=body??{};
+ const stride=CONFIG.robot.vertebraBaseCm,bones=[];
+ for(const limb of limbs){
+  const {kind,side}=limb,key=limbKey(limb);
+  const index=limb.anchor??(kind==='arm'?0:count);
+  const rig=limbRig(body,limb);
+  const [rootX,rootY]=rig.root,[tipX,tipY]=limb.anchor===undefined?rig.rest:rig.graftRest;
+  const a={x:rootX-index*stride,y:side*rootY},end={x:tipX-index*stride,y:side*tipY};
+  const factor=limb.lengthScale??1,[upper,lower]=rig.lengths;
+  const solved=ik(a,end,upper*factor,lower*factor,kind==='arm'?side:-side);
+  bones.push({key:`${key}-upper`,a,b:solved.joint},{key:`${key}-lower`,a:solved.joint,b:solved.end});
+ }
+ for(let i=count-1;i>=0;i--)bones.push({key:'spine-'+i,a:{x:-i*stride,y:0},b:{x:-(i+1)*stride,y:0}});
+ const head=body?.headOffset??PATIENT_HEAD_OFFSET,half=10*(body?.headSizeFactor??1);
+ bones.push({key:'head',a:{x:head-half,y:0},b:{x:head+half,y:0}});
+ return bones.map(bone=>{
+  const part=skinParts[bone.key]??ROBOT_PARTS[bone.key];
+  return {...bone,part,matrix:skinMatrix(bone.a,bone.b,part)};
+ });
 }
 export const PORTRAIT_BONES=portraitBones();
 
 const anatomyPortraitCache=new WeakMap();
-// Combat-card anatomy uses the same limb anchors, lengths and sprite cells as
-// the actual fight rig. A second arm grows from its assigned spine segment,
-// never from the original shoulder by accident.
 export function portraitBonesForBody(body){
  if(!body?.limbs||!body.skinParts)return PORTRAIT_BONES;
- if(anatomyPortraitCache.has(body))return anatomyPortraitCache.get(body);
- const count=body.spineSegments??4,bones=[];
- for(const limb of body.limbs){
-  const kind=limb.kind,side=limb.side;
-  if(kind!=='arm'&&kind!=='leg')continue;
-  const index=limb.anchor??(kind==='arm'?0:count);
-  const extra=limb.key?.includes('-graft')??false;
-  const a={x:-index*10+(kind==='arm'?3:-5),y:side*(kind==='arm'?15:12)+(extra?side*8:0)};
-  const factor=limb.lengthScale??1;
-  const end={x:a.x+(kind==='arm'?27:-23)*factor,
-   y:a.y+side*(extra?24:kind==='arm'?12:19)*factor};
-  const solved=ik(a,end,...(kind==='arm'?[27*factor,29*factor]:[32*factor,33*factor]),kind==='arm'?side:-side);
-  const key=limb.key??`${kind}-${side}`;
-  bones.push({key:`${key}-upper`,a,b:solved.joint},
-   {key:`${key}-lower`,a:solved.joint,b:solved.end});
- }
- for(let i=count-1;i>=0;i--)bones.push({key:`spine-${i}`,a:{x:-i*10,y:0},b:{x:-(i+1)*10,y:0}});
- bones.push({key:'head',a:{x:15,y:0},b:{x:35,y:0}});
- const result=bones.map(bone=>{
-  const part=body.skinParts[bone.key]??ROBOT_PARTS[bone.key];
-  return {...bone,part,matrix:skinMatrix(bone.a,bone.b,part)};
- });
- anatomyPortraitCache.set(body,result);
- return result;
+ if(!anatomyPortraitCache.has(body))anatomyPortraitCache.set(body,portraitBones(body));
+ return anatomyPortraitCache.get(body);
 }
 
 const palettes=new Map();
@@ -176,7 +162,7 @@ export function paintPatientPortrait(card,id,states,bones=PORTRAIT_BONES) {
     }else{
       draw.strokeStyle=state.state==='off'?'#353e48':TELEMETRY_COLOURS[state.state]??'#b7ada1';draw.fillStyle=draw.strokeStyle;
       draw.lineWidth=bone.key.startsWith('spine')?10:3;draw.lineCap='round';draw.beginPath();
-      if(bone.key==='head'){draw.arc(25,0,10,0,Math.PI*2);draw.fill();}
+      if(bone.key==='head'){draw.arc((bone.a.x+bone.b.x)/2,0,Math.abs(bone.b.x-bone.a.x)/2,0,Math.PI*2);draw.fill();}
       else{draw.moveTo(bone.a.x,bone.a.y);draw.lineTo(bone.b.x,bone.b.y);draw.stroke();}
     }
     draw.restore();

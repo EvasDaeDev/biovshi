@@ -34,8 +34,10 @@ test('lengthening affects real IK limb geometry',async()=>{
  const body=towerPatientAnatomy({surgeries:[{site:'arm-1-upper',procedure:'lengthen_arm'}]});
  const changed=body.limbs.find(l=>l.key==='arm-1'),normal=body.limbs.find(l=>l.key==='arm--1');
  assert.equal(changed.lengthScale,1.2);
- assert.deepEqual(lengths({scale:CONFIG.robot.scale},changed),[27*CONFIG.robot.scale*1.2,29*CONFIG.robot.scale*1.2]);
- assert.deepEqual(lengths({scale:CONFIG.robot.scale},normal),[27*CONFIG.robot.scale,29*CONFIG.robot.scale]);
+ const baseline=lengths({scale:CONFIG.robot.scale},normal);
+ assert.ok(Math.abs(baseline[0]-15.176256662989397)<1e-7);
+ assert.ok(Math.abs(baseline[1]-19.16528032449229)<1e-7);
+ assert.deepEqual(lengths({scale:CONFIG.robot.scale},changed),baseline.map(length=>length*1.2));
 });
 
 test('preview neck faces right and hands attach to offset shoulders rather than spine centre',()=>{
@@ -44,8 +46,8 @@ test('preview neck faces right and hands attach to offset shoulders rather than 
  const chest=base['spine-0'][0],pelvis=base['spine-3'][1];
  const head=base.head;
  assert.ok(head[1][0]>head[0][0],'atlas head anchor points toward the right');
- assert.deepEqual(base['arm-1-upper'][0],[chest[0]+3*unit,chest[1]+15*unit]);
- assert.deepEqual(base['arm--1-upper'][0],[chest[0]+3*unit,chest[1]-15*unit]);
+ assert.deepEqual(base['arm-1-upper'][0],[chest[0],chest[1]+12*unit]);
+ assert.deepEqual(base['arm--1-upper'][0],[chest[0],chest[1]-12*unit]);
  assert.deepEqual(base['leg-1-upper'][0],[pelvis[0]-5*unit,pelvis[1]+12*unit]);
  assert.deepEqual(base['leg--1-upper'][0],[pelvis[0]-5*unit,pelvis[1]-12*unit]);
  const extra=towerUpgradePose({surgeries:[{site:'arm-1-upper',procedure:'graft_arm'}]});

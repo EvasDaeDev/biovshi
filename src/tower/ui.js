@@ -1,4 +1,5 @@
-import {artifactDropChance,bossRepeatDropChance,ARTIFACT_COMPLETION_REWARD,ARTIFACT_PIECE_COUNT} from './artifacts.js';
+import {bakeRoundFloor} from '../render/floor-history.js';
+import {artifactDropChance,ARTIFACT_COMPLETION_REWARD,ARTIFACT_PIECE_COUNT} from './artifacts.js';
 import {bossName} from '../boss/names.js';
 import {setPaused} from '../ui/controls.js';
 import {hasBoss,isBossFloor} from '../boss/config.js';
@@ -9,7 +10,7 @@ import {towerMutationSnapshot,towerAttackInterval,TOWER_MUTATIONS,TOWER_MUTATION
  equipTowerMutation,removeTowerMutation,towerInstalledItems,towerMutationInstallPrice,TOWER_MUTATION_LIMIT,TOWER_RARITIES,towerMutationRarity} from './mutations.js';
 import {towerCycleWins,towerCycleInfo,towerCycleTitle,towerFloorLabel} from './cycles.js';
 import {TOWER_MUTATION_ATLAS,towerUpgradeApplies,towerRaritySvgFilter} from './upgrade-appearance.js';
-import {towerSegmentStacks,towerInstalledSegments,towerUnreadSegments,markTowerSegmentSeen,towerSegmentSellPrice,TOWER_SEGMENT_INSTALL_PRICE,equipTowerSegment,removeTowerSegment,sellTowerSegment} from './segments.js';
+import {towerSegmentDropChance,towerSegmentStacks,towerInstalledSegments,towerUnreadSegments,markTowerSegmentSeen,towerSegmentSellPrice,TOWER_SEGMENT_INSTALL_PRICE,canInstallTowerSegment,canCreditTowerSegmentSale,equipTowerSegment,removeTowerSegment,sellTowerSegment} from './segments.js';
 import {ROBOT_PARTS} from '../render/robot-skin.js';
 import {TOWER_SURGERY_IDS,TOWER_SURGERY_OPERATIONS,TOWER_SURGERY_MIN_LEVEL,towerSurgeryCapacity,towerSurgeryPrice,towerSurgeryReplacePrice,towerSurgeryAvailableSites,towerSurgerySiteLabel} from './surgery.js';
 import {towerAvailableDonors} from './donors.js';
@@ -212,8 +213,19 @@ export function towerPreparation(){
       return '<span class="tower-stat-preview"><span>'+label+'</span> <strong class="'+cls+'">'+formatSkillPoints(value*100)+'%'+(diff>0?' ▲':diff<0?' ▼':'')+'</strong></span>';
     };
     const current=snapshot.effects,original=initial.effects;
+    const earned=earnedStats(towerCycleWins(t.level));
+    const skillFields=SKILLS.map((skill,i)=>{
+      const choices=[earned[i]-1,earned[i],earned[i]+1].filter(n=>n>=2);
+      const allocation=draftStats[i]>earned[i]?'tower-stat-boosted':draftStats[i]<earned[i]?'tower-stat-reduced':'';
+      return `<label ${skillHintAttributes(snapshot,i)} aria-label="${skill.name}">
+        <span class="tower-skill-icon" aria-hidden="true">${skill.icon}</span>
+        <span class="tower-stat-control"><select data-tower-stat="${i}" class="${allocation}" aria-label="${skill.name} — базовые очки" aria-describedby="tower-stat-total-${i}">
+          ${choices.map(n=>`<option value="${n}" ${n===draftStats[i]?'selected':''}>${n}</option>`).join('')}</select>
+          <span id="tower-stat-total-${i}" class="tower-stat-total">Итог <strong data-tower-effective="${i}">${formatSkillPoints(snapshot.effective[i])}</strong></span>
+        </span></label>`;
+    }).join('');
     fields.innerHTML=`<div class="garage-stat-list"><small>Побед: ${t.wins} · очков в текущем цикле: ${9+towerCycleWins(t.level)}</small>
-      ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)} aria-label="${skill.name}"><span class="tower-skill-icon" aria-hidden="true">${skill.icon}</span><select data-tower-stat="${i}" class="${draftStats[i]>earnedStats(towerCycleWins(t.level))[i]?'tower-stat-boosted':draftStats[i]<earnedStats(towerCycleWins(t.level))[i]?'tower-stat-reduced':''}" aria-label="${skill.name}">${[earnedStats(towerCycleWins(t.level))[i]-1,earnedStats(towerCycleWins(t.level))[i],earnedStats(towerCycleWins(t.level))[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===draftStats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
+      ${skillFields}</div>
       <div class="garage-stat-effects tower-stat-previews"><span class="tower-preview-label ${draftStats.some((v,i)=>v!==t.stats[i])?'is-active':''}">ПРЕДПРОСМОТР</span>${comparison('СКОРОСТЬ',current[0],original[0])}${comparison('МОБИЛЬНОСТЬ',current[2],original[2])}${comparison('КРИТ',current[1],original[1])}<span class="tower-stat-preview"><span>ИНТЕРВАЛ АТАК</span> <strong>${Math.round(towerAttackInterval(snapshot.combat)*1000)} мс</strong></span></div>
       <div class="tower-stat-confirm"><button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button><button type="button" data-tower-apply>ПРИМЕНИТЬ</button></div>`;
     const changed=draftStats.some((v,i)=>v!==t.stats[i]);
@@ -291,7 +303,7 @@ export function towerPreparation(){
     if(!entries.length){
       const note=document.createElement('small');
       note.textContent='Склад пуст. Первые части появятся после победы над боссом.';
-      mutationPanel.append(note);return;
+      mutationPanel.append(note);
     }
     const grid=document.createElement('div');grid.className='tower-inventory-grid';
     for(const item of entries){
@@ -320,17 +332,18 @@ export function towerPreparation(){
       };
       grid.append(button);
     }
-    mutationPanel.append(grid);
+    if(entries.length)mutationPanel.append(grid);
     const chosen=entries.find(item=>item.representativeId===selectedOwned);
-    if(!chosen)return;
     const description=document.createElement('small');description.className='tower-mutation-detail';
-    description.textContent=TOWER_MUTATIONS[chosen.type].name+' · '+towerSurgerySiteLabel(chosen.site)+
-      ' · '+TOWER_RARITIES[chosen.rarity].name+' · '+towerMutationEffectText(chosen.type,chosen.rarity);
+    description.textContent=chosen?TOWER_MUTATIONS[chosen.type].name+' · '+towerSurgerySiteLabel(chosen.site)+
+      ' · '+TOWER_RARITIES[chosen.rarity].name+' · '+towerMutationEffectText(chosen.type,chosen.rarity):'Выберите модификацию.';
+    description.title=description.textContent;
     mutationPanel.append(description);
     const actions=document.createElement('div');actions.className='tower-mutation-action-area';
     const install=document.createElement('button');install.type='button';install.className='tower-mutation-install';
-    install.innerHTML=chosen.installed?'СНЯТЬ · БЕСПЛАТНО':'УСТАНОВИТЬ · '+formatChips(TOWER_SEGMENT_INSTALL_PRICE);
-    install.disabled=!chosen.installed&&ctx.betting.players[ctx.towerPlayer].balance<TOWER_SEGMENT_INSTALL_PRICE;
+    install.innerHTML=chosen?.installed?'СНЯТЬ · БЕСПЛАТНО':'УСТАНОВИТЬ · '+formatChips(TOWER_SEGMENT_INSTALL_PRICE);
+    install.disabled=!chosen||!t.preparing||!chosen.installed&&
+      (!canInstallTowerSegment(t,{...chosen,id:chosen.representativeId})||ctx.betting.players[ctx.towerPlayer].balance<TOWER_SEGMENT_INSTALL_PRICE);
     install.onclick=()=>{
       if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||install.disabled)return;
       const previous=equipped.find(item=>item.site===chosen.site);
@@ -356,8 +369,8 @@ export function towerPreparation(){
       });
     };
     const sell=document.createElement('button');sell.type='button';sell.className='tower-mutation-install tower-segment-sell';
-    const price=towerSegmentSellPrice(chosen.rarity);
-    sell.innerHTML='ПРОДАТЬ · +'+formatChips(price);sell.disabled=chosen.installed;
+    const price=chosen?towerSegmentSellPrice(chosen.rarity):0;
+    sell.innerHTML=chosen?'ПРОДАТЬ · +'+formatChips(price):'ПРОДАТЬ';sell.disabled=!chosen||chosen.installed||!t.preparing||!canCreditTowerSegmentSale(ctx.betting,ctx.towerPlayer,price);
     sell.onclick=()=>{
       if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||sell.disabled)return;
       confirmGameAction({root:ctx.root,title:'ПРОДАЖА СЕГМЕНТА',
@@ -373,7 +386,29 @@ export function towerPreparation(){
     actions.append(install,sell);mutationPanel.append(actions);
   }
   function renderMutations(){
-    if(t.segmentRewardsEnabled){renderSegmentInventory();return;}
+    const previousGrid=mutationPanel.querySelector('.tower-inventory-grid');
+    const scrollTop=(mutationPanel.querySelector('.tower-legacy-stock')??previousGrid)?.scrollTop??0;
+    const active=document.activeElement;
+    const focusedId=previousGrid?.contains(active)?active.dataset.mutationId:null;
+    if(t.segmentRewardsEnabled)renderSegmentInventory();
+    else{
+      renderLegacyMutations();
+      let actions=mutationPanel.querySelector('.tower-mutation-action-area');
+      if(!actions){
+        actions=document.createElement('div');actions.className='tower-mutation-action-area';
+        const button=document.createElement('button');button.type='button';button.className='tower-mutation-install';
+        button.textContent='УСТАНОВИТЬ';button.disabled=true;actions.append(button);
+      }
+      const stock=document.createElement('div');stock.className='tower-legacy-stock';
+      stock.append(...[...mutationPanel.children].filter(node=>node!==actions));
+      mutationPanel.append(stock,actions);
+    }
+    const grid=mutationPanel.querySelector('.tower-inventory-grid');
+    const scroll=mutationPanel.querySelector('.tower-legacy-stock')??grid;
+    if(scroll)scroll.scrollTop=scrollTop;
+    if(grid&&focusedId)[...grid.children].find(card=>card.dataset.mutationId===focusedId)?.focus({preventScroll:true});
+  }
+  function renderLegacyMutations(){
     mutationPanel.replaceChildren();mutationPanel.hidden=false;
     const heading=document.createElement('strong');heading.className='tower-mutation-title';
     heading.textContent=t.mutationDraft?'БОСС СПИСАН · ВЫБЕРИ ИМУЩЕСТВО':'ЛИЧНОЕ ИМУЩЕСТВО ПАЦИЕНТА';
@@ -764,6 +799,11 @@ export function updateTowerHud(){
 }
 export function settleTower(winner){
   if(ctx.towerSettled)return;ctx.towerSettled=true;
+  if(ctx.floorCanvas){
+    // Capture the completed fight before its player, arena or tower can change.
+    ctx.towerFloorBake=bakeRoundFloor().catch(error=>console.warn('Tower floor baking:',error))
+      .finally(()=>{ctx.towerFloorBake=null;});
+  }
   const t=towerFor(ctx.betting,ctx.towerPlayer),won=winner===0,cleared=won?t.level:t.wins;
   ctx.towerOutcome={won,floor:t.level,cleared,record:Math.max(t.record,cleared),newRecord:cleared>t.record,
     runKills:t.runKills,runCoins:t.runCoins,floorCoins:ctx.towerFloorCoins??0,time:ctx.round.elapsedSec,
@@ -775,7 +815,7 @@ export function settleTower(winner){
   // a death is not a previous victory and must never reduce either chance.
   const bossLoot=won&&hasBoss(t)?{
    previousWins:t.artifacts.bossWins[t.level]??0,
-   segmentChance:t.segmentRewardsEnabled?bossRepeatDropChance(t.artifacts.bossWins[t.level]??0):null,
+   segmentChance:t.segmentRewardsEnabled?towerSegmentDropChance(t.artifacts.bossWins[t.level]??0):null,
    fragmentChance:artifactDropChance(t.artifacts,t.level)
   }:null;
   const priorPieces=[...t.artifacts.pieces];
@@ -845,7 +885,7 @@ export function installTowerUI({enterFight=false}={}){
   ctx.root.querySelector('#tower-wallet').hidden=ctx.mode!=='tower';
   const menu=ctx.root.querySelector('#launch-overlay');
   ctx.root.querySelector('#menu-player').onchange=e=>{ctx.betting.towerPlayerId=Number(e.target.value);bettingSave();refreshMenu();};
-  ctx.root.querySelector('#tower-reset').onclick=()=>{if(confirm('Сбросить башню выбранного игрока? Действующая ДМС будет аннулирована без возврата монет. Банк, личный рекорд и артефакты сохранятся. Тариф следующей ДМС не изменится.')){resetTower(ctx.betting,ctx.menuPlayer);bettingSave();refreshMenu();}};
+  ctx.root.querySelector('#tower-reset').onclick=()=>{if(confirm('Сбросить башню выбранного игрока? Следы боёв на аренах будут очищены. Действующая ДМС будет аннулирована без возврата монет. Банк, личный рекорд и артефакты сохранятся. Тариф следующей ДМС не изменится.')){resetTower(ctx.betting,ctx.menuPlayer);bettingSave();refreshMenu();}};
   ctx.root.querySelector('#launch-tower').onclick=()=>{
     ctx.audio?.unlock();
     if(!ctx.betting){menu.hidden=true;ctx.afterSetup='menu';bettingSetup();return;}

@@ -28,6 +28,12 @@ export default defineConfig(({mode})=>{
       console.log('Curated runtime assets:',report.copied,'files,',report.bytes,'bytes');
     },
   }],
-  build: { target: 'es2022', sourcemap: false, copyPublicDir: false },
+  build: {
+    target: 'es2022', sourcemap: false, copyPublicDir: false,
+    ...(testBuild?{rollupOptions:{input:{
+      game:fileURLToPath(new URL('./index.html',import.meta.url)),
+      locationEditor:fileURLToPath(new URL('./Editors/location-editor.html',import.meta.url)),
+    }}}:{}),
+  },
   };
 });

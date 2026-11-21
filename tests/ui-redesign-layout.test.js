@@ -72,7 +72,7 @@ test('Tower preparation remains dark and uses logical height across scaled layou
  assert.match(tower,/#tower-floor-preview \.tower-challenge-option\.is-selected\s*\{[\s\S]*?border:2px solid var\(--ui-selected\)/);
  assert.match(tower,/#tower-preparation>\.bet-panel>\.bet-actions #tower-fight\s*\{[\s\S]*?background:#884734/);
  const shelter=css.slice(css.indexOf('/* Shelter: keep the native top-layer dialog'),css.indexOf('/* Module replacement is a true popup'));
- assert.match(shelter,/max-height:calc\(var\(--game-height,100dvh\) - 20px\);/);
+ assert.match(shelter,/max-height:min\(100%,calc\(var\(--game-height,100dvh\) - 20px\)\);/);
  assert.doesNotMatch(shelter,/max-height:calc\(100dvh - 20px\)/);
  assert.doesNotMatch(shelter,/max-height:min\(30dvh,235px\)/);
  assert.match(css,/#robot-tag-hops-v22 \.tower-replacement-dialog\s*\{[\s\S]*?max-height:min\(calc\(var\(--game-height,100dvh\) - 18px\),650px\)/);

@@ -2,11 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
-import {ARENAS,arenaDiagram,arenaPicker} from '../src/game/arenas.js';
+import {ARENAS,arenaDiagram,arenaPicker,loadLocations} from '../src/game/arenas.js';
 import {initializeGame} from '../src/game/initialize.js';
 import {ctx} from '../src/game/state.js';
 import {chooseSpawnLayout,containsPoint} from '../src/game/arena.js';
-import {coreClearCircle} from '../src/systems/collision.js';
+import {coreClearCircle,inside,sightClear} from '../src/systems/collision.js';
+import {capsulePolygonContact} from '../src/systems/surface-contact.js';
+import {planPath} from '../src/systems/navigation.js';
+import {roundPoints} from '../src/game/location-geometry.js';
 import {wallRibbon} from '../src/render/wall-geometry.js';
 import {cameraReset,cameraApply} from '../src/render/camera.js';
 import {betNewSession} from '../src/betting/ledger.js';
@@ -124,5 +127,69 @@ test('all four arenas support ten tower fighters without invalid spawns',()=>{
     assert.ok(!ctx.obstacles.some(b=>containsPoint(b,p)),id+' patrol point');
    }
   }finally{close(dom);}
+ }
+});
+
+test('rectangular locations keep true bounds, camera centre and concave collision geometry',async()=>{
+ const map={version:1,id:'rectangle',name:'Прямоугольник',width:900,height:520,capacity:6,objects:[
+  {kind:'obstacle',points:[[340,100],[570,100],[570,175],[425,175],[425,360],[340,360]]},
+  {kind:'obstacle',points:roundPoints([740,300],60)}
+ ]};
+ const base='https://arena-layouts.test/locations/';
+ const fetcher=async url=>({ok:true,json:async()=>url.pathname.endsWith('active.json')?{version:1,active:[map.id]}:map});
+ await loadLocations(base,{fetcher});
+ let dom;
+ try{
+  dom=setup(map.id);
+  const {left,top,right,bottom}=ctx.arenaBoundary;
+  assert.deepEqual([right-left,bottom-top],[900,520]);
+  const floor=ctx.arenaContent.querySelector(':scope > rect');
+  assert.deepEqual([floor.getAttribute('width'),floor.getAttribute('height')],['900','520']);
+  assert.equal(ctx.robots.length,4);
+  assert.equal(ctx.camera.x+ctx.camera.size/2,350);
+  assert.equal(ctx.camera.y+ctx.camera.size/2,350);
+  const point=(x,y)=>({x:x+left,y:y+top});
+  const solid=point(390,240),notch=point(495,245),round=point(740,300);
+  assert.equal(inside(solid),true);
+  assert.equal(inside(notch),false);
+  assert.equal(inside(round),true);
+  assert.equal(sightClear(notch,point(550,305)),true);
+  assert.equal(sightClear(notch,point(300,245)),false);
+  assert.equal(capsulePolygonContact({a:notch,b:notch,r:20},ctx.obstacles[0]),null);
+  assert.ok(capsulePolygonContact({a:solid,b:solid,r:20},ctx.obstacles[0]));
+  const path=planPath(point(300,220),notch,20);
+  assert.deepEqual(path.at(-1),notch);
+  assert.ok(path.length>1,'path goes around the solid portion');
+  assert.ok(ctx.svg.querySelector('#tag7hop-concave-wall-1'),'concave wall uses the authored silhouette');
+ }finally{
+  if(dom)close(dom);
+  await loadLocations(base,{fetcher:async()=>({ok:false,status:404}),warn:()=>{}});
+ }
+});
+
+
+test('authored Tower starts preserve player and enemy assignments and fill missing positions',async()=>{
+ const map={version:1,id:'assigned-starts',name:'Старты',width:900,height:520,capacity:6,objects:[],
+  towerSpawns:{player:[180,145],opponents:[[690,125],[680,380]]}};
+ const base='https://arena-layouts.test/locations/';
+ const fetcher=async url=>({ok:true,json:async()=>url.pathname.endsWith('active.json')?{version:1,active:[map.id]}:map});
+ await loadLocations(base,{fetcher});
+ let dom;
+ try{
+  const tower=newTower(0);
+  tower.level=7;tower.wins=6;
+  dom=setup(map.id,tower);
+  const {left,top}=ctx.arenaBoundary;
+  const positions=[map.towerSpawns.player,...map.towerSpawns.opponents].map(([x,y])=>[x+left,y+top]);
+  const starts=chooseSpawnLayout();
+  assert.ok(starts.length>positions.length);
+  assert.deepEqual(starts.slice(0,3).map(p=>[p.x,p.y]),positions);
+  assert.deepEqual(ctx.robots.slice(0,3).map(p=>[p.x,p.y]),positions);
+  assert.ok(starts.every(p=>coreClearCircle(p,CONFIG.startup.spawnMarginCm)));
+  ctx.mode='spectator';ctx.ROBOT_COUNT=4;
+  assert.ok(chooseSpawnLayout().every(p=>!p.authored));
+ }finally{
+  if(dom)close(dom);
+  await loadLocations(base,{fetcher:async()=>({ok:false,status:404}),warn:()=>{}});
  }
 });

@@ -12,7 +12,14 @@ export function sweepPose(state,p,{limb,shoulder,upper,lower,maxReach,base,compl
  if(progress.phase==='windup')tip={x:base.x+(start.x-base.x)*progress.wind,y:base.y+(start.y-base.y)*progress.wind};
  else if(progress.phase==='thrust')tip=point(progress.reach);
  else tip={x:base.x+(end.x-base.x)*progress.reach,y:base.y+(end.y-base.y)*progress.reach};
- return {kind:limb.kind,limb,shoulder,joint:complete?ik(shoulder,tip,upper,lower,limb.kind==='arm'?side:-side).joint:tip,tip,base,complete,progress};
+ if(!complete){
+  const dx=tip.x-shoulder.x,dy=tip.y-shoulder.y;
+  const angle=Math.hypot(dx,dy)>1e-9?Math.atan2(dy,dx):p.direction;
+  tip={x:shoulder.x+Math.cos(angle)*upper,y:shoulder.y+Math.sin(angle)*upper};
+  return {kind:limb.kind,limb,shoulder,joint:tip,tip,base,complete,progress};
+ }
+ const solved=ik(shoulder,tip,upper,lower,limb.kind==='arm'?side:-side);
+ return {kind:limb.kind,limb,shoulder,joint:solved.joint,tip:solved.end,base,complete,progress};
 }
 export function poseAt(robot,p,age){return robot.attackPose({...p,preview:false,started:ctx.game.time-age});}
 export function poseClear(robot,pose){

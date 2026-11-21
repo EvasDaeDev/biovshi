@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "active": [
+    "ward",
+    "ring",
+    "annulus",
+    "sluice",
+    "zigzag",
+    "columns",
+	"maze",
+    "throat"
+  ]
+}

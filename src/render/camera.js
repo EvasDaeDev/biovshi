@@ -1,3 +1,4 @@
+import {arenaRaster} from '../game/arena-dimensions.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { attr } from "./svg.js";
@@ -20,7 +21,7 @@ export function cameraBounds(size, outset = 8) {
 export function cameraReset() {
   // Preserve the true arena centre when the maximum view is narrower than
   // the full floor-plus-walls extent.
-  const arena=ctx.arenaDefinition??{left:0,top:0,size:700};
+  const arena=arenaRaster(ctx.arenaDefinition);
   ctx.camera.size=ctx.CAMERA_FULL;
   ctx.camera.x=arena.left+(arena.size-ctx.CAMERA_FULL)/2;
   ctx.camera.y=arena.top+(arena.size-ctx.CAMERA_FULL)/2;
@@ -80,15 +81,29 @@ export function cameraUpdate(dt) {
     ctx.combat.finished
   ) return;
 
+  const tower=ctx.mode==='tower';
+  // A stalled render frame must not consume the entire follow transition.
+  if(tower)dt=Math.min(dt,1/20);
+
   const active = ctx.robots.filter(r => r.visible && r.mobile);
-  if (!active.length) return;
+  const player=tower?ctx.robots.find(r=>r.id===0&&r.visible&&Number.isFinite(r.x)&&Number.isFinite(r.y)):null;
+  if(!active.length&&!player)return;
 
   const width=ctx.fieldWidth||ctx.fieldSide||700,height=ctx.fieldHeight||ctx.fieldSide||700,short=Math.min(width,height);
-  const player=ctx.mode==='tower'?active.find(r=>r.id===0&&Number.isFinite(r.x)&&Number.isFinite(r.y)):null;
   const followSize=Math.max(ctx.CAMERA_MIN,ctx.CAMERA_FULL*towerFollowFraction);
-  const framed=player?active.filter(r=>
-    Math.abs(r.x-player.x)<=followSize*width/(2*short)&&
-    Math.abs(r.y-player.y)<=followSize*height/(2*short)):active;
+  // Fade opponents in over the edge of the framing window so an entering or
+  // departing fighter cannot abruptly change the zoom target.
+  const nearby=player?active.flatMap(r=>{
+    if(r===player||!Number.isFinite(r.x)||!Number.isFinite(r.y))return [];
+    const edge=Math.max(Math.abs(r.x-player.x)*2*short/(followSize*width),
+      Math.abs(r.y-player.y)*2*short/(followSize*height));
+    const influence=clamp((1-edge)/.2,0,1);
+    return influence>0?[{robot:r,influence}]:[];
+  }):[];
+  const framed=player?[player,...nearby.map(({robot,influence})=>({
+    x:player.x+(robot.x-player.x)*influence,
+    y:player.y+(robot.y-player.y)*influence
+  }))]:active;
 
   // Body positions keep head turns, attacks and limb motion from changing framing.
   const {left,right,top,bottom}=cameraTargetBounds(framed);
@@ -96,12 +111,13 @@ export function cameraUpdate(dt) {
   const padding=player?towerFollowFraction:1;
   const fit=Math.max((right-left+400*padding)*short/width,(bottom-top+200*padding)*short/height);
   const targetSize=player
-    ?(framed.length>1?clamp(fit,ctx.CAMERA_MIN,followSize):followSize)
+    ?followSize+(clamp(fit,ctx.CAMERA_MIN,followSize)-followSize)*Math.max(0,...nearby.map(({influence})=>influence))
     :clamp(fit,ctx.CAMERA_MIN,ctx.CAMERA_FULL);
   const cx=player?.x??(left+right)/2,cy=player?.y??(top+bottom)/2;
 
-  // Zoom out faster than zooming in so that escaping fighters stay visible.
-  const zoomTau = targetSize > ctx.camera.size ? .28 : .95;
+  // Spectator mode zooms out faster to keep escaping fighters visible.
+  const zoomTau = tower ? .85 : targetSize > ctx.camera.size ? .28 : .95;
+  const previousSize=ctx.camera.size;
   const sizeBlend = 1 - Math.exp(-dt / zoomTau);
 
   ctx.camera.size +=
@@ -112,6 +128,18 @@ export function cameraUpdate(dt) {
   }
 
   // Follow the chosen centre without arena boundary restrictions.
+  if(tower){
+    const centerX=ctx.camera.x+previousSize/2,centerY=ctx.camera.y+previousSize/2;
+    const blend=1-Math.exp(-dt/.55);
+    const dx=(cx-centerX)*blend,dy=(cy-centerY)*blend;
+    const limit=ctx.camera.size*.7*dt;
+    const fraction=Math.min(1,limit/(Math.hypot(dx,dy)||1));
+    ctx.camera.x=centerX+dx*fraction-ctx.camera.size/2;
+    ctx.camera.y=centerY+dy*fraction-ctx.camera.size/2;
+    cameraApply();
+    return;
+  }
+
   const moveX = cx - ctx.camera.size / 2;
   const moveY = cy - ctx.camera.size / 2;
 

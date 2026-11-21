@@ -338,7 +338,9 @@ for(const marker of ['telegram-app','telegram-launch'])test(`full stylesheet cas
   assert.equal(style('.tower-reroll-line').flexWrap,'wrap');
   assert.equal(style('.tower-upgrade-paper').maxHeight,'100%');
   assert.equal(style('.tower-upgrade-paper').overflow,'auto');
-  assert.equal(style('.tower-upgrade-content').overflow,'visible');
+  assert.equal(style('.tower-upgrade-content').overflow,'hidden','modifier cards own the scroll region');
+  f.doc.querySelector('[data-upgrade-tab="artifacts"]').click();
+  assert.equal(style('.tower-upgrade-content').overflow,'visible','other tabs can use the phone sheet scroll');
   const patient=f.doc.querySelector('.tower-upgrade-table');
   assert.equal(patient.parentElement.className,'tower-upgrade-patient-panel');
   assert.equal(patient.nextElementSibling.id,'tower-upgrade-stats');

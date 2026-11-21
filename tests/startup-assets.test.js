@@ -25,15 +25,33 @@ test('real startup waits for the texture check, reuses images for tinting and cr
     getImageData(x,y,w,h){return {data:new Uint8ClampedArray(w*h*4).fill(128)};},
   };};
   dom.window.HTMLCanvasElement.prototype.toDataURL=()=> 'data:image/png;base64,AAAA';
+  let releaseLocations;
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async (url,options)=>{
+    assert.equal(options.cache,'no-store');
+    if(url.pathname==='/locations/start-arena.json'){
+      const ward=JSON.parse(fs.readFileSync(new URL('../public/locations/ward.json',import.meta.url),'utf8'));
+      return {ok:true,json:async()=>({...ward,id:'start-arena',name:'Тестовая локация'})};
+    }
+    assert.equal(url.href,'https://startup.test/locations/active.json');
+    await new Promise(resolve=>{releaseLocations=resolve;});
+    return {ok:true,json:async()=>({version:1,active:['start-arena']})};
+  };
   await import('../src/main.js');
   const root=document.getElementById('robot-tag-hops-v22');
   assert.equal(root.inert,true,'controls stay inactive while textures are pending');
   assert.equal(ctx.robots,undefined,'participants are not instantiated before checking images');
   assert.equal(requests,Object.keys(ASSETS.textures).length);
   released=true;for(const finish of pending)finish();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(ctx.robots,undefined,'patients wait until active locations have been checked');
+  releaseLocations();
+  globalThis.fetch=originalFetch;
   for(let i=0;i<100&&document.getElementById('texture-loading');i++)await new Promise(resolve=>setImmediate(resolve));
   assert.equal(document.getElementById('texture-loading'),null);
   assert.equal(root.inert,false);
+  assert.equal(ctx.arenaId,'start-arena');
+  assert.equal(root.querySelector('#tag7hop-arena-border').getAttribute('aria-label'),'Тестовая локация');
   assert.equal(ctx.startup.phase,'demo','simulation remains gated on initial load');
   assert.equal(root.querySelector('#launch-game').textContent,'ПОСМОТРЕТЬ БОЙ!');
   assert.equal(root.querySelector('#launch-overlay').hidden,false,'first load shows launch gate');

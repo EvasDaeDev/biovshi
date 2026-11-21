@@ -7,11 +7,12 @@ function navigationGraph(padding) {
   let cache=arenaGraphs.get(ctx.obstacles);
   if(!cache||cache.planes!==ctx.arenaPlanes){cache={planes:ctx.arenaPlanes,entries:new Map()};arenaGraphs.set(ctx.obstacles,cache);}
   if(cache.entries.has(padding))return cache.entries.get(padding);
-  const boxes=ctx.obstacles.map(b=>expandedObstacle(b,padding));
-  const outer=ctx.obstacles.map(b=>expandedObstacle(b,padding+2));
+  const pieces=ctx.obstacles.flatMap(b=>b.parts??[b]);
+  const boxes=pieces.map(b=>expandedObstacle(b,padding));
+  const outer=pieces.map(b=>expandedObstacle(b,padding+2));
   const corners=outer.flatMap(b=>b.points).filter(p=>coreClearCircle(p,Math.max(2,padding))&&!boxes.some(b=>containsPoint(b,p)));
   const edges=corners.map((a,i)=>corners.map((b,j)=>i===j?null:boxes.every(box=>rectHit(a,b,box)===null)?Math.hypot(a.x-b.x,a.y-b.y):null));
-  const graph={boxes,outer,corners,edges};
+  const graph={boxes,outer,corners,edges,pieces};
   if(cache.entries.size>=8)cache.entries.delete(cache.entries.keys().next().value);
   cache.entries.set(padding,graph);
   return graph;
@@ -19,7 +20,8 @@ function navigationGraph(padding) {
 export
 // Граф видимости: кратчайший обход углов всех кубов с запасом для лап.
 function planPath(start, end, padding = 70) {
-  const {boxes,outer,corners,edges}=navigationGraph(padding);
+  if(rectHit(start,end,null,padding)===null)return [{...end}];
+  const {boxes,outer,corners,edges,pieces}=navigationGraph(padding);
   const contains=containsPoint;
   let finish = {
     ...end
@@ -37,7 +39,7 @@ function planPath(start, end, padding = 70) {
   const clear = (a, b) => boxes.every((box,index) => {
     // Из уже занятого запаса можно выйти; сам куб пересекать нельзя.
     if (a === start && contains(box, start)) {
-      const edge=nearestObstaclePoint(a,ctx.obstacles[index]).point;
+      const edge=nearestObstaclePoint(a,pieces[index]).point;
       // Exit an occupied clearance zone away from the actual surface.
       // A direct shortcut toward it can fit the centre but trap the full rig.
       return (b.x-a.x)*(a.x-edge.x)+(b.y-a.y)*(a.y-edge.y)>=-1e-6&&rectHit(a,b,null,3)===null;

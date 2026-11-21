@@ -2,7 +2,7 @@ name: Request test preview deployment
 
 on:
   push:
-    branches: [experiment/tower-bosses]
+    branches: [test/combat-hit-sync]
 
 permissions:
   contents: read
@@ -14,4 +14,4 @@ jobs:
       # The Pages workflow receives workflow_run on main, so the protected
       # github-pages environment does not need to admit experimental branches.
       - name: Request combined stable and test publication
-        run: echo 'Publish main at / and experiment/tower-bosses at /test/'
+        run: echo 'Publish main at / and test/combat-hit-sync at /test/'

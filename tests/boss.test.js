@@ -27,7 +27,7 @@ import {pounceContactSegment,pounceOpportunity,selectSimultaneousStrikes,strikeP
 import {bossPortraitBones} from '../src/boss/card.js';
 import {drawDetachedSkin} from '../src/render/robot-skin.js';
 import {limbKey} from '../src/robot/body.js';
-import {bossOpponentMemory,bossSideWeaponIntent} from '../src/boss/positioning.js';
+import {bossOpponentMemory,bossSideWeaponIntent,bossNeedsShortRange,isBossStump} from '../src/boss/positioning.js';
 import {chargePlan} from '../src/boss/attacks.js';
 
 for(const variant of BOSS_VARIANTS)for(const arena of variant.spineSegments>6?['columns']:['ward','ring','annulus'])test(`${variant.id} boss has independent geometry, atlas, supports and unique attack sources in ${arena}`,()=>{
@@ -279,5 +279,40 @@ test('boss floor is a four-way free-for-all and pays 100 for boss, 10 for a pati
   ctx.robots[3].damage('head',0,100);step(1/60);
   assert.equal(f.session.players[0].balance,1110);assert.equal(ctx.combat.finished,true);assert.equal(ctx.combat.winner,0);
   assert.equal(f.tower.artifacts.pieces.length,1);assert.equal(ctx.towerOutcome.floorCoins,110);
+ }finally{f.close();}
+});
+
+
+test('boss switches to kicks and periodic short-range stump approaches when both forearms are lost',()=>{
+ const f=startBossScenario({variant:'brute',arena:'ward'});
+ try{
+  const boss=f.boss,memory=bossOpponentMemory(boss.body.behavior.state,f.player.id);
+  assert.equal(bossNeedsShortRange(boss),false,'intact arms use ordinary spacing');
+  for(const key of ['arm--1-lower','arm-1-lower'])assert.equal(boss.damage(key,0,100),true);
+  const stumps=boss.attackSources.filter(isBossStump);
+  assert.equal(stumps.length,2,'both upper arms remain attack-capable');
+  assert.equal(bossNeedsShortRange(boss),true);
+  const first=bossSideWeaponIntent(boss,f.player,memory);
+  assert.ok(first,'amputated boss still has a tactical approach');
+  assert.match(first.mode,/ног|удар/,'kicks remain the initial priority');
+  ctx.game.time+=BOSS_CONFIG.tactics.positionCommitSec*2+.01;
+  bossSideWeaponIntent(boss,f.player,memory);
+  ctx.game.time+=BOSS_CONFIG.tactics.positionCommitSec*2+.01;
+  const close=bossSideWeaponIntent(boss,f.player,memory);
+  assert.ok(close,'periodic stump phase must not stall');
+  assert.match(close.mode,/культ/,'stump phase must actively close to physical contact');
+  assert.equal(Number.isFinite(close.heading),true);
+  assert.ok(close.goal&&Number.isFinite(close.goal.x)&&Number.isFinite(close.goal.y));
+ }finally{f.close();}
+});
+
+test('one remaining full arm prevents premature stump-only stance',()=>{
+ const f=startBossScenario({variant:'brute',arena:'ward'});
+ try{
+  const boss=f.boss;
+  assert.equal(boss.damage('arm-1-lower',0,100),true);
+  assert.equal(boss.attackSources.some(isBossStump),true);
+  assert.equal(bossNeedsShortRange(boss),false);
+  assert.equal(bossSideWeaponIntent(boss,f.player,bossOpponentMemory(boss.body.behavior.state,f.player.id)),null);
  }finally{f.close();}
 });

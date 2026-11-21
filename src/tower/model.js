@@ -1,15 +1,15 @@
 import {newInsurance,validInsurance,purchaseInsurance} from './insurance.js';
-import {awardTowerSegments,normalizeTowerSegmentInventory,validTowerSegmentInventory} from './segments.js';
+import {towerSegmentDropChance,awardTowerSegments,normalizeTowerSegmentInventory,validTowerSegmentInventory} from './segments.js';
 import {validTowerMutationState,grantTowerMutationDraft,normalizeTowerMutationInventory} from './mutations.js';
 import {validTowerSurgeries,validTowerSurgicalStock,normalizeTowerSurgicalStock,purchaseTowerSurgery} from './surgery.js';
 import {normalizeTowerGraftProsthetics} from './anatomy.js';
 import {validTowerDonorState,awardTowerDonors} from './donors.js';
-import {selectedTowerFloor,towerFloorCount,validTowerFloorPlan} from './floors.js';
+import {repairTowerArena,selectedTowerFloor,towerFloorCount,validTowerFloorPlan} from './floors.js';
 import {TEST_BUILD} from '../build-channel.js';
 import {validTowerRerolls} from './economy.js';
 import {isBossFloor,hasBoss} from '../boss/config.js';
 import {ensureBossEncounter,validBossEncounter,bossFloorReward} from '../boss/encounter.js';
-import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,bossRepeatDropChance,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
+import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
 import {BASE_STATS,earnedStats,validStats,normalizeProsthetics} from '../garage/model.js';
 import {towerCycleInfo,towerCycleWins} from './cycles.js';
 export const TOWER_REWARD=10;
@@ -32,11 +32,13 @@ export function normalizeTower(t){
  normalizeTowerSurgicalStock(t);
  if(t.insurance?.checkpoint){
   const checkpoint=t.insurance.checkpoint;
+  repairTowerArena(checkpoint.floorPlan,checkpoint.level);
   checkpoint.surgeries??=[];
   normalizeTowerSurgicalStock(checkpoint);
  }
  t.graftProsthetics=normalizeTowerGraftProsthetics(t.graftProsthetics,t);
  t.donorTissues??=[];
+ repairTowerArena(t.floorPlan,t.level);
  t.arenaRerolls??=0;
  t.arenaRerollLocked??=false;
  t.insurance??=newInsurance();
@@ -65,6 +67,7 @@ export function validTower(t){
  const count=towerEnemyCount(t),optionalCount=n=>n===null||Number.isSafeInteger(n)&&n>=0;
  return validBossEncounter(t.bossEncounter,t.level)&&validTowerFloorPlan(t.floorPlan,t.level)&&t&&t.version===2&&Number.isSafeInteger(t.level)&&t.level>=1&&Number.isSafeInteger(t.wins)&&t.wins===t.level-1
   &&Number.isInteger(t.patient)&&t.patient>=0&&t.patient<4&&validStats(t.stats,towerCycleWins(t.level))
+  &&(t.floorHistoryGeneration===undefined||Number.isSafeInteger(t.floorHistoryGeneration)&&t.floorHistoryGeneration>=0)
   &&(t.cycleNotice===undefined||t.cycleNotice===t.level&&t.level>30&&(t.level-1)%30===0)
   &&Number.isSafeInteger(t.statChanges)&&t.statChanges>=0
   &&(t.segmentRewardsEnabled===undefined||typeof t.segmentRewardsEnabled==='boolean')
@@ -120,12 +123,13 @@ export function completeTower(session,player,won,random=Math.random){
    // Starting a new cycle resets earned points only, not the chosen allocation.
    // Death without DMS and manual reset still restore the standard baseline.
    t.insurance=newInsurance();t.cycleNotice=t.level;
+   t.floorHistoryGeneration=(t.floorHistoryGeneration??0)+1;
   }
   t.arenaRerolls=0;t.arenaRerollLocked=false;t.rewarded=[];t.preparing=true;delete t.legacyEnemyCount;delete t.bossEncounter;delete t.legacyBossFloor;delete t.floorPlan;
   if(bossWon){
    // Transitional implementation: new segment warehouse is populated while
    // the legacy reward UI remains enabled until its full replacement lands.
-   if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random,bossRepeatDropChance(previousBossWins),previousBossWins);
+   if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random,towerSegmentDropChance(previousBossWins),previousBossWins);
    else grantTowerMutationDraft(t,random,previousBossWins);
   }}
  else {
@@ -157,6 +161,7 @@ export function completeTower(session,player,won,random=Math.random){
   // A surviving warehouse must be usable immediately on the replacement patient.
   // Likewise, DMS restores the patient to a configurable preparation phase.
   if(next.segmentRewardsEnabled)next.preparing=true;
+  if(t.floorHistoryGeneration!==undefined)next.floorHistoryGeneration=t.floorHistoryGeneration;
   delete next.lastBossSegments;
   normalizeTowerMutationInventory(next);
   session.towers[player]=next;
@@ -167,7 +172,9 @@ export function resetTower(session,player){
  const t=towerFor(session,player);
  // A voluntary run reset abandons the insured checkpoint as well as the build.
  // Retain the earned artifact collection, personal record and escalated DMS tariff.
- return session.towers[player]=newTower(undefined,t.record,t.artifacts,{price:t.insurance.price,checkpoint:null});
+ const next=newTower(undefined,t.record,t.artifacts,{price:t.insurance.price,checkpoint:null});
+ next.floorHistoryGeneration=(t.floorHistoryGeneration??0)+1;
+ return session.towers[player]=next;
 }
 
 export function buyTowerSurgery(session,player,procedure,site,donorId=null,replaceSite=null,stockId=null){

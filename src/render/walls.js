@@ -71,7 +71,14 @@ export function createWalls() {
     },ctx.blockG);
     for (const obstacle of ctx.obstacles) {
       const wall=el('g',{},obstacles);
-      drawRibbon(wallRibbon(obstacle.points,width,{inward:true}),'obstacle',wall);
+      if(obstacle.parts){
+        const id='tag7hop-concave-wall-'+obstacles.children.length;
+        const clip=el('clipPath',{id},wall);
+        const d=outline(obstacle.points);
+        el('path',{d},clip);
+        el('path',{d,fill:'none',stroke:'url(#texture-obstacle)','stroke-width':2*width,
+          'stroke-linejoin':'round','clip-path':'url(#'+id+')'},wall);
+      }else drawRibbon(wallRibbon(obstacle.points,width,{inward:true}),'obstacle',wall);
     }
   }
 }

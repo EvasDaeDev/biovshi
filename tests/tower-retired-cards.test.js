@@ -1,37 +1,56 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import {JSDOM} from 'jsdom';
-import {retireTowerEnemyCard} from '../src/ui/paint-telemetry.js';
+import {startBossScenario} from '../scripts/boss-harness.mjs';
+import {ctx} from '../src/game/state.js';
+import {paintTelemetry} from '../src/ui/paint-telemetry.js';
 
-test('Tower enemy cards fade out, collapse and remain hidden after animation',()=>{
- const dom=new JSDOM('<div id="robot-tag-hops-v22"><section class="robot-card"></section></div>');
+const order=()=>[...ctx.roles.children].map(node=>ctx.cardNodes.findIndex(card=>card.card===node));
+const allVisible=()=>assert.ok(ctx.cardNodes.every(({card})=>!card.hidden&&card.getAttribute('aria-hidden')!=='true'));
+
+test('Tower keeps the player first and moves eliminated enemies below all active patients',()=>{
+ const f=startBossScenario({variant:'brute',arena:'ring',ordinary:true});
  try{
-  const card=dom.window.document.querySelector('.robot-card');
-  assert.equal(retireTowerEnemyCard(card,{id:2,mobile:false},'tower'),true);
-  assert.ok(card.classList.contains('tower-card-exiting'));
-  assert.equal(card.getAttribute('aria-hidden'),'true');
-  assert.equal(card.hidden,false,'transition begins before card disappears');
-  assert.equal(retireTowerEnemyCard(card,{id:2,mobile:false},'tower'),false,'cannot animate twice');
-  card.dispatchEvent(new dom.window.Event('animationend'));
-  assert.equal(card.hidden,true,'animation removes defeated card from layout');
- }finally{dom.window.close();}
+  const [player,dying,dead,alive]=ctx.robots;
+  assert.ok(alive);
+  const cards=[...ctx.cardNodes];
+  const original=order();
+  for(const kind of ['arm','leg'])for(const side of [-1,1])dying.damage(`${kind}-${side}-upper`,0,100);
+  ctx.combat.unarmedDeadline[dying.id]=ctx.game.time+5;
+  dead.damage('head',0,100);
+  paintTelemetry();
+  assert.equal(dying.mobile,true);
+  assert.match(cards[dying.id].action.textContent,/Теряет сознание/);
+  assert.equal(cards[dead.id].action.textContent,'Погиб');
+  assert.deepEqual(order(),[...original.filter(id=>id!==dead.id),dead.id]);
+  allVisible();
+
+  dying.failFromOilLoss();
+  player.damage('head',alive.id,100);
+  paintTelemetry();
+  assert.equal(cards[dying.id].action.textContent,'Без сознания');
+  assert.deepEqual(order(),[0,...original.filter(id=>![0,dying.id,dead.id].includes(id)),dying.id,dead.id]);
+  assert.deepEqual(ctx.cardNodes,cards,'telemetry still looks up cards by robot id');
+  assert.equal(cards[0].card.classList.contains('tower-card-retired'),false);
+  for(const r of [dying,dead])assert.equal(cards[r.id].card.classList.contains('tower-card-retired'),true);
+  allVisible();
+
+  const observer=new f.dom.window.MutationObserver(()=>{});
+  observer.observe(ctx.roles,{childList:true});
+  ctx.telemetryDirty=true;paintTelemetry();
+  assert.deepEqual(observer.takeRecords(),[]);
+  observer.disconnect();
+ }finally{f.close();}
 });
 
-test('only defeated Tower enemies retire; player, healthy enemies and other modes remain',()=>{
- const dom=new JSDOM('<section class="robot-card"></section>');
+test('spectator cards retain their original order after a patient is eliminated',()=>{
+ const f=startBossScenario({variant:'brute',arena:'ring',ordinary:true});
  try{
-  const card=dom.window.document.querySelector('.robot-card');
-  for(const [robot,mode] of [[{id:0,mobile:false},'tower'],[{id:1,mobile:true},'tower'],[{id:1,mobile:false},'betting']]){
-   assert.equal(retireTowerEnemyCard(card,robot,mode),false);
-   assert.equal(card.hidden,false);
-   assert.equal(card.classList.contains('tower-card-exiting'),false);
-  }
- }finally{dom.window.close();}
-});
-
-test('Tower card exit style respects reduced-motion preference',()=>{
- const css=fs.readFileSync(new URL('../styles/tower.css',import.meta.url),'utf8');
- assert.match(css,/\.robot-card\.tower-card-exiting\s*\{[\s\S]*?animation:tower-card-exit 340ms/);
- assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+  ctx.mode='spectator';
+  const original=order();
+  ctx.robots[1].damage('head',0,100);
+  paintTelemetry();
+  assert.deepEqual(order(),original);
+  assert.equal(ctx.roles.querySelector('.tower-card-retired'),null);
+  allVisible();
+ }finally{f.close();}
 });

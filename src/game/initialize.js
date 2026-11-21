@@ -142,14 +142,14 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.w = 700;
   ctx.h = 700;
   // The original SVG template is 7m square; resize its floor and darkness masks.
-  const {left:floorLeft,top:floorTop,size:floorSize}=ctx.arenaDefinition;
+  const {left:floorLeft,top:floorTop,width:floorWidth,height:floorHeight}=ctx.arenaDefinition;
   for(const node of [
     ctx.arenaContent.querySelector(':scope > rect'),
     ctx.svg.querySelector('#tag7hop-darkness'),
     ctx.svg.querySelector('#tag7hop-darkness-mask'),
     ctx.svg.querySelector('#tag7hop-darkness-mask > rect'),
   ])if(node)for(const [key,value] of Object.entries({
-    x:floorLeft,y:floorTop,width:floorSize,height:floorSize
+    x:floorLeft,y:floorTop,width:floorWidth,height:floorHeight
   }))attr(node,key,value);
   ctx.HEAD_LIMIT = CONFIG.vision.headScanDeg * Math.PI / 180;
   ctx.SCAN_SPEED = CONFIG.vision.scanSpeedDeg * Math.PI / 180;
@@ -164,10 +164,9 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.planeCache = new WeakMap();
   ctx.arenaBoundary = {
     left: ctx.arenaDefinition.left,
-    right: ctx.arenaDefinition.left+ctx.arenaDefinition.size,
+    right: floorLeft+floorWidth,
     top: ctx.arenaDefinition.top,
-    bottom: ctx.arenaDefinition.top+ctx.arenaDefinition.size,
-    cut: ctx.arenaDefinition.cut,
+    bottom: floorTop+floorHeight,
     points: ctx.arenaDefinition.points
   };
   ctx.arenaBoundary.points = obstacleVertices(ctx.arenaBoundary);
@@ -196,8 +195,8 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     filterUnits: 'userSpaceOnUse',
     x: floorLeft-180,
     y: floorTop-180,
-    width: floorSize+360,
-    height: floorSize+360
+    width: floorWidth+360,
+    height: floorHeight+360
   }, ctx.defs);
   el('feGaussianBlur', {
     stdDeviation: 5
@@ -318,21 +317,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     orbitBreakUntil: 0,
     orbitGoal: null
   }));
-  ctx.patrolPoints = [{
-    x: 270,
-    y: 100
-  }, {
-    x: 555,
-    y: 145
-  }, {
-    x: 440,
-    y: 600
-  }, {
-    x: 145,
-    y: 555
-  }];
-  if(ctx.arenaDefinition.patrolPoints)ctx.patrolPoints=ctx.arenaDefinition.patrolPoints.map(p=>({...p}));
-  if(ctx.arenaId==='ring')ctx.patrolPoints=[{x:350,y:230},{x:470,y:350},{x:350,y:470},{x:230,y:350}];
+  ctx.patrolPoints=ctx.arenaDefinition.patrolPoints.map(p=>({...p}));
   ctx.pulses = [];
   ctx.pulseNodes = Array.from({
     length: 6
