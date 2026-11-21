@@ -967,13 +967,21 @@ test('inertia stops at arena boundaries or obstacles and uses the same endpoint 
 
 test('an unchanged textured frame causes no redundant DOM mutations',()=>{
   const textures=Object.fromEntries(['robotA','robotB','robotC','robotD'].map(key=>[key,{loaded:true}]));
-  const dom=setup({textures});paint();
-  const observer=new dom.window.MutationObserver(()=>{});
-  observer.observe(ctx.root,{attributes:true,childList:true,characterData:true,subtree:true});
-  for(let i=0;i<10;i++)paint();
-  const mutations=observer.takeRecords();
-  assert.equal(mutations.length,0,mutations.map(m=>(m.target.id||m.target.nodeName)+':'+m.attributeName).join(','));
-  observer.disconnect();dom.window.close();
+  let now=1,dom;
+  ctx.telemetryNow=()=>now;
+  try{
+   dom=setup({textures});paint();
+   assert.ok(ctx.cardNodes.every(card=>card.action.textContent==='Патрулирует'));
+   const observer=new dom.window.MutationObserver(()=>{});
+   observer.observe(ctx.root,{attributes:true,childList:true,characterData:true,subtree:true});
+   for(let i=0;i<10;i++){
+    now+=CONFIG.rendering.telemetryIntervalSec*1.1;
+    paint();
+   }
+   const mutations=observer.takeRecords();
+   observer.disconnect();
+   assert.equal(mutations.length,0,mutations.map(m=>(m.target.id||m.target.nodeName)+':'+m.attributeName).join(','));
+  }finally{delete ctx.telemetryNow;dom?.window.close();}
 });
 
 

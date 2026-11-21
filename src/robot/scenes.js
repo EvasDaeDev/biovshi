@@ -625,6 +625,7 @@ export function jumpTick(robotState, dt, intent) {
   }
 }
 export function robotSetVisible(robotState, value, spawnAt = null) {
+  if(robotState.visible!==value)ctx.telemetryDirty=true;
   robotState.visible = value;
   robotState.spawnAt = value ? spawnAt : null;
   for (const node of [robotState.actor, robotState.floor, robotState.pool, robotState.nearLight, robotState.vision, robotState.lightBeam, ...robotState.trailNodes].filter(Boolean)) attr(node, 'display', value ? '' : 'none');
