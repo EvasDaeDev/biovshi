@@ -12,14 +12,16 @@ export
 
 // Circular nearby light uses the same obstacle shadow test as the flashlight.
 function rectHit(a, b, box = null, pad = 0) {
-  if (!box) {
+  if (!box||box.parts) {
     let nearest = null;
-    for (const obstacle of ctx.obstacles) {
+    for (const obstacle of box?.parts??ctx.obstacles) {
       const hit = rectHit(a,b,obstacle,pad);
       if (hit !== null) nearest = nearest === null ? hit : Math.min(nearest,hit);
     }
     return nearest;
   }
+  if(!pad&&(box.left>Math.max(a.x,b.x)||box.right<Math.min(a.x,b.x)||
+   box.top>Math.max(a.y,b.y)||box.bottom<Math.min(a.y,b.y)))return null;
   let lo = 0,
     hi = 1;
   for (const n of polygonPlanes(box, pad)) {

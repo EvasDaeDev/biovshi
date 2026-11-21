@@ -55,8 +55,19 @@ test('JSON import round-trips valid geometry and rejects invalid figures and obs
  assert.equal(once.spawns.length,4);
  assert.equal(once.patrol.length,6);
  assert.throws(()=>parseLocation({...input,objects:[box(-20,100,30,30)]}),/координат/);
- assert.throws(()=>parseLocation({...input,objects:[{...input.objects[0],points:input.objects[0].points.toReversed()}]}),/выпуклыми/);
+ const corners=input.objects[0].points;
+ assert.throws(()=>parseLocation({...input,objects:[{kind:'obstacle',points:[corners[0],corners[2],corners[1],corners[3]]}]}),/пересекаться/);
+ assert.deepEqual(parseLocation({...input,objects:[{kind:'obstacle',points:corners.toReversed()}]}).location.objects,input.objects);
  assert.throws(()=>parseLocation({...input,spawns:[[120,170],[350,60],[350,640],[640,350]]}),/Стартовым/);
+});
+test('role-specific spawn points round-trip and reject overlaps or obstructed points',()=>{
+ const map={...blank(),objects:[box(320,320,60,60)],towerSpawns:{player:[180,150],opponents:[[500,160],[520,520]]}};
+ const parsed=parseLocation(map).location;
+ assert.deepEqual(parsed.towerSpawns,map.towerSpawns);
+ assert.deepEqual(parseLocation(JSON.parse(JSON.stringify(parsed))).location,parsed);
+ assert.throws(()=>parseLocation({...map,towerSpawns:{player:[10,10]}}),/Точкам старта Башни/);
+ assert.throws(()=>parseLocation({...map,towerSpawns:{player:[180,150],opponents:[[185,150]]}}),/Точкам старта Башни/);
+ assert.throws(()=>parseLocation({...map,towerSpawns:{opponents:[[340,350]]}}),/Точкам старта Башни/);
 });
 test('launch refresh follows active IDs, skips missing and malformed files and ignores stale catalogs',async()=>{
  const files={'active.json':manifest(['custom','missing','broken','../ward','custom','another']),

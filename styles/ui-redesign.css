@@ -1450,22 +1450,43 @@
   min-height:100%;
   box-sizing:border-box;
 }
+#robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-content:has(> #tower-upgrade-mutation-page:not([hidden])){
+  overflow:hidden;
+  scrollbar-gutter:auto;
+}
+#robot-tag-hops-v22 #tower-upgrade-window #tower-upgrade-mutation-page:not([hidden]),
 #robot-tag-hops-v22 #tower-upgrade-window #tower-prep-mutations:not([hidden]){
   display:flex;
   flex-direction:column;
-  align-items:stretch;
-  min-height:100%;
+  flex:1;
+  min-height:0;
   box-sizing:border-box;
   margin:0;
 }
 #robot-tag-hops-v22 #tower-upgrade-window #tower-prep-mutations > .tower-inventory-grid{
   box-sizing:border-box;
-  max-height:clamp(8rem,34dvh,18rem);
+  max-height:100%;
   overflow-y:auto;
   overscroll-behavior-y:contain;
   scrollbar-gutter:stable;
   align-content:start;
   padding:4px;
+  flex:0 1 auto;
+  min-height:0;
+}
+#robot-tag-hops-v22 #tower-upgrade-window .tower-legacy-stock{
+  overflow:auto;
+  min-height:0;
+  overscroll-behavior-y:contain;
+}
+#robot-tag-hops-v22 #tower-upgrade-window #tower-prep-mutations > :not(.tower-inventory-grid,.tower-legacy-stock){
+  flex-shrink:0;
+}
+#robot-tag-hops-v22 #tower-upgrade-window #tower-prep-mutations > .tower-mutation-detail{
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
 }
 #robot-tag-hops-v22 #tower-upgrade-window .tower-mutation-action-area{
   display:flex;
@@ -1474,9 +1495,17 @@
   align-items:stretch;
   gap:8px;
   margin-top:auto;
-  padding-top:14px;
+  padding-top:8px;
   padding-bottom:4px;
   border-top:1px solid #615f4b;
+}
+@media(max-width:720px){
+  #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-content:has(> #tower-upgrade-mutation-page:not([hidden])){
+    height:clamp(240px,55dvh,400px);
+  }
+}
+html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower-upgrade-window .tower-upgrade-content:has(> #tower-upgrade-mutation-page:not([hidden])){
+  height:clamp(240px,calc(var(--game-height,100dvh) * .55),400px);
 }
 #robot-tag-hops-v22 #tower-upgrade-window .tower-mutation-action-area .tower-mutation-install{
   display:inline-flex;

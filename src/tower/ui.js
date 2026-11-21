@@ -10,7 +10,7 @@ import {towerMutationSnapshot,towerAttackInterval,TOWER_MUTATIONS,TOWER_MUTATION
  equipTowerMutation,removeTowerMutation,towerInstalledItems,towerMutationInstallPrice,TOWER_MUTATION_LIMIT,TOWER_RARITIES,towerMutationRarity} from './mutations.js';
 import {towerCycleWins,towerCycleInfo,towerCycleTitle,towerFloorLabel} from './cycles.js';
 import {TOWER_MUTATION_ATLAS,towerUpgradeApplies,towerRaritySvgFilter} from './upgrade-appearance.js';
-import {towerSegmentStacks,towerInstalledSegments,towerUnreadSegments,markTowerSegmentSeen,towerSegmentSellPrice,TOWER_SEGMENT_INSTALL_PRICE,equipTowerSegment,removeTowerSegment,sellTowerSegment} from './segments.js';
+import {towerSegmentStacks,towerInstalledSegments,towerUnreadSegments,markTowerSegmentSeen,towerSegmentSellPrice,TOWER_SEGMENT_INSTALL_PRICE,canInstallTowerSegment,canCreditTowerSegmentSale,equipTowerSegment,removeTowerSegment,sellTowerSegment} from './segments.js';
 import {ROBOT_PARTS} from '../render/robot-skin.js';
 import {TOWER_SURGERY_IDS,TOWER_SURGERY_OPERATIONS,TOWER_SURGERY_MIN_LEVEL,towerSurgeryCapacity,towerSurgeryPrice,towerSurgeryReplacePrice,towerSurgeryAvailableSites,towerSurgerySiteLabel} from './surgery.js';
 import {towerAvailableDonors} from './donors.js';
@@ -303,7 +303,7 @@ export function towerPreparation(){
     if(!entries.length){
       const note=document.createElement('small');
       note.textContent='Склад пуст. Первые части появятся после победы над боссом.';
-      mutationPanel.append(note);return;
+      mutationPanel.append(note);
     }
     const grid=document.createElement('div');grid.className='tower-inventory-grid';
     for(const item of entries){
@@ -332,17 +332,18 @@ export function towerPreparation(){
       };
       grid.append(button);
     }
-    mutationPanel.append(grid);
+    if(entries.length)mutationPanel.append(grid);
     const chosen=entries.find(item=>item.representativeId===selectedOwned);
-    if(!chosen)return;
     const description=document.createElement('small');description.className='tower-mutation-detail';
-    description.textContent=TOWER_MUTATIONS[chosen.type].name+' · '+towerSurgerySiteLabel(chosen.site)+
-      ' · '+TOWER_RARITIES[chosen.rarity].name+' · '+towerMutationEffectText(chosen.type,chosen.rarity);
+    description.textContent=chosen?TOWER_MUTATIONS[chosen.type].name+' · '+towerSurgerySiteLabel(chosen.site)+
+      ' · '+TOWER_RARITIES[chosen.rarity].name+' · '+towerMutationEffectText(chosen.type,chosen.rarity):'Выберите модификацию.';
+    description.title=description.textContent;
     mutationPanel.append(description);
     const actions=document.createElement('div');actions.className='tower-mutation-action-area';
     const install=document.createElement('button');install.type='button';install.className='tower-mutation-install';
-    install.innerHTML=chosen.installed?'СНЯТЬ · БЕСПЛАТНО':'УСТАНОВИТЬ · '+formatChips(TOWER_SEGMENT_INSTALL_PRICE);
-    install.disabled=!chosen.installed&&ctx.betting.players[ctx.towerPlayer].balance<TOWER_SEGMENT_INSTALL_PRICE;
+    install.innerHTML=chosen?.installed?'СНЯТЬ · БЕСПЛАТНО':'УСТАНОВИТЬ · '+formatChips(TOWER_SEGMENT_INSTALL_PRICE);
+    install.disabled=!chosen||!t.preparing||!chosen.installed&&
+      (!canInstallTowerSegment(t,{...chosen,id:chosen.representativeId})||ctx.betting.players[ctx.towerPlayer].balance<TOWER_SEGMENT_INSTALL_PRICE);
     install.onclick=()=>{
       if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||install.disabled)return;
       const previous=equipped.find(item=>item.site===chosen.site);
@@ -368,8 +369,8 @@ export function towerPreparation(){
       });
     };
     const sell=document.createElement('button');sell.type='button';sell.className='tower-mutation-install tower-segment-sell';
-    const price=towerSegmentSellPrice(chosen.rarity);
-    sell.innerHTML='ПРОДАТЬ · +'+formatChips(price);sell.disabled=chosen.installed;
+    const price=chosen?towerSegmentSellPrice(chosen.rarity):0;
+    sell.innerHTML=chosen?'ПРОДАТЬ · +'+formatChips(price):'ПРОДАТЬ';sell.disabled=!chosen||chosen.installed||!t.preparing||!canCreditTowerSegmentSale(ctx.betting,ctx.towerPlayer,price);
     sell.onclick=()=>{
       if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||sell.disabled)return;
       confirmGameAction({root:ctx.root,title:'ПРОДАЖА СЕГМЕНТА',
@@ -386,14 +387,26 @@ export function towerPreparation(){
   }
   function renderMutations(){
     const previousGrid=mutationPanel.querySelector('.tower-inventory-grid');
-    const scrollTop=previousGrid?.scrollTop??0;
+    const scrollTop=(mutationPanel.querySelector('.tower-legacy-stock')??previousGrid)?.scrollTop??0;
     const active=document.activeElement;
     const focusedId=previousGrid?.contains(active)?active.dataset.mutationId:null;
-    if(t.segmentRewardsEnabled)renderSegmentInventory();else renderLegacyMutations();
+    if(t.segmentRewardsEnabled)renderSegmentInventory();
+    else{
+      renderLegacyMutations();
+      let actions=mutationPanel.querySelector('.tower-mutation-action-area');
+      if(!actions){
+        actions=document.createElement('div');actions.className='tower-mutation-action-area';
+        const button=document.createElement('button');button.type='button';button.className='tower-mutation-install';
+        button.textContent='УСТАНОВИТЬ';button.disabled=true;actions.append(button);
+      }
+      const stock=document.createElement('div');stock.className='tower-legacy-stock';
+      stock.append(...[...mutationPanel.children].filter(node=>node!==actions));
+      mutationPanel.append(stock,actions);
+    }
     const grid=mutationPanel.querySelector('.tower-inventory-grid');
-    if(!grid)return;
-    grid.scrollTop=scrollTop;
-    if(focusedId)[...grid.children].find(card=>card.dataset.mutationId===focusedId)?.focus({preventScroll:true});
+    const scroll=mutationPanel.querySelector('.tower-legacy-stock')??grid;
+    if(scroll)scroll.scrollTop=scrollTop;
+    if(grid&&focusedId)[...grid.children].find(card=>card.dataset.mutationId===focusedId)?.focus({preventScroll:true});
   }
   function renderLegacyMutations(){
     mutationPanel.replaceChildren();mutationPanel.hidden=false;

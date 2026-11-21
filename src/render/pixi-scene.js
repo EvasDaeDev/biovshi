@@ -1,3 +1,4 @@
+import {arenaRaster} from '../game/arena-dimensions.js';
 import { fittedCamera } from './camera.js';
 import { ctx } from '../game/state.js';
 import { CONFIG } from '../config.js';
@@ -48,7 +49,7 @@ export class PixiArena {
   }
   floorSprite(canvas){
     const sprite=new this.p.Sprite(this.texture(canvas,false));
-    const {left,top,size}=ctx.arenaDefinition;
+    const {left,top,size}=arenaRaster(ctx.arenaDefinition);
     sprite.position.set(left,top);sprite.width=sprite.height=size;return sprite;
   }
   setAmbientHue(shift){
@@ -63,7 +64,7 @@ export class PixiArena {
   }
   replaceFloor(canvas){
     if(!this.floor||this.disposed)return;
-    const {left,top,size}=ctx.arenaDefinition,old=this.floor.texture;
+    const {left,top,size}=arenaRaster(ctx.arenaDefinition),old=this.floor.texture;
     this.floor.texture=this.texture(canvas,false);
     this.floor.position.set(left,top);this.floor.width=this.floor.height=size;
     this.owned.delete(old);old.destroy(true);this.render();
@@ -82,7 +83,7 @@ export class PixiArena {
         }
         temporary.addChild(object);
       }
-      const {left,top,size:arenaSize}=ctx.arenaDefinition;
+      const {left,top,size:arenaSize}=arenaRaster(ctx.arenaDefinition);
       return this.app.renderer.extract.canvas({target:temporary,
         frame:new this.p.Rectangle(left,top,arenaSize,arenaSize),
         resolution:size/arenaSize,clearColor:[0,0,0,0],antialias:false});
@@ -112,7 +113,7 @@ export class PixiArena {
     this.obstacleGlow=obstacleGlow;this.content.addChild(obstacleGlow);
     this.content.addChild(obstacles);
     for(const root of [ctx.trailsG,ctx.groundG,ctx.oilG,ctx.detachedG,ctx.actorsG,ctx.sparksG,ctx.pulsesG])this.attachRoot(root,this.content);
-    const {left,top,size}=ctx.arenaDefinition;
+    const {left,top,size}=arenaRaster(ctx.arenaDefinition);
     this.nightComposition=new this.p.Container();
     // RenderTexture origin is local, while the arena itself has world coordinates.
     this.nightComposition.position.set(-left,-top);

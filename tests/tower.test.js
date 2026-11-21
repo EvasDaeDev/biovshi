@@ -1295,6 +1295,8 @@ test('Shelter keeps the inventory scroll and keyboard focus when a card is selec
   document.querySelector('#tower-upgrade-open').click();
   const selector='#tower-upgrade-window #tower-prep-mutations > .tower-inventory-grid';
   const grid=document.querySelector(selector);
+  const actions=()=>[...document.querySelectorAll('#tower-prep-mutations .tower-mutation-action-area button')];
+  assert.deepEqual(actions().map(button=>button.disabled),[true,true],'actions are visible before selection');
   assert.equal(grid.children.length,12);
   const card=grid.lastElementChild;
   card.focus();
@@ -1304,9 +1306,18 @@ test('Shelter keeps the inventory scroll and keyboard focus when a card is selec
   assert.equal(updated.scrollTop,180);
   assert.equal(updated.lastElementChild.getAttribute('aria-pressed'),'true');
   assert.equal(document.activeElement,updated.lastElementChild);
-  assert.ok(updated.parentElement.querySelector('.tower-mutation-action-area'));
+  assert.deepEqual(actions().map(button=>button.disabled),[false,false]);
+  assert.equal(actions()[0].parentElement.parentElement,updated.parentElement,'actions are outside the scroll viewport');
+  session.players[0].balance=0;
+  updated.lastElementChild.click();
+  assert.deepEqual(actions().map(button=>button.disabled),[true,false]);
+  run.equippedSegments=['seg12'];
+  document.querySelector(`${selector} [data-mutation-id="seg12"]`).click();
+  assert.deepEqual(actions().map(button=>button.disabled),[false,true]);
+  assert.match(actions()[0].textContent,/СНЯТЬ/);
   const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
   assert.match(css,/#tower-prep-mutations > \.tower-inventory-grid\s*\{[^}]*max-height:[^}]*overflow-y:auto/);
+  assert.match(css,/\.tower-upgrade-content:has\(> #tower-upgrade-mutation-page:not\(\[hidden\]\)\)\s*\{\s*overflow:hidden/);
  }finally{close(dom);}
 });
 

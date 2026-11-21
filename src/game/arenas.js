@@ -6,19 +6,28 @@ import sluice from '../../public/locations/sluice.json' with {type:'json'};
 import zigzag from '../../public/locations/zigzag.json' with {type:'json'};
 import columns from '../../public/locations/columns.json' with {type:'json'};
 import throat from '../../public/locations/throat.json' with {type:'json'};
-import {locationBoundary,parseLocation,validLocationId} from './location-geometry.js';
+import {convexParts,locationBoundary,locationDimensions,parseLocation,validLocationId} from './location-geometry.js';
 
 function buildArena(raw,id){
  const {location,spawns,patrol}=parseLocation(raw,{id,spawnMargin:CONFIG.startup.spawnMarginCm});
- const {name,size,capacity}=location,left=(700-size)/2,top=left;
+ const {name,capacity}=location,{width,height}=locationDimensions(location);
+ const size=Math.max(width,height),left=(700-width)/2,top=(700-height)/2;
  const toWorld=([x,y])=>({x:x+left,y:y+top});
- return {id,name,size,left,top,capacity,points:locationBoundary(location).map(toWorld),
+ return {id,name,size,width,height,left,top,capacity,points:locationBoundary(location).map(toWorld),
   obstacles:location.objects.map(({kind,points})=>{
-   const world=points.map(toWorld);
-   return {kind,points:world,left:Math.min(...world.map(p=>p.x)),right:Math.max(...world.map(p=>p.x)),
-    top:Math.min(...world.map(p=>p.y)),bottom:Math.max(...world.map(p=>p.y))};
+   const polygon=vertices=>{
+    const world=vertices.map(toWorld);
+    return {points:world,left:Math.min(...world.map(p=>p.x)),right:Math.max(...world.map(p=>p.x)),
+     top:Math.min(...world.map(p=>p.y)),bottom:Math.max(...world.map(p=>p.y))};
+   };
+   const parts=convexParts(points);
+   return {kind,...polygon(points),...(parts.length>1?{parts:parts.map(polygon)}:{})};
   }),
-  spawnPoints:spawns.map(toWorld),patrolPoints:patrol.map(toWorld)};
+  spawnPoints:spawns.map(toWorld),patrolPoints:patrol.map(toWorld),
+  ...(location.towerSpawns?{towerSpawns:{
+   player:location.towerSpawns.player?toWorld(location.towerSpawns.player):null,
+   opponents:(location.towerSpawns.opponents??[]).map(toWorld),
+  }}:{})};
 }
 const defaults=Object.fromEntries([ward,ring,annulus,sluice,zigzag,columns,throat].map(raw=>[raw.id,buildArena(raw,raw.id)]));
 export const TOWER_ARENA_CAPACITY=Object.freeze(Object.fromEntries(Object.values(defaults).map(a=>[a.id,a.capacity])));
@@ -68,7 +77,8 @@ export const arenaDefinition=id=>ARENAS[id]??(id===emergencyArena.id?emergencyAr
 export const hasArena=id=>typeof id==='string'&&(Object.hasOwn(ARENAS,id)||id===emergencyArena.id);
 export const arenaCapacity=id=>hasArena(id)?arenaDefinition(id).capacity:0;
 export function arenaDiagram(arena){
- const project=p=>`${(p.x-arena.left)/arena.size*100},${(p.y-arena.top)/arena.size*100}`;
+ const {width,height,size,left,top}=arena;
+ const project=p=>`${(p.x-left+(size-width)/2)/size*100},${(p.y-top+(size-height)/2)/size*100}`;
  const obstacles=arena.obstacles.map(b=>`<polygon class="arena-obstacle" points="${b.points.map(project).join(' ')}"/>`).join('');
  return `<svg viewBox="-5 -5 110 110" aria-hidden="true"><polygon points="${arena.points.map(project).join(' ')}"/>${obstacles}</svg>`;
 }
