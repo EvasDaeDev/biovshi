@@ -1452,6 +1452,15 @@
   box-sizing:border-box;
   margin:0;
 }
+#robot-tag-hops-v22 #tower-upgrade-window #tower-prep-mutations > .tower-inventory-grid{
+  box-sizing:border-box;
+  max-height:clamp(8rem,34dvh,18rem);
+  overflow-y:auto;
+  overscroll-behavior-y:contain;
+  scrollbar-gutter:stable;
+  align-content:start;
+  padding:4px;
+}
 #robot-tag-hops-v22 #tower-upgrade-window .tower-mutation-action-area{
   display:flex;
   flex-direction:row;

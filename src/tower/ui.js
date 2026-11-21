@@ -385,7 +385,17 @@ export function towerPreparation(){
     actions.append(install,sell);mutationPanel.append(actions);
   }
   function renderMutations(){
-    if(t.segmentRewardsEnabled){renderSegmentInventory();return;}
+    const previousGrid=mutationPanel.querySelector('.tower-inventory-grid');
+    const scrollTop=previousGrid?.scrollTop??0;
+    const active=document.activeElement;
+    const focusedId=previousGrid?.contains(active)?active.dataset.mutationId:null;
+    if(t.segmentRewardsEnabled)renderSegmentInventory();else renderLegacyMutations();
+    const grid=mutationPanel.querySelector('.tower-inventory-grid');
+    if(!grid)return;
+    grid.scrollTop=scrollTop;
+    if(focusedId)[...grid.children].find(card=>card.dataset.mutationId===focusedId)?.focus({preventScroll:true});
+  }
+  function renderLegacyMutations(){
     mutationPanel.replaceChildren();mutationPanel.hidden=false;
     const heading=document.createElement('strong');heading.className='tower-mutation-title';
     heading.textContent=t.mutationDraft?'БОСС СПИСАН · ВЫБЕРИ ИМУЩЕСТВО':'ЛИЧНОЕ ИМУЩЕСТВО ПАЦИЕНТА';

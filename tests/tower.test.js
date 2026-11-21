@@ -1273,6 +1273,32 @@ test('Shelter and unviewed segment cards show red badges until the stack is open
  }finally{close(dom);}
 });
 
+test('Shelter keeps the inventory scroll and keyboard focus when a card is selected',()=>{
+ const session=betNewSession(['Склад'],200),run=towerFor(session,0);
+ run.segmentRewardsEnabled=true;run.preparing=true;
+ run.segmentInventory=Array.from({length:12},(_,i)=>({id:`seg${i+1}`,type:'servo',
+  site:i<6?'arm-1-upper':'arm--1-upper',rarity:i%6}));
+ run.nextSegmentId=13;
+ const dom=setup(session,run);
+ try{
+  document.querySelector('#tower-upgrade-open').click();
+  const selector='#tower-upgrade-window #tower-prep-mutations > .tower-inventory-grid';
+  const grid=document.querySelector(selector);
+  assert.equal(grid.children.length,12);
+  const card=grid.lastElementChild;
+  card.focus();
+  grid.scrollTop=180;
+  card.click();
+  const updated=document.querySelector(selector);
+  assert.equal(updated.scrollTop,180);
+  assert.equal(updated.lastElementChild.getAttribute('aria-pressed'),'true');
+  assert.equal(document.activeElement,updated.lastElementChild);
+  assert.ok(updated.parentElement.querySelector('.tower-mutation-action-area'));
+  const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
+  assert.match(css,/#tower-prep-mutations > \.tower-inventory-grid\s*\{[^}]*max-height:[^}]*overflow-y:auto/);
+ }finally{close(dom);}
+});
+
 
 test('normal-floor victory does not repeat the previous boss reward caption',()=>{
  const session=betNewSession(['Результаты'],300),run=towerFor(session,0);
