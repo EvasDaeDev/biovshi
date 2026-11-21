@@ -1971,3 +1971,45 @@ html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower
 #robot-tag-hops-v22 #tower-preparation>.bet-panel>.bet-actions #tower-insurance.is-active:hover{
   background:#4e6931;
 }
+
+/* Startup dialogs use screen pixels inside the scaled game root. */
+#robot-tag-hops-v22 .startup-dialog{
+  --startup-top:max(12px,env(safe-area-inset-top),var(--telegram-inset-top,0px));
+  --startup-right:max(12px,env(safe-area-inset-right),var(--telegram-inset-right,0px));
+  --startup-bottom:max(12px,env(safe-area-inset-bottom),var(--telegram-inset-bottom,0px));
+  --startup-left:max(12px,env(safe-area-inset-left),var(--telegram-inset-left,0px));
+  position:fixed;
+  inset:var(--startup-top) var(--startup-right) var(--startup-bottom) var(--startup-left);
+  zoom:calc(1 / var(--interface-scale,1));
+  width:min(700px,calc(100vw - var(--startup-left) - var(--startup-right)));
+  max-width:none;
+  max-height:calc(100dvh - var(--startup-top) - var(--startup-bottom));
+  margin:auto;
+  padding:clamp(16px,4vw,36px);
+  overflow:auto;
+  overscroll-behavior:contain;
+  border:1px solid #817153;
+  background:#22271f;
+  color:#f0e2c2;
+  box-shadow:0 20px 56px #0009;
+  font:16px/1.55 system-ui,sans-serif;
+}
+#robot-tag-hops-v22 .startup-dialog::backdrop{background:#0a0d0abb}
+#robot-tag-hops-v22 #startup-welcome{width:min(460px,calc(100vw - var(--startup-left) - var(--startup-right)))}
+#robot-tag-hops-v22 #startup-intro{background:rgb(34 39 31 / 92%)}
+#robot-tag-hops-v22 .startup-dialog h2{margin:0;font-size:clamp(24px,5vw,40px);line-height:1.15}
+#robot-tag-hops-v22 .startup-dialog p{margin:0 0 .85em}
+#robot-tag-hops-v22 .startup-dialog .startup-subtitle{margin:.4em 0 1.3em;color:#ddc79b}
+#robot-tag-hops-v22 .startup-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin-top:22px}
+#robot-tag-hops-v22 .startup-actions button{
+  min-height:44px;
+  padding:8px 16px;
+  border:1px solid #a69061;
+  border-radius:5px;
+  background:#2e3429;
+  color:#f0e2c2;
+  font:700 16px/1.2 system-ui,sans-serif;
+  cursor:pointer;
+}
+#robot-tag-hops-v22 .startup-actions .startup-primary{background:#e7c577;color:#22271f}
+#robot-tag-hops-v22 .startup-actions button:focus-visible{outline:2px solid #fff2b4;outline-offset:3px}

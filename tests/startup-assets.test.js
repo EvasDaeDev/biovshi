@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {ctx} from '../src/game/state.js';
 import {ASSETS} from '../src/assets/manifest.js';
+import {showStartupWelcome} from '../src/ui/startup-welcome.js';
 
 test('real startup waits for the texture check, reuses images for tinting and creates no redundant models',async()=>{
   const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://startup.test/',pretendToBeVisual:true});
@@ -40,6 +41,9 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   await import('../src/main.js');
   const root=document.getElementById('robot-tag-hops-v22');
   assert.equal(root.inert,true,'controls stay inactive while textures are pending');
+  const welcome=root.querySelector('#startup-welcome'),intro=root.querySelector('#startup-intro');
+  assert.equal(welcome.open,false,'welcome waits for loading');
+  assert.equal(intro.open,false);
   assert.equal(ctx.robots,undefined,'participants are not instantiated before checking images');
   assert.equal(requests,Object.keys(ASSETS.textures).length);
   released=true;for(const finish of pending)finish();
@@ -66,9 +70,48 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   await bakeStaticLighting();assert.equal(staticRasters,2);
   assert.equal(ctx.actorsG.querySelectorAll('[data-robot-fallback]').length,0);
   assert.equal(ctx.actorsG.querySelectorAll('[data-skin-segment]').length,52);
-  // Starting the simulation requires the explicit launch click, not boot().
-  root.querySelector('#launch-game').click();
+  const launch=root.querySelector('#launch-game');
+  const read=welcome.querySelector('#startup-read-intro');
+  assert.equal(welcome.open,true);
+  assert.equal(document.activeElement,read);
+  launch.click();
+  assert.equal(ctx.startup.phase,'demo','the welcome blocks the menu');
+
+  read.click();
+  assert.equal(welcome.open,false);
+  assert.equal(intro.open,true);
+  assert.equal(document.activeElement,intro.querySelector('h2'));
+  assert.equal(intro.querySelector('strong').textContent,'Башня');
+  const forward=intro.querySelector('[data-startup-dismiss]');
+  assert.equal(forward.textContent,'ВПЕРЕД');
+  forward.click();
+  assert.equal(intro.open,false);
+  assert.equal(document.activeElement,launch);
+  assert.equal(root.querySelector('#launch-overlay').hidden,false);
+  assert.equal(ctx.startup.phase,'demo','finishing the intro returns to the menu');
+
+  launch.click();
   assert.equal(root.querySelector('#launch-overlay').hidden,true);
   assert.equal(ctx.startup.phase,'spawning');
   ctx.root.__disposeTag();dom.window.close();
+});
+
+
+test('skipping the welcome keeps the intro closed and opens the menu',()=>{
+  const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const dom=new JSDOM(html);
+  try{
+    const root=dom.window.document.querySelector('#robot-tag-hops-v22');
+    root.__disposeTag=()=>{};
+    showStartupWelcome(root);
+    const welcome=root.querySelector('#startup-welcome');
+    const skip=welcome.querySelector('[data-startup-dismiss]');
+    assert.equal(skip.textContent,'Пропустить');
+    skip.click();
+    assert.equal(welcome.open,false);
+    assert.equal(root.querySelector('#startup-intro').open,false);
+    assert.equal(root.querySelector('#launch-overlay').hidden,false);
+    assert.equal(dom.window.document.activeElement,root.querySelector('#launch-game'));
+    root.__disposeTag();
+  }finally{dom.window.close();}
 });

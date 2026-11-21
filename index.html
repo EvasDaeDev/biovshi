@@ -91,6 +91,30 @@
       <p class="launch-footnote">СИГНАЛ ПОДАН · ПАЦИЕНТЫ ГОТОВЫ</p>
     </div>
   </div>
+  <dialog id="startup-welcome" class="startup-dialog" aria-modal="true" aria-labelledby="startup-welcome-title">
+    <h2 id="startup-welcome-title">Добро пожаловать в «БиоВши»</h2>
+    <footer class="startup-actions">
+      <button type="button" data-startup-dismiss>Пропустить</button>
+      <button type="button" class="startup-primary" id="startup-read-intro" autofocus>Вступление</button>
+    </footer>
+  </dialog>
+  <dialog id="startup-intro" class="startup-dialog" aria-modal="true" aria-labelledby="startup-intro-title">
+    <h2 id="startup-intro-title" tabindex="-1" autofocus>БИОВШИ</h2>
+    <p class="startup-subtitle"><em>Экспериментальный центр протезирования и имплантации</em></p>
+    <p>Когда-то здесь создавали будущее.</p>
+    <p>По заказам частных военных корпораций Центр разрабатывал универсальных солдат — живучих, послушных и способных продолжать бой даже после потери большей части тела. Конечности заменяли протезами, органы — имплантами, а человеческие возможности расширяли до пределов, которые прежде считались невозможными.</p>
+    <p>Потом закончилось финансирование.</p>
+    <p>Заказчики исчезли. Учёные остались. Пациенты тоже.</p>
+    <p>Оборудование требовало обслуживания, персонал — зарплаты, а пациенты — новых конечностей взамен регулярно утрачиваемых. Закрыть Центр было нельзя. Содержать его — не на что.</p>
+    <p>Решение нашлось неожиданно быстро.</p>
+    <p>Теперь экспериментальные бои транслируются для платёжеспособной публики. Зрители делают ставки, а полученные травмы открывают новые возможности для исследований.</p>
+    <p>Особой популярностью пользуется <strong>Башня</strong> — многоуровневая программа испытаний, где каждый следующий этаж опаснее предыдущего. Победителям полагаются деньги, модификации и право продолжить эксперимент.</p>
+    <p>Проигравшим — медицинская помощь. По возможности.</p>
+    <p><strong>Добро пожаловать в Центр.</strong><br><em>Ваше здоровье по-прежнему является нашим главным научным интересом.</em></p>
+    <footer class="startup-actions">
+      <button type="button" class="startup-primary" data-startup-dismiss>ВПЕРЕД</button>
+    </footer>
+  </dialog>
   <div id="tower-preparation" class="bet-overlay" role="dialog" aria-modal="true" aria-labelledby="tower-prep-title" hidden><div class="bet-panel">
     <header class="tower-prep-header"><button id="tower-prep-back" class="tower-nav-button" type="button" aria-label="Назад" tabindex="-1" aria-hidden="true">← НАЗАД</button><h2 id="tower-prep-title">БАШНЯ</h2><button id="tower-prep-settings" class="tower-nav-button" type="button" aria-label="Настройки" aria-controls="arena-settings" aria-expanded="false" tabindex="-1" aria-hidden="true">НАСТРОЙКИ ⚙</button></header><p id="tower-prep-name" class="tower-player-wallet"></p><div class="tower-prep-workspace"><section class="tower-prep-arena" aria-label="Арена и испытания"><div id="tower-floor-preview"></div></section><section class="tower-prep-patient" aria-label="Подготовка пациента">
     <div id="tower-stats" class="bet-fields"></div>

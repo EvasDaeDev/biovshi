@@ -20,6 +20,7 @@ import {initializePixiArena} from './render/pixi-scene.js';
 import {initializeDiagnostics} from './render/diagnostics.js';
 import {preloadTextures} from './assets/preload.js';
 import {createLoadingScreen} from './ui/loading-screen.js';
+import {showStartupWelcome} from './ui/startup-welcome.js';
 import {bettingLoad,bettingSave} from './betting/storage.js';
 import {startSpawnSequence} from './game/session.js';
 let cancelled=false,initialLoading=null;
@@ -150,7 +151,9 @@ async function boot(){
  ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});setPaused(true);ctx.afterSetup='menu';bettingSetup();};
  ctx.startDemo=()=>transition({session:ctx.betting,entry:'auto',arenaId:ctx.betting?.arenaId??'ward'});
  await prepare({textures,session,arenaId:session?.arenaId??'ward',loading});
- if(cancelled||ctx.disposed){loading.close();return;}root.inert=false;loading.close();
+ if(cancelled||ctx.disposed){loading.close();return;}
+ root.inert=false;loading.close();
+ showStartupWelcome(root);
 }
 boot().catch(error=>{
  console.error('Game startup:',error);
