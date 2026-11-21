@@ -6,7 +6,7 @@ import {wrap} from '../utils/math.js';
 import {note} from '../game/events.js';
 import {activeOpponents,fighterIntent} from '../systems/ai.js';
 import {sightClear} from '../systems/collision.js';
-import {strikeCandidates,struckSegment,compareStrikeCandidates,prioritizeAdditionalArm,isAdditionalAttackArm,queueCombatHit} from '../systems/combat.js';
+import {strikeCandidates,movingStrikeContact,compareStrikeCandidates,prioritizeAdditionalArm,isAdditionalAttackArm,queueCombatHit} from '../systems/combat.js';
 import {pendingStrikes,setPendingStrikes} from '../systems/strikes.js';
 import {BOSS_CONFIG} from './config.js';
 import {sweepPathClear,sweepContact,chargePlan,bossDamage,poseClear,poseAt} from './attacks.js';
@@ -171,7 +171,11 @@ export function createBossBehavior(){
     const age=ctx.game.time-p.started,segment=sweepContact(robot,victim,p,p.lastAge??0,age);p.lastAge=age;
     if(segment&&sightClear(robot.center,victim.center))applyHit(robot,victim,p,segment);
     else if(ctx.game.time>=p.impactAt){p.resolved=true;recordBossTacticalStrike(bossOpponentMemory(state,victim.id),source,false,ctx.game.time);note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});}
-   }else if(ctx.game.time>=p.impactAt){p.resolved=true;const segment=struckSegment(robot,victim,p);if(segment)applyHit(robot,victim,p,segment);else {recordBossTacticalStrike(bossOpponentMemory(state,victim.id),source,false,ctx.game.time);note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});}}
+   }else if(ctx.game.time>=p.started+p.timing.windupSec){
+    const segment=movingStrikeContact(robot,victim,p);
+    if(segment)applyHit(robot,victim,p,segment);
+    else if(ctx.game.time>=p.impactAt){p.resolved=true;recordBossTacticalStrike(bossOpponentMemory(state,victim.id),source,false,ctx.game.time);note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});}
+   }
   }
   if(ctx.game.time>=p.endsAt){
    setPendingStrikes(robot.id,[]);
