@@ -9,27 +9,14 @@ const setText = (node, value) => { if (node.textContent !== value) node.textCont
 const setClass = (node,key,on) => {if(node.classList.contains(key)!==on)node.classList.toggle(key,on);};
 const formatTrauma = new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
 const setAttribute = (node,key,value) => {if(node.getAttribute(key)!==value)node.setAttribute(key,value);};
-// In Tower mode, defeated enemy cards leave the HUD after a short exit
-// animation. Keep the card in cardNodes until the next arena initialization;
-// deleting it would break telemetry references still keyed by robot id.
-export function retireTowerEnemyCard(card,robot,mode){
-  if(mode!=='tower'||robot.id===0||robot.mobile||card.hidden||card.classList.contains('tower-card-exiting'))return false;
-  card.style.setProperty('--tower-card-exit-height',card.getBoundingClientRect().height+'px');
-  card.classList.add('tower-card-exiting');
-  card.setAttribute('aria-hidden','true');
-  const finish=event=>{
-    if(event.target!==card)return;
-    card.hidden=true;
-    card.removeEventListener('animationend',finish);
-  };
-  card.addEventListener('animationend',finish);
-  if(card.ownerDocument.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
-    card.hidden=true;
-    card.removeEventListener('animationend',finish);
+function orderTowerCards(cards){
+  let next=null;
+  for(let i=cards.length-1;i>=0;i--){
+    const card=cards[i];
+    if(card.parentElement!==ctx.roles||card.nextElementSibling!==next)ctx.roles.insertBefore(card,next);
+    next=card;
   }
-  return true;
 }
-
 
 export function paintTelemetry() {
   if(ctx.telemetryEnabled===false||ctx.arenaExpanded)return;
@@ -38,12 +25,12 @@ export function paintTelemetry() {
   ctx.telemetryDirty = false;
   ctx.telemetryRobots = ctx.robots[0];
   ctx.lastTelemetryAt = now;
+  const tower=ctx.mode==='tower',active=[],retired=[];
+  let player=null;
   for (const r of ctx.robots) {
     const n = r.segmentCount;
     const card = ctx.cardNodes[r.id];
     if(!card)continue;
-    // Once an enemy exits the Tower HUD, don't re-show it every telemetry tick.
-    if(ctx.mode==='tower'&&card.card.classList.contains('tower-card-exiting'))continue;
     if (card.card.hidden) card.card.hidden = false;
     setText(card.segments, `${n}/${r.segmentTotal}`);
     const actionText = friendlyAction(r);
@@ -74,6 +61,12 @@ export function paintTelemetry() {
     setClass(card.card,'disabled', !r.mobile);
     const bones=r.isBoss?bossPortraitBones(r.body):r.body?.skinParts?portraitBonesForBody(r.body):PORTRAIT_BONES;
     paintPatientPortrait(card,r.id,bones.map(({key})=>({key,...segmentDisplayState(r,key)})),bones);
-    retireTowerEnemyCard(card.card,r,ctx.mode);
+    const defeated=tower&&r.id!==0&&!r.mobile;
+    setClass(card.card,'tower-card-retired',defeated);
+    if(tower){
+      if(r.id===0)player=card.card;
+      else (defeated?retired:active).push(card.card);
+    }
   }
+  if(tower)orderTowerCards(player?[player,...active,...retired]:[...active,...retired]);
 }

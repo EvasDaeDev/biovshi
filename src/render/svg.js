@@ -17,6 +17,12 @@ export function el(tag, attrs, parent) {
   parent.appendChild(e);
   return e;
 }
+export function raiseRobotActor(actor) {
+  const layer=ctx.actorsG,top=layer.lastElementChild;
+  // SVG order also drives Pixi. Keep the highest enemy immediately under the player.
+  const before=ctx.mode==='tower'&&!actor.hasAttribute('data-tower-player')&&top?.hasAttribute('data-tower-player')?top:null;
+  if(actor.parentNode!==layer||actor.nextElementSibling!==before)layer.insertBefore(actor,before);
+}
 export function dot(e, p, r) {
   attr(e, 'cx', p.x);
   attr(e, 'cy', p.y);

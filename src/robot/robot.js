@@ -7,7 +7,7 @@ import { clearBone, clearCircle, clearanceAt, edgeClearance, freeBlockedJoint, l
 import { contacts, currentTargetVisible, hasGoal, retreatFromBoundary, robotTick, steerTo, updateHead, watchProgress } from "./locomotion.js";
 import { coverOffset, hopHeight, jumpTick, lifted, planIdleHops, reboundPlan, reboundTick, robotBeginApproach, robotBeginCover, robotBeginScene, robotCanCover, robotCancelCover, robotCoverGap, robotCelebrateVictory, robotEndScene, robotPerformIdle, robotPounce, robotReboundFrom, robotSetVisible, robotStartle, sceneEnvelope, scheduleIdle, settleHands, updateIdleHops, updateIdleScene, updateScene } from "./scenes.js";
 import { bodyTransform, draw, robotPaint, visiblePoint, visionAngle, visualOffset, visualRotation } from "../render/robot.js";
-import { attr, el } from "../render/svg.js";
+import { attr, el, raiseRobotActor } from "../render/svg.js";
 import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
 import { limbColor } from "../utils/colors.js";
@@ -141,9 +141,10 @@ function createRobot(id, start, body = {}) {
       createFlashlightTexture(robotState[key],key);
     }
   }
-  robotState.actor = el('g', {
-    class: 'robot'
-  }, ctx.actorsG);
+  robotState.actor=document.createElementNS(ctx.NS,'g');
+  attr(robotState.actor,'class','robot');
+  if(towerLight)attr(robotState.actor,'data-tower-player','');
+  raiseRobotActor(robotState.actor);
   robotState.floor = el('g', {}, ctx.groundG);
   ctx.defs.querySelector('#tag7hop-victory-glow-'+robotState.id)?.remove();
   robotState.figure = el('g', {'data-robot-figure':robotState.id}, robotState.actor);

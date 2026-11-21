@@ -6,7 +6,7 @@ import { coreClearBone, sightClear } from "../systems/collision.js";
 import { ctx } from "../game/state.js";
 import { pointSegment, segmentDistance } from "../utils/math.js";
 import { note } from "../game/events.js";
-import { attr } from "../render/svg.js";
+import { attr, raiseRobotActor } from "../render/svg.js";
 export function coverOffset(robotState, victim) {
   const a = robotState.api.center,
     b = victim.center,
@@ -720,7 +720,7 @@ export function robotCancelCover(robotState) {
 }
 export function robotBeginCover(robotState, victim) {
   robotState.attackVisual = robotState.coverOffset(victim);
-  ctx.actorsG.appendChild(robotState.actor);
+  raiseRobotActor(robotState.actor);
 }
 export function robotReboundFrom(robotState, victim) {
   const plan = robotState.reboundPlan(victim);

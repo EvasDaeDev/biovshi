@@ -20,6 +20,7 @@ import {initializeDiagnostics} from '../src/render/diagnostics.js';
 import {victoryGold,goldMatrix} from '../src/render/victory-glow.js';
 import {paintTelemetry} from '../src/ui/paint-telemetry.js';
 import {createRobot} from '../src/robot/robot.js';
+import {startBossScenario} from '../scripts/boss-harness.mjs';
 
 test('Pixi static wall atlas includes outer masonry underneath the original wall',()=>{
   const dom=setup();
@@ -293,6 +294,26 @@ test('Pixi resizes a rectangular drawing buffer and post filter while centring a
   }
   assert.equal(sizes.length,2,'swapping width and height must resize even though the short side is unchanged');
   arena.ambient.destroy();arena.nightComposition.destroy();arena.finish();ctx.root.__disposeTag();dom.window.close();
+});
+
+test('SVG and Pixi keep the Tower player above other patients when an enemy climbs over another',()=>{
+ const f=startBossScenario({variant:'brute',arena:'ring',ordinary:true}),arena=bridge();
+ try{
+  const [player,enemy,other]=ctx.robots,layer=arena.records.get(ctx.actorsG).object;
+  const sprite=r=>arena.records.get(r.actor).object;
+  assert.equal(ctx.actorsG.lastElementChild,player.actor);
+  assert.equal(layer.children.at(-1),sprite(player));
+  enemy.beginCover(other);
+  arena.flush();
+  assert.equal(enemy.actor.nextElementSibling,player.actor);
+  assert.equal(ctx.actorsG.lastElementChild,player.actor);
+  assert.deepEqual(layer.children.slice(-2),[sprite(enemy),sprite(player)]);
+  ctx.mode='spectator';
+  other.beginCover(enemy);
+  arena.flush();
+  assert.equal(ctx.actorsG.lastElementChild,other.actor);
+  assert.equal(layer.children.at(-1),sprite(other));
+ }finally{arena.finish();f.close();}
 });
 
 test('floor capture excludes labels, preserves world transforms and restores scene ordering even if extraction fails',()=>{
