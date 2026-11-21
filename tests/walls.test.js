@@ -1,3 +1,4 @@
+import {ARENAS} from '../src/game/arenas.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { wallRibbon, triangleMatrix } from '../src/render/wall-geometry.js';
@@ -54,7 +55,7 @@ test('full camera includes the exterior wall with an 8 cm margin; zoom retains e
 });
 
 test('obstacle ribbons stay inside every obstacle, including triangles narrower than 30 cm',()=>{
-  for (const obstacle of CONFIG.arena.obstacles) {
+  for (const obstacle of ARENAS.ward.obstacles) {
     const points=obstacleVertices(obstacle),original=structuredClone(points);
     for (const boundary of [points,[...points].reverse()]) {
       const ribbon=wallRibbon(boundary,30,{inward:true});

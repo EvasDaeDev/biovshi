@@ -2,9 +2,9 @@
 // canonical persisted session; UI drafts never modify run or money.
 import {validStats} from '../garage/model.js';
 import {towerCycleWins} from './cycles.js';
-import {ARENAS} from '../game/arenas.js';
+import {ARENAS,arenaCapacity} from '../game/arenas.js';
 import {hasBoss} from '../boss/config.js';
-import {TOWER_ARENA_CAPACITY,validTowerFloorPlan} from './floors.js';
+import {bossArenaIds,towerArenaMinimum,validTowerFloorPlan} from './floors.js';
 
 export const TOWER_REROLL_MAX=60;
 export const towerRerollPrice=count=>Number.isSafeInteger(count)&&count>=0&&count<TOWER_REROLL_MAX
@@ -34,13 +34,13 @@ export function applyTowerStatChange(run,stats){
 export function towerRerollCandidates(run){
  const plan=run?.floorPlan;
  if(!plan||plan.floor!==run.level||!validTowerFloorPlan(plan,run.level)||run.arenaRerollLocked||run.rewarded?.length)return [];
- const boss=hasBoss(run),minimum=boss?6:run.level>=20?7:run.level>=10?6:run.level>=5?4:2;
- return Object.keys(ARENAS).filter(id=>{
-  if(id===plan.options[0].arenaId)return false;
-  if(boss&&(id!=='ward'&&id!=='columns'||run.level>=25&&id!=='columns'))return false;
-  const capacity=TOWER_ARENA_CAPACITY[id];
-  return capacity>=minimum&&plan.options.every(o=>o.profiles.length+1<=capacity);
- });
+ const boss=hasBoss(run);
+ const needed=Math.max(...plan.options.map(o=>o.profiles.length+1));
+ const ids=boss?bossArenaIds(run.level):Object.keys(ARENAS);
+ const minimum=boss?needed:Math.max(needed,towerArenaMinimum(run.level));
+ const fitting=ids.filter(id=>arenaCapacity(id)>=minimum);
+ return (fitting.length?fitting:ids.filter(id=>arenaCapacity(id)>=needed))
+  .filter(id=>id!==plan.options[0].arenaId);
 }
 export function purchaseTowerArenaReroll(session,player,run,random=Math.random){
  const count=run?.arenaRerolls,price=towerRerollPrice(count);

@@ -1,4 +1,4 @@
-import {ARENAS} from '../game/arenas.js';
+import {ARENAS,arenaDefinition} from '../game/arenas.js';
 import {validTower,normalizeTower} from '../tower/model.js';
 import {newGarage,validStats,normalizePatronage,normalizePatient} from '../garage/model.js';
 import { ctx } from "../game/state.js";
@@ -53,7 +53,7 @@ export function bettingLoad() {
     s.garage.forEach(normalizePatient);s.shopSpent??=0;s.topUps??=0;s.insuranceSpent??=0;s.surgerySpent??=0;s.towerEconomySpent??=0;s.mutationSpent??=0;
     if(!Number.isSafeInteger(s.topUps)||s.topUps<0||s.players.length*s.capital+s.topUps+s.towerEarned>16000000)throw Error();
     if(!Number.isSafeInteger(s.mutationSpent)||s.mutationSpent<0||s.mutationSpent>16000000||!Number.isSafeInteger(s.shopSpent)||s.shopSpent<0||!Number.isSafeInteger(s.insuranceSpent)||s.insuranceSpent<0||s.insuranceSpent>16000000||!Number.isSafeInteger(s.surgerySpent)||s.surgerySpent<0||s.surgerySpent>16000000||!Number.isSafeInteger(s.towerEconomySpent)||s.towerEconomySpent<0||s.towerEconomySpent>16000000)throw Error();
-    if(!Object.hasOwn(ARENAS,s.arenaId))s.arenaId='ward';
+    if(!Object.hasOwn(ARENAS,s.arenaId))s.arenaId=arenaDefinition().id;
     normalizePatronage(s);
     validateGarage(s, s.garage);
     if (s.roundSnapshot !== undefined) {

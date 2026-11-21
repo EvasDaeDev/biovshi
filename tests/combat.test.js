@@ -1,3 +1,4 @@
+import {ARENAS} from '../src/game/arenas.js';
 import {ASSETS} from '../src/assets/manifest.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -247,7 +248,7 @@ test('operating-room lighting, dark footprints and inward textured obstacle wall
     if(pass)initializeGame({entry:'setup'});
     const walls=ctx.svg.querySelector('#tag7hop-obstacle-walls');
     assert.equal(walls.parentNode,ctx.blockG);
-    assert.equal(walls.children.length,CONFIG.arena.obstacles.length);
+    assert.equal(walls.children.length,ARENAS.ward.obstacles.length);
     assert.equal(walls.querySelectorAll('path[transform]').length,44);
     assert.equal(ctx.svg.querySelectorAll('#texture-obstacle').length,1);
     const pattern=ctx.svg.querySelector('#texture-obstacle');

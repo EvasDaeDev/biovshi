@@ -167,7 +167,6 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     right: ctx.arenaDefinition.left+ctx.arenaDefinition.size,
     top: ctx.arenaDefinition.top,
     bottom: ctx.arenaDefinition.top+ctx.arenaDefinition.size,
-    cut: ctx.arenaDefinition.cut,
     points: ctx.arenaDefinition.points
   };
   ctx.arenaBoundary.points = obstacleVertices(ctx.arenaBoundary);
@@ -318,21 +317,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     orbitBreakUntil: 0,
     orbitGoal: null
   }));
-  ctx.patrolPoints = [{
-    x: 270,
-    y: 100
-  }, {
-    x: 555,
-    y: 145
-  }, {
-    x: 440,
-    y: 600
-  }, {
-    x: 145,
-    y: 555
-  }];
-  if(ctx.arenaDefinition.patrolPoints)ctx.patrolPoints=ctx.arenaDefinition.patrolPoints.map(p=>({...p}));
-  if(ctx.arenaId==='ring')ctx.patrolPoints=[{x:350,y:230},{x:470,y:350},{x:350,y:470},{x:230,y:350}];
+  ctx.patrolPoints=ctx.arenaDefinition.patrolPoints.map(p=>({...p}));
   ctx.pulses = [];
   ctx.pulseNodes = Array.from({
     length: 6

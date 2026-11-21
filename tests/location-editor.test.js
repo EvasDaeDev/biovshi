@@ -1,0 +1,81 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import {JSDOM} from 'jsdom';
+
+test('location editor draws, moves, deletes and round-trips a symmetrical plan',async t=>{
+ const html=await fs.readFile(new URL('../Editors/location-editor.html',import.meta.url),'utf8');
+ const dom=new JSDOM(html,{url:'https://example.test/biovshi/test/Editors/location-editor.html'});
+ t.after(()=>dom.window.close());
+ const {document}=dom.window;
+ const $=id=>document.getElementById(id);
+ t.mock.method(globalThis,'fetch',async url=>{
+  assert.equal(url.href,'https://example.test/biovshi/test/locations/active.json');
+  return {ok:true,json:async()=>({version:1,active:['ward']})};
+ });
+ const previous={document:globalThis.document,DOMPoint:globalThis.DOMPoint,Option:globalThis.Option};
+ t.after(()=>Object.assign(globalThis,previous));
+ globalThis.document=document;
+ globalThis.Option=dom.window.Option;
+ globalThis.DOMPoint=class{constructor(x,y){this.x=x;this.y=y;}matrixTransform(){return this;}};
+ const svg=$('blueprint');
+ svg.getScreenCTM=()=>({inverse:()=>({})});
+ let pointer;
+ svg.setPointerCapture=id=>{pointer=id;};
+ svg.hasPointerCapture=id=>pointer===id;
+ svg.releasePointerCapture=()=>{pointer=undefined;};
+ const objects=()=>[...document.querySelectorAll('.object')];
+ const tool=name=>document.querySelector('[data-tool="'+name+'"]').click();
+ const gesture=(start,end,target=svg)=>{
+  const [x,y]=start,[bx,by]=end;
+  const dispatch=(where,name,clientX,clientY)=>{
+   const e=new dom.window.MouseEvent(name,{bubbles:true,button:0,clientX,clientY});
+   Object.defineProperty(e,'pointerId',{value:1});
+   where.dispatchEvent(e);
+  };
+  dispatch(target,'pointerdown',x,y);
+  dispatch(svg,'pointermove',bx,by);
+  dispatch(svg,'pointerup',bx,by);
+ };
+ await import('../Editors/location-editor.js');
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual([...$('catalog').options].map(option=>option.value),['','ward']);
+
+ tool('wall');
+ $('mirror-x').click();
+ gesture([100,150],[100,300]);
+ assert.equal(objects().length,2);
+ $('mirror-x').click();
+ $('mirror-y').click();
+ tool('obstacle');
+ gesture([220,180],[300,250]);
+ assert.equal(objects().length,4);
+ $('mirror-x').click();
+ gesture([40,40],[80,80]);
+ assert.equal(objects().length,8);
+ tool('select');
+ gesture([60,60],[80,80],objects()[4]);
+ assert.equal(objects()[4].getAttribute('points'),'60,60 100,60 100,100 60,100');
+ $('delete').click();
+ assert.equal(objects().length,4);
+ $('undo').click();
+ assert.equal(objects().length,8);
+ $('check').click();
+ assert.ok(document.querySelectorAll('.gap').length>0);
+ assert.equal(document.querySelectorAll('.spawn').length,4);
+
+ let exported,filename;
+ t.mock.method(URL,'createObjectURL',blob=>{exported=blob;return 'blob:test';});
+ t.mock.method(URL,'revokeObjectURL',()=>{});
+ t.mock.method(dom.window.HTMLAnchorElement.prototype,'click',function(){filename=this.download;});
+ $('export').click();
+ const json=await exported.text();
+ assert.equal(filename,'new-arena.json');
+ assert.equal(JSON.parse(json).objects.length,8);
+ $('new-map').click();
+ assert.equal(objects().length,0);
+ Object.defineProperty($('file'),'files',{value:[new File([json],filename,{type:'application/json'})]});
+ $('file').dispatchEvent(new dom.window.Event('change'));
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(objects().length,8);
+});

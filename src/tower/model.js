@@ -4,7 +4,7 @@ import {validTowerMutationState,grantTowerMutationDraft,normalizeTowerMutationIn
 import {validTowerSurgeries,validTowerSurgicalStock,normalizeTowerSurgicalStock,purchaseTowerSurgery} from './surgery.js';
 import {normalizeTowerGraftProsthetics} from './anatomy.js';
 import {validTowerDonorState,awardTowerDonors} from './donors.js';
-import {selectedTowerFloor,towerFloorCount,validTowerFloorPlan} from './floors.js';
+import {repairTowerArena,selectedTowerFloor,towerFloorCount,validTowerFloorPlan} from './floors.js';
 import {TEST_BUILD} from '../build-channel.js';
 import {validTowerRerolls} from './economy.js';
 import {isBossFloor,hasBoss} from '../boss/config.js';
@@ -32,11 +32,13 @@ export function normalizeTower(t){
  normalizeTowerSurgicalStock(t);
  if(t.insurance?.checkpoint){
   const checkpoint=t.insurance.checkpoint;
+  repairTowerArena(checkpoint.floorPlan,checkpoint.level);
   checkpoint.surgeries??=[];
   normalizeTowerSurgicalStock(checkpoint);
  }
  t.graftProsthetics=normalizeTowerGraftProsthetics(t.graftProsthetics,t);
  t.donorTissues??=[];
+ repairTowerArena(t.floorPlan,t.level);
  t.arenaRerolls??=0;
  t.arenaRerollLocked??=false;
  t.insurance??=newInsurance();

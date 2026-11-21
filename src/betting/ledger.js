@@ -1,4 +1,5 @@
 import {newGarage} from '../garage/model.js';
+import {arenaDefinition} from '../game/arenas.js';
 export const BET_WIN_PERCENT = 85;
 export const JACKPOT_INTERVAL = 5;
 export const JACKPOT_PERCENT = 25;
@@ -26,7 +27,7 @@ export function betNewSession(names, capital = STARTING_CAPITAL) {
     round: 1,
     capital,
     phase: 'betting',
-    arenaId:'ward',
+    arenaId:arenaDefinition().id,
     jackpot: 0,
     jackpotRounds: 0,
     lockedJackpot: 0,
