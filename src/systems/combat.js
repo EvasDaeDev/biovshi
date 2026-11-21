@@ -268,7 +268,8 @@ function resolvePounceImpacts() {
     if(!touched)return;
     leap.impactDone=true;
     const id=attacker.id;
-    if(victim.damage(touched,id,CONFIG.attack.combatPounceDamage)){
+    queueCombatHit(attacker,victim,touched,CONFIG.attack.combatPounceDamage,applied=>{
+      if(!applied)return;
       if(victim.mobile)victim.reactToHit(attacker,touched);
       ctx.combat.hits++;
       ctx.combat.fighterHits[id]++;
@@ -276,13 +277,12 @@ function resolvePounceImpacts() {
       ctx.combat.lastHitTime=ctx.game.time;
       ctx.agentAI[id].lastHitAt=ctx.game.time;
       ctx.agentAI[victim.id].lastHitAt=ctx.game.time;
-      note('combat-strike',{from:id,to:victim.id,
-        source:'head',segment:touched,pounce:true});
+      note('combat-strike',{from:id,to:victim.id,source:'head',segment:touched,pounce:true});
       if(victim.mobile&&victim.movementLimbs<(victim.movementLimbTotal??4)){
         ctx.combat.retreatUntil[victim.id]=ctx.game.time+CONFIG.combat.retreatSec;
         ctx.combat.retreatFrom[victim.id]=id;
       }
-    }
+    });
   }
 }
 function initiateCombatPounces() {
@@ -346,8 +346,8 @@ export function combatAttacks() {
   // Movement has advanced all bodies; refresh their currently animated hit geometry
   // before any attacker tests a collision this physics tick.
   for(const robot of ctx.robots)robot.refreshCombatCapsules?.();
-  resolvePounceImpacts();
   ctx.combat.hitBatch=[];
+  resolvePounceImpacts();
   // Snapshot all due strike contacts before applying damage. A hit registered
   // on this physics tick must not change another strike's collision geometry.
   const contactSnapshot=new Map();
