@@ -1,3 +1,4 @@
+import {arenaRaster} from '../game/arena-dimensions.js';
 import { clamp } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { attr } from "./svg.js";
@@ -20,7 +21,7 @@ export function cameraBounds(size, outset = 8) {
 export function cameraReset() {
   // Preserve the true arena centre when the maximum view is narrower than
   // the full floor-plus-walls extent.
-  const arena=ctx.arenaDefinition??{left:0,top:0,size:700};
+  const arena=arenaRaster(ctx.arenaDefinition);
   ctx.camera.size=ctx.CAMERA_FULL;
   ctx.camera.x=arena.left+(arena.size-ctx.CAMERA_FULL)/2;
   ctx.camera.y=arena.top+(arena.size-ctx.CAMERA_FULL)/2;

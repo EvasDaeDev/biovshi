@@ -90,6 +90,15 @@ export function arenaClearance(p) {
   return nearest;
 }
 export function containsPoint(b, p, pad = 0) {
+  if(b.parts){
+    if(pad)return b.parts.some(part=>containsPoint(part,p,pad));
+    let inside=false;
+    for(const [i,a] of b.points.entries()){
+      const q=b.points[(i+1)%b.points.length];
+      if((a.y>p.y)!==(q.y>p.y)&&p.x<(q.x-a.x)*(p.y-a.y)/(q.y-a.y)+a.x)inside=!inside;
+    }
+    return inside;
+  }
   return polygonPlanes(b, pad).every(n => n.nx * p.x + n.ny * p.y < n.c - 1e-9);
 }
 export function expandedObstacle(b, pad) {
@@ -103,8 +112,8 @@ export function expandedObstacle(b, pad) {
       };
     });
   return {
-    ...b,
-    points
+    ...b,points,left:Math.min(...points.map(p=>p.x)),right:Math.max(...points.map(p=>p.x)),
+    top:Math.min(...points.map(p=>p.y)),bottom:Math.max(...points.map(p=>p.y))
   };
 }
 // Фиксированные точки старта. В каждой из них может появиться любой робот.

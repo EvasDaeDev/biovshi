@@ -81,11 +81,16 @@ export function towerSegmentBonuses(run){
  return {stats:result.map(n=>Math.round(n*100)/100),crit:Math.min(.1,crit),
   cooldownMultiplier:Math.max(.75,1-cooldown)};
 }
+export const canInstallTowerSegment=(run,item)=>Boolean(run.preparing&&item&&
+ !run.equippedSegments.includes(item.id)&&towerSegmentSites(item.type,run).includes(item.site));
+export const canCreditTowerSegmentSale=(session,player,price)=>{
+ const buyer=session.players?.[player];
+ return Boolean(buyer&&buyer.balance+price<=16000000&&(session.towerEarned??0)+price<=16000000);
+};
 export function equipTowerSegment(session,player,run,id){
  normalizeTowerSegmentInventory(run);
  const item=run.segmentInventory.find(x=>x.id===id);
- if(!run.preparing||!item||run.equippedSegments.includes(id)||
-  !towerSegmentSites(item.type,run).includes(item.site))throw Error('Сегмент недоступен для установки.');
+ if(!canInstallTowerSegment(run,item))throw Error('Сегмент недоступен для установки.');
  const buyer=session.players?.[player];
  if(!buyer||buyer.balance<TOWER_SEGMENT_INSTALL_PRICE)throw Error('Недостаточно монет.');
  const old=towerInstalledSegments(run).find(x=>x.site===item.site);
@@ -105,7 +110,7 @@ export function sellTowerSegment(session,player,run,id){
  if(!run.preparing||!item||run.equippedSegments.includes(id))throw Error('Этот предмет нельзя продать.');
  const price=towerSegmentSellPrice(item.rarity),buyer=session.players?.[player];
  const totalEarned=session.towerEarned??0;
- if(!buyer||buyer.balance+price>16000000||totalEarned+price>16000000)
+ if(!canCreditTowerSegmentSale(session,player,price))
   throw Error('Невозможно начислить монеты.');
  run.segmentInventory=run.segmentInventory.filter(x=>x.id!==id);
  run.unseenSegmentIds=run.unseenSegmentIds.filter(unseen=>unseen!==id);

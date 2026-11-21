@@ -1,3 +1,4 @@
+import {arenaRaster} from '../game/arena-dimensions.js';
 import {accessFloorStore,floorBlob} from './floor-storage.js';
 import {ctx} from '../game/state.js';
 import {staticArenaImage} from './pixi-static.js';
@@ -7,7 +8,9 @@ import {bettingSave} from '../betting/storage.js';
 const SIZE=1024;
 function canvas(){const c=document.createElement('canvas');c.width=c.height=SIZE;return c;}
 function floorScope(){
-  const sessionId=ctx.betting?.floorId,arena=ctx.arenaId??'ward';
+  const sessionId=ctx.betting?.floorId,arenaId=ctx.arenaId??'ward';
+  const {width,height}=ctx.arenaDefinition??{};
+  const arena=width!==height?arenaId+'@'+width+'x'+height:arenaId;
   if(ctx.mode==='tower'&&ctx.towerRun&&sessionId)return {
     key:`tower:${sessionId}:${ctx.towerPlayer}:${arena}`,
     generation:ctx.towerRun.floorHistoryGeneration??0
@@ -35,7 +38,7 @@ function install(next){
   ctx.floorCanvas=next;
   if(!ctx.floorImage){
     ctx.floorImage=document.createElementNS(ctx.NS,'image');
-    const {left,top,size}=ctx.arenaDefinition;
+    const {left,top,size}=arenaRaster(ctx.arenaDefinition);
     for(const [key,value] of Object.entries({x:left,y:top,width:size,height:size,preserveAspectRatio:'none'}))
       ctx.floorImage.setAttribute(key,value);
     ctx.grid.after(ctx.floorImage);

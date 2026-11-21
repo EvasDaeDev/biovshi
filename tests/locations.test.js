@@ -55,7 +55,9 @@ test('JSON import round-trips valid geometry and rejects invalid figures and obs
  assert.equal(once.spawns.length,4);
  assert.equal(once.patrol.length,6);
  assert.throws(()=>parseLocation({...input,objects:[box(-20,100,30,30)]}),/координат/);
- assert.throws(()=>parseLocation({...input,objects:[{...input.objects[0],points:input.objects[0].points.toReversed()}]}),/выпуклыми/);
+ const corners=input.objects[0].points;
+ assert.throws(()=>parseLocation({...input,objects:[{kind:'obstacle',points:[corners[0],corners[2],corners[1],corners[3]]}]}),/пересекаться/);
+ assert.deepEqual(parseLocation({...input,objects:[{kind:'obstacle',points:corners.toReversed()}]}).location.objects,input.objects);
  assert.throws(()=>parseLocation({...input,spawns:[[120,170],[350,60],[350,640],[640,350]]}),/Стартовым/);
 });
 test('launch refresh follows active IDs, skips missing and malformed files and ignores stale catalogs',async()=>{

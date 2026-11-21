@@ -13,6 +13,23 @@ function polygonData(box){
 export function capsulePolygonContact(c,box){
  const data=polygonData(box),{a,b,r}=c;
  if(Math.max(a.x,b.x)+r<data.left||Math.min(a.x,b.x)-r>data.right||Math.max(a.y,b.y)+r<data.top||Math.min(a.y,b.y)-r>data.bottom)return null;
+ if(box.parts){
+  const hits=box.parts.flatMap(part=>{
+   const hit=capsulePolygonContact(c,part);
+   return hit?[hit]:[];
+  });
+  if(hits.length<2)return hits[0]??null;
+  // Prefer a translation that resolves the entire union, not just one ear.
+  let best=null,cost=Infinity;
+  for(const hit of hits){
+   const {nx,ny,depth}=hit;
+   const shift=p=>({x:p.x+nx*(depth+1e-7),y:p.y+ny*(depth+1e-7)});
+   const moved={a:shift(a),b:shift(b),r};
+   const remaining=box.parts.reduce((sum,part)=>sum+(capsulePolygonContact(moved,part)?.depth??0)**2,0);
+   if(remaining<cost||remaining===cost&&depth<best.depth){best=hit;cost=remaining;}
+  }
+  return best;
+ }
  const dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;
  let best=null;
  const overlap=({n,min,max})=>{

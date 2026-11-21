@@ -23,7 +23,10 @@
         <div class="tools" role="group" aria-label="Инструменты">
           <button data-tool="select" aria-pressed="true" type="button">Выбор</button>
           <button data-tool="wall" aria-pressed="false" type="button">Стена</button>
-          <button data-tool="obstacle" aria-pressed="false" type="button">Препятствие</button>
+          <button data-tool="obstacle" aria-pressed="false" type="button">Прямоугольник</button>
+          <button data-tool="circle" aria-pressed="false" type="button">Круг</button>
+          <button data-tool="polygon" aria-pressed="false" type="button">Контур</button>
+          <button id="close-polygon" type="button" hidden>Замкнуть</button>
         </div>
         <div class="mirrors" role="group" aria-label="Симметрия относительно центра">
           <label><input id="mirror-x" type="checkbox"> Симметрия X</label>
@@ -31,7 +34,7 @@
         </div>
       </div>
       <div class="viewport">
-        <svg id="blueprint" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="План арены в сантиметрах">
+        <svg id="blueprint" xmlns="http://www.w3.org/2000/svg" role="img" tabindex="0" aria-label="План арены в сантиметрах">
           <defs>
             <pattern id="small-grid" width="10" height="10" patternUnits="userSpaceOnUse">
               <path d="M 10 0 H 0 V 10" class="small-grid"/>
@@ -58,14 +61,15 @@
         <label>Название<input id="name" maxlength="80"></label>
         <label>Имя файла<input id="location-id" maxlength="40" spellcheck="false" title="Строчная латиница, цифры, дефис и подчёркивание"></label>
         <div class="fields">
-          <label>Сторона, см<input id="size" type="number" min="300" max="1600" step="1"></label>
+          <label>Ширина, см<input id="width" type="number" min="300" max="1600" step="1"></label>
+          <label>Высота, см<input id="height" type="number" min="300" max="1600" step="1"></label>
           <label>Пациентов<input id="capacity" type="number" min="2" max="10" step="1"></label>
           <label>Срез углов, см<input id="cut" type="number" min="0" step="any"></label>
           <label>Шаг привязки, см
             <select id="snap"><option>1</option><option>5</option><option selected>10</option><option>25</option><option>50</option></select>
           </label>
         </div>
-        <p id="contour-note" hidden>В файле задан внешний контур. При изменении стороны он масштабируется вместе с планом.</p>
+        <p id="contour-note" hidden>В файле задан внешний контур. При изменении ширины или высоты он масштабируется вместе с планом.</p>
       </section>
       <section class="panel">
         <h2>Объекты <span id="object-count"></span></h2>
