@@ -7,6 +7,7 @@ import {towerSurgeryAvailableSites,towerSurgerySiteLabel,towerSurgeryCapacity,TO
 import {renderTowerUpgradePatient} from './upgrade-preview.js';
 import {towerPatientAnatomy} from './anatomy.js';
 import {ctx} from '../game/state.js';
+import {formatSkillPoints} from '../ui/patient.js';
 import {uiIcon} from '../ui/icons.js';
 
 const create=(tag,className,text)=>{
@@ -150,8 +151,8 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
    const cell=create('div','tower-upgrade-stat');
    cell.append(create('span','',statNames[i]));
    const value=create('b','');
-   value.append(create('span','tower-stat-before',format(before[i])));
-   const next=create('span','tower-stat-after',format(after[i]));
+   value.append(create('span','tower-stat-before',formatSkillPoints(before[i])));
+   const next=create('span','tower-stat-after',formatSkillPoints(after[i]));
    const delta=after[i]-before[i],changed=Math.abs(delta)>.0001;
    next.hidden=!changed;
    if(changed){

@@ -213,8 +213,19 @@ export function towerPreparation(){
       return '<span class="tower-stat-preview"><span>'+label+'</span> <strong class="'+cls+'">'+formatSkillPoints(value*100)+'%'+(diff>0?' ▲':diff<0?' ▼':'')+'</strong></span>';
     };
     const current=snapshot.effects,original=initial.effects;
+    const earned=earnedStats(towerCycleWins(t.level));
+    const skillFields=SKILLS.map((skill,i)=>{
+      const choices=[earned[i]-1,earned[i],earned[i]+1].filter(n=>n>=2);
+      const allocation=draftStats[i]>earned[i]?'tower-stat-boosted':draftStats[i]<earned[i]?'tower-stat-reduced':'';
+      return `<label ${skillHintAttributes(snapshot,i)} aria-label="${skill.name}">
+        <span class="tower-skill-icon" aria-hidden="true">${skill.icon}</span>
+        <span class="tower-stat-control"><select data-tower-stat="${i}" class="${allocation}" aria-label="${skill.name} — базовые очки" aria-describedby="tower-stat-total-${i}">
+          ${choices.map(n=>`<option value="${n}" ${n===draftStats[i]?'selected':''}>${n}</option>`).join('')}</select>
+          <span id="tower-stat-total-${i}" class="tower-stat-total">Итог <strong data-tower-effective="${i}">${formatSkillPoints(snapshot.effective[i])}</strong></span>
+        </span></label>`;
+    }).join('');
     fields.innerHTML=`<div class="garage-stat-list"><small>Побед: ${t.wins} · очков в текущем цикле: ${9+towerCycleWins(t.level)}</small>
-      ${SKILLS.map((skill,i)=>`<label ${skillHintAttributes(snapshot,i)} aria-label="${skill.name}"><span class="tower-skill-icon" aria-hidden="true">${skill.icon}</span><select data-tower-stat="${i}" class="${draftStats[i]>earnedStats(towerCycleWins(t.level))[i]?'tower-stat-boosted':draftStats[i]<earnedStats(towerCycleWins(t.level))[i]?'tower-stat-reduced':''}" aria-label="${skill.name}">${[earnedStats(towerCycleWins(t.level))[i]-1,earnedStats(towerCycleWins(t.level))[i],earnedStats(towerCycleWins(t.level))[i]+1].filter(n=>n>=2).map(n=>`<option value="${n}" ${n===draftStats[i]?'selected':''}>${n}</option>`).join('')}</select></label>`).join('')}</div>
+      ${skillFields}</div>
       <div class="garage-stat-effects tower-stat-previews"><span class="tower-preview-label ${draftStats.some((v,i)=>v!==t.stats[i])?'is-active':''}">ПРЕДПРОСМОТР</span>${comparison('СКОРОСТЬ',current[0],original[0])}${comparison('МОБИЛЬНОСТЬ',current[2],original[2])}${comparison('КРИТ',current[1],original[1])}<span class="tower-stat-preview"><span>ИНТЕРВАЛ АТАК</span> <strong>${Math.round(towerAttackInterval(snapshot.combat)*1000)} мс</strong></span></div>
       <div class="tower-stat-confirm"><button type="button" data-tower-base>ВЕРНУТЬ ИСХОДНЫЕ</button><button type="button" data-tower-apply>ПРИМЕНИТЬ</button></div>`;
     const changed=draftStats.some((v,i)=>v!==t.stats[i]);

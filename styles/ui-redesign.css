@@ -1587,7 +1587,7 @@
 #robot-tag-hops-v22 #tower-preparation #tower-stats .garage-stat-list>label{
   display:flex;
   flex-direction:row;
-  align-items:center;
+  align-items:flex-start;
   /* Keep each icon immediately beside its own numeric selector. */
   justify-content:flex-end;
   gap:4px;
@@ -1609,11 +1609,30 @@
   height:36px;
   object-fit:contain;
 }
-#robot-tag-hops-v22 #tower-preparation #tower-stats select[data-tower-stat]{
+#robot-tag-hops-v22 #tower-preparation #tower-stats .tower-stat-control{
+  display:grid;
   flex:0 1 82px;
-  width:82px;
-  max-width:82px;
   min-width:48px;
+  gap:3px;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats .tower-stat-total{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:0 4px;
+  padding-inline:2px;
+  color:#d6c9ac;
+  font-size:11px;
+  line-height:1.25;
+  font-variant-numeric:tabular-nums;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats .tower-stat-total strong{
+  color:#f1e2c5;
+  font-size:12px;
+}
+#robot-tag-hops-v22 #tower-preparation #tower-stats select[data-tower-stat]{
+  width:100%;
+  min-width:0;
   min-height:42px;
   padding:5px 7px;
   margin:0;
@@ -1660,9 +1679,8 @@
     height:32px;
     min-width:32px;
   }
-  #robot-tag-hops-v22 #tower-preparation #tower-stats select[data-tower-stat]{
+  #robot-tag-hops-v22 #tower-preparation #tower-stats .tower-stat-control{
     flex-basis:68px;
-    width:68px;
   }
 }
 

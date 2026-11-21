@@ -27,7 +27,7 @@ import {advanceStartup} from '../src/game/session.js';
 import {step} from '../src/game/loop.js';
 import {note} from '../src/game/events.js';
 import {patientGarage,patientSkin,patientCombatStats} from '../src/game/patients.js';
-import {patientName} from '../src/ui/patient.js';
+import {patientName,formatSkillPoints} from '../src/ui/patient.js';
 import {showResults} from '../src/ui/results.js';
 function setup(s,tower,arenaId='ward'){
  const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://tower.test/',pretendToBeVisual:true});
@@ -874,6 +874,33 @@ test('Tower preparation uses compact icon-only controls, fixed preview slot and 
   assert.match(css,/\.tower-challenge-option\.is-selected\.is-standard\s*\{[\s\S]*?border-color:#63e780/);
   assert.match(css,/#tower-stats \.tower-preview-label\s*\{[\s\S]*?visibility:hidden/);
   assert.match(css,/#tower-stats \.tower-skill-icon \.ui-icon\s*\{[\s\S]*?width:36px/);
+ }finally{close(dom);}
+});
+
+test('Tower preparation shows the Shelter totals and updates them while reallocating base points',()=>{
+ const session=betNewSession(['Подготовка'],200),run=towerFor(session,0);
+ run.segmentRewardsEnabled=true;
+ run.prosthetics=['leg-1-lower'];
+ run.segmentInventory=[{id:'seg1',type:'flywheel',site:'arm--1-upper',rarity:0}];
+ run.equippedSegments=['seg1'];run.nextSegmentId=2;
+ const dom=setup(session,run);
+ try{
+  const read=selector=>[...document.querySelectorAll(selector)].map(node=>node.textContent);
+  const totals=()=>read('#tower-stats [data-tower-effective]');
+  const initial=towerMutationSnapshot(run).effective.map(formatSkillPoints);
+  assert.deepEqual(totals(),initial);
+  assert.ok(initial.some(value=>value.includes(',')));
+  document.querySelector('#tower-upgrade-open').click();
+  assert.deepEqual(read('#tower-upgrade-window .tower-stat-before'),initial);
+  document.querySelector('.tower-upgrade-back').click();
+  const speed=document.querySelector('[data-tower-stat="0"]');
+  assert.equal(speed.value,'3');
+  assert.equal(speed.getAttribute('aria-describedby'),'tower-stat-total-0');
+  speed.value='4';speed.dispatchEvent(new Event('change'));
+  assert.deepEqual(run.stats,[3,3,3]);
+  assert.deepEqual(totals(),towerMutationSnapshot({...run,stats:[4,2,3]}).effective.map(formatSkillPoints));
+  document.querySelector('[data-tower-base]').click();
+  assert.deepEqual(totals(),initial);
  }finally{close(dom);}
 });
 
