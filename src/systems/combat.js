@@ -304,7 +304,7 @@ export function combatAttacks() {
       const eligible=attacker.visible&&attacker.mobile&&src&&victim?.visible
         &&victim.hasHead&&victim.segmentCount>0
         &&(ctx.mode!=='tower'||!towerAllies(ctx.towerRun,attacker.id,victim.id,ctx.game.time));
-      contactSnapshot.set(pending,eligible?struckSegment(attacker,victim,pending):null);
+      if(eligible)contactSnapshot.set(pending,struckSegment(attacker,victim,pending));
     }
   }
   // Каждый удар: замах -> движение -> касание -> возврат в опору.
