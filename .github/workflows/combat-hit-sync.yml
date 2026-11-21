@@ -1,0 +1,28 @@
+name: Combat hit synchronization regression checks
+
+on:
+  push:
+    branches:
+      - test/combat-hit-sync
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Run synchronized hitbox regressions
+        run: node --test tests/combat-hit-sync.test.js
+      - name: Full combat test suite
+        run: npm test
+      - name: Check production build
+        run: npm run build
