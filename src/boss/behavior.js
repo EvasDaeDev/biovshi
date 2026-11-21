@@ -10,7 +10,7 @@ import {strikeCandidates,movingStrikeContact,compareStrikeCandidates,prioritizeA
 import {pendingStrikes,setPendingStrikes} from '../systems/strikes.js';
 import {BOSS_CONFIG} from './config.js';
 import {sweepPathClear,sweepContact,chargePlan,bossDamage,poseClear,poseAt} from './attacks.js';
-import {bossOpponentMemory,observeBossOpponent,recordBossTacticalStrike,bossPositionIntent} from './positioning.js';
+import {bossOpponentMemory,observeBossOpponent,recordBossTacticalStrike,bossPositionIntent,bossNeedsShortRange,isBossStump} from './positioning.js';
 const root=key=>key.replace(/-(upper|lower)$/,'');
 const duration=t=>t.windupSec+t.thrustSec+t.recoverSec;
 export function updateBossPhase(robot,state){
@@ -123,8 +123,12 @@ export function createBossBehavior(){
   if(state.followup){state.status='Продолжает серию';return hold(robot,target.center);}
   if(now<ctx.combat.nextStrike[robot.id]){
    const dx=robot.x-target.center.x,dy=robot.y-target.center.y,d=Math.hypot(dx,dy)||1;
-   if(d<cfg.spacingDistance&&sightClear(robot.center,target.center)){
+   if(!bossNeedsShortRange(robot)&&d<cfg.spacingDistance&&sightClear(robot.center,target.center)){
     state.status='Держит дистанцию атаки';return {goal:{x:robot.x+dx/d*12,y:robot.y+dy/d*12},speed:CONFIG.movement.chaseSpeedCm,manual:true,mode:'атакует',lookPoint:target.center,retreat:{x:dx/d,y:dy/d}};
+   }
+   if(bossNeedsShortRange(robot)){
+    const approach=bossPositionIntent(robot,target,memory,now);
+    if(approach){state.status=approach.mode;return approach;}
    }
    state.status='Восстанавливается';return hold(robot,target.center);
   }
@@ -140,7 +144,7 @@ export function createBossBehavior(){
    state.nextChargeAt=now+1;
   }
   const armSources=robot.attackSources.filter(s=>s.kind==='arm');
-  const noFrontArms=!armSources.some(s=>!s.key.includes('pair2'));
+  const noFrontArms=!armSources.some(s=>s.key.endsWith('-lower')&&!s.key.includes('pair2'));
   const candidates=ordinaryCandidates(robot,target).filter(c=>seen||c.source.kind==='leg');
   // A headbutt is not a substitute for the missing front arms: it exposes
   // the exact critical segment a kiting player is aiming at.
@@ -229,8 +233,9 @@ export function createBossBehavior(){
   const wantsWide=state.cycles%(state.phase===2?2:3)===(state.phase===2?1:2);
   const wide=wantsWide?wideCandidate(robot,target,cfg.sweep):null;
   if(wide){state.cycles++;begin(robot,wide,cfg.sweep,{style:'sweep'});return;}
-  const noFrontArms=!robot.attackSources.some(s=>s.kind==='arm'&&!s.key.includes('pair2'));
-  const candidate=ordinaryCandidates(robot,target).find(c=>(seen||c.source.kind==='leg')&&(!noFrontArms||c.source.kind!=='head'));if(!candidate)return;
+  const noFrontArms=!robot.attackSources.some(s=>s.kind==='arm'&&s.key.endsWith('-lower')&&!s.key.includes('pair2'));
+  const options=ordinaryCandidates(robot,target).filter(c=>(seen||c.source.kind==='leg')&&(!noFrontArms||c.source.kind!=='head'));
+  const candidate=noFrontArms?(options.find(c=>c.source.kind==='leg')??options.find(c=>isBossStump(c.source))??options[0]):options[0];if(!candidate)return;
   state.cycles++;begin(robot,candidate,candidate.source.kind==='head'?BOSS_CONFIG.combat:cfg.first,{comboIndex:candidate.source.kind==='head'?undefined:1});
  }
  return {state,intent,resolveCombat,planCombat};
