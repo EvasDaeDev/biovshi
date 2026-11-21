@@ -533,6 +533,8 @@ function createRobot(id, start, body = {}) {
       return robotState.isDamageable(key);
     },
     damage: robotDamage.bind(null, robotState),
+    // Rebuild hit capsules after combat creates/removes strike poses in this tick.
+    refreshCombatCapsules() { robotState.api.capsules=robotState.makeCapsules(); },
     get actualPose() {
       return {
         chest: robotState.chest,
