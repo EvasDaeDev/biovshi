@@ -78,7 +78,25 @@
           <button id="undo" type="button">Отменить</button>
           <button id="delete" type="button">Удалить выбранное</button>
         </div>
-        <button id="auto-spawns" type="button">Пересчитать старты и патруль</button>
+        <div class="actions" role="group" aria-label="Поворот с шагом 5 градусов">
+          <button id="rotate-left" type="button" aria-label="Повернуть против часовой стрелки на 5 градусов">↶ 5°</button>
+          <button id="rotate-right" type="button" aria-label="Повернуть по часовой стрелке на 5 градусов">↷ 5°</button>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Старты Башни <span id="spawn-count"></span></h2>
+        <div class="actions" role="group" aria-label="Точки старта">
+          <button data-tool="spawn-player" aria-pressed="false" type="button">Игрок</button>
+          <button data-tool="spawn-opponent" aria-pressed="false" type="button">Противник</button>
+        </div>
+        <button id="auto-spawns" type="button">Сбросить старты и патруль</button>
+      </section>
+      <section class="panel">
+        <h2>Проверка масштаба</h2>
+        <div class="actions">
+          <button data-tool="mannequin" aria-pressed="false" type="button">Болванка пациента</button>
+          <button id="clear-mannequin" type="button">Убрать</button>
+        </div>
       </section>
       <section class="panel">
         <h2>Ширина проходов</h2>

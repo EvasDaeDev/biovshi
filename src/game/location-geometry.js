@@ -68,6 +68,19 @@ export function locationPassages(location){
  }
  return passages.sort((a,b)=>a.width-b.width);
 }
+export function rotatePolygon(points,degrees){
+ const sides=edges(points);
+ let area=0,x=0,y=0;
+ for(const [a,b] of sides){
+  const weight=a[0]*b[1]-a[1]*b[0];
+  area+=weight;
+  x+=(a[0]+b[0])*weight;
+  y+=(a[1]+b[1])*weight;
+ }
+ x/=3*area;y/=3*area;
+ const angle=degrees*Math.PI/180,c=Math.cos(angle),s=Math.sin(angle);
+ return points.map(([px,py])=>[x+(px-x)*c-(py-y)*s,y+(px-x)*s+(py-y)*c]);
+}
 export function wallPoints(a,b,width){
  const length=distance(a,b);
  if(length<EPSILON)throw Error('Укажите два разных конца стены.');
@@ -219,6 +232,22 @@ export function parseLocation(raw,{id,spawnMargin=60}={}){
   location.spawns=readPoints(raw.spawns,dimensions,4,4);
   if(!location.spawns.every(clear)||location.spawns.some((p,i)=>location.spawns.slice(0,i).some(q=>distance(p,q)<65)))
    throw Error('Стартовым точкам не хватает свободного места.');
+ }
+ if(raw.towerSpawns!==undefined){
+  const authored=raw.towerSpawns;
+  if(!authored||typeof authored!=='object'||Array.isArray(authored))throw Error('Некорректные точки старта Башни.');
+  const player=authored.player===undefined?null:readPoints([authored.player],dimensions,1,1)[0];
+  const opponents=authored.opponents===undefined?[]:readPoints(authored.opponents,dimensions,0,9);
+  const positions=player?[player,...opponents]:opponents;
+  if(!positions.every(clear)||positions.some((p,i)=>positions.slice(0,i).some(q=>distance(p,q)<65)))
+   throw Error('Точкам старта Башни не хватает места. Разведите их и отодвиньте от стен и препятствий.');
+  if(positions.length){
+   const activeOpponents=opponents.slice(0,capacity-1);
+   const reserved=player?[player,...activeOpponents]:activeOpponents;
+   if(automaticSpawns(location,clear,capacity,reserved).length<capacity)
+    throw Error('Для заданных стартов Башни не хватает свободных мест.');
+   location.towerSpawns={...(player?{player}:{}),...(opponents.length?{opponents}:{})};
+  }
  }
  const slots=automaticSpawns(location,clear,Math.max(capacity,4),location.spawns);
  if(slots.length<Math.max(capacity,4))throw Error('Для указанной вместимости не хватает безопасных стартовых точек.');

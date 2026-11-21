@@ -166,3 +166,30 @@ test('rectangular locations keep true bounds, camera centre and concave collisio
   await loadLocations(base,{fetcher:async()=>({ok:false,status:404}),warn:()=>{}});
  }
 });
+
+
+test('authored Tower starts preserve player and enemy assignments and fill missing positions',async()=>{
+ const map={version:1,id:'assigned-starts',name:'Старты',width:900,height:520,capacity:6,objects:[],
+  towerSpawns:{player:[180,145],opponents:[[690,125],[680,380]]}};
+ const base='https://arena-layouts.test/locations/';
+ const fetcher=async url=>({ok:true,json:async()=>url.pathname.endsWith('active.json')?{version:1,active:[map.id]}:map});
+ await loadLocations(base,{fetcher});
+ let dom;
+ try{
+  const tower=newTower(0);
+  tower.level=7;tower.wins=6;
+  dom=setup(map.id,tower);
+  const {left,top}=ctx.arenaBoundary;
+  const positions=[map.towerSpawns.player,...map.towerSpawns.opponents].map(([x,y])=>[x+left,y+top]);
+  const starts=chooseSpawnLayout();
+  assert.ok(starts.length>positions.length);
+  assert.deepEqual(starts.slice(0,3).map(p=>[p.x,p.y]),positions);
+  assert.deepEqual(ctx.robots.slice(0,3).map(p=>[p.x,p.y]),positions);
+  assert.ok(starts.every(p=>coreClearCircle(p,CONFIG.startup.spawnMarginCm)));
+  ctx.mode='spectator';ctx.ROBOT_COUNT=4;
+  assert.ok(chooseSpawnLayout().every(p=>!p.authored));
+ }finally{
+  if(dom)close(dom);
+  await loadLocations(base,{fetcher:async()=>({ok:false,status:404}),warn:()=>{}});
+ }
+});

@@ -63,3 +63,12 @@ p,ol { margin: 0; font-size: 13px; color: var(--muted); }
 }
 
 .polygon-start { fill:#e8f8bb; stroke:#171f20; stroke-width:2; vector-effect:non-scaling-stroke; pointer-events:none; }
+
+.spawn-marker { cursor:pointer; }
+.spawn-marker circle { fill:#222e29; stroke:#a6edac; stroke-width:2; vector-effect:non-scaling-stroke; }
+.spawn-marker.opponent circle { stroke:#ffb891; }
+.spawn-marker.selected circle { fill:#73553b; stroke:#fff0b9; stroke-width:3; }
+.spawn-marker text { fill:#f2f4e8; text-anchor:middle; dominant-baseline:central; font-size:13px; font-weight:700; pointer-events:none; }
+.patient-mannequin { color:#f2d67b; opacity:.68; pointer-events:none; }
+.patient-mannequin line { stroke:currentColor; stroke-linecap:round; }
+.patient-mannequin circle { fill:currentColor; }

@@ -23,7 +23,11 @@ function buildArena(raw,id){
    const parts=convexParts(points);
    return {kind,...polygon(points),...(parts.length>1?{parts:parts.map(polygon)}:{})};
   }),
-  spawnPoints:spawns.map(toWorld),patrolPoints:patrol.map(toWorld)};
+  spawnPoints:spawns.map(toWorld),patrolPoints:patrol.map(toWorld),
+  ...(location.towerSpawns?{towerSpawns:{
+   player:location.towerSpawns.player?toWorld(location.towerSpawns.player):null,
+   opponents:(location.towerSpawns.opponents??[]).map(toWorld),
+  }}:{})};
 }
 const defaults=Object.fromEntries([ward,ring,annulus,sluice,zigzag,columns,throat].map(raw=>[raw.id,buildArena(raw,raw.id)]));
 export const TOWER_ARENA_CAPACITY=Object.freeze(Object.fromEntries(Object.values(defaults).map(a=>[a.id,a.capacity])));

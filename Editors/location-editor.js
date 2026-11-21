@@ -1,14 +1,17 @@
 import {
  closePolygon,convexParts,fitsBoundary,locationBoundary,locationDimensions,locationPassages,mirrorModes,mirroredObjects,
- parseLocation,polygonKey,roundPoints,validLocationId,wallPoints,
+ parseLocation,polygonKey,rotatePolygon,roundPoints,validLocationId,wallPoints,
 } from '../src/game/location-geometry.js';
+import {neutralCapsules} from '../src/robot/neutral-pose.js';
 
 const $=id=>document.getElementById(id);
 const svg=$('blueprint'),drawing=$('drawing');
 const buttons=[...document.querySelectorAll('[data-tool]')];
 const draft=()=>({version:1,id:'new-arena',name:'Новая арена',size:700,capacity:6,minPassage:120,cornerCut:25,objects:[]});
 let location=draft(),history=[],tool='select',selected=null,gesture=null,checked=null,catalogRequest=0;
-let outline=[],outlineTip=null;
+let outline=[],outlineTip=null,selectedSpawn=null,mannequin=null;
+const patientOutline=neutralCapsules({x:0,y:0,angle:0});
+const rotationStep=5;
 const modes=()=>mirrorModes($('mirror-x').checked,$('mirror-y').checked);
 const number=id=>$(id).valueAsNumber;
 function message(text='',error=false){
@@ -20,10 +23,10 @@ function invalidate(){
  $('gaps').replaceChildren();
  message();
 }
-function svgElement(tag,attributes){
+function svgElement(tag,attributes,parent=drawing){
  const node=document.createElementNS('http://www.w3.org/2000/svg',tag);
  for(const [name,value] of Object.entries(attributes))node.setAttribute(name,value);
- drawing.append(node);
+ parent.append(node);
  return node;
 }
 const pointsText=points=>points.map(p=>p.join(',')).join(' ');
@@ -36,6 +39,23 @@ function orbit(object){
 function drawObject(object,className,index){
  svgElement('polygon',{class:'object '+object.kind+' '+className,points:pointsText(object.points),
   ...(index===undefined?{}:{'data-index':index})});
+}
+function drawSpawn(point,role,index){
+ const active=selectedSpawn?.role===role&&selectedSpawn.index===index;
+ const [x,y]=active&&gesture?.spawn?gesture.current:point;
+ const marker=svgElement('g',{class:'spawn-marker '+role+(active?' selected':''),
+  'data-spawn-role':role,'data-spawn-index':index,transform:'translate('+x+' '+y+')'});
+ svgElement('circle',{r:10},marker);
+ svgElement('text',{},marker).textContent=role==='player'?'И':String(index+1);
+}
+function drawMannequin(){
+ if(!mannequin)return;
+ const {point,angle}=mannequin;
+ const group=svgElement('g',{class:'patient-mannequin',transform:'translate('+point.join(' ')+') rotate('+angle+')'});
+ for(const {a,b,r} of patientOutline){
+  if(a.x===b.x&&a.y===b.y)svgElement('circle',{cx:a.x,cy:a.y,r},group);
+  else svgElement('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,'stroke-width':2*r},group);
+ }
 }
 function render(){
  const {width,height}=locationDimensions(location),{objects}=location,margin=Math.max(12,Math.max(width,height)*.035);
@@ -58,9 +78,17 @@ function render(){
   for(const gap of checked.narrow.slice(0,24))line(gap.from,gap.to,{class:'gap'});
   for(const [cx,cy] of checked.spawns)svgElement('circle',{class:'spawn',cx,cy,r:5});
  }
+ const {player,opponents=[]}=location.towerSpawns??{};
+ if(player)drawSpawn(player,'player',0);
+ opponents.forEach((point,index)=>drawSpawn(point,'opponent',index));
+ drawMannequin();
+ $('spawn-count').textContent=(player?'Игрок задан':'Игрок авто')+' · '+opponents.length+' / 9';
+ $('clear-mannequin').disabled=!mannequin;
+ const canRotate=tool==='mannequin'?Boolean(mannequin):Boolean(picked);
+ $('rotate-left').disabled=$('rotate-right').disabled=!canRotate;
  $('object-count').textContent=objects.length+' / 64';
  $('undo').disabled=!history.length&&!outline.length;
- $('delete').disabled=selected===null;
+ $('delete').disabled=selected===null&&!selectedSpawn;
 }
 function updateFields(){
  $('name').value=location.name;
@@ -86,6 +114,8 @@ function setLocation(next){
  saveHistory();
  location=next;
  selected=null;
+ selectedSpawn=null;
+ mannequin=null;
  updateFields();
  invalidate();
  render();
@@ -95,15 +125,19 @@ function setTool(next){
  cancelGesture();
  clearOutline();
  tool=next;
+ if(next==='mannequin'){selected=null;selectedSpawn=null;}
  svg.dataset.tool=tool;
  $('close-polygon').hidden=tool!=='polygon';
  for(const button of buttons)button.setAttribute('aria-pressed',String(button.dataset.tool===tool));
  $('tool-help').textContent={
-  select:'Перетащите объект. Delete удаляет выделенное.',
+  select:'Перетащите объект или точку старта. Delete удаляет выделенное.',
   wall:'Протяните от начала стены до конца.',
   obstacle:'Протяните между углами препятствия.',
   circle:'Потяните от центра до края круга, чтобы задать радиус.',
   polygon:'Отметьте вершины отрезков. Для замыкания нажмите на первую вершину или Enter.',
+  'spawn-player':'Щёлкните по плану, чтобы поставить точку старта игрока.',
+  'spawn-opponent':'Щёлкните по плану, чтобы добавить старт противника. Точки используются по порядку.',
+  mannequin:'Щёлкните или перетащите болванку. Клавиши Q и E поворачивают её на 5°.',
  }[tool];
  render();
 }
@@ -151,6 +185,11 @@ for(const field of ['width','height'])$(field).addEventListener('change',()=>{
  if(!next.objects.every(o=>fitsBoundary(o.points,next))){
   updateFields();message('При таком размере один из объектов выходит за границу.',true);return;
  }
+ if(next.towerSpawns){
+  const {player,opponents}=next.towerSpawns;
+  next.towerSpawns={...(player?{player:points([player])[0]}:{}),
+   ...(opponents?{opponents:points(opponents)}:{})};
+ }
  if(next.spawns)next.spawns=points(next.spawns);
  if(next.patrol)next.patrol=points(next.patrol);
  setLocation(next);
@@ -191,10 +230,52 @@ function movedSelection(start,end,object){
  if(!dx&&!dy)return null;
  return {...object,points:object.points.map(([x,y])=>[x+dx,y+dy])};
 }
+function saveSpawn(role,point,index){
+ const {player,opponents=[]}=location.towerSpawns??{};
+ const next={...(player?{player}:{}),opponents:[...opponents]};
+ if(role==='player')next.player=point;
+ else{
+  index??=opponents.length;
+  if(index>=9){message('Можно поставить до девяти точек старта противников.',true);return;}
+  next.opponents[index]=point;
+ }
+ saveHistory();
+ location.towerSpawns=next;
+ selected=null;
+ selectedSpawn={role,index:role==='player'?0:index};
+ invalidate();
+}
+function rotateSelection(degrees){
+ if(tool==='mannequin'&&mannequin){
+  mannequin.angle=(mannequin.angle+degrees)%360;
+ }else if(selected!==null){
+  const object=location.objects[selected];
+  try{commitObject({...object,points:rotatePolygon(object.points,degrees)},object);}
+  catch(error){message(error.message,true);}
+ }
+ render();
+}
 svg.addEventListener('pointerdown',event=>{
  if(event.button!==0||gesture)return;
  const start=coordinate(event);
  if(!start)return;
+ if(tool==='mannequin'){
+  mannequin={point:start,angle:mannequin?.angle??0};
+  svg.focus({preventScroll:true});
+  svg.setPointerCapture(event.pointerId);
+  gesture={pointer:event.pointerId,start,current:start,mannequin:true};
+  render();return;
+ }
+ const role=tool==='spawn-player'?'player':tool==='spawn-opponent'?'opponent':null;
+ const marker=event.target.closest('[data-spawn-role]');
+ if(marker&&(tool==='select'||role===marker.dataset.spawnRole)){
+  selected=null;
+  selectedSpawn={role:marker.dataset.spawnRole,index:Number(marker.dataset.spawnIndex)};
+  svg.setPointerCapture(event.pointerId);
+  gesture={pointer:event.pointerId,start,current:start,spawn:selectedSpawn};
+  render();return;
+ }
+ if(role){saveSpawn(role,start);render();return;}
  if(tool==='polygon'){
   svg.focus({preventScroll:true});
   if(outline.length&&polygonKey([start])===polygonKey([outline[0]])){finishPolygon();return;}
@@ -202,6 +283,7 @@ svg.addEventListener('pointerdown',event=>{
   outline.push(start);outlineTip=null;render();return;
  }
  if(tool==='select'){
+  selectedSpawn=null;
   const index=event.target.closest('[data-index]')?.dataset.index;
   selected=index===undefined?null:Number(index);
   render();
@@ -225,6 +307,11 @@ svg.addEventListener('pointermove',event=>{
  $('cursor').textContent='X '+point[0]+' · Y '+point[1]+' см'+(radius===null?'':' · R '+radius+' см');
  if(tool==='polygon'&&outline.length){outlineTip=point;render();return;}
  if(gesture?.pointer!==event.pointerId)return;
+ if(gesture.spawn||gesture.mannequin){
+  gesture.current=point;
+  if(gesture.mannequin)mannequin.point=point;
+  render();return;
+ }
  try{updateGesture(point);}catch{gesture.preview=null;}
  render();
 });
@@ -244,6 +331,7 @@ function commitObject(next,original=null,preview=mirroredObjects(next,location,m
  location.objects=objects;
  const index=objects.findIndex(o=>o.kind===next.kind&&polygonKey(o.points)===polygonKey(next.points));
  selected=index>=0?index:null;
+ selectedSpawn=null;
  invalidate();
 }
 function finishPolygon(){
@@ -260,7 +348,13 @@ svg.addEventListener('pointerup',event=>{
  if(gesture?.pointer!==event.pointerId)return;
  try{
   const point=coordinate(event);
-  const next=point&&updateGesture(point);
+  if(!point)return;
+  if(gesture.spawn){
+   if(point.some((value,i)=>value!==gesture.start[i]))saveSpawn(gesture.spawn.role,point,gesture.spawn.index);
+   return;
+  }
+  if(gesture.mannequin){mannequin.point=point;return;}
+  const next=updateGesture(point);
   if(next)commitObject(next,gesture.object,gesture.preview);
  }catch(error){message(error.message,true);}
  finally{cancelGesture();render();}
@@ -269,10 +363,15 @@ for(const event of ['pointercancel','lostpointercapture'])svg.addEventListener(e
  if(gesture){cancelGesture();render();}
 });
 function removeSelected(){
- if(selected===null)return;
+ if(selected===null&&!selectedSpawn)return;
  saveHistory();
- location.objects=keepObjects(location.objects,location.objects[selected]);
+ if(selectedSpawn){
+  const {player,opponents=[]}=location.towerSpawns;
+  if(selectedSpawn.role==='player')location.towerSpawns={opponents};
+  else location.towerSpawns={...(player?{player}:{}),opponents:opponents.filter((_,i)=>i!==selectedSpawn.index)};
+ }else location.objects=keepObjects(location.objects,location.objects[selected]);
  selected=null;
+ selectedSpawn=null;
  invalidate();
  render();
 }
@@ -282,6 +381,7 @@ function undo(){
  cancelGesture();
  location=history.pop();
  selected=null;
+ selectedSpawn=null;
  updateFields();
  invalidate();
  render();
@@ -357,11 +457,15 @@ $('file').onchange=event=>{importFile(event.target.files[0]);event.target.value=
 $('export').onclick=exportFile;
 $('check').onclick=check;
 $('delete').onclick=removeSelected;
+$('rotate-left').onclick=()=>rotateSelection(-rotationStep);
+$('rotate-right').onclick=()=>rotateSelection(rotationStep);
+$('clear-mannequin').onclick=()=>{mannequin=null;render();};
 $('undo').onclick=undo;
 $('close-polygon').onclick=finishPolygon;
 $('auto-spawns').onclick=()=>{
  const next={...location};
  delete next.spawns;
+ delete next.towerSpawns;
  delete next.patrol;
  setLocation(next);
  check();
@@ -371,9 +475,13 @@ for(const id of ['mirror-x','mirror-y'])$(id).onchange=()=>{cancelGesture();rend
 document.addEventListener('keydown',event=>{
  if(event.target.closest?.('input,select,textarea'))return;
  if(event.key==='Delete')removeSelected();
+ const rotationKey=event.code==='KeyQ'?'q':event.code==='KeyE'?'e':event.key.toLowerCase();
+ if(!event.ctrlKey&&!event.metaKey&&!event.altKey&&['q','e'].includes(rotationKey)){
+  event.preventDefault();rotateSelection(rotationKey==='q'?-rotationStep:rotationStep);
+ }
  if(event.key==='Enter'&&(event.target===document.body||event.target===svg)&&tool==='polygon'&&outline.length){event.preventDefault();finishPolygon();}
  if(event.key.toLowerCase()==='z'&&(event.ctrlKey||event.metaKey)){event.preventDefault();undo();}
- if(event.key==='Escape'){cancelGesture();clearOutline();selected=null;render();}
+ if(event.key==='Escape'){cancelGesture();clearOutline();selected=null;selectedSpawn=null;render();}
 });
 updateFields();
 setTool('select');

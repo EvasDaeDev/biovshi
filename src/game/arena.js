@@ -2,7 +2,7 @@ import {planNeutralRigSpawns} from '../boss/spawn.js';
 import {bossAnatomy} from '../boss/anatomy.js';
 import {towerPatientAnatomy} from '../tower/anatomy.js';
 import {BOSS_CONFIG} from '../boss/config.js';
-import {standardLimbs} from '../robot/body.js';
+import {standardNeutralBody} from '../robot/neutral-pose.js';
 import {createBoss} from '../boss/boss.js';
 import {ensureBossEncounter} from '../boss/encounter.js';
 import { clamp } from '../utils/math.js';
@@ -130,17 +130,24 @@ export function chooseSpawnLayout() {
   if(ctx.mode==='tower'){
     // A low-discrepancy sequence fills usable floor for arbitrary participant counts.
     // Prefer generous spacing, then relax it for crowded late floors.
-    const slots=[];const count=ctx.ROBOT_COUNT;
+    const count=ctx.ROBOT_COUNT;
+    const {player,opponents=[]}=ctx.arenaDefinition?.towerSpawns??{};
+    const enemies=opponents.slice(0,count-1);
+    const reserved=player?[player,...enemies]:enemies;
+    const slots=[];
     for(const separation of [65,48,32,16,0]){
-      for(let i=0;i<Math.max(3000,count*100)&&slots.length<count;i++){
+      for(let i=0;i<Math.max(3000,count*100)&&reserved.length+slots.length<count;i++){
         const p={x:boundary.left+margin+((i*.61803398875)%1)*(boundary.right-boundary.left-2*margin),
           y:boundary.top+margin+((i*.75487766625)%1)*(boundary.bottom-boundary.top-2*margin)};
-        if(coreClearCircle(p,margin)&&slots.every(q=>Math.hypot(q.x-p.x,q.y-p.y)>=separation))slots.push(p);
+        if(coreClearCircle(p,margin)&&reserved.every(q=>Math.hypot(q.x-p.x,q.y-p.y)>=Math.max(1,separation))
+          &&slots.every(q=>Math.hypot(q.x-p.x,q.y-p.y)>=Math.max(1,separation)))slots.push(p);
       }
-      if(slots.length===count)break;
+      if(reserved.length+slots.length===count)break;
     }
     for(let i=slots.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[slots[i],slots[j]]=[slots[j],slots[i]];}
-    return slots.map(p=>({...p,angle:spawnFacingAngle(p,boundary)}));
+    const authored=p=>({...p,authored:true});
+    const layout=[player?authored(player):slots.shift(),...enemies.map(authored),...slots].filter(Boolean);
+    return layout.map(p=>({...p,angle:spawnFacingAngle(p,boundary)}));
   }
   const slots=ctx.arenaDefinition?.spawnPoints?.map(p=>({...p}))??[{x:cx,y:boundary.top+margin},{x:boundary.left+margin,y:cy},{x:boundary.right-margin,y:cy},{x:cx,y:boundary.bottom-margin}];
   for (const p of slots) if (!coreClearCircle(p, CONFIG.startup.spawnMarginCm)) throw Error('Стартовая точка пересекается с препятствием');
@@ -163,8 +170,8 @@ export function rebuildRobots() {
   // Newly generated floor plans guarantee collision-free FULL bodies, not
   // merely clear centre points. Preserve historical unplanned tower layouts.
   const plannedFloor=ctx.mode==='tower'&&ctx.towerRun?.floorPlan?.floor===ctx.towerRun?.level;
-  const preflight=Boolean(encounter||plannedFloor);
-  const normalRig=preflight?{spineSegments:4,pelvisKey:'spine-3',limbs:standardLimbs()}:null;
+  const preflight=Boolean(encounter||plannedFloor||layout.some(p=>p.authored));
+  const normalRig=preflight?standardNeutralBody():null;
   const playerBody=ctx.mode==='tower'?towerPatientAnatomy(ctx.towerRun):null;
   const rigs=preflight?layout.map((_,id)=>encounter&&id===1
     ?{body:bossAnatomy(encounter.variant),scaleMultiplier:BOSS_CONFIG.scale}
