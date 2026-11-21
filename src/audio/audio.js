@@ -6,6 +6,8 @@ import { ctx } from '../game/state.js';
 
 const STORAGE=storageKey('biovshi.audio.v1');
 const DEFAULTS={sounds:50,music:50};
+const MUSIC_GAINS={music:1,menuMusic:.65};
+const isMusic=key=>Object.hasOwn(MUSIC_GAINS,key);
 const rawFiles=new Map(),decodedFiles=new WeakMap();
 const vocalGainCache=new WeakMap();
 const PAIN_TARGET_RMS=10**(-19/20);
@@ -107,26 +109,28 @@ async function decodeSound(context,file){
 
 export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis.localStorage,
   contextFactory=browserContext,
-  bufferLoader=decodeSound,maxVoices=12}={}){
+  bufferLoader=decodeSound,maxVoices=12,musicOffsets=new Map()}={}){
   const settings=loadAudioSettings(storage),voices=new Set(),loops=new Map(),warnings=new Set();
   let context,soundBus,musicBus,roomConvolver,disposed=false,unlocked=false,effectsPaused=false,lastPhase;
-  let musicOffset=0,musicFadeEnd=null;
+  let musicFadeEnd=null;
   const MUSIC_FADE_SECONDS=10;
   const warn=(key,error)=>{if(!warnings.has(key)){warnings.add(key);console.warn('Audio unavailable:',key,error);}};
   // Fetch ahead without requiring a running audio device. Decode only once a
   // context has been unlocked, and reuse it across arena replacements on iOS.
   if(bufferLoader===decodeSound)for(const [key,file] of Object.entries(ASSETS.sounds))fetchSound(file).catch(error=>warn(key,error));
   function stop(voice){
-    if(voice.key==='music'&&voice.startedAt!=null&&voice.source?.buffer?.duration>0){
-      musicOffset=(voice.offset+Math.max(0,context.currentTime-voice.startedAt))%voice.source.buffer.duration;
-    }
+    if(voice.cancelled)return;
     voice.cancelled=true;
+    if(isMusic(voice.key)&&voice.startedAt!=null&&voice.source?.buffer?.duration>0){
+      musicOffsets.set(voice.key,(voice.offset+Math.max(0,context.currentTime-voice.startedAt))%voice.source.buffer.duration);
+    }
     try{voice.source?.stop();}catch{}
     voice.source?.disconnect();voice.gain?.disconnect();voice.roomSend?.disconnect();voices.delete(voice);
     if(voice.slot&&loops.get(voice.slot)===voice)loops.delete(voice.slot);
   }
   function stopAll(){for(const voice of [...voices])stop(voice);}
   function gainFor(key,buffer){
+    if(isMusic(key))return MUSIC_GAINS[key];
     if(key==='step')return .7;
     if(key==='drag')return 1;
     if(key==='crawl')return .55;
@@ -138,24 +142,27 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
   function play(key,{patient,origin=state.robots?.[patient],slot,priority=2,delaySec=0}={}){
     if(disposed||state.appInactive||!unlocked||!context||context.state!=='running'||!ASSETS.sounds[key]||warnings.has(key))return;
     if(slot&&loops.has(slot))return;
-    if((key!=='music'&&settings.sounds===0)||(key==='music'&&settings.music===0))return;
-    const initialDistanceGain=slot?null:distanceGain(state,origin);
+    const music=isMusic(key);
+    if(settings[music?'music':'sounds']===0)return;
+    const initialDistanceGain=music?1:slot?null:distanceGain(state,origin);
     if(initialDistanceGain===0)return;
-    const effects=[...voices].filter(v=>v.key!=='music');
-    if(key!=='music'&&effects.length>=maxVoices){
-      const replace=effects.find(v=>!v.slot&&v.priority<priority);
-      if(replace)stop(replace);else return;
+    if(!music){
+      const effects=[...voices].filter(v=>!isMusic(v.key));
+      if(effects.length>=maxVoices){
+        const replace=effects.find(v=>!v.slot&&v.priority<priority);
+        if(replace)stop(replace);else return;
+      }
     }
     const voice={key,slot,origin,priority,cancelled:false};voices.add(voice);if(slot)loops.set(slot,voice);
     bufferLoader(context,ASSETS.sounds[key]).then(buffer=>{
       if(disposed||voice.cancelled)return;
       const source=context.createBufferSource(),gain=context.createGain();voice.source=source;voice.gain=gain;
       source.buffer=buffer;source.loop=Boolean(slot);
-      source.playbackRate.value=key==='music'||key==='victory'?1:playbackRate(patient,slot?0:(Math.random()-.5)*.4);
+      source.playbackRate.value=music||key==='victory'?1:playbackRate(patient,slot?0:(Math.random()-.5)*.4);
       voice.baseGain=gainFor(key,buffer);
       voice.targetGain=voice.baseGain*(initialDistanceGain??distanceGain(state,origin));
       gain.gain.value=voice.targetGain;source.connect(gain);
-      gain.connect(key==='music'?musicBus:soundBus);
+      gain.connect(music?musicBus:soundBus);
       const wet=wetFor(key);
       if(roomConvolver&&wet>0){
         const send=context.createGain();
@@ -163,8 +170,8 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
         gain.connect(send);send.connect(roomConvolver);voice.roomSend=send;
       }
       source.onended=()=>stop(voice);
-      if(key==='music'){
-        voice.offset=buffer.duration>0?musicOffset%buffer.duration:0;
+      if(music){
+        voice.offset=buffer.duration>0?(musicOffsets.get(key)??0)%buffer.duration:0;
         voice.startedAt=context.currentTime;
         source.start(0,voice.offset);
       }else source.start(context.currentTime+Math.max(0,delaySec));
@@ -175,12 +182,13 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     if(state.appInactive){stopAll();musicFadeEnd=null;return;}
     const active=state.startup?.phase==='running'&&!state.combat?.finished;
     const paused=Boolean(state.paused||state.settingsOpen||state.orientationBlocked);
-    if(lastPhase==='running'&&state.startup?.phase!=='running')for(const voice of [...voices])if(voice.key!=='music')stop(voice);
+    if(lastPhase==='running'&&state.startup?.phase!=='running')for(const voice of [...voices])if(!isMusic(voice.key))stop(voice);
     lastPhase=state.startup?.phase;
-    if(paused&&!effectsPaused)for(const v of [...voices])if(v.key!=='music')stop(v);
+    if(paused&&!effectsPaused)for(const v of [...voices])if(!isMusic(v.key))stop(v);
     effectsPaused=paused;
-    const music=active&&settings.music>0;
-    if(music){
+    if(active&&settings.music>0){
+      const menuVoice=loops.get('menuMusic');
+      if(menuVoice)stop(menuVoice);
       if(musicFadeEnd!==null){
         // A new round never inherits a half-faded voice: resume from its current position.
         if(loops.has('music'))stop(loops.get('music'));
@@ -200,6 +208,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
         }else if(context.currentTime>=musicFadeEnd){stop(voice);musicFadeEnd=null;}
       }else{stop(voice);musicFadeEnd=null;}
     }else musicFadeEnd=null;
+    if(!active)play('menuMusic',{slot:'menuMusic'});
     const movementLoops=new Set();
     if(active&&!paused&&settings.sounds>0)for(const robot of state.robots??[]){
       if(robot.visible&&robot.mobile&&state.combat.unarmedDeadline?.[robot.id]!=null){
@@ -211,7 +220,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       }
     }
     for(const [slot,voice] of loops){
-      if(slot==='music')continue;
+      if(isMusic(voice.key))continue;
       if(!movementLoops.has(slot)){stop(voice);continue;}
       if(!voice.gain)continue;
       const targetGain=voice.baseGain*distanceGain(state,voice.origin);
@@ -284,7 +293,7 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
   function setVolume(channel,value){
     if(!(channel in settings))return;
     settings[channel]=clamp(value);applyVolumes();
-    if(settings[channel]===0)for(const voice of [...voices])if((voice.key==='music')===(channel==='music'))stop(voice);
+    if(settings[channel]===0)for(const voice of [...voices])if(isMusic(voice.key)===(channel==='music'))stop(voice);
     if(channel==='music'&&settings.music===0)musicFadeEnd=null;
     try{storage?.setItem(STORAGE,JSON.stringify(settings));}catch{}
     updateControls();sync();

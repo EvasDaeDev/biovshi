@@ -15,6 +15,12 @@
 - Лицензия записи: [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
 - При использовании отредактированной записи: сокращение длительности, изменение громкости и зацикливание для фоновой музыки игры.
 
+**Long Note Three**
+- Композитор: Kevin MacLeod.
+- Источник: https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100424
+- Лицензия записи: [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
+- Версия для игры сокращена до 3:00, зациклена и воспроизводится на пониженной громкости.
+
 Указание авторства распространяется на соответствующую запись; оно не означает, что авторы музыки поддерживают или одобряют игру.
 
 ## Другие звуковые и графические материалы
