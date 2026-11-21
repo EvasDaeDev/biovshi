@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {makeCapsules} from '../src/robot/collision.js';
-import {strikeProgress,struckSegment} from '../src/systems/combat.js';
+import {strikeProgress,struckSegment,queueCombatHit,flushCombatHits} from '../src/systems/combat.js';
 import {CONFIG} from '../src/config.js';
 import {ctx} from '../src/game/state.js';
 
@@ -114,4 +114,41 @@ test('both simultaneous strikes contribute distinct attack capsules',()=>{
   assert.deepEqual(arm.b,pose.tip);
   assert.deepEqual(leg.b,legPose.tip);
   assert.deepEqual(leg.a,legPose.joint);
+});
+
+test('reciprocal lethal impacts both commit after the contact snapshot',()=>{
+  const alive=[true,true],damageLog=[],callbacks=[];
+  const fighters=[0,1].map(id=>({id,damage(segment,attacker,amount,options){
+    if(!alive[id]&&!options?.allowIncapacitated)return false;
+    damageLog.push({victim:id,attacker,segment,amount});
+    alive[id]=false;
+    return true;
+  }}));
+  ctx.combat={hitBatch:[]};
+  queueCombatHit(fighters[0],fighters[1],'head',2,applied=>callbacks.push([0,applied]));
+  queueCombatHit(fighters[1],fighters[0],'head',2,applied=>callbacks.push([1,applied]));
+  assert.deepEqual(alive,[true,true],'no lethal damage before commit');
+  flushCombatHits();
+  assert.deepEqual(alive,[false,false],'both fighters take their pre-existing strikes');
+  assert.deepEqual(damageLog.map(hit=>hit.victim),[1,0]);
+  assert.deepEqual(callbacks,[[0,true],[1,true]]);
+  assert.equal(ctx.combat.hitBatch,null);
+});
+
+test('mixed boss and player hits share the same deferred damage batch',()=>{
+  const applied=[];
+  const boss={id:1},player={id:0};
+  const target=(id)=>({id,damage(segment,from,amount,options){
+    applied.push({id,segment,from,amount,allowIncapacitated:options?.allowIncapacitated});
+    return true;
+  }});
+  ctx.combat={hitBatch:[]};
+  queueCombatHit(player,target(1),'arm-1-lower',1,()=>{});
+  queueCombatHit(boss,target(0),'head',2,()=>{});
+  assert.equal(applied.length,0,'the boss must not apply damage early');
+  flushCombatHits();
+  assert.deepEqual(applied,[
+    {id:1,segment:'arm-1-lower',from:0,amount:1,allowIncapacitated:true},
+    {id:0,segment:'head',from:1,amount:2,allowIncapacitated:true}
+  ]);
 });
