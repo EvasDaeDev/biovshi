@@ -26,11 +26,16 @@ function strikeProgress(p) {
     wind: smooth(age / wind),
     phase: 'windup'
   };
-  if (age < wind + thrust) return {
-    reach: smooth((age - wind) / thrust),
-    wind: 1,
-    phase: 'thrust'
-  };
+  if (age < wind + thrust) {
+    const extension=smooth((age - wind) / thrust);
+    return {
+      reach: extension,
+      // Release the rearward windup continuously during the forward thrust.
+      // Keeping wind=1 until impact caused a 5 cm arm / 3 cm head snap.
+      wind: 1-extension,
+      phase: 'thrust'
+    };
+  }
   if (age < wind + thrust + recover) return {
     reach: 1 - smooth((age - wind - thrust) / recover),
     wind: 0,
