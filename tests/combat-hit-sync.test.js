@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {makeCapsules} from '../src/robot/collision.js';
-import {strikeProgress} from '../src/systems/combat.js';
+import {strikeProgress,struckSegment} from '../src/systems/combat.js';
 import {CONFIG} from '../src/config.js';
 import {ctx} from '../src/game/state.js';
 
@@ -73,4 +73,45 @@ test('windup releases smoothly and reaches full extension at the impact boundary
   assert.ok(Math.abs(before.reach-after.reach)<1e-6,'no sudden reach extension at impact');
   assert.equal(after.wind,0);
   assert.equal(after.reach,1);
+});
+
+test('collision detection sees the visually extended enemy arm during a counterattack',()=>{
+  const {robot}=fixture();
+  const victim={
+    capsules:makeCapsules(robot),
+    center:{x:18,y:10},
+    isDamageable:key=>key==='arm-1-lower'
+  };
+  const pending={source:'arm-1-lower',started:0,
+    aim:{x:30,y:10},timing:CONFIG.combat};
+  ctx.game.time=CONFIG.combat.windupSec+CONFIG.combat.thrustSec;
+  ctx.obstacles=[];
+  const attacker={
+    center:{x:0,y:10},
+    attackPose:p=>({
+      kind:'arm',
+      tip:{x:p.started===pending.started?30:0,y:10}
+    })
+  };
+  assert.equal(struckSegment(attacker,victim,pending),'arm-1-lower');
+});
+
+test('both simultaneous strikes contribute distinct attack capsules',()=>{
+  const {robot,limb,pose}=fixture();
+  const second={kind:'leg',side:-1,key:'leg--1',massScale:1};
+  const legPose={kind:'leg',limb:second,
+    shoulder:{x:0,y:5},joint:{x:8,y:7},
+    tip:{x:22,y:9},complete:true};
+  robot.legs=[second];
+  robot.origin=l=>l===second?legPose.shoulder:{x:0,y:0};
+  robot.attackPose=p=>p.source==='leg--1-lower'?legPose:pose;
+  ctx.combat.pending[0].secondary={
+    source:'leg--1-lower',started:0,aim:{x:22,y:9}
+  };
+  const capsules=makeCapsules(robot);
+  const arm=capsules.find(c=>c.segment==='arm-1-lower'&&c.a.x!==c.b.x);
+  const leg=capsules.find(c=>c.segment==='leg--1-lower'&&c.a.x!==c.b.x);
+  assert.deepEqual(arm.b,pose.tip);
+  assert.deepEqual(leg.b,legPose.tip);
+  assert.deepEqual(leg.a,legPose.joint);
 });
