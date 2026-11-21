@@ -6,7 +6,7 @@ import {wrap} from '../utils/math.js';
 import {note} from '../game/events.js';
 import {activeOpponents,fighterIntent} from '../systems/ai.js';
 import {sightClear} from '../systems/collision.js';
-import {strikeCandidates,struckSegment,compareStrikeCandidates,prioritizeAdditionalArm,isAdditionalAttackArm} from '../systems/combat.js';
+import {strikeCandidates,struckSegment,compareStrikeCandidates,prioritizeAdditionalArm,isAdditionalAttackArm,queueCombatHit} from '../systems/combat.js';
 import {pendingStrikes,setPendingStrikes} from '../systems/strikes.js';
 import {BOSS_CONFIG} from './config.js';
 import {sweepPathClear,sweepContact,chargePlan,bossDamage,poseClear,poseAt} from './attacks.js';
@@ -44,13 +44,18 @@ function wideCandidate(robot,target,timing,exclude){
 }
 function applyHit(robot,victim,p,segment){
  p.resolved=true;const damage=bossDamage(random(),patientCombatStats(robot.id,robot).effective[1]);
- if(!victim.damage(segment,robot.id,damage)){note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});return;}
- if(victim.mobile)victim.reactToHit(robot,segment);
- ctx.combat.hits++;ctx.combat.fighterHits[robot.id]++;ctx.combat.fighterTaken[victim.id]++;ctx.combat.lastHitTime=ctx.game.time;
- ctx.agentAI[robot.id].lastHitAt=ctx.game.time;ctx.agentAI[victim.id].lastHitAt=ctx.game.time;
- recordBossTacticalStrike(bossOpponentMemory(robot.body.behavior.state,victim.id),robot.attackSources.find(s=>s.key===p.source),true,ctx.game.time);
- note('combat-strike',{from:robot.id,to:victim.id,source:p.source,segment,bossStyle:p.style??'jab'});
+ // Boss jabs and sweeps share the same physical-tick damage commit as ordinary
+ // strikes. Their hit decisions are made before any same-tick incapacitation.
+ queueCombatHit(robot,victim,segment,damage,applied=>{
+  if(!applied){note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});return;}
+  if(victim.mobile)victim.reactToHit(robot,segment);
+  ctx.combat.hits++;ctx.combat.fighterHits[robot.id]++;ctx.combat.fighterTaken[victim.id]++;ctx.combat.lastHitTime=ctx.game.time;
+  ctx.agentAI[robot.id].lastHitAt=ctx.game.time;ctx.agentAI[victim.id].lastHitAt=ctx.game.time;
+  recordBossTacticalStrike(bossOpponentMemory(robot.body.behavior.state,victim.id),robot.attackSources.find(s=>s.key===p.source),true,ctx.game.time);
+  note('combat-strike',{from:robot.id,to:victim.id,source:p.source,segment,bossStyle:p.style??'jab'});
+ });
 }
+
 export function createBossBehavior(){
  const state={phase:1,cycles:0,lastAttackSource:null,followup:null,charge:null,quickStrike:null,chargeOutcome:null,chargeHistory:[],tacticsByTarget:{},nextChargeAt:6,lastSeen:null,lastSeenAt:-Infinity,status:''};
  const hold=(robot,point,mode='атакует')=>({goal:{x:robot.x,y:robot.y},speed:0,mode,lookPoint:point??null,brake:true});
