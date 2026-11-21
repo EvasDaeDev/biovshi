@@ -72,3 +72,16 @@ p,ol { margin: 0; font-size: 13px; color: var(--muted); }
 .patient-mannequin { color:#f2d67b; opacity:.68; pointer-events:none; }
 .patient-mannequin line { stroke:currentColor; stroke-linecap:round; }
 .patient-mannequin circle { fill:currentColor; }
+
+.transform-gizmo .gizmo-ring, .transform-gizmo .gizmo-axis, .transform-gizmo .gizmo-center, .transform-gizmo .gizmo-scale {
+  vector-effect:non-scaling-stroke;
+}
+.gizmo-ring { fill:none; stroke:#b8e6fa; stroke-width:1.5; cursor:grab; }
+.gizmo-ring-hit { fill:none; stroke:transparent; stroke-width:13px; vector-effect:non-scaling-stroke; pointer-events:stroke; cursor:grab; }
+.gizmo-axis { stroke-width:2px; pointer-events:none; }
+.gizmo-x { fill:#ff9c8a; stroke:#ff9c8a; cursor:ew-resize; }
+.gizmo-y { fill:#b7eb9d; stroke:#b7eb9d; cursor:ns-resize; }
+.gizmo-center,.gizmo-scale { fill:#d6eef7; stroke:#14282d; stroke-width:1.5; cursor:move; }
+.gizmo-scale { cursor:nwse-resize; }
+.gizmo-editing .gizmo-center { fill:#ffdc89; stroke:#734c20; }
+.gizmo-label { fill:#e7f3f8; font-weight:700; text-anchor:middle; pointer-events:none; }

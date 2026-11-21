@@ -3,8 +3,10 @@
 import {TOWER_MUTATION_IDS,TOWER_MUTATIONS,rollTowerBossRarity} from './mutations.js';
 import {towerUpgradeApplies} from './upgrade-appearance.js';
 import {towerPatientAnatomy} from './anatomy.js';
+import {bossRepeatDropChance} from './artifacts.js';
 
 export const TOWER_SECOND_SEGMENT_CHANCE=.35;
+export const towerSegmentDropChance=previousWins=>Math.max(.45,bossRepeatDropChance(previousWins));
 export const TOWER_SEGMENT_INSTALL_PRICE=75;
 export const TOWER_SEGMENT_SELL_BASE=50;
 export const towerSegmentSellPrice=rarity=>Math.round(TOWER_SEGMENT_SELL_BASE*(1+.12*rarity));
@@ -34,7 +36,7 @@ export function towerSegmentStacks(run){
 export function awardTowerSegments(run,clearedFloor,random=Math.random,dropChance=1,previousBossWins=dropChance<1?1:0){
  normalizeTowerSegmentInventory(run);
  // On repeats the chance to receive a 1-2 segment batch decreases by
- // 30% of its CURRENT value. The first boss victory is guaranteed.
+ // 30% of its current value, with a 45% floor. The first victory is guaranteed.
  // A missed roll grants no segments and clears the latest reward marker.
  if(dropChance<1&&random()>=dropChance){
   run.lastBossSegments=[];

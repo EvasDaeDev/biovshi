@@ -1,6 +1,6 @@
 import {
  closePolygon,convexParts,fitsBoundary,locationBoundary,locationDimensions,locationPassages,mirrorModes,mirroredObjects,
- parseLocation,polygonKey,rotatePolygon,roundPoints,validLocationId,wallPoints,
+ parseLocation,polygonCenter,polygonKey,rotatePolygon,roundPoints,validLocationId,wallPoints,
 } from '../src/game/location-geometry.js';
 import {neutralCapsules} from '../src/robot/neutral-pose.js';
 
@@ -9,9 +9,10 @@ const svg=$('blueprint'),drawing=$('drawing');
 const buttons=[...document.querySelectorAll('[data-tool]')];
 const draft=()=>({version:1,id:'new-arena',name:'Новая арена',size:700,capacity:6,minPassage:120,cornerCut:25,objects:[]});
 let location=draft(),history=[],tool='select',selected=null,gesture=null,checked=null,catalogRequest=0;
-let outline=[],outlineTip=null,selectedSpawn=null,mannequin=null;
+let outline=[],outlineTip=null,selectedSpawn=null,mannequin=null,editPivot=false;
 const patientOutline=neutralCapsules({x:0,y:0,angle:0});
 const rotationStep=5;
+const selectionHelp='Выделите объект. Кольцо поворачивает, стрелки перемещают, квадрат меняет масштаб. Delete удаляет выделенное.';
 const modes=()=>mirrorModes($('mirror-x').checked,$('mirror-y').checked);
 const number=id=>$(id).valueAsNumber;
 function message(text='',error=false){
@@ -57,6 +58,25 @@ function drawMannequin(){
   else svgElement('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,'stroke-width':2*r},group);
  }
 }
+const objectPivot=object=>object.pivot??polygonCenter(object.points);
+function drawGizmo(object){
+ const pivot=objectPivot(object);
+ const matrix=svg.getScreenCTM();
+ const unit=1/(Math.hypot(matrix?.a??1,matrix?.b??0)||1),radius=42*unit;
+ const group=svgElement('g',{class:'transform-gizmo'+(editPivot?' gizmo-editing':''),transform:'translate('+pivot.join(' ')+')'});
+ if(!editPivot){
+  svgElement('circle',{class:'gizmo-ring',r:radius,'pointer-events':'none'},group);
+  svgElement('circle',{class:'gizmo-ring-hit',r:radius,'data-transform':'rotate'},group);
+  const stem=33*unit,tip=53*unit,half=5*unit;
+  svgElement('line',{class:'gizmo-axis gizmo-x',x1:0,y1:0,x2:stem,y2:0},group);
+  svgElement('polygon',{class:'gizmo-x',points:`${stem},${-half} ${tip},0 ${stem},${half}`,'data-transform':'x'},group);
+  svgElement('line',{class:'gizmo-axis gizmo-y',x1:0,y1:0,x2:0,y2:stem},group);
+  svgElement('polygon',{class:'gizmo-y',points:`${-half},${stem} 0,${tip} ${half},${stem}`,'data-transform':'y'},group);
+  svgElement('rect',{class:'gizmo-scale',x:-40*unit,y:-40*unit,width:10*unit,height:10*unit,'data-transform':'scale'},group);
+ }
+ svgElement('circle',{class:'gizmo-center',r:6*unit,'data-transform':editPivot?'pivot':'move'},group);
+ if(gesture?.handle==='rotate')svgElement('text',{class:'gizmo-label',x:0,y:-55*unit,'font-size':13*unit},group).textContent=(gesture.degrees??0)+'°';
+}
 function render(){
  const {width,height}=locationDimensions(location),{objects}=location,margin=Math.max(12,Math.max(width,height)*.035);
  svg.setAttribute('viewBox',[-margin,-margin,width+2*margin,height+2*margin].join(' '));
@@ -82,6 +102,11 @@ function render(){
  if(player)drawSpawn(player,'player',0);
  opponents.forEach((point,index)=>drawSpawn(point,'opponent',index));
  drawMannequin();
+ if(picked&&tool==='select')drawGizmo(gesture?.object&&gesture.next?gesture.next:picked);
+ $('edit-pivot').disabled=tool!=='select'||!picked;
+ $('edit-pivot').setAttribute('aria-pressed',String(editPivot&&tool==='select'&&Boolean(picked)));
+ if(tool==='select')$('tool-help').textContent=editPivot&&picked?'Перетащите золотой пивот на новое место.':selectionHelp;
+ $('reset-pivot').disabled=!picked?.pivot;
  $('spawn-count').textContent=(player?'Игрок задан':'Игрок авто')+' · '+opponents.length+' / 9';
  $('clear-mannequin').disabled=!mannequin;
  const canRotate=tool==='mannequin'?Boolean(mannequin):Boolean(picked);
@@ -115,6 +140,7 @@ function setLocation(next){
  location=next;
  selected=null;
  selectedSpawn=null;
+ editPivot=false;
  mannequin=null;
  updateFields();
  invalidate();
@@ -125,12 +151,13 @@ function setTool(next){
  cancelGesture();
  clearOutline();
  tool=next;
+ editPivot=false;
  if(next==='mannequin'){selected=null;selectedSpawn=null;}
  svg.dataset.tool=tool;
  $('close-polygon').hidden=tool!=='polygon';
  for(const button of buttons)button.setAttribute('aria-pressed',String(button.dataset.tool===tool));
  $('tool-help').textContent={
-  select:'Перетащите объект или точку старта. Delete удаляет выделенное.',
+  select:selectionHelp,
   wall:'Протяните от начала стены до конца.',
   obstacle:'Протяните между углами препятствия.',
   circle:'Потяните от центра до края круга, чтобы задать радиус.',
@@ -177,7 +204,8 @@ for(const field of ['width','height'])$(field).addEventListener('change',()=>{
   objects:location.objects.map(o=>{
    const n=o.points.length;
    const [cx,cy]=o.points.reduce(([u,v],[x,y])=>[u+x/n,v+y/n],[0,0]);
-   return {...o,points:o.points.map(([x,y])=>[cx*sx+(x-cx)*uniform,cy*sy+(y-cy)*uniform])};
+   const transform=([x,y])=>[cx*sx+(x-cx)*uniform,cy*sy+(y-cy)*uniform];
+   return {...o,points:o.points.map(transform),...(o.pivot?{pivot:transform(o.pivot)}:{})};
   })};
  delete next.size;
  if(next.boundary)next.boundary=points(next.boundary);
@@ -195,10 +223,11 @@ for(const field of ['width','height'])$(field).addEventListener('change',()=>{
  setLocation(next);
 });
 
-function coordinate(event){
+function coordinate(event,snapped=true){
  const matrix=svg.getScreenCTM();
  if(!matrix)return null;
  const p=new DOMPoint(event.clientX,event.clientY).matrixTransform(matrix.inverse());
+ if(!snapped)return [p.x,p.y];
  const step=Number($('snap').value);
  const {width,height}=locationDimensions(location);
  const snap=(value,max)=>Math.max(0,Math.min(max,Math.round(value/step)*step));
@@ -225,10 +254,28 @@ function placement(start,end){
  if(left===right||top===bottom)return null;
  return {kind:'obstacle',points:[[left,top],[right,top],[right,bottom],[left,bottom]]};
 }
-function movedSelection(start,end,object){
- const dx=end[0]-start[0],dy=end[1]-start[1];
- if(!dx&&!dy)return null;
- return {...object,points:object.points.map(([x,y])=>[x+dx,y+dy])};
+function transformedObject(object,transform){
+ return {...object,points:object.points.map(transform),...(object.pivot?{pivot:transform(object.pivot)}:{})};
+}
+function movedSelection(start,end,object,axis){
+ const dx=axis==='y'?0:end[0]-start[0],dy=axis==='x'?0:end[1]-start[1];
+ return dx||dy?transformedObject(object,([x,y])=>[x+dx,y+dy]):null;
+}
+function transformedSelection(point){
+ const {start,object,handle}=gesture;
+ if(handle==='pivot')return point.some((value,i)=>value!==start[i])?{...object,pivot:point}:null;
+ if(handle!=='rotate'&&handle!=='scale')return movedSelection(start,point,object,handle);
+ const pivot=objectPivot(object);
+ const distance=p=>Math.hypot(p[0]-pivot[0],p[1]-pivot[1]);
+ if(handle==='scale'){
+  const ratio=Math.max(.1,Math.min(10,distance(point)/(distance(start)||1)));
+  return Math.abs(ratio-1)>1e-6?{...object,points:object.points.map(([x,y])=>[pivot[0]+(x-pivot[0])*ratio,pivot[1]+(y-pivot[1])*ratio])}:null;
+ }
+ const angle=p=>Math.atan2(p[1]-pivot[1],p[0]-pivot[0]);
+ const delta=(angle(point)-angle(start))*180/Math.PI;
+ const degrees=Math.round((((delta+540)%360)-180)/rotationStep)*rotationStep;
+ gesture.degrees=degrees;
+ return degrees?{...object,points:rotatePolygon(object.points,degrees,pivot)}:null;
 }
 function saveSpawn(role,point,index){
  const {player,opponents=[]}=location.towerSpawns??{};
@@ -250,15 +297,22 @@ function rotateSelection(degrees){
   mannequin.angle=(mannequin.angle+degrees)%360;
  }else if(selected!==null){
   const object=location.objects[selected];
-  try{commitObject({...object,points:rotatePolygon(object.points,degrees)},object);}
+  try{commitObject({...object,points:rotatePolygon(object.points,degrees,objectPivot(object))},object);}
   catch(error){message(error.message,true);}
  }
  render();
 }
 svg.addEventListener('pointerdown',event=>{
  if(event.button!==0||gesture)return;
- const start=coordinate(event);
+ const handle=tool==='select'?event.target.closest('[data-transform]')?.dataset.transform:null;
+ const start=coordinate(event,handle!=='rotate'&&handle!=='scale');
  if(!start)return;
+ if(handle&&selected!==null){
+  svg.focus({preventScroll:true});
+  svg.setPointerCapture(event.pointerId);
+  gesture={pointer:event.pointerId,start,current:start,handle,object:location.objects[selected]};
+  return;
+ }
  if(tool==='mannequin'){
   mannequin={point:start,angle:mannequin?.angle??0};
   svg.focus({preventScroll:true});
@@ -285,7 +339,9 @@ svg.addEventListener('pointerdown',event=>{
  if(tool==='select'){
   selectedSpawn=null;
   const index=event.target.closest('[data-index]')?.dataset.index;
-  selected=index===undefined?null:Number(index);
+  const next=index===undefined?null:Number(index);
+  if(next!==selected)editPivot=false;
+  selected=next;
   render();
   if(selected===null)return;
  }
@@ -295,16 +351,16 @@ svg.addEventListener('pointerdown',event=>{
 function updateGesture(point){
  gesture.current=point;
  const {start,object}=gesture;
- const next=object?movedSelection(start,point,object):placement(start,point);
+ const next=object?transformedSelection(point):placement(start,point);
  gesture.next=next;
  gesture.preview=next?mirroredObjects(next,location,modes()):null;
  return next;
 }
 svg.addEventListener('pointermove',event=>{
- const point=coordinate(event);
+ const point=coordinate(event,gesture?.handle!=='rotate'&&gesture?.handle!=='scale');
  if(!point)return;
  const radius=tool==='circle'&&gesture?Math.round(Math.hypot(point[0]-gesture.start[0],point[1]-gesture.start[1])):null;
- $('cursor').textContent='X '+point[0]+' · Y '+point[1]+' см'+(radius===null?'':' · R '+radius+' см');
+ $('cursor').textContent='X '+Math.round(point[0])+' · Y '+Math.round(point[1])+' см'+(radius===null?'':' · R '+radius+' см');
  if(tool==='polygon'&&outline.length){outlineTip=point;render();return;}
  if(gesture?.pointer!==event.pointerId)return;
  if(gesture.spawn||gesture.mannequin){
@@ -323,6 +379,9 @@ function cancelGesture(){
  if(svg.hasPointerCapture(pointer))svg.releasePointerCapture(pointer);
 }
 function commitObject(next,original=null,preview=mirroredObjects(next,location,modes())){
+ const {width,height}=locationDimensions(location);
+ if(preview.some(o=>o.pivot&&(o.pivot[0]<0||o.pivot[0]>width||o.pivot[1]<0||o.pivot[1]>height)))
+  throw Error('Пивот должен находиться в пределах плана.');
  if(preview.some(o=>!fitsBoundary(o.points,location)))throw Error('Объект или его отражение выходит за внешний контур.');
  const base=original?keepObjects(location.objects,original):location.objects;
  const objects=mergeObjects(base,preview);
@@ -347,7 +406,7 @@ function finishPolygon(){
 svg.addEventListener('pointerup',event=>{
  if(gesture?.pointer!==event.pointerId)return;
  try{
-  const point=coordinate(event);
+  const point=coordinate(event,gesture.handle!=='rotate'&&gesture.handle!=='scale');
   if(!point)return;
   if(gesture.spawn){
    if(point.some((value,i)=>value!==gesture.start[i]))saveSpawn(gesture.spawn.role,point,gesture.spawn.index);
@@ -457,6 +516,15 @@ $('file').onchange=event=>{importFile(event.target.files[0]);event.target.value=
 $('export').onclick=exportFile;
 $('check').onclick=check;
 $('delete').onclick=removeSelected;
+$('edit-pivot').onclick=()=>{editPivot=!editPivot;render();};
+$('reset-pivot').onclick=()=>{
+ const object=location.objects[selected];
+ if(!object?.pivot)return;
+ const {pivot,...reset}=object;
+ try{commitObject(reset,object);editPivot=false;}
+ catch(error){message(error.message,true);}
+ render();
+};
 $('rotate-left').onclick=()=>rotateSelection(-rotationStep);
 $('rotate-right').onclick=()=>rotateSelection(rotationStep);
 $('clear-mannequin').onclick=()=>{mannequin=null;render();};
@@ -481,7 +549,7 @@ document.addEventListener('keydown',event=>{
  }
  if(event.key==='Enter'&&(event.target===document.body||event.target===svg)&&tool==='polygon'&&outline.length){event.preventDefault();finishPolygon();}
  if(event.key.toLowerCase()==='z'&&(event.ctrlKey||event.metaKey)){event.preventDefault();undo();}
- if(event.key==='Escape'){cancelGesture();clearOutline();selected=null;selectedSpawn=null;render();}
+ if(event.key==='Escape'){cancelGesture();clearOutline();editPivot=false;selected=null;selectedSpawn=null;render();}
 });
 updateFields();
 setTool('select');

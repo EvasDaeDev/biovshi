@@ -1,5 +1,5 @@
 import {bakeRoundFloor} from '../render/floor-history.js';
-import {artifactDropChance,bossRepeatDropChance,ARTIFACT_COMPLETION_REWARD,ARTIFACT_PIECE_COUNT} from './artifacts.js';
+import {artifactDropChance,ARTIFACT_COMPLETION_REWARD,ARTIFACT_PIECE_COUNT} from './artifacts.js';
 import {bossName} from '../boss/names.js';
 import {setPaused} from '../ui/controls.js';
 import {hasBoss,isBossFloor} from '../boss/config.js';
@@ -10,7 +10,7 @@ import {towerMutationSnapshot,towerAttackInterval,TOWER_MUTATIONS,TOWER_MUTATION
  equipTowerMutation,removeTowerMutation,towerInstalledItems,towerMutationInstallPrice,TOWER_MUTATION_LIMIT,TOWER_RARITIES,towerMutationRarity} from './mutations.js';
 import {towerCycleWins,towerCycleInfo,towerCycleTitle,towerFloorLabel} from './cycles.js';
 import {TOWER_MUTATION_ATLAS,towerUpgradeApplies,towerRaritySvgFilter} from './upgrade-appearance.js';
-import {towerSegmentStacks,towerInstalledSegments,towerUnreadSegments,markTowerSegmentSeen,towerSegmentSellPrice,TOWER_SEGMENT_INSTALL_PRICE,canInstallTowerSegment,canCreditTowerSegmentSale,equipTowerSegment,removeTowerSegment,sellTowerSegment} from './segments.js';
+import {towerSegmentDropChance,towerSegmentStacks,towerInstalledSegments,towerUnreadSegments,markTowerSegmentSeen,towerSegmentSellPrice,TOWER_SEGMENT_INSTALL_PRICE,canInstallTowerSegment,canCreditTowerSegmentSale,equipTowerSegment,removeTowerSegment,sellTowerSegment} from './segments.js';
 import {ROBOT_PARTS} from '../render/robot-skin.js';
 import {TOWER_SURGERY_IDS,TOWER_SURGERY_OPERATIONS,TOWER_SURGERY_MIN_LEVEL,towerSurgeryCapacity,towerSurgeryPrice,towerSurgeryReplacePrice,towerSurgeryAvailableSites,towerSurgerySiteLabel} from './surgery.js';
 import {towerAvailableDonors} from './donors.js';
@@ -815,7 +815,7 @@ export function settleTower(winner){
   // a death is not a previous victory and must never reduce either chance.
   const bossLoot=won&&hasBoss(t)?{
    previousWins:t.artifacts.bossWins[t.level]??0,
-   segmentChance:t.segmentRewardsEnabled?bossRepeatDropChance(t.artifacts.bossWins[t.level]??0):null,
+   segmentChance:t.segmentRewardsEnabled?towerSegmentDropChance(t.artifacts.bossWins[t.level]??0):null,
    fragmentChance:artifactDropChance(t.artifacts,t.level)
   }:null;
   const priorPieces=[...t.artifacts.pieces];

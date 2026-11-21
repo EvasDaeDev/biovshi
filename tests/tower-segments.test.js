@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {newTower,completeTower} from '../src/tower/model.js';
 import {purchaseInsurance} from '../src/tower/insurance.js';
-import {towerSegmentSellPrice,towerSegmentStacks,awardTowerSegments,
+import {towerSegmentDropChance,towerSegmentSellPrice,towerSegmentStacks,awardTowerSegments,
  equipTowerSegment,removeTowerSegment,sellTowerSegment,validTowerSegmentInventory,
  towerSegmentBonuses,towerUnreadSegments,markTowerSegmentSeen} from '../src/tower/segments.js';
 
@@ -30,7 +30,7 @@ test('second segment drops at 35 percent after winning the segment batch',()=>{
  assert.ok(validTowerSegmentInventory(repeat));
 });
 
-test('a repeat boss segment batch has a 70%, then 49% chance; misses grant nothing',()=>{
+test('repeat boss segment batches drop at 70%, 49%, then at least 45%',()=>{
  const run=newTower();
  const first=awardTowerSegments(run,5,()=>.99,1);
  assert.equal(first.length,2,'first victory still guarantees a 1-2 segment batch');
@@ -42,7 +42,10 @@ test('a repeat boss segment batch has a 70%, then 49% chance; misses grant nothi
  assert.equal(run.segmentInventory.length,2);
  assert.equal(awardTowerSegments(run,5,()=>.5,.49).length,0,'49 percent does not include a 50 percent roll');
  assert.equal(awardTowerSegments(run,5,()=>0,.49).length,1,'successful roll grants a normal segment batch');
- assert.equal(run.segmentInventory.length,3);
+ assert.deepEqual([0,1,2,3,8,100].map(towerSegmentDropChance),[1,.7,.7**2,.45,.45,.45]);
+ assert.equal(awardTowerSegments(run,5,()=>.45,towerSegmentDropChance(30),30).length,0);
+ assert.equal(awardTowerSegments(run,5,()=>.449,towerSegmentDropChance(30),30).length,1);
+ assert.equal(run.segmentInventory.length,4);
  assert.ok(validTowerSegmentInventory(run));
 });
 

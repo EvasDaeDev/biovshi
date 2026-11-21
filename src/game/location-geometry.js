@@ -68,7 +68,7 @@ export function locationPassages(location){
  }
  return passages.sort((a,b)=>a.width-b.width);
 }
-export function rotatePolygon(points,degrees){
+export function polygonCenter(points){
  const sides=edges(points);
  let area=0,x=0,y=0;
  for(const [a,b] of sides){
@@ -77,7 +77,9 @@ export function rotatePolygon(points,degrees){
   x+=(a[0]+b[0])*weight;
   y+=(a[1]+b[1])*weight;
  }
- x/=3*area;y/=3*area;
+ return [x/(3*area),y/(3*area)];
+}
+export function rotatePolygon(points,degrees,[x,y]=polygonCenter(points)){
  const angle=degrees*Math.PI/180,c=Math.cos(angle),s=Math.sin(angle);
  return points.map(([px,py])=>[x+(px-x)*c-(py-y)*s,y+(px-x)*s+(py-y)*c]);
 }
@@ -225,7 +227,8 @@ export function parseLocation(raw,{id,spawnMargin=60}={}){
    convexParts(points);
   }
   if(!fitsBoundary(points,location))throw Error('Объект №'+(i+1)+' выходит за границы арены.');
-  return {kind:object.kind,points};
+  const pivot=object.pivot===undefined?null:readPoints([object.pivot],dimensions,1,1)[0];
+  return {kind:object.kind,points,...(pivot?{pivot}:{})};
  });
  const clear=clearanceTest(location,spawnMargin);
  if(raw.spawns!==undefined){
@@ -264,7 +267,8 @@ export function mirroredObjects(object,size,modes){
  for(const [x,y] of modes){
   const points=mirroredPoints(object.points,size,x,y);
   const key=polygonKey(points);
-  if(!variants.has(key))variants.set(key,{kind:object.kind,points});
+  const pivot=object.pivot?mirroredPoints([object.pivot],size,x,y)[0]:null;
+  if(!variants.has(key))variants.set(key,{kind:object.kind,points,...(pivot?{pivot}:{})});
  }
  return [...variants.values()];
 }

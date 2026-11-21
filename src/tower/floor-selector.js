@@ -6,9 +6,9 @@ import {towerEnemyProfile,towerProfileDifference} from './profiles.js';
 import {towerRelationLabel} from './relations.js';
 import {purchaseTowerArenaReroll,towerRerollCandidates,towerRerollPrice} from './economy.js';
 import {towerEnemyCount} from './model.js';
-import {artifactDropChance,bossRepeatDropChance} from './artifacts.js';
+import {artifactDropChance} from './artifacts.js';
 import {towerBossRarityOdds,TOWER_RARITIES} from './mutations.js';
-import {TOWER_SECOND_SEGMENT_CHANCE} from './segments.js';
+import {towerSegmentDropChance,TOWER_SECOND_SEGMENT_CHANCE} from './segments.js';
 import {hasBoss} from '../boss/config.js';
 import {formatChips} from '../ui/currency.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
@@ -20,7 +20,7 @@ function bossDropSummary(run){
  const previousWins=run.artifacts.bossWins[run.level]??0;
  const fragment=artifactDropChance(run.artifacts,run.level);
  const segments=Boolean(run.segmentRewardsEnabled);
- const batch=segments?bossRepeatDropChance(previousWins):1;
+ const batch=segments?towerSegmentDropChance(previousWins):1;
  if(!fragment&&!batch)return null;
 
  const summary=document.createElement('span');summary.className='tower-boss-drop';

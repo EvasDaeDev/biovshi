@@ -1,5 +1,5 @@
 import {newInsurance,validInsurance,purchaseInsurance} from './insurance.js';
-import {awardTowerSegments,normalizeTowerSegmentInventory,validTowerSegmentInventory} from './segments.js';
+import {towerSegmentDropChance,awardTowerSegments,normalizeTowerSegmentInventory,validTowerSegmentInventory} from './segments.js';
 import {validTowerMutationState,grantTowerMutationDraft,normalizeTowerMutationInventory} from './mutations.js';
 import {validTowerSurgeries,validTowerSurgicalStock,normalizeTowerSurgicalStock,purchaseTowerSurgery} from './surgery.js';
 import {normalizeTowerGraftProsthetics} from './anatomy.js';
@@ -9,7 +9,7 @@ import {TEST_BUILD} from '../build-channel.js';
 import {validTowerRerolls} from './economy.js';
 import {isBossFloor,hasBoss} from '../boss/config.js';
 import {ensureBossEncounter,validBossEncounter,bossFloorReward} from '../boss/encounter.js';
-import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,bossRepeatDropChance,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
+import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
 import {BASE_STATS,earnedStats,validStats,normalizeProsthetics} from '../garage/model.js';
 import {towerCycleInfo,towerCycleWins} from './cycles.js';
 export const TOWER_REWARD=10;
@@ -129,7 +129,7 @@ export function completeTower(session,player,won,random=Math.random){
   if(bossWon){
    // Transitional implementation: new segment warehouse is populated while
    // the legacy reward UI remains enabled until its full replacement lands.
-   if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random,bossRepeatDropChance(previousBossWins),previousBossWins);
+   if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random,towerSegmentDropChance(previousBossWins),previousBossWins);
    else grantTowerMutationDraft(t,random,previousBossWins);
   }}
  else {
