@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {makeCapsules} from '../src/robot/collision.js';
+import {strikeProgress} from '../src/systems/combat.js';
+import {CONFIG} from '../src/config.js';
 import {ctx} from '../src/game/state.js';
 
 function fixture(source='arm-1-lower'){
@@ -54,4 +56,21 @@ test('resting limb capsules remain on their own inverse-kinematics pose',()=>{
   const lower=caps.find(c=>c.segment==='arm-1-lower'&&c.a.x!==c.b.x);
   assert.ok(lower);
   assert.deepEqual(lower.b,{x:12,y:0});
+});
+
+test('windup releases smoothly and reaches full extension at the impact boundary',()=>{
+  const timing=CONFIG.combat,wind=timing.windupSec,impact=wind+timing.thrustSec;
+  ctx.game={time:wind};
+  const start=strikeProgress({started:0,timing});
+  assert.equal(start.phase,'thrust');
+  assert.equal(start.wind,1);
+  assert.equal(start.reach,0);
+  ctx.game.time=impact-1e-7;
+  const before=strikeProgress({started:0,timing});
+  ctx.game.time=impact;
+  const after=strikeProgress({started:0,timing});
+  assert.ok(Math.abs(before.wind-after.wind)<1e-6,'no sudden rearward offset at impact');
+  assert.ok(Math.abs(before.reach-after.reach)<1e-6,'no sudden reach extension at impact');
+  assert.equal(after.wind,0);
+  assert.equal(after.reach,1);
 });
