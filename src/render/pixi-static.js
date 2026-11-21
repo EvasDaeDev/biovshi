@@ -1,3 +1,4 @@
+import {arenaRaster} from '../game/arena-dimensions.js';
 import { ctx } from '../game/state.js';
 import { loadTextureImage,releaseTextureImage } from '../assets/preload.js';
 
@@ -16,7 +17,7 @@ const PROPERTIES=['fill','fill-opacity','fill-rule','stroke','stroke-width','str
 export async function staticArenaImage(nodes,{outset=0,night=false,forceVisible=false,pixels=null,exclude=null}={}) {
   const doc=ctx.svg.ownerDocument,win=doc.defaultView;
   const root=doc.createElementNS(ctx.NS,'svg'),defs=doc.createElementNS(ctx.NS,'defs');
-  const {left=0,top=0,size:arenaSize=700}=ctx.arenaDefinition??{};
+  const {left=0,top=0,size:arenaSize=700}=arenaRaster(ctx.arenaDefinition);
   const size=arenaSize+outset*2,x=left-outset,y=top-outset,resolution=pixels?pixels/size:2;
   root.setAttribute('xmlns',ctx.NS);root.setAttribute('width',size*resolution);root.setAttribute('height',size*resolution);
   root.setAttribute('viewBox',`${x} ${y} ${size} ${size}`);

@@ -1,3 +1,4 @@
+import {arenaRaster} from '../game/arena-dimensions.js';
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
 import { el } from './svg.js';
@@ -11,7 +12,7 @@ export async function bakeStaticLighting() {
   if(!group||group.dataset.rasterized==='true')return;
   const source=group.cloneNode(true);
   source.removeAttribute('style');
-  const {left,top,size:arenaSize}=ctx.arenaDefinition;
+  const {left,top,size:arenaSize}=arenaRaster(ctx.arenaDefinition);
   const size=Math.round(arenaSize*CONFIG.light.staticResolution);
   const markup=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="${left} ${top} ${arenaSize} ${arenaSize}"><defs>${ctx.ambientBlur.outerHTML}${ctx.fieldClip.outerHTML}</defs>${source.outerHTML}</svg>`;
   const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(markup);

@@ -22,7 +22,13 @@ export function accessFloorStore(key,value,{indexedDB=globalThis.indexedDB,timeo
       db=request.result;db.onversionchange=()=>db.close();if(done){db.close();return;}
       try{
         tx=db.transaction('floors',value===undefined?'readonly':'readwrite');
-        const store=tx.objectStore('floors'),operation=value===undefined?store.get(key):store.put(value,key);
+        const store=tx.objectStore('floors');
+        const versioned=Number.isSafeInteger(value?.generation);
+        const operation=value===undefined||versioned?store.get(key):store.put(value,key);
+        if(versioned)operation.onsuccess=()=>{
+          // A previous tower generation can still be finishing in another tab.
+          if((operation.result?.generation??-1)<=value.generation)store.put(value,key);
+        };
         tx.oncomplete=()=>finish(null,operation.result);
         tx.onerror=tx.onabort=()=>finish(tx.error??Error('Floor storage failed'));
       }catch(error){finish(error);}

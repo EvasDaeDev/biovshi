@@ -188,8 +188,10 @@ function knockOut(robotState, cause) {
   robotState.api.capsules = robotState.makeCapsules();
   return true;
 }
-export function robotDamage(robotState, key, by, damage=1) {
-  if (!robotState.mobile() || !Number.isFinite(damage) || damage <= 0 || !key || !robotState.isDamageable(key) || !robotState.hp.has(key) || robotState.broken.has(key) || ctx.game.time - (robotState.hitAt.get(key) ?? -99) < CONFIG.combat.damageInvulnerabilitySec) return false;
+export function robotDamage(robotState, key, by, damage=1, options=null) {
+  // A contact from a simultaneous strike batch remains valid even if an
+  // earlier contact in that same batch already incapacitated this robot.
+  if ((!robotState.mobile() && !options?.allowIncapacitated) || !Number.isFinite(damage) || damage <= 0 || !key || !robotState.isDamageable(key) || !robotState.hp.has(key) || robotState.broken.has(key) || ctx.game.time - (robotState.hitAt.get(key) ?? -99) < CONFIG.combat.damageInvulnerabilitySec) return false;
   robotState.lastTowerAttacker=by;
   robotState.hitAt.set(key, ctx.game.time);
   // Only the contacted bone receives a soft visual hit tint. Never mark

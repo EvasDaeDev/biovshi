@@ -1,4 +1,5 @@
 // Neutral patient pose using the combat anatomy and real limb length coefficients.
+import {limbRig,PATIENT_HEAD_OFFSET} from '../robot/body.js';
 import {CONFIG} from '../config.js';
 import {towerPatientAnatomy} from './anatomy.js';
 const scale=CONFIG.robot.scale*3.2;
@@ -11,20 +12,17 @@ export function towerUpgradePose(patient){
  const spine=Array.from({length:count+1},(_,i)=>[290-i*stride,100]);
  const pose={};
  for(let i=0;i<count;i++)pose[`spine-${i}`]=[spine[i],spine[i+1]];
- const neck=add(spine[0],1,0,20*scale);
+ const neck=add(spine[0],1,0,PATIENT_HEAD_OFFSET*scale);
  // The head atlas points forward from its first anchor toward its second.
  // Reversed anchors rotate the face 180 degrees in the surgery preview.
  pose.head=[add(neck,-1,0,10*scale),add(neck,1,0,10*scale)];
  for(const limb of limbs){
   const {kind,side,key}=limb,extra=key.includes('-graft');
-  // Match robot/kinematics.js origin(): shoulders and hips attach at
-  // (3, +/-15) and (-5, +/-12) centimetres, not at the spinal centreline.
-  const spineIndex=limb.anchor===undefined?(kind==='arm'?0:count):
-   Math.min(count,limb.anchor);
-  const root=add(spine[spineIndex],
-   (kind==='arm'?3:-5)*scale,side*(kind==='arm'?15:12)*scale);
-  const upper=(kind==='arm'?27:32)*scale*(limb.lengthScale??1);
-  const lower=(kind==='arm'?29:33)*scale*(limb.lengthScale??1);
+  const spineIndex=limb.anchor===undefined?(kind==='arm'?0:count):Math.min(count,limb.anchor);
+  const rig=limbRig(anatomy,limb),[rootX,rootY]=rig.root;
+  const root=add(spine[spineIndex],rootX,side*rootY,scale);
+  const factor=scale*(limb.lengthScale??1);
+  const [upper,lower]=rig.lengths.map(length=>length*factor);
   const a=extra?(kind==='arm'?.30:-.45):(kind==='arm'?.58:-.75);
   const b=side*Math.sqrt(1-a*a);
   const joint=add(root,a,b,upper);

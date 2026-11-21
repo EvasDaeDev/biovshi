@@ -27,7 +27,7 @@ import {advanceStartup} from '../src/game/session.js';
 import {step} from '../src/game/loop.js';
 import {note} from '../src/game/events.js';
 import {patientGarage,patientSkin,patientCombatStats} from '../src/game/patients.js';
-import {patientName} from '../src/ui/patient.js';
+import {patientName,formatSkillPoints} from '../src/ui/patient.js';
 import {showResults} from '../src/ui/results.js';
 function setup(s,tower,arenaId='ward'){
  const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://tower.test/',pretendToBeVisual:true});
@@ -396,21 +396,32 @@ test('Shelter shows one value when equipped and compares only genuinely changing
 
 test('Shelter artifact tab stays within one popup with patient and compact tiles',()=>{
  const session=betNewSession(['Артефакты внутри'],1000),run=towerFor(session,0);
+ unlockSurgeryForTest(session,run);
  const dom=setup(session,run,'ward');
  try{
   const modal=document.querySelector('#tower-upgrade-window');
   document.querySelector('#tower-upgrade-open').click();
   const popupCount=document.querySelectorAll('#tower-upgrade-window').length;
+  const paper=modal.querySelector('.tower-upgrade-paper');
+  const content=paper.querySelector('.tower-upgrade-content');
+  content.scrollTop=120;
+  modal.querySelector('[data-upgrade-tab="surgery"]').click();
+  assert.equal(modal.querySelector('#tower-upgrade-surgery-page').hidden,false);
+  assert.equal(content.scrollTop,0);
   modal.querySelector('[data-upgrade-tab="artifacts"]').click();
   assert.equal(document.querySelectorAll('#tower-upgrade-window').length,popupCount);
   assert.equal(modal.querySelector('#tower-upgrade-artifacts-page').hidden,false);
   assert.equal(modal.querySelector('.tower-upgrade-table').hidden,false,'patient stays visible on artifacts tab');
   assert.equal(modal.querySelector('#tower-upgrade-stats').hidden,false,'current stats stay visible');
   assert.equal(modal.querySelectorAll('#tower-upgrade-artifacts-page .artifact').length,4);
-  assert.equal(modal.querySelector('.tower-upgrade-paper').classList.contains('is-artifacts'),false,
-    'switching tabs does not replace the sheet layout');
+  assert.equal(modal.querySelector('.tower-upgrade-paper'),paper);
   modal.querySelector('[data-upgrade-tab="mutations"]').click();
   assert.equal(modal.querySelector('#tower-upgrade-artifacts-page').hidden,true);
+  const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
+  const layout=css.match(/#tower-upgrade-window \.tower-upgrade-paper\s*\{([^}]+)\}/)[1];
+  assert.match(layout,/grid-template-rows:auto auto minmax\(0,1fr\) auto/);
+  assert.match(layout,/\n\s+height:\d+px/);
+  assert.match(layout,/max-height:min\(100%,calc\(var\(--game-height,100dvh\)/);
   modal.querySelector('.tower-upgrade-close').click();
  }finally{close(dom);}
 });
@@ -877,6 +888,33 @@ test('Tower preparation uses compact icon-only controls, fixed preview slot and 
  }finally{close(dom);}
 });
 
+test('Tower preparation shows the Shelter totals and updates them while reallocating base points',()=>{
+ const session=betNewSession(['Подготовка'],200),run=towerFor(session,0);
+ run.segmentRewardsEnabled=true;
+ run.prosthetics=['leg-1-lower'];
+ run.segmentInventory=[{id:'seg1',type:'flywheel',site:'arm--1-upper',rarity:0}];
+ run.equippedSegments=['seg1'];run.nextSegmentId=2;
+ const dom=setup(session,run);
+ try{
+  const read=selector=>[...document.querySelectorAll(selector)].map(node=>node.textContent);
+  const totals=()=>read('#tower-stats [data-tower-effective]');
+  const initial=towerMutationSnapshot(run).effective.map(formatSkillPoints);
+  assert.deepEqual(totals(),initial);
+  assert.ok(initial.some(value=>value.includes(',')));
+  document.querySelector('#tower-upgrade-open').click();
+  assert.deepEqual(read('#tower-upgrade-window .tower-stat-before'),initial);
+  document.querySelector('.tower-upgrade-back').click();
+  const speed=document.querySelector('[data-tower-stat="0"]');
+  assert.equal(speed.value,'3');
+  assert.equal(speed.getAttribute('aria-describedby'),'tower-stat-total-0');
+  speed.value='4';speed.dispatchEvent(new Event('change'));
+  assert.deepEqual(run.stats,[3,3,3]);
+  assert.deepEqual(totals(),towerMutationSnapshot({...run,stats:[4,2,3]}).effective.map(formatSkillPoints));
+  document.querySelector('[data-tower-base]').click();
+  assert.deepEqual(totals(),initial);
+ }finally{close(dom);}
+});
+
 test('tower skill transfers remain free on repeated confirmation and reload',()=>{
  const session=betNewSession(['Игрок'],200),run=towerFor(session,0);
  const dom=setup(session,run);
@@ -1243,6 +1281,43 @@ test('Shelter and unviewed segment cards show red badges until the stack is open
   assert.equal(document.querySelector('#tower-upgrade-open .tower-new-dot'),null);
   assert.equal(document.querySelector('.tower-inventory-item[data-mutation-id="seg1"] .tower-new-dot'),null);
   assert.deepEqual(bettingLoad().towers[0].unseenSegmentIds,[]);
+ }finally{close(dom);}
+});
+
+test('Shelter keeps the inventory scroll and keyboard focus when a card is selected',()=>{
+ const session=betNewSession(['Склад'],200),run=towerFor(session,0);
+ run.segmentRewardsEnabled=true;run.preparing=true;
+ run.segmentInventory=Array.from({length:12},(_,i)=>({id:`seg${i+1}`,type:'servo',
+  site:i<6?'arm-1-upper':'arm--1-upper',rarity:i%6}));
+ run.nextSegmentId=13;
+ const dom=setup(session,run);
+ try{
+  document.querySelector('#tower-upgrade-open').click();
+  const selector='#tower-upgrade-window #tower-prep-mutations > .tower-inventory-grid';
+  const grid=document.querySelector(selector);
+  const actions=()=>[...document.querySelectorAll('#tower-prep-mutations .tower-mutation-action-area button')];
+  assert.deepEqual(actions().map(button=>button.disabled),[true,true],'actions are visible before selection');
+  assert.equal(grid.children.length,12);
+  const card=grid.lastElementChild;
+  card.focus();
+  grid.scrollTop=180;
+  card.click();
+  const updated=document.querySelector(selector);
+  assert.equal(updated.scrollTop,180);
+  assert.equal(updated.lastElementChild.getAttribute('aria-pressed'),'true');
+  assert.equal(document.activeElement,updated.lastElementChild);
+  assert.deepEqual(actions().map(button=>button.disabled),[false,false]);
+  assert.equal(actions()[0].parentElement.parentElement,updated.parentElement,'actions are outside the scroll viewport');
+  session.players[0].balance=0;
+  updated.lastElementChild.click();
+  assert.deepEqual(actions().map(button=>button.disabled),[true,false]);
+  run.equippedSegments=['seg12'];
+  document.querySelector(`${selector} [data-mutation-id="seg12"]`).click();
+  assert.deepEqual(actions().map(button=>button.disabled),[false,true]);
+  assert.match(actions()[0].textContent,/СНЯТЬ/);
+  const css=fs.readFileSync(new URL('../styles/ui-redesign.css',import.meta.url),'utf8');
+  assert.match(css,/#tower-prep-mutations > \.tower-inventory-grid\s*\{[^}]*max-height:[^}]*overflow-y:auto/);
+  assert.match(css,/\.tower-upgrade-content:has\(> #tower-upgrade-mutation-page:not\(\[hidden\]\)\)\s*\{\s*overflow:hidden/);
  }finally{close(dom);}
 });
 

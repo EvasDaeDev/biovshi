@@ -1,4 +1,4 @@
-import {limbKey} from './body.js';
+import {limbKey,limbRig,PATIENT_HEAD_OFFSET} from './body.js';
 import { clamp, wrap } from '../utils/math.js';
 import { ctx } from "../game/state.js";
 import { strikeProgress } from "../systems/combat.js";
@@ -13,7 +13,7 @@ export function local(robotState, s, a, b) {
   };
 }
 export function headFrameAt(robotState, yaw) {
-  const p = robotState.local(robotState.chest, 14, 0),neckOffset=14+25-(robotState.body?.headOffset??25);
+  const p = robotState.local(robotState.chest, 14, 0),neckOffset=14+25-(robotState.body?.headOffset??PATIENT_HEAD_OFFSET);
   return {
     x: p.x - Math.cos(yaw) * neckOffset * (robotState.scale??ctx.scale),
     y: p.y - Math.sin(yaw) * neckOffset * (robotState.scale??ctx.scale),
@@ -72,7 +72,7 @@ export function attackPose(robotState, p) {
   };
   const dx = p.aim.x - shoulder.x,
     dy = p.aim.y - shoulder.y,
-    d = Math.hypot(dx, dy) || 1;
+    distance = Math.hypot(dx,dy),d=distance||1;
   const maxReach = complete ? upper + lower - .2 : upper - .2; // upper-only stump reaches about half as far
   const desired = {
     x: shoulder.x + dx / d * Math.min(maxReach, d),
@@ -91,6 +91,15 @@ export function attackPose(robotState, p) {
   };
   const wind = progress.wind,
     reach = progress.reach;
+  if(!complete){
+    // A stump rotates about its root; its surviving bone keeps its full length.
+    const baseAngle=Math.atan2(base.y-shoulder.y,base.x-shoulder.x);
+    const rearAngle=Math.atan2(rear.y-shoulder.y,rear.x-shoulder.x);
+    const aimAngle=distance>1e-9?Math.atan2(dy,dx):baseAngle;
+    const angle=baseAngle+wrap(rearAngle-baseAngle)*wind+wrap(aimAngle-baseAngle)*reach;
+    const tip={x:shoulder.x+Math.cos(angle)*upper,y:shoulder.y+Math.sin(angle)*upper};
+    return {kind:l.kind,limb:l,shoulder,joint:tip,tip,base,progress,complete};
+  }
   const tip = {
     x: base.x + (rear.x - base.x) * wind + (desired.x - base.x) * reach,
     y: base.y + (rear.y - base.y) * wind + (desired.y - base.y) * reach
@@ -112,16 +121,8 @@ export function attackPose(robotState, p) {
     tip.x = shoulder.x + vx / dist * maxReach;
     tip.y = shoulder.y + vy / dist * maxReach;
   }
-  return {
-    kind: l.kind,
-    limb: l,
-    shoulder,
-    joint: complete ? ik(shoulder,tip,upper,lower,l.kind==='arm'?l.side:-l.side).joint : tip,
-    tip,
-    base,
-    progress,
-    complete
-  };
+  const solved=ik(shoulder,tip,upper,lower,l.kind==='arm'?l.side:-l.side);
+  return {kind:l.kind,limb:l,shoulder,joint:solved.joint,tip:solved.end,base,progress,complete};
 }
 export function hornPoints(robotState, side) {
   return [robotState.local(robotState.headFrame, 24 + robotState.headMotion, side * 8), robotState.local(robotState.headFrame, 44 + robotState.headMotion, side * 10), robotState.local(robotState.headFrame, 32 + robotState.headMotion, side * 4)];
@@ -184,21 +185,30 @@ export function layoutBody(robotState, dt) {
   robotState.headFrame = robotState.headFrameAt(robotState.currentIntent.lookPoint ? robotState.gazeYaw : robotState.chest.angle + robotState.look);
 }
 export function handRest(robotState, side) {
-  return robotState.local(robotState.chest, 30 + clamp(Math.hypot(robotState.vx, robotState.vy) / (robotState.scale??ctx.scale) * .1, 0, 8), side * (27 + Math.abs(robotState.turnRate) * 2));
+  const [x,y]=limbRig(robotState.body,{kind:'arm'}).rest;
+  return robotState.local(robotState.chest,x+clamp(Math.hypot(robotState.vx,robotState.vy)/(robotState.scale??ctx.scale)*.1,0,8),side*(y+Math.abs(robotState.turnRate)*2));
 }
 export function legRest(robotState, side) {
-  return robotState.local(robotState.pelvis, -28 + clamp(Math.hypot(robotState.vx, robotState.vy) / (robotState.scale??ctx.scale) * .14, 0, 10), side * 31);
+  const [x,y]=limbRig(robotState.body,{kind:'leg'}).rest;
+  return robotState.local(robotState.pelvis,x+clamp(Math.hypot(robotState.vx,robotState.vy)/(robotState.scale??ctx.scale)*.14,0,10),side*y);
 }
 export function origin(robotState, l) {
-  if(l.anchor!==undefined)return robotState.local(robotState.spine[l.anchor],l.kind==='arm'?3:-5,l.side*(l.kind==='arm'?15:12));
-  return l.kind === 'extra' ? robotState.local(robotState.spine[2], 0, l.side * 12) : l.kind === 'arm' ? robotState.local(robotState.chest, 3, l.side * 15) : robotState.local(robotState.pelvis, -5, l.side * 12);
+  const frame=robotState.limbFrame(l);
+  if(l.kind==='extra')return robotState.local(frame,0,l.side*12);
+  const [x,y]=limbRig(robotState.body,l).root;
+  return robotState.local(frame,x,l.side*y);
 }
 export function lengths(robotState, l) {
+  if(l.kind==='extra')return [CONFIG.robot.extraLimbLengthCm,CONFIG.robot.extraLimbLengthCm];
   const factor=(robotState.scale??ctx.scale)*(l.lengthScale??1);
-  return l.kind === 'extra' ? [CONFIG.robot.extraLimbLengthCm, CONFIG.robot.extraLimbLengthCm] : l.kind === 'arm' ? [27*factor,29*factor] : [32*factor,33*factor];
+  const [upper,lower]=limbRig(robotState.body,l).lengths;
+  return [upper*factor,lower*factor];
 }
 export function rest(robotState, l) {
-  if(l.anchor!==undefined)return robotState.local(robotState.spine[l.anchor],l.kind==='arm'?30:-28,l.side*(l.kind==='arm'?35:40));
+  if(l.anchor!==undefined){
+    const [x,y]=limbRig(robotState.body,l).graftRest;
+    return robotState.local(robotState.spine[l.anchor],x,l.side*y);
+  }
   return l.kind === 'extra' ? robotState.local(robotState.spine[2], 6, l.side * 44) : l.kind === 'arm' ? robotState.handRest(l.side) : robotState.legRest(l.side);
 }
 export function savePose(robotState) {

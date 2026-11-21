@@ -106,6 +106,13 @@ test('segment and artifact replay chances share per-boss saved victory count',()
  assert.equal(run.artifacts.bossWins[5],3);
  assert.equal(run.segmentInventory.length,1,'below 49 percent earns a segment batch');
  assert.equal(run.artifacts.pieces.length,2,'below 49 percent also grants a fragment');
+ resetTower(session,0);
+ run=atFloor(session,0,5);
+ run.segmentRewardsEnabled=true;
+ completeTower(session,0,true,()=>.4);
+ assert.equal(run.artifacts.bossWins[5],4);
+ assert.equal(run.segmentInventory.length,1,'the fourth fight uses the 45 percent floor');
+ assert.equal(run.artifacts.pieces.length,2,'the independent artifact roll still misses above 34.3 percent');
  assert.deepEqual(towerFor(session,1).artifacts,newArtifactCollection(),
   'another player does not inherit boss defeats');
 });

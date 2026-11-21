@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {ASSETS} from '../src/assets/manifest.js';
+import {validLocationId} from '../src/game/location-geometry.js';
 
 // Only gameplay resources, installation icons and pinned Telegram SDK are
 // shipped. Never copy arbitrary public/ files (including artist sources).
@@ -28,15 +29,27 @@ export function assertRuntimePath(file){
 
 export async function copyRuntimeAssets(sourceRoot,destinationRoot,{warn=()=>{}}={}){
   let copied=0,bytes=0;
-  const missing=[];
-  for(const relative of requiredRuntimePaths()){
+  const missing=[],missingLocations=[];
+  const locations=[];
+  const manifestPath='locations/active.json';
+  try{
+    const raw=await fs.readFile(path.join(sourceRoot,manifestPath),'utf8');
+    locations.push(manifestPath);
+    const manifest=JSON.parse(raw);
+    if(manifest?.version!==1||!Array.isArray(manifest.active)||manifest.active.length>128)
+      throw Error('Invalid location manifest');
+    for(const id of new Set(manifest.active.filter(validLocationId)))locations.push('locations/'+id+'.json');
+  }catch(error){
+    if(error.code!=='ENOENT')warn('Could not read active locations: '+error.message);
+  }
+  for(const relative of [...requiredRuntimePaths(),...locations]){
     assertRuntimePath(relative);
     const source=path.join(sourceRoot,relative);
     let info;
     try{info=await fs.stat(source);}
     catch(error){
       if(error.code!=='ENOENT')throw error;
-      missing.push(relative);continue;
+      (relative.startsWith('locations/')?missingLocations:missing).push(relative);continue;
     }
     if(!info.isFile())throw Error('Runtime asset is not a file: '+relative);
     const destination=path.join(destinationRoot,relative);
@@ -45,6 +58,7 @@ export async function copyRuntimeAssets(sourceRoot,destinationRoot,{warn=()=>{}}
     bytes+=info.size;copied++;
   }
   if(missing.length)warn('Optional atlas files not found: '+missing.join(', '));
+  if(missingLocations.length)warn('Active locations not found: '+missingLocations.join(', '));
   return {copied,bytes,missing};
 }
 

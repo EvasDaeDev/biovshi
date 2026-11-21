@@ -111,10 +111,12 @@ test('a rear kick holds body and planted feet even under a forward movement inte
 test('loss of a shin keeps only a shorter stump kick; loss of thigh removes the attack',()=>{
  const {dom,r}=setup();try{
   ctx.robots=[r];
+  const thigh=r.capsules.find(c=>c.segment==='leg-1-upper');
+  const length=Math.hypot(thigh.a.x-thigh.b.x,thigh.a.y-thigh.b.y);
   for(let i=0;i<3;i++){ctx.game.time+=1;r.damage('leg-1-lower',1);}
   const source=r.attackSources.find(s=>s.key==='leg-1-upper');assert.ok(source);assert.equal(source.reachFactor,.5);
   const preview=r.attackPose({source:source.key,aim:pointAt(r,120,100),preview:true});
-  assert.ok(Math.hypot(preview.tip.x-preview.shoulder.x,preview.tip.y-preview.shoulder.y)<=32);
+  assert.ok(Math.abs(Math.hypot(preview.tip.x-preview.shoulder.x,preview.tip.y-preview.shoulder.y)-length)<1e-7);
   for(let i=0;i<3;i++){ctx.game.time+=1;r.damage('leg-1-upper',1);}
   assert.equal(r.attackSources.some(s=>s.kind==='leg'&&s.side===1),false);
  }finally{dom.window.close();}

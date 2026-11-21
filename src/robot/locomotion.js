@@ -8,7 +8,7 @@ import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
 import { coreClearBone, nearestObstaclePoint } from "../systems/collision.js";
 import { ik, segmentDistance } from "../utils/math.js";
-import { isSolidBody } from "./collision.js";
+import { isSolidBody,peerBodyOverlap,solidCapsules } from "./collision.js";
 import { robotContinueVictory } from "./scenes.js";
 import { note } from "../game/events.js";
 export function hasGoal(robotState) {
@@ -78,7 +78,7 @@ export function retreatFromBoundary(robotState, dt) {
     distance = CONFIG.movement.boundaryRetreatSpeedCm * CONFIG.movement.speedMultiplier * patientMovementMultiplier(robotState.id,robotState.api,0) * dt;
   let best = null,
     bestScore = -Infinity;
-  const peerBodies = robotState.peerRobots().flatMap(r => r.capsules.filter(isSolidBody));
+  const peerBodies = robotState.peerRobots().flatMap(r=>solidCapsules(r.capsules));
   for (let index = 0; index < 16; index++) {
     const turn = index * Math.PI / 8;
     const dx = Math.cos(heading + turn) * distance,
@@ -326,8 +326,12 @@ export function contacts(robotState, dt, previous) {
   const pending = limbs.filter(l => l.phase >= 1 && !robotState.lifted(l)).map(l => {
     const a = robotState.origin(l),
       r = robotState.rest(l),
-      error = Math.hypot(r.x - l.foot.x, r.y - l.foot.y) / (robotState.scale??ctx.scale),
-      urgent = !robotState.validContact(l) || !robotState.limbClear(l) || Math.hypot(l.foot.x - a.x, l.foot.y - a.y) > 44 * (robotState.scale??ctx.scale),
+      scale=robotState.scale??ctx.scale,
+      error = Math.hypot(r.x - l.foot.x, r.y - l.foot.y) / scale,
+      // A longer relaxed reach should not immediately lift a newly planted hand.
+      replantReach=l.kind==='arm'&&l.anchor===undefined&&!robotState.body?.isBoss
+        ?Math.max(44*scale,Math.hypot(r.x-a.x,r.y-a.y)+8*scale):44*scale,
+      urgent = !robotState.validContact(l) || !robotState.limbClear(l) || Math.hypot(l.foot.x - a.x, l.foot.y - a.y) > replantReach,
       cycle = (robotState.gait / (Math.PI * 2) + (l.kind === 'arm' ? l.side === 1 ? 0 : .5 : l.side === -1 ? 0 : .5)) % 1;
     return {
       l,
@@ -476,12 +480,15 @@ export function robotTick(robotState, dt, intent) {
     robotState.api.capsules = robotState.makeCapsules();
     return;
   }
-  if(!intent.manual&&pendingStrikes(robotState.id).some(p=>p.source.startsWith('leg-'))){
-    // Autonomous kicks keep planted supports; manual control keeps movement
-    // and turning available throughout every ordinary strike.
+  const strikes=intent.manual?[]:pendingStrikes(robotState.id);
+  if(strikes.some(p=>p.source.startsWith('leg-'))){
+    // Keep planted supports during an autonomous kick. A boss can still
+    // track the opponent in front while a leg attacks separately behind it.
     if(robotState.scene)robotState.api.endScene();
     robotState.vx=robotState.vy=robotState.requestedSpeed=0;
-    robotState.currentIntent={goal:{x:robotState.x,y:robotState.y},speed:0,mode:'лягается',lookPoint:null};
+    const primary=strikes[0];
+    const lookPoint=robotState.body?.isBoss&&!primary.source.startsWith('leg-')?primary.aim:null;
+    robotState.currentIntent={goal:{x:robotState.x,y:robotState.y},speed:0,mode:'лягается',lookPoint};
     robotState.updateHead(dt);
     return;
   }
@@ -571,6 +578,11 @@ export function robotTick(robotState, dt, intent) {
     y: robotState.y
   };
   // Сохраняем опоры: при тесном контакте небезопасный шаг откатывается целиком.
+  // Recoil and independently advanced opponents can leave an existing
+  // overlap. A commanded step may reduce it while walls and supports stay solid.
+  if(intent.manual&&intent.speed>0&&robotState.peerRobots().length){
+    robotState.stepPeerOverlap=peerBodyOverlap(robotState);
+  }
   const previousHeadMotion = robotState.headMotion;
   robotState.headMotion = 0;
   if (!robotState.rigClear()) robotState.headMotion = previousHeadMotion;
@@ -675,6 +687,7 @@ export function robotTick(robotState, dt, intent) {
     robotState.allLimbs().forEach((l, i) => Object.assign(l, previousLimbs[i]));
     robotState.vx = robotState.vy = 0;
   }
+  robotState.stepPeerOverlap=null;
   // Учитываем итоговое перемещение ПОСЛЕ отката небезопасного шага.
   if(!intent.manual||intent.navigate&&intent.speed>0)robotState.watchProgress(dt, old);
   robotState.api.capsules = robotState.makeCapsules();

@@ -83,6 +83,8 @@ test('Tower starts wide and smoothly follows the player at half of the opening v
     near(centre()[0],150);near(centre()[1],200);
 
     nearEnemy.x=180;nearEnemy.y=210;
+    cameraUpdate(1/30);
+    near(centre()[0],150);near(centre()[1],200);
     settle();
     near(ctx.camera.size,(30+84+200)*600/900);
     near(centre()[0],150);near(centre()[1],200);
@@ -90,8 +92,15 @@ test('Tower starts wide and smoothly follows the player at half of the opening v
 
     nearEnemy.mobile=false;
     player.x=320;player.y=220;
+    const [oldX,oldY]=centre();
+    cameraUpdate(2);
+    assert.ok(Math.hypot(centre()[0]-oldX,centre()[1]-oldY)<14,'a stalled frame must not jump to the new centre');
     settle();
     assert.equal(ctx.camera.size,358);
+    near(centre()[0],320);near(centre()[1],220);
+
+    player.mobile=false;
+    settle();
     near(centre()[0],320);near(centre()[1],220);
 
     ctx.paused=true;

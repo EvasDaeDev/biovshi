@@ -1,3 +1,4 @@
+import {arenaRaster} from '../game/arena-dimensions.js';
 import {accessFloorStore,floorBlob} from './floor-storage.js';
 import {ctx} from '../game/state.js';
 import {staticArenaImage} from './pixi-static.js';
@@ -6,26 +7,38 @@ import {paint} from './frame.js';
 import {bettingSave} from '../betting/storage.js';
 const SIZE=1024;
 function canvas(){const c=document.createElement('canvas');c.width=c.height=SIZE;return c;}
-function persist(){
-  const key=ctx.betting?.floorId?ctx.betting.floorId+':'+(ctx.arenaId??'ward'):null,source=ctx.floorCanvas;
+function floorScope(){
+  const sessionId=ctx.betting?.floorId,arenaId=ctx.arenaId??'ward';
+  const {width,height}=ctx.arenaDefinition??{};
+  const arena=width!==height?arenaId+'@'+width+'x'+height:arenaId;
+  if(ctx.mode==='tower'&&ctx.towerRun&&sessionId)return {
+    key:`tower:${sessionId}:${ctx.towerPlayer}:${arena}`,
+    generation:ctx.towerRun.floorHistoryGeneration??0
+  };
+  return {key:`${sessionId??'demo'}:${arena}`,sessionId,arena};
+}
+function remember({key,generation},source){
+  ctx.arenaFloors??=new Map();
+  ctx.arenaFloors.set(key,generation===undefined?source:{generation,source});
+}
+function persist(scope,source){
+  const {key,sessionId,generation}=scope;
+  if(!sessionId&&generation===undefined)return;
   const previous=ctx.floorSavePromise??Promise.resolve();
-  const generation=ctx.floorSaveGeneration=(ctx.floorSaveGeneration??0)+1;
   ctx.floorSavePromise=previous.catch(()=>{}).then(async()=>{
-    if(generation!==ctx.floorSaveGeneration||!key)return;
     try{
       if(!globalThis.indexedDB)throw Error('IndexedDB unavailable');
       const blob=await floorBlob(source);
-      if(generation!==ctx.floorSaveGeneration)return;
-      await accessFloorStore(key,blob);ctx.floorStorageAvailable=true;
+      await accessFloorStore(key,generation===undefined?blob:{generation,blob});
+      ctx.floorStorageAvailable=true;
     }catch{ctx.floorStorageAvailable=false;}
   });
 }
 function install(next){
   ctx.floorCanvas=next;
-  ctx.arenaFloors??=new Map();ctx.arenaFloors.set((ctx.betting?.floorId??'demo')+':'+(ctx.arenaId??'ward'),next);
   if(!ctx.floorImage){
     ctx.floorImage=document.createElementNS(ctx.NS,'image');
-    const {left,top,size}=ctx.arenaDefinition;
+    const {left,top,size}=arenaRaster(ctx.arenaDefinition);
     for(const [key,value] of Object.entries({x:left,y:top,width:size,height:size,preserveAspectRatio:'none'}))
       ctx.floorImage.setAttribute(key,value);
     ctx.grid.after(ctx.floorImage);
@@ -37,24 +50,36 @@ export async function initializeFloor(){
   const {canvas:base}=await staticArenaImage([ctx.arenaContent.querySelector(':scope > rect'),ctx.svg.querySelector('#tag7hop-floor-decals'),ctx.grid],{pixels:SIZE});
   ctx.cleanFloorCanvas=base;ctx.floorImage=null;ctx.floorCanvas=base;ctx.floorRevision=0;
   if(ctx.betting&&!ctx.betting.floorId){ctx.betting.floorId=globalThis.crypto?.randomUUID?.()??String(Date.now())+Math.random();bettingSave();}
-  const memory=ctx.arenaFloors?.get((ctx.betting?.floorId??'demo')+':'+(ctx.arenaId??'ward'));
-  if(memory){install(memory);return;}
+  const scope=floorScope();
+  const {key,generation,sessionId,arena}=scope;
+  const memory=ctx.arenaFloors?.get(key);
+  const cached=generation===undefined?memory:memory?.generation===generation?memory.source:null;
+  if(cached){install(cached);return;}
   let saved;
-  try{if(ctx.betting?.floorId){saved=await accessFloorStore(ctx.betting.floorId+':'+(ctx.arenaId??'ward'));if(!saved&&ctx.arenaId==='ward')saved=await accessFloorStore(ctx.betting.floorId);}}catch{ctx.floorStorageAvailable=false;}
+  try{
+    if(sessionId||generation!==undefined){
+      await ctx.floorSavePromise;
+      saved=await accessFloorStore(key);
+      if(generation!==undefined)saved=saved?.generation===generation?saved.blob:null;
+      else if(!saved&&arena==='ward')saved=await accessFloorStore(sessionId);
+    }
+  }catch{ctx.floorStorageAvailable=false;}
   if(saved){
     let url;
     try{
       url=typeof saved==='string'?saved:URL.createObjectURL(saved);
       const image=await loadTextureImage(url,{timeoutMs:3000}),next=canvas();
-      next.getContext('2d').drawImage(image,0,0,SIZE,SIZE);install(next);return;
+      next.getContext('2d').drawImage(image,0,0,SIZE,SIZE);remember(scope,next);install(next);return;
     }catch{ctx.floorStorageAvailable=false;}
     finally{if(url){releaseTextureImage(url);if(typeof saved!=='string')URL.revokeObjectURL(url);}}
   }
-  install(base);
+  remember(scope,base);install(base);
 }
 export async function cleanFloor(){
   if(!ctx.cleanFloorCanvas||ctx.floorBaking)return;
-  ctx.lastFloorBakeError='';install(ctx.cleanFloorCanvas);ctx.floorRevision=(ctx.floorRevision??0)+1;persist();
+  const scope=floorScope();
+  ctx.lastFloorBakeError='';install(ctx.cleanFloorCanvas);ctx.floorRevision=(ctx.floorRevision??0)+1;
+  remember(scope,ctx.floorCanvas);persist(scope,ctx.floorCanvas);
 }
 // Only fresh remains are treated. The existing opaque floor is copied unchanged.
 export function mergeFloorPixels(base,layer){
@@ -71,7 +96,10 @@ export function mergeFloorPixels(base,layer){
   return base;
 }
 export async function bakeRoundFloor({signal}={}){
-  if(!ctx.floorCanvas)return;
+  const source=ctx.floorCanvas,scope=floorScope();
+  if(!source)return;
+  // The final physics tick may still be depositing oil from the last strike.
+  if(scope.generation!==undefined)await Promise.resolve();
   paint();
   // A living unconscious patient is carried away, not baked into the floor.
   // Blood and detached parts remain, along with bodies of genuinely dead patients.
@@ -80,7 +108,11 @@ export async function bakeRoundFloor({signal}={}){
   const layer=ctx.arenaRenderer?.rasterizeRemains?ctx.arenaRenderer.rasterizeRemains(nodes,SIZE):(await staticArenaImage(nodes,{pixels:SIZE,exclude:'.robot-label'})).canvas;
   if(signal?.aborted)return;
   const next=canvas(),draw=next.getContext('2d',{willReadFrequently:true});
-  draw.drawImage(ctx.floorCanvas,0,0,SIZE,SIZE);
+  draw.drawImage(source,0,0,SIZE,SIZE);
   const base=draw.getImageData(0,0,SIZE,SIZE),fresh=layer.getContext('2d').getImageData(0,0,SIZE,SIZE);
-  mergeFloorPixels(base.data,fresh.data);draw.putImageData(base,0,0);install(next);persist();
+  mergeFloorPixels(base.data,fresh.data);draw.putImageData(base,0,0);
+  remember(scope,next);
+  // Tower results still draw the live remains. Show the composite on the next visit.
+  if(scope.generation===undefined&&ctx.floorCanvas===source)install(next);
+  persist(scope,next);
 }

@@ -1,3 +1,4 @@
+import {ARENAS} from '../src/game/arenas.js';
 import {ASSETS} from '../src/assets/manifest.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -5,7 +6,7 @@ import fs from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { createInertia, inertiaOffset, detachedCenter } from '../src/render/inertia.js';
 import { coreClearBone } from '../src/systems/collision.js';
-import { strikeCandidates } from '../src/systems/combat.js';
+import { strikeCandidates,queueCombatHit,flushCombatHits } from '../src/systems/combat.js';
 import { headGuardActive } from '../src/systems/ai.js';
 import { createRobot } from '../src/robot/robot.js';
 import { segmentDistance } from '../src/utils/math.js';
@@ -247,7 +248,7 @@ test('operating-room lighting, dark footprints and inward textured obstacle wall
     if(pass)initializeGame({entry:'setup'});
     const walls=ctx.svg.querySelector('#tag7hop-obstacle-walls');
     assert.equal(walls.parentNode,ctx.blockG);
-    assert.equal(walls.children.length,CONFIG.arena.obstacles.length);
+    assert.equal(walls.children.length,ARENAS.ward.obstacles.length);
     assert.equal(walls.querySelectorAll('path[transform]').length,44);
     assert.equal(ctx.svg.querySelectorAll('#texture-obstacle').length,1);
     const pattern=ctx.svg.querySelector('#texture-obstacle');
@@ -444,14 +445,14 @@ test('every robot uses its own atlas; severed parts, victory halo and load fallb
   }
   for(const limb of a.limbs) {
     const frame=limb.kind==='arm'?a.actualPose.chest:a.actualPose.pelvis;
-    const x=(limb.kind==='arm'?3:-5)*CONFIG.robot.scale;
-    const y=limb.side*(limb.kind==='arm'?15:12)*CONFIG.robot.scale;
+    const x=(limb.kind==='arm'?0:-5)*CONFIG.robot.scale;
+    const y=limb.side*12*CONFIG.robot.scale;
     const root={x:frame.x+Math.cos(frame.angle)*x-Math.sin(frame.angle)*y,
       y:frame.y+Math.sin(frame.angle)*x+Math.cos(frame.angle)*y};
     const node=actor.querySelector(`[data-skin-segment="${limb.kind}-${limb.side}-upper"]`);
     const [A,B,C,D,E,F]=node.getAttribute('transform').match(/matrix\(([^)]+)\)/)[1].split(' ').map(Number);
-    assert.ok(Math.abs(A*8+C*32+E-root.x)<1e-8,'arm/leg root X remains at the original attachment');
-    assert.ok(Math.abs(B*8+D*32+F-root.y)<1e-8,'arm/leg root Y remains at the original attachment');
+    assert.ok(Math.abs(A*8+C*32+E-root.x)<1e-8,'arm/leg root X remains at the calibrated attachment');
+    assert.ok(Math.abs(B*8+D*32+F-root.y)<1e-8,'arm/leg root Y remains at the calibrated attachment');
   }
   const chest=actor.querySelector('[data-skin-segment="spine-0"]');
   const chestMatrix=chest.getAttribute('transform');
@@ -967,13 +968,21 @@ test('inertia stops at arena boundaries or obstacles and uses the same endpoint 
 
 test('an unchanged textured frame causes no redundant DOM mutations',()=>{
   const textures=Object.fromEntries(['robotA','robotB','robotC','robotD'].map(key=>[key,{loaded:true}]));
-  const dom=setup({textures});paint();
-  const observer=new dom.window.MutationObserver(()=>{});
-  observer.observe(ctx.root,{attributes:true,childList:true,characterData:true,subtree:true});
-  for(let i=0;i<10;i++)paint();
-  const mutations=observer.takeRecords();
-  assert.equal(mutations.length,0,mutations.map(m=>(m.target.id||m.target.nodeName)+':'+m.attributeName).join(','));
-  observer.disconnect();dom.window.close();
+  let now=1,dom;
+  ctx.telemetryNow=()=>now;
+  try{
+   dom=setup({textures});paint();
+   assert.ok(ctx.cardNodes.every(card=>card.action.textContent==='Патрулирует'));
+   const observer=new dom.window.MutationObserver(()=>{});
+   observer.observe(ctx.root,{attributes:true,childList:true,characterData:true,subtree:true});
+   for(let i=0;i<10;i++){
+    now+=CONFIG.rendering.telemetryIntervalSec*1.1;
+    paint();
+   }
+   const mutations=observer.takeRecords();
+   observer.disconnect();
+   assert.equal(mutations.length,0,mutations.map(m=>(m.target.id||m.target.nodeName)+':'+m.attributeName).join(','));
+  }finally{delete ctx.telemetryNow;dom?.window.close();}
 });
 
 
@@ -1166,4 +1175,26 @@ test('recovery replaces only severed segments, persists prosthetics, and death r
     await resetRound();
     assert.ok([...ctx.robots[0].actor.querySelectorAll('[data-skin-segment] image')].every(img=>img.getAttribute('href').endsWith('r_01.png')));
   }finally{ctx.root.__disposeTag();dom.window.close();}
+});
+
+
+test('reciprocal lethal head hits incapacitate both real robots in one physics tick',()=>{
+  const dom=setup();
+  const [first,second]=ctx.robots;
+  assert.ok(first?.mobile&&second?.mobile);
+  first.hp.set('head',1);
+  second.hp.set('head',1);
+  const registered=[];
+  ctx.combat.hitBatch=[];
+  queueCombatHit(first,second,'head',2,applied=>registered.push({from:first.id,applied}));
+  queueCombatHit(second,first,'head',2,applied=>registered.push({from:second.id,applied}));
+  assert.equal(first.mobile,true);
+  assert.equal(second.mobile,true);
+  flushCombatHits();
+  assert.deepEqual(registered,[{from:first.id,applied:true},{from:second.id,applied:true}]);
+  assert.equal(first.mobile,false);
+  assert.equal(second.mobile,false);
+  assert.equal(first.hp.get('head'),0);
+  assert.equal(second.hp.get('head'),0);
+  dom.window.close();
 });

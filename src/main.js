@@ -1,8 +1,8 @@
 import {SESSION_STORAGE} from './build-channel.js';
 import {setPaused} from './ui/controls.js';
-import {arenaDefinition,randomArenaId} from './game/arenas.js';
+import {arenaDefinition,loadLocations,suitableArenaId} from './game/arenas.js';
 import {installTowerUI,openMenu,towerPreparation} from './tower/ui.js';
-import {towerFor} from './tower/model.js';
+import {towerEnemyCount,towerFor} from './tower/model.js';
 import {ensureTowerFloorPlan,selectedTowerFloor} from './tower/floors.js';
 import {bettingSetup,bettingCancel} from './betting/ui.js';
 import {initializeFloor} from './render/floor-history.js';
@@ -27,6 +27,7 @@ let cancelled=false,initialLoading=null;
 let launchAccepted=false;
 async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,enterFight=false,loading=null}){
  loading?.update('Создаём пациентов…',{done:1,total:6});
+ if(ctx.towerFloorBake)await ctx.towerFloorBake;
  initializeGame({textures,session,entry,arenaId,tower});
  await applyTextures();if(cancelled||ctx.disposed)return;
  loading?.update('Рисуем портреты пациентов…',{done:2,total:6});
@@ -67,8 +68,11 @@ async function boot(){
  const root=document.getElementById('robot-tag-hops-v22');
  const loading=createLoadingScreen({staged:true});initialLoading=loading;
  root.inert=true;
- const textures=await preloadTextures({onProgress:(done,total)=>
-  loading.update('Загружаем текстуры пациентов и арены…',{done,total,phase:'textures'})});
+ const [textures]=await Promise.all([
+  preloadTextures({onProgress:(done,total)=>
+   loading.update('Загружаем текстуры пациентов и арены…',{done,total,phase:'textures'})}),
+  loadLocations(new URL('./locations/',document.baseURI)),
+ ]);
  if(cancelled){loading.close();return;}
  loading.update('Текстуры загружены. Запускаем игру…',{done:0,total:6});
  ctx.BET_STORAGE=SESSION_STORAGE;const session=bettingLoad();
@@ -101,7 +105,7 @@ async function boot(){
    // Only lightweight floor metadata is read while the old canvas is hidden.
    ctx.towerPlayer=player;ctx.towerRun=run;ctx.mode='tower';ctx.deferTowerArena=true;
    ctx.root.dataset.gameMode='tower-preparing';
-   ctx.arenaDefinition=arenaDefinition(selectedTowerFloor(run)?.arenaId??'ward');
+   ctx.arenaDefinition=arenaDefinition(selectedTowerFloor(run)?.arenaId??suitableArenaId(towerEnemyCount(run)+1));
    ctx.towerGarage=[{stats:[...run.stats],mutations:[...run.mutations],
      mutationInventory:structuredClone(run.mutationInventory??[]),
      equippedMutations:[...(run.equippedMutations??[])],
@@ -134,7 +138,7 @@ async function boot(){
      let succeeded=false;
      try{
        await transition({session:current,entry:'tower',tower:structuredClone(run),
-         arenaId:selectedTowerFloor(run)?.arenaId??randomArenaId(),enterFight:true,loading:progress});
+         arenaId:selectedTowerFloor(run)?.arenaId??ctx.arenaDefinition.id,enterFight:true,loading:progress});
        succeeded=true;
      }catch(error){progress.fail('Не удалось подготовить арену.');throw error;}
      finally{if(succeeded)progress.close();}

@@ -87,9 +87,12 @@ test('boss preparation shows actual drop chances in one row and details in its h
   run.artifacts.pieces=Array.from({length:16},(_,index)=>index);view.render();
   assert.equal(summary().textContent,'ДРОП С БОССА: модификатор 49%');
   run.artifacts.bossWins[5]=60;view.render();
-  assert.equal(summary().textContent,'ДРОП С БОССА: модификатор <0,01%');
+  assert.equal(summary().textContent,'ДРОП С БОССА: модификатор 45%');
+  assert.match(summary().dataset.hint,/Шанс получить набор деталей при повторной победе: 45%/);
+  run.artifacts.pieces=[];view.render();
+  assert.equal(summary().textContent,'ДРОП С БОССА: артефакт <0,01%, модификатор 45%');
   run.artifacts.bossWins[5]=3000;view.render();
-  assert.equal(summary(),null,'a row with no positive drop chance is omitted');
+  assert.equal(summary().textContent,'ДРОП С БОССА: модификатор 45%');
   delete run.segmentRewardsEnabled;view.render();
   assert.equal(summary().textContent,'ДРОП С БОССА: модификатор 100%','old saves still receive the guaranteed draft');
   assert.doesNotMatch(summary().dataset.hint,/35%/);

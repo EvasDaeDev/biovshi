@@ -9,7 +9,7 @@ import { clamp, wrap, smooth } from '../utils/math.js';
 import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
 import { sightClear, coreClearBone } from "./collision.js";
-import { pointSegment } from "../utils/math.js";
+import { pointSegment,segmentDistance } from "../utils/math.js";
 import { note } from "../game/events.js";
 import { activeOpponents } from "./ai.js";
 import { bettingSettle } from "../betting/ui.js";
@@ -26,11 +26,16 @@ function strikeProgress(p) {
     wind: smooth(age / wind),
     phase: 'windup'
   };
-  if (age < wind + thrust) return {
-    reach: smooth((age - wind) / thrust),
-    wind: 1,
-    phase: 'thrust'
-  };
+  if (age < wind + thrust) {
+    const extension=smooth((age - wind) / thrust);
+    return {
+      reach: extension,
+      // Release the rearward windup continuously during the forward thrust.
+      // Keeping wind=1 until impact caused a 5 cm arm / 3 cm head snap.
+      wind: 1-extension,
+      phase: 'thrust'
+    };
+  }
   if (age < wind + thrust + recover) return {
     reach: 1 - smooth((age - wind - thrust) / recover),
     wind: 0,
@@ -137,6 +142,38 @@ export function struckSegment(attacker, victim, p) {
   }
   return null;
 }
+// Test the actual tip trajectory over the active part of this physics step.
+// This catches a moving opponent touched midway through the thrust instead
+// of retrospectively raycasting the full swing at impact time.
+export function movingStrikeContact(attacker,victim,p){
+  const timing=p.timing??attacker.body?.combat??CONFIG.combat;
+  const age=Math.max(0,ctx.game.time-p.started);
+  const lo=Math.max(timing.windupSec,p.lastContactAge??timing.windupSec);
+  const hi=Math.min(timing.windupSec+timing.thrustSec,age);
+  if(age<timing.windupSec||hi<lo)return null;
+  p.lastContactAge=hi;
+  if(p.source.startsWith('leg-')&&!kickPathClear(attacker,p))return null;
+  if(!sightClear(attacker.center,victim.center))return null;
+  const capsules=victim.capsules.filter(c=>c.segment&&victim.isDamageable(c.segment));
+  const steps=Math.max(1,Math.ceil((hi-lo)*180));
+  let previous=null;
+  for(let i=0;i<=steps;i++){
+    const sampleAge=lo+(hi-lo)*i/steps;
+    const pose=attacker.attackPose({...p,started:ctx.game.time-sampleAge});
+    if(!pose)return null;
+    const tip=pose.tip;
+    let best=null;
+    for(const c of capsules){
+      const gap=pointSegment(tip,c.a,c.b)-c.r;
+      const swept=previous?segmentDistance(previous,tip,c.a,c.b)-c.r:gap;
+      const nearest=Math.min(gap,swept);
+      if(nearest<=2.2&&(!best||nearest<best.gap))best={segment:c.segment,gap:nearest};
+    }
+    if(best)return best.segment;
+    previous=tip;
+  }
+  return null;
+}
 export function strikePriority(candidate) {
   return candidate.score + (candidate.source.kind === 'head' ? 1000
     : candidate.source.kind === 'leg' ? 4 : 0);
@@ -231,7 +268,8 @@ function resolvePounceImpacts() {
     if(!touched)return;
     leap.impactDone=true;
     const id=attacker.id;
-    if(victim.damage(touched,id,CONFIG.attack.combatPounceDamage)){
+    queueCombatHit(attacker,victim,touched,CONFIG.attack.combatPounceDamage,applied=>{
+      if(!applied)return;
       if(victim.mobile)victim.reactToHit(attacker,touched);
       ctx.combat.hits++;
       ctx.combat.fighterHits[id]++;
@@ -239,13 +277,12 @@ function resolvePounceImpacts() {
       ctx.combat.lastHitTime=ctx.game.time;
       ctx.agentAI[id].lastHitAt=ctx.game.time;
       ctx.agentAI[victim.id].lastHitAt=ctx.game.time;
-      note('combat-strike',{from:id,to:victim.id,
-        source:'head',segment:touched,pounce:true});
+      note('combat-strike',{from:id,to:victim.id,source:'head',segment:touched,pounce:true});
       if(victim.mobile&&victim.movementLimbs<(victim.movementLimbTotal??4)){
         ctx.combat.retreatUntil[victim.id]=ctx.game.time+CONFIG.combat.retreatSec;
         ctx.combat.retreatFrom[victim.id]=id;
       }
-    }
+    });
   }
 }
 function initiateCombatPounces() {
@@ -286,51 +323,87 @@ export function towerFighterCombatBonus(id){
  const {crit,cooldownMultiplier}=patientCombatStats(0).combat;
  return {crit,cooldownMultiplier};
 }
+// Commit contacts only after every participant, including bosses, has resolved its
+// attack geometry for this simulation tick.
+export function queueCombatHit(attacker,victim,segment,damage,onResult){
+  const batch=ctx.combat.hitBatch;
+  if(batch){batch.push({attacker,victim,segment,damage,onResult});return;}
+  onResult(victim.damage(segment,attacker.id,damage));
+}
+export function flushCombatHits(){
+  const batch=ctx.combat.hitBatch;
+  ctx.combat.hitBatch=null;
+  if(!batch)return;
+  for(const {attacker,victim,segment,damage,onResult} of batch){
+    // Eligibility and contact were established before any of these hits landed.
+    // Do not discard a same-tick counterattack because its owner died first.
+    const applied=victim.damage(segment,attacker.id,damage,{allowIncapacitated:true});
+    onResult(applied);
+  }
+}
 export function combatAttacks() {
   if (ctx.combat.finished) return;
+  // Movement has advanced all bodies; refresh their currently animated hit geometry
+  // before any attacker tests a collision this physics tick.
+  for(const robot of ctx.robots)robot.refreshCombatCapsules?.();
+  ctx.combat.hitBatch=[];
   resolvePounceImpacts();
+  // Snapshot all due strike contacts before applying damage. A hit registered
+  // on this physics tick must not change another strike's collision geometry.
+  const contactSnapshot=new Map();
+  for(const attacker of ctx.robots){
+    if(attacker.body?.resolveCombat)continue;
+    for(const pending of pendingStrikes(attacker.id)){
+      if(pending.resolved)continue;
+      const timing=pending.timing??attacker.body?.combat??CONFIG.combat;
+      if(ctx.game.time<pending.started+timing.windupSec)continue;
+      const victim=ctx.robots[pending.victim];
+      const src=attacker.attackSources.find(source=>source.key===pending.source);
+      const eligible=attacker.visible&&attacker.mobile&&src&&victim?.visible
+        &&victim.hasHead&&victim.segmentCount>0
+        &&(ctx.mode!=='tower'||!towerAllies(ctx.towerRun,attacker.id,victim.id,ctx.game.time));
+      if(eligible){
+        const contact=movingStrikeContact(attacker,victim,pending);
+        if(contact||ctx.game.time>=pending.impactAt)contactSnapshot.set(pending,contact);
+      }
+    }
+  }
   // Каждый удар: замах -> движение -> касание -> возврат в опору.
   for (const attacker of ctx.robots) {
     const id = attacker.id;
     if(attacker.body?.resolveCombat){attacker.body.resolveCombat(attacker);continue;}
     for(const pending of pendingStrikes(id)){
-      if (!pending.resolved && ctx.game.time >= pending.impactAt) {
+      if (!pending.resolved && contactSnapshot.has(pending)) {
         pending.resolved = true;
         const victim = ctx.robots[pending.victim];
-        const src = attacker.attackSources.find(s => s.key === pending.source);
-        if (attacker.visible && attacker.mobile && src && victim?.visible && victim.hasHead && victim.segmentCount > 0
-          &&(ctx.mode!=='tower'||!towerAllies(ctx.towerRun,id,victim.id,ctx.game.time))) {
-          const touched = struckSegment(attacker, victim, pending);
+        if (contactSnapshot.has(pending)) {
+          const touched = contactSnapshot.get(pending)??null;
           const stats=touched?patientCombatStats(id,attacker):null;
           const damage=touched&&random()<(stats.effects?.[1]??critChance(stats.effective[1]))?2:1;
-          if (touched && victim.damage(touched, id, damage)) {
-            if (victim.mobile) victim.reactToHit(attacker, touched);
-            ctx.combat.hits++;
-            ctx.combat.fighterHits[id]++;
-            ctx.combat.fighterTaken[victim.id]++;
-            ctx.combat.lastHitTime = ctx.game.time;
-            ctx.agentAI[id].lastHitAt = ctx.game.time;
-            ctx.agentAI[victim.id].lastHitAt = ctx.game.time;
-            note('combat-strike', {
-              from: id,
-              to: victim.id,
-              source: pending.source,
-              segment: touched
+          if(touched){
+            queueCombatHit(attacker,victim,touched,damage,applied=>{
+              if(applied){
+                if(victim.mobile)victim.reactToHit(attacker,touched);
+                ctx.combat.hits++;
+                ctx.combat.fighterHits[id]++;
+                ctx.combat.fighterTaken[victim.id]++;
+                ctx.combat.lastHitTime=ctx.game.time;
+                ctx.agentAI[id].lastHitAt=ctx.game.time;
+                ctx.agentAI[victim.id].lastHitAt=ctx.game.time;
+                note('combat-strike',{from:id,to:victim.id,source:pending.source,segment:touched});
+                if(victim.mobile&&victim.movementLimbs<(victim.movementLimbTotal??4)){
+                  ctx.combat.retreatUntil[victim.id]=ctx.game.time+CONFIG.combat.retreatSec;
+                  ctx.combat.retreatFrom[victim.id]=id;
+                }
+              }else note('combat-miss',{from:id,to:victim.id,source:pending.source});
             });
-            if (victim.mobile && victim.movementLimbs < (victim.movementLimbTotal??4)) {
-              ctx.combat.retreatUntil[victim.id] = ctx.game.time + CONFIG.combat.retreatSec;
-              ctx.combat.retreatFrom[victim.id] = id;
-            }
-          } else note('combat-miss', {
-            from: id,
-            to: victim.id,
-            source: pending.source
-          });
+          }else note('combat-miss',{from:id,to:victim.id,source:pending.source});
         }
       }
     }
     if(pendingStrikes(id).every(p=>ctx.game.time>=p.endsAt))ctx.combat.pending[id]=null;
   }
+  flushCombatHits();
   initiateCombatPounces();
   // Each limb attacks one target; each cycle can attack at most two opponents.
   for (const attacker of ctx.robots) {
@@ -367,6 +440,9 @@ export function combatAttacks() {
       for(const best of selected)note('combat-windup',{from:id,to:best.victim.id,source:best.source.key});
     }
   }
+  // Strike planning changes the animated pose after robot.tick() built capsules.
+  // Keep rendering and subsequent collision queries on the same pose immediately.
+  for(const robot of ctx.robots)robot.refreshCombatCapsules?.();
   const mobile = ctx.robots.filter(r => r.mobile && r.visible && r.segmentCount > 0);
   // A headbutt that wins the fight must still complete its backward hop
   // and landing recovery before switching to the victory animation.

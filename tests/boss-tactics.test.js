@@ -59,6 +59,68 @@ test('two-hit combo uses separate limbs sequentially and leaves a recovery windo
  }finally{f.close();}
 });
 
+function approachRearDuringCombo(f){
+ const front=createRobot(2,{x:385,y:350,angle:Math.PI});
+ ctx.robots=[createRobot(0,{x:160,y:350,angle:0}),f.boss,front];
+ f.boss.body.planCombat(f.boss);
+ const [primary]=pendingStrikes(1);
+ assert.equal(primary.victim,front.id);
+ assert.match(primary.source,/^arm-/);
+ ctx.game.time=primary.started+.15;
+ const player=createRobot(0,{x:245,y:350,angle:0});
+ ctx.robots[0]=player;
+ assert.ok(player.clear());
+ assert.equal(f.boss.canSee(player.center),false);
+ return {player,front,primary};
+}
+
+test('boss kicks a player coming from behind during a front combo, without turning or replacing its first swing',()=>{
+ const f=duel();try{
+  const {player,front,primary}=approachRearDuringCombo(f);
+  const wall={left:270,right:276,top:320,bottom:380};
+  wall.points=obstacleVertices(wall);ctx.obstacles=[wall];
+  f.boss.body.planCombat(f.boss);
+  assert.deepEqual(pendingStrikes(1),[primary],'a wall blocks rear contact sensing');
+  ctx.obstacles=[];
+  f.boss.body.planCombat(f.boss);
+  const [stillFront,kick]=pendingStrikes(1);
+  assert.equal(stillFront,primary);
+  assert.equal(kick?.victim,player.id);
+  assert.match(kick.source,/^leg-/);
+  assert.ok(kick.started>primary.started,'the player arrived after the front windup began');
+  const intent=f.boss.body.intent(f.boss);
+  assert.deepEqual(intent.lookPoint,primary.aim);
+  const heading=f.boss.angle;
+  f.boss.tick(1/60,intent);
+  assert.equal(f.boss.angle,heading);
+  const hits=[];
+  for(const target of [player,front]){
+   target.damage=(segment,by)=>{hits.push([target.id,segment,by]);return true;};
+   target.reactToHit=()=>{};
+  }
+  for(let time=kick.started;time<=kick.endsAt+.025;time+=1/60)advanceTo(f,time);
+  assert.deepEqual(hits.map(([id,,by])=>[id,by]),[[front.id,f.boss.id],[player.id,f.boss.id]]);
+  assert.deepEqual(pendingStrikes(1),[]);
+  assert.equal(f.state.followup?.victim,front.id,'the rear kick leaves the front combo queued');
+ }finally{f.close();}
+});
+
+test('losing either attacking limb preserves the boss swing on the other side',()=>{
+ for(const index of [0,1]){
+  const f=duel();try{
+   approachRearDuringCombo(f);
+   f.boss.body.planCombat(f.boss);
+   const strikes=pendingStrikes(1);
+   assert.equal(strikes.length,2);
+   f.boss.damage(strikes[index].source.replace(/-(upper|lower)$/,'-upper'),0,100);
+   f.boss.body.resolveCombat(f.boss);
+   assert.deepEqual(pendingStrikes(1),[strikes[1-index]]);
+   f.boss.body.planCombat(f.boss);
+   assert.deepEqual(pendingStrikes(1),[strikes[1-index]],'other limbs do not restart a cancelled swing mid-cycle');
+  }finally{f.close();}
+ }
+});
+
 test('second phase follows the first strike with a wide strike when the other arm can reach',()=>{
  const f=duel();try{
   f.state.phase=2;f.boss.body.planCombat(f.boss);const first=pendingStrikes(1)[0];assert.equal(first.comboIndex,1);

@@ -1,4 +1,5 @@
 import {obstacleVertices} from '../game/arena.js';
+import {solidCapsules} from '../robot/collision.js';
 import {ctx} from '../game/state.js';
 import {clamp,segmentDistance} from '../utils/math.js';
 const cache=new WeakMap();
@@ -12,6 +13,23 @@ function polygonData(box){
 export function capsulePolygonContact(c,box){
  const data=polygonData(box),{a,b,r}=c;
  if(Math.max(a.x,b.x)+r<data.left||Math.min(a.x,b.x)-r>data.right||Math.max(a.y,b.y)+r<data.top||Math.min(a.y,b.y)-r>data.bottom)return null;
+ if(box.parts){
+  const hits=box.parts.flatMap(part=>{
+   const hit=capsulePolygonContact(c,part);
+   return hit?[hit]:[];
+  });
+  if(hits.length<2)return hits[0]??null;
+  // Prefer a translation that resolves the entire union, not just one ear.
+  let best=null,cost=Infinity;
+  for(const hit of hits){
+   const {nx,ny,depth}=hit;
+   const shift=p=>({x:p.x+nx*(depth+1e-7),y:p.y+ny*(depth+1e-7)});
+   const moved={a:shift(a),b:shift(b),r};
+   const remaining=box.parts.reduce((sum,part)=>sum+(capsulePolygonContact(moved,part)?.depth??0)**2,0);
+   if(remaining<cost||remaining===cost&&depth<best.depth){best=hit;cost=remaining;}
+  }
+  return best;
+ }
  const dx=b.x-a.x,dy=b.y-a.y,len2=dx*dx+dy*dy;
  let best=null;
  const overlap=({n,min,max})=>{
@@ -46,14 +64,13 @@ export function translateWholePose(state,dx,dy){
  if(state.recoverySwing)for(const p of [state.recoverySwing.from,state.recoverySwing.to])if(p)points.add(p);
  for(const p of points)if(p){p.x+=dx;p.y+=dy;}state.x+=dx;state.y+=dy;
 }
-const solid=c=>c.segment==='head'||c.segment?.startsWith('spine-');
 function measure(state,tolerance,skipClearPeers=false){
- const caps=state.makeCapsules(),contacts=[];let cost=0,peerCost=0;
+ const caps=state.makeCapsules(false),contacts=[];let cost=0,peerCost=0;
  for(const c of caps)for(const hit of staticContacts(c)){
   const allow=isLimb(c)?tolerance:0,excess=hit.depth-allow;
   if(excess>1e-6){contacts.push({...hit,excess});cost+=excess*excess*(isLimb(c)?1:10);}
  }
- if(!skipClearPeers||contacts.length)for(const other of state.peerRobots())for(const a of caps.filter(solid))for(const b of other.capsules.filter(solid)){
+ if(!skipClearPeers||contacts.length)for(const other of state.peerRobots())for(const a of solidCapsules(caps))for(const b of solidCapsules(other.capsules)){
   const depth=a.r+b.r+.15-segmentDistance(a.a,a.b,b.a,b.b);if(depth>0)peerCost+=depth*depth*10;
  }
  return {cost:cost+peerCost,staticCost:cost,peerCost,contacts};
