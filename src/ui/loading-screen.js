@@ -1,20 +1,6 @@
 import {ASSETS,assetUrl} from '../assets/manifest.js';
 
-export const LOADING_TIPS=Object.freeze([
- 'Не стой на месте. Пациенты любят неподвижные цели.',
- 'Ноги ещё на месте? Значит, можно маневрировать.',
- 'После босса забери модуль. Установка оплачивается отдельно.',
- 'Оторванная конечность не повод терять голову.',
- 'Следи за противниками: они дерутся не только с тобой.',
- 'ДМС сохраняет контрольную точку. Бесплатной она не бывает.',
- 'В Убежище можно снять модуль и вернуть его на склад.',
- 'У каждого протеза есть цена. У каждого пациента — предел.',
- 'Когда врагов много, пусть сначала разбираются друг с другом.',
- 'Не путай редкость модуля с количеством конечностей.'
-]);
-export const LOADING_TIP_MS=1500;
-
-export function createLoadingScreen({document:doc=globalThis.document,random=Math.random,staged=false}={}){
+export function createLoadingScreen({document:doc=globalThis.document,staged=false}={}){
  const node=doc.getElementById('texture-loading')??doc.createElement('div');
  if(!node.isConnected)doc.body.prepend(node);
  node.id='texture-loading';node.replaceChildren();node.setAttribute('role','status');
@@ -27,21 +13,14 @@ export function createLoadingScreen({document:doc=globalThis.document,random=Mat
  const percent=doc.createElement('p');percent.className='loading-percent';percent.textContent='0%';
  const host=doc.createElement('div');host.className='loading-streamer';
  const canvas=doc.createElement('canvas');canvas.width=280;canvas.height=288;
- const tip=doc.createElement('p');tip.className='loading-tip';host.append(canvas,tip);
+ const line=doc.createElement('p');line.className='loading-tip';
+ line.textContent='Музыка и звук влияют на восприятие игры. Не выключайте их!';
+ host.append(canvas,line);
  const dismissButton=doc.createElement('button');dismissButton.type='button';dismissButton.className='loading-dismiss';dismissButton.textContent='ЗАКРЫТЬ';dismissButton.hidden=true;
  const center=doc.createElement('div');center.className='loading-center';center.append(title,sub,status,meter,percent,dismissButton);
  node.append(center,host);
- let closed=false,failed=false,started=0,raf=0,timer=null,lastTip=-1,atlas=null,highestProgress=0;
- const tips=[...LOADING_TIPS];
- const chooseTip=()=>{
-  if(closed)return;
-  const choices=tips.length>1?tips.filter((_,i)=>i!==lastTip):tips;
-  const selected=choices[Math.min(choices.length-1,Math.floor(random()*choices.length))]??tips[0];
-  lastTip=tips.indexOf(selected);tip.textContent=selected;
- };
- chooseTip();
+ let closed=false,failed=false,started=0,raf=0,atlas=null,highestProgress=0;
  const win=doc.defaultView;
- timer=win.setInterval(chooseTip,LOADING_TIP_MS);
  const image=new win.Image();image.onload=()=>{if(!closed)atlas=image;};
  image.onerror=()=>{host.classList.add('without-art');};
  image.src=assetUrl(ASSETS.textures.streamer);
@@ -88,14 +67,13 @@ export function createLoadingScreen({document:doc=globalThis.document,random=Mat
    if(closed)return;
    failed=true;status.textContent=message;node.setAttribute('aria-busy','false');
    node.setAttribute('role','alert');
-   if(timer!==null){win.clearInterval(timer);timer=null;}
    if(raf)win.cancelAnimationFrame?.(raf);
    dismissButton.hidden=false;
    dismissButton.focus();
   },
   close(){
    if(closed)return;
-   closed=true;if(timer!==null)win.clearInterval(timer);
+   closed=true;
    if(raf)win.cancelAnimationFrame?.(raf);
    image.onload=image.onerror=null;dismissButton.onclick=null;node.remove();
   }

@@ -39,7 +39,7 @@ test('app deactivation stops music and pending effects; activation resumes music
  }finally{f.finish();}
 });
 
-test('menu music loops at 65% of the music slider and resumes after combat, mute and arena replacement',async()=>{
+test('menu music loops at 85% of the music slider and resumes after combat, mute and arena replacement',async()=>{
  const musicOffsets=new Map();
  const f=setup({phase:'menu',musicOffsets});
  try{
@@ -47,7 +47,7 @@ test('menu music loops at 65% of the music slider and resumes after combat, mute
   const menu=live(f.sources,'menuMusic')[0];
   assert.ok(menu.loop);
   assert.equal(menu.playbackRate.value,1);
-  assert.equal(menu.gain.gain.value,.65);
+  assert.equal(menu.gain.gain.value,.85);
   assert.deepEqual(menu.gain.connections,[f.gains[1]]);
   f.audio.setVolume('sounds',0);
   f.state.startup.phase='tower-ready';

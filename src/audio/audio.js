@@ -6,7 +6,7 @@ import { ctx } from '../game/state.js';
 
 const STORAGE=storageKey('biovshi.audio.v1');
 const DEFAULTS={sounds:50,music:50};
-const MUSIC_GAINS={music:1,menuMusic:.65};
+const MUSIC_GAINS={music:1,menuMusic:.85};
 const isMusic=key=>Object.hasOwn(MUSIC_GAINS,key);
 const rawFiles=new Map(),decodedFiles=new WeakMap();
 const vocalGainCache=new WeakMap();
