@@ -291,12 +291,31 @@ export function towerFighterCombatBonus(id){
  const {crit,cooldownMultiplier}=patientCombatStats(0).combat;
  return {crit,cooldownMultiplier};
 }
+// Commit contacts only after every participant, including bosses, has resolved its
+// attack geometry for this simulation tick.
+export function queueCombatHit(attacker,victim,segment,damage,onResult){
+  const batch=ctx.combat.hitBatch;
+  if(batch){batch.push({attacker,victim,segment,damage,onResult});return;}
+  onResult(victim.damage(segment,attacker.id,damage));
+}
+export function flushCombatHits(){
+  const batch=ctx.combat.hitBatch;
+  ctx.combat.hitBatch=null;
+  if(!batch)return;
+  for(const {attacker,victim,segment,damage,onResult} of batch){
+    // Eligibility and contact were established before any of these hits landed.
+    // Do not discard a same-tick counterattack because its owner died first.
+    const applied=victim.damage(segment,attacker.id,damage,{allowIncapacitated:true});
+    onResult(applied);
+  }
+}
 export function combatAttacks() {
   if (ctx.combat.finished) return;
   // Movement has advanced all bodies; refresh their currently animated hit geometry
   // before any attacker tests a collision this physics tick.
   for(const robot of ctx.robots)robot.refreshCombatCapsules?.();
   resolvePounceImpacts();
+  ctx.combat.hitBatch=[];
   // Snapshot all due strike contacts before applying damage. A hit registered
   // on this physics tick must not change another strike's collision geometry.
   const contactSnapshot=new Map();
@@ -324,34 +343,30 @@ export function combatAttacks() {
           const touched = contactSnapshot.get(pending)??null;
           const stats=touched?patientCombatStats(id,attacker):null;
           const damage=touched&&random()<(stats.effects?.[1]??critChance(stats.effective[1]))?2:1;
-          if (touched && victim.damage(touched, id, damage)) {
-            if (victim.mobile) victim.reactToHit(attacker, touched);
-            ctx.combat.hits++;
-            ctx.combat.fighterHits[id]++;
-            ctx.combat.fighterTaken[victim.id]++;
-            ctx.combat.lastHitTime = ctx.game.time;
-            ctx.agentAI[id].lastHitAt = ctx.game.time;
-            ctx.agentAI[victim.id].lastHitAt = ctx.game.time;
-            note('combat-strike', {
-              from: id,
-              to: victim.id,
-              source: pending.source,
-              segment: touched
+          if(touched){
+            queueCombatHit(attacker,victim,touched,damage,applied=>{
+              if(applied){
+                if(victim.mobile)victim.reactToHit(attacker,touched);
+                ctx.combat.hits++;
+                ctx.combat.fighterHits[id]++;
+                ctx.combat.fighterTaken[victim.id]++;
+                ctx.combat.lastHitTime=ctx.game.time;
+                ctx.agentAI[id].lastHitAt=ctx.game.time;
+                ctx.agentAI[victim.id].lastHitAt=ctx.game.time;
+                note('combat-strike',{from:id,to:victim.id,source:pending.source,segment:touched});
+                if(victim.mobile&&victim.movementLimbs<(victim.movementLimbTotal??4)){
+                  ctx.combat.retreatUntil[victim.id]=ctx.game.time+CONFIG.combat.retreatSec;
+                  ctx.combat.retreatFrom[victim.id]=id;
+                }
+              }else note('combat-miss',{from:id,to:victim.id,source:pending.source});
             });
-            if (victim.mobile && victim.movementLimbs < (victim.movementLimbTotal??4)) {
-              ctx.combat.retreatUntil[victim.id] = ctx.game.time + CONFIG.combat.retreatSec;
-              ctx.combat.retreatFrom[victim.id] = id;
-            }
-          } else note('combat-miss', {
-            from: id,
-            to: victim.id,
-            source: pending.source
-          });
+          }else note('combat-miss',{from:id,to:victim.id,source:pending.source});
         }
       }
     }
     if(pendingStrikes(id).every(p=>ctx.game.time>=p.endsAt))ctx.combat.pending[id]=null;
   }
+  flushCombatHits();
   initiateCombatPounces();
   // Each limb attacks one target; each cycle can attack at most two opponents.
   for (const attacker of ctx.robots) {
