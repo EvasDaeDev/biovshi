@@ -30,7 +30,7 @@ export function towerStandardSpecialist(random=Math.random){
 export const TOWER_DANGER_STYLES=Object.freeze({
  trial:Object.freeze({name:'Отбор',description:'Столько же врагов, но все специализированные'}),
  crowd:Object.freeze({name:'Переполнение',description:'Больше соперников, преимущественно обычных'}),
- mixed:Object.freeze({name:'Смешанный',description:'Разные специализации одновременно'})
+ mixed:Object.freeze({name:'Смешанный',description:'Разные типы бойцов одновременно: быстрые сближаются напрямую, силовые навязывают ближний бой, маневренные заходят с фланга'})
 });
 const DANGER_STYLE_IDS=Object.keys(TOWER_DANGER_STYLES);
 
