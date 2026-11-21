@@ -145,7 +145,9 @@ export function bossSideWeaponIntent(robot,target,memory){
   {x:preferred.point.x-robot.x+12*(robot.scale??1),y:preferred.point.y-robot.y},heading-robot.angle);
  const stance={x:lead.x-offset.x,y:lead.y-offset.y};
  const dx=stance.x-robot.x,dy=stance.y-robot.y,gap=Math.hypot(dx,dy);
- if(gap<cfg.positionStopGap){
+ // Stumps have a much shorter physical reach: do not stop a full 18 cm
+ // short of their planned contact point as the original stance logic did.
+ if(gap<(kind==='stump'?4:cfg.positionStopGap)){
   return {goal:{x:robot.x,y:robot.y},speed:0,brake:true,heading,
    lookPoint:target.center,mode:kind==='leg'?'готовит удар ногой':'готовит удар культёй'};
  }
