@@ -11,7 +11,7 @@ const turn=(p,a)=>({x:p.x*Math.cos(a)-p.y*Math.sin(a),
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 export const isBossStump=s=>s?.kind==='arm'&&s.key.endsWith('-upper');
 export const isBossFullArm=s=>s?.kind==='arm'&&s.key.endsWith('-lower');
-export const bossNeedsShortRange=robot=>!robot.attackSources.some(isBossFullArm);
+export const bossNeedsShortRange=robot=>!robot.attackSources.some(s=>isBossFullArm(s)&&!s.key.includes('pair2'));
 
 // Memories are per opponent and persist for the entire encounter. A turn,
 // missed attack, or single evasive movement cannot reset accumulated evidence.
@@ -111,8 +111,9 @@ export function chooseBossStance(robot,target,memory){
 export function bossSideWeaponIntent(robot,target,memory){
  const cfg=BOSS_CONFIG.tactics;
  const weapons=robot.attackSources.filter(s=>s.kind==='arm'||s.kind==='leg');
- const fullArms=weapons.filter(isBossFullArm);
- if(fullArms.length)return null;
+ const fullFrontArms=weapons.filter(s=>isBossFullArm(s)&&!s.key.includes('pair2'));
+ if(fullFrontArms.length)return null;
+ const rearArms=weapons.filter(s=>isBossFullArm(s)&&s.key.includes('pair2'));
  const stumps=weapons.filter(isBossStump);
  const legs=weapons.filter(s=>s.kind==='leg');
  if(!memory.choiceUntil||ctx.game.time>=memory.choiceUntil){
@@ -120,21 +121,21 @@ export function bossSideWeaponIntent(robot,target,memory){
   memory.choice=stumps.length&&(!legs.length||memory.shortRangeCycle%3===0)?'stump':'leg';
   memory.choiceUntil=ctx.game.time+cfg.positionCommitSec*2;
  }
- const kind=memory.choice==='stump'&&stumps.length?'stump':legs.length?'leg':'stump';
- const options=kind==='leg'?legs:stumps;
+ const kind=rearArms.length?'arm':memory.choice==='stump'&&stumps.length?'stump':legs.length?'leg':'stump';
+ const options=kind==='arm'?rearArms:kind==='leg'?legs:stumps;
  if(!options.length)return null;
  const preferred=options.find(s=>s.side===memory.side)??options[0];
  const side=preferred.side||1;
  const bearing=direction(robot,target.center);
- const relative=kind==='leg'?cfg.sideKickBearing:0;
+ const relative=kind==='leg'?cfg.sideKickBearing:kind==='arm'?cfg.sideArmBearing:0;
  // Opponent lies on the active side of the selected foot/rear arm.
  const heading=wrap(bearing-side*relative);
  const align=Math.abs(wrap(heading-robot.angle));
  const dist=distance(robot,target.center);
- const mode=kind==='leg'?'сближается для удара ногой':'сближается для удара культёй';
+ const mode=kind==='leg'?'сближается для удара ногой':kind==='arm'?'заходит к задней руке':'сближается для удара культёй';
  if(align>cfg.positionAlignTolerance){
   return {goal:{x:robot.x,y:robot.y},speed:0,brake:true,heading,
-   lookPoint:target.center,mode:kind==='leg'?'разворачивает ноги':'разворачивает культю'};
+   lookPoint:target.center,mode:kind==='leg'?'разворачивает ноги':kind==='arm'?'разворачивает задние руки':'разворачивает культю'};
  }
  // Approach in short steps while maintaining the committed SIDE heading.
  // Manual retreat accepts a world-space direction and still uses the usual
@@ -143,14 +144,16 @@ export function bossSideWeaponIntent(robot,target,memory){
  const lead={x:target.center.x+clamp(targetVelocity.x*cfg.positionPredictionSec,-10,10),
   y:target.center.y+clamp(targetVelocity.y*cfg.positionPredictionSec,-10,10)};
  const offset=turn(kind==='leg'?{x:-13,y:side*cfg.sideStanceLateral}:
-  {x:preferred.point.x-robot.x+12*(robot.scale??1),y:preferred.point.y-robot.y},heading-robot.angle);
+  kind==='arm'?{x:8,y:side*cfg.sideStanceLateral}:
+  {x:preferred.point.x-robot.x+12*(robot.scale??1),y:preferred.point.y-robot.y},
+  kind==='stump'?heading-robot.angle:heading);
  const stance={x:lead.x-offset.x,y:lead.y-offset.y};
  const dx=stance.x-robot.x,dy=stance.y-robot.y,gap=Math.hypot(dx,dy);
  // Stumps have a much shorter physical reach: do not stop a full 18 cm
  // short of their planned contact point as the original stance logic did.
  if(gap<(kind==='stump'?4:cfg.positionStopGap)){
   return {goal:{x:robot.x,y:robot.y},speed:0,brake:true,heading,
-   lookPoint:target.center,mode:kind==='leg'?'готовит удар ногой':'готовит удар культёй'};
+   lookPoint:target.center,mode:kind==='leg'?'готовит удар ногой':kind==='arm'?'готовит удар задней рукой':'готовит удар культёй'};
  }
  const step=Math.min(gap,cfg.sideApproachStep);
  let goal={x:robot.x+dx/gap*step,y:robot.y+dy/gap*step};
@@ -161,7 +164,7 @@ export function bossSideWeaponIntent(robot,target,memory){
   const alt={x:robot.x+lateral.x*step,y:robot.y+lateral.y*step};
   if(!coreClearCircle(alt,cfg.positionClearance))
    return {goal:{x:robot.x,y:robot.y},speed:0,brake:true,heading,
-    lookPoint:target.center,mode:kind==='leg'?'ищет сектор для удара ногой':'ищет сектор для удара культёй'};
+    lookPoint:target.center,mode:kind==='leg'?'ищет сектор для удара ногой':kind==='arm'?'ищет сектор задней рукой':'ищет сектор для удара культёй'};
   goal=alt;
  }
  const mx=goal.x-robot.x,my=goal.y-robot.y,mag=Math.hypot(mx,my)||1;
