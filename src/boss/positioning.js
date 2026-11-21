@@ -1,4 +1,5 @@
 import {CONFIG} from '../config.js';
+import {ctx} from '../game/state.js';
 import {wrap} from '../utils/math.js';
 import {coreClearCircle} from '../systems/collision.js';
 import {BOSS_CONFIG} from './config.js';
