@@ -69,15 +69,15 @@ function browserContext(){
   return sharedContext??=AudioContext?new AudioContext():null;
 }
 const clamp=value=>Math.max(0,Math.min(100,Number(value)||0));
-// Gain at 2, 4, 6, 8 and 10 metres, in the arena's centimetre coordinates.
+// Gain at 1, 2.5, 4, 5.5 and 7 metres. The last stretch fades to zero at 10 m.
 const TOWER_DISTANCE_GAINS=[1,.6,.3,.15,.1];
 function distanceGain(state,origin){
   const camera=state.camera;
   if(state.mode!=='tower'||!camera||!origin)return 1;
   const distance=Math.hypot(origin.x-(camera.x+camera.size/2),origin.y-(camera.y+camera.size/2));
-  if(!Number.isFinite(distance)||distance<=200)return 1;
-  if(distance>=1000)return .1;
-  const step=(distance-200)/200,index=Math.floor(step);
+  if(!Number.isFinite(distance)||distance<=100)return 1;
+  if(distance>=700)return .1*Math.max(0,(1000-distance)/300);
+  const step=(distance-100)/150,index=Math.floor(step);
   const near=TOWER_DISTANCE_GAINS[index],far=TOWER_DISTANCE_GAINS[index+1];
   return near+(far-near)*(step-index);
 }
@@ -139,12 +139,13 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
     if(disposed||state.appInactive||!unlocked||!context||context.state!=='running'||!ASSETS.sounds[key]||warnings.has(key))return;
     if(slot&&loops.has(slot))return;
     if((key!=='music'&&settings.sounds===0)||(key==='music'&&settings.music===0))return;
+    const initialDistanceGain=slot?null:distanceGain(state,origin);
+    if(initialDistanceGain===0)return;
     const effects=[...voices].filter(v=>v.key!=='music');
     if(key!=='music'&&effects.length>=maxVoices){
       const replace=effects.find(v=>!v.slot&&v.priority<priority);
       if(replace)stop(replace);else return;
     }
-    const initialDistanceGain=slot?null:distanceGain(state,origin);
     const voice={key,slot,origin,priority,cancelled:false};voices.add(voice);if(slot)loops.set(slot,voice);
     bufferLoader(context,ASSETS.sounds[key]).then(buffer=>{
       if(disposed||voice.cancelled)return;
@@ -216,7 +217,8 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       const targetGain=voice.baseGain*distanceGain(state,voice.origin);
       if(targetGain!==voice.targetGain){
         voice.targetGain=targetGain;
-        voice.gain.gain.setTargetAtTime(targetGain,context.currentTime,.08);
+        if(targetGain===0)voice.gain.gain.setValueAtTime(0,context.currentTime);
+        else voice.gain.gain.setTargetAtTime(targetGain,context.currentTime,.08);
       }
     }
   }

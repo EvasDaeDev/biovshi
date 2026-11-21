@@ -121,14 +121,20 @@ test('Tower combat audio falls off from the camera centre in arena metres',async
  try{
   Object.assign(f.state,{mode:'tower',camera:{x:200,y:100,size:400}});
   Object.assign(f.state.robots[0],{x:400,y:300});
-  Object.assign(f.state.robots[1],{x:1000,y:300});
+  Object.assign(f.state.robots[1],{x:800,y:300});
   await f.unlock();
   const near=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-9,`${actual} != ${expected}`);
-  for(const [distance,multiplier] of [[0,1],[200,1],[300,.8],[400,.6],[600,.3],[800,.15],[1000,.1],[1400,.1]]){
+  for(const [distance,multiplier] of [[0,1],[100,1],[175,.8],[250,.6],[400,.3],[550,.15],[700,.1],[850,.05]]){
    // Deliberately separate the foot contact from the patient's body.
    emitGameEvent('footstep',{robot:0,point:{x:400,y:300+distance}});
    await flush();
    near(live(f.sources,'step').at(-1).gain.gain.value,.7*multiplier);
+  }
+  const steps=live(f.sources,'step').length;
+  for(const distance of [1000,1400]){
+   emitGameEvent('footstep',{robot:0,point:{x:400,y:300+distance}});
+   await flush();
+   assert.equal(live(f.sources,'step').length,steps);
   }
   // Zoom in without moving the centre.
   Object.assign(f.state.camera,{x:300,y:200,size:200});
@@ -137,7 +143,7 @@ test('Tower combat audio falls off from the camera centre in arena metres',async
   f.state.robots[1].x=400;f.state.camera.x=500;
   await flush();
   const hit=live(f.sources,'hit')[0];
-  near(hit.gain.gain.value,.95*.6);
+  near(hit.gain.gain.value,.95*.3);
   near(hit.gain.connections[1].gain.value,.07);
   const pain=f.sources.find(s=>s.started&&String(s.buffer).includes('/man_pain/'));
   near(pain.gain.gain.value,.3);
@@ -155,20 +161,27 @@ test('Tower movement loops smoothly track changes in camera and patient position
  try{
   Object.assign(f.state,{mode:'tower',camera:{x:0,y:0,size:400}});
   const robot=f.state.robots[1];
-  Object.assign(robot,{x:800,y:200,velocity:{x:3,y:0},limbs:[]});
+  Object.assign(robot,{x:600,y:200,velocity:{x:3,y:0},limbs:[]});
   f.state.combat.unarmedDeadline[1]=10;
   await f.unlock();
   const drag=live(f.sources,'drag')[0],crawl=live(f.sources,'crawl')[0];
   assert.equal(drag.gain.gain.value,.3);
   assert.equal(crawl.gain.gain.value,.55*.3);
   f.context.currentTime=.2;
-  f.state.camera.x=200;f.audio.sync();
+  f.state.camera.x=150;f.audio.sync();
   assert.deepEqual(drag.gain.gain.events,[['target',.6,.2,.08]]);
   assert.deepEqual(crawl.gain.gain.events,[['target',.55*.6,.2,.08]]);
   f.context.currentTime=.4;
-  robot.x=500;f.audio.sync();f.audio.sync();
+  robot.x=450;f.audio.sync();f.audio.sync();
   assert.deepEqual(drag.gain.gain.events.at(-1),['target',1,.4,.08]);
   assert.equal(drag.gain.gain.events.length,2,'an unchanged target is not rescheduled');
+  f.context.currentTime=.6;
+  robot.x=1400;f.audio.sync();
+  assert.deepEqual(drag.gain.gain.events.at(-1),['set',0,.6]);
+  assert.deepEqual(crawl.gain.gain.events.at(-1),['set',0,.6]);
+  f.context.currentTime=.8;
+  robot.x=450;f.audio.sync();
+  assert.deepEqual(drag.gain.gain.events.at(-1),['target',1,.8,.08]);
   assert.deepEqual(live(f.sources,'drag'),[drag]);
   assert.deepEqual(live(f.sources,'crawl'),[crawl]);
  }finally{f.finish();}
