@@ -9,7 +9,7 @@ import { clamp, wrap, smooth } from '../utils/math.js';
 import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
 import { sightClear, coreClearBone } from "./collision.js";
-import { pointSegment } from "../utils/math.js";
+import { pointSegment,segmentDistance } from "../utils/math.js";
 import { note } from "../game/events.js";
 import { activeOpponents } from "./ai.js";
 import { bettingSettle } from "../betting/ui.js";
@@ -139,6 +139,38 @@ export function struckSegment(attacker, victim, p) {
       if (gap<=2.2 && (!first || gap<first.gap)) first={segment:c.segment,gap};
     }
     if (first) return first.segment;
+  }
+  return null;
+}
+// Test the actual tip trajectory over the active part of this physics step.
+// This catches a moving opponent touched midway through the thrust instead
+// of retrospectively raycasting the full swing at impact time.
+export function movingStrikeContact(attacker,victim,p){
+  const timing=p.timing??attacker.body?.combat??CONFIG.combat;
+  const age=Math.max(0,ctx.game.time-p.started);
+  const lo=Math.max(timing.windupSec,p.lastContactAge??timing.windupSec);
+  const hi=Math.min(timing.windupSec+timing.thrustSec,age);
+  if(age<timing.windupSec||hi<lo)return null;
+  p.lastContactAge=hi;
+  if(p.source.startsWith('leg-')&&!kickPathClear(attacker,p))return null;
+  if(!sightClear(attacker.center,victim.center))return null;
+  const capsules=victim.capsules.filter(c=>c.segment&&victim.isDamageable(c.segment));
+  const steps=Math.max(1,Math.ceil((hi-lo)*180));
+  let previous=null;
+  for(let i=0;i<=steps;i++){
+    const sampleAge=lo+(hi-lo)*i/steps;
+    const pose=attacker.attackPose({...p,started:ctx.game.time-sampleAge});
+    if(!pose)return null;
+    const tip=pose.tip;
+    let best=null;
+    for(const c of capsules){
+      const gap=pointSegment(tip,c.a,c.b)-c.r;
+      const swept=previous?segmentDistance(previous,tip,c.a,c.b)-c.r:gap;
+      const nearest=Math.min(gap,swept);
+      if(nearest<=2.2&&(!best||nearest<best.gap))best={segment:c.segment,gap:nearest};
+    }
+    if(best)return best.segment;
+    previous=tip;
   }
   return null;
 }
@@ -322,13 +354,18 @@ export function combatAttacks() {
   for(const attacker of ctx.robots){
     if(attacker.body?.resolveCombat)continue;
     for(const pending of pendingStrikes(attacker.id)){
-      if(pending.resolved||ctx.game.time<pending.impactAt)continue;
+      if(pending.resolved)continue;
+      const timing=pending.timing??attacker.body?.combat??CONFIG.combat;
+      if(ctx.game.time<pending.started+timing.windupSec)continue;
       const victim=ctx.robots[pending.victim];
       const src=attacker.attackSources.find(source=>source.key===pending.source);
       const eligible=attacker.visible&&attacker.mobile&&src&&victim?.visible
         &&victim.hasHead&&victim.segmentCount>0
         &&(ctx.mode!=='tower'||!towerAllies(ctx.towerRun,attacker.id,victim.id,ctx.game.time));
-      if(eligible)contactSnapshot.set(pending,struckSegment(attacker,victim,pending));
+      if(eligible){
+        const contact=movingStrikeContact(attacker,victim,pending);
+        if(contact||ctx.game.time>=pending.impactAt)contactSnapshot.set(pending,contact);
+      }
     }
   }
   // Каждый удар: замах -> движение -> касание -> возврат в опору.
@@ -336,7 +373,7 @@ export function combatAttacks() {
     const id = attacker.id;
     if(attacker.body?.resolveCombat){attacker.body.resolveCombat(attacker);continue;}
     for(const pending of pendingStrikes(id)){
-      if (!pending.resolved && ctx.game.time >= pending.impactAt) {
+      if (!pending.resolved && contactSnapshot.has(pending)) {
         pending.resolved = true;
         const victim = ctx.robots[pending.victim];
         if (contactSnapshot.has(pending)) {
