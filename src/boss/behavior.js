@@ -28,6 +28,14 @@ function ordinaryCandidates(robot,target){
   .sort((a,b)=>priority(a.segment)-priority(b.segment)||compareStrikeCandidates(a,b));
  return prioritizeAdditionalArm(available,robot.body?.behavior?.state?.lastAttackSource);
 }
+function rearKickCandidate(robot,excludeTarget){
+ const legs=robot.attackSources.filter(source=>source.kind==='leg');
+ if(!legs.length)return null;
+ const candidates=activeOpponents(robot.id)
+  .filter(target=>target.id!==excludeTarget)
+  .flatMap(target=>legs.map(source=>strikeCandidates(robot,target,source)[0]).filter(Boolean));
+ return candidates.sort(compareStrikeCandidates)[0]??null;
+}
 function wideCandidate(robot,target,timing,exclude){
  if(!sightClear(robot.center,target.center)||Math.abs(wrap(Math.atan2(target.y-robot.y,target.x-robot.x)-robot.angle))>1.25)return null;
  const candidates=robot.attackSources.filter(s=>s.kind==='arm'&&root(s.key)!==exclude);
@@ -119,7 +127,10 @@ export function createBossBehavior(){
    state.charge=null;
   }
   const pending=pendingStrikes(robot.id)[0];
-  if(pending){state.status=pending.style==='sweep'?'Широкий удар':pending.comboIndex?`Серия · ${pending.comboIndex}/2`:'Наносит удар';return hold(robot,pending.aim);}
+  if(pending){
+   state.status=pending.rearKick?'Бьёт ногой':pending.style==='sweep'?'Широкий удар':pending.comboIndex?`Серия · ${pending.comboIndex}/2`:'Наносит удар';
+   return hold(robot,pending.rearKick?null:pending.aim);
+  }
   if(state.followup){state.status='Продолжает серию';return hold(robot,target.center);}
   if(now<ctx.combat.nextStrike[robot.id]){
    const dx=robot.x-target.center.x,dy=robot.y-target.center.y,d=Math.hypot(dx,dy)||1;
@@ -166,40 +177,69 @@ export function createBossBehavior(){
  function resolveCombat(robot){
   updateBossPhase(robot,state);
   if(!robot.mobile||ctx.combat.finished){state.followup=state.charge=state.quickStrike=state.chargeOutcome=null;setPendingStrikes(robot.id,[]);return;}
-  const p=pendingStrikes(robot.id)[0];if(!p)return;
-  const victim=ctx.robots[p.victim],source=robot.attackSources.find(s=>s.key===p.source);
-  if(!source||!victim?.mobile||!victim.visible){setPendingStrikes(robot.id,[]);state.followup=null;ctx.combat.nextStrike[robot.id]=ctx.game.time+.4;return;}
-  if(p.style==='sweep'&&!poseClear(robot,poseAt(robot,p,ctx.game.time-p.started))){setPendingStrikes(robot.id,[]);state.followup=null;ctx.combat.nextStrike[robot.id]=ctx.game.time+.4;return;}
-  if(!p.resolved){
-   if(p.style==='sweep'){
-    const age=ctx.game.time-p.started,segment=sweepContact(robot,victim,p,p.lastAge??0,age);p.lastAge=age;
-    if(segment&&sightClear(robot.center,victim.center))applyHit(robot,victim,p,segment);
-    else if(ctx.game.time>=p.impactAt){p.resolved=true;recordBossTacticalStrike(bossOpponentMemory(state,victim.id),source,false,ctx.game.time);note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});}
-   }else if(ctx.game.time>=p.started+p.timing.windupSec){
-    const segment=movingStrikeContact(robot,victim,p);
-    if(segment)applyHit(robot,victim,p,segment);
-    else if(ctx.game.time>=p.impactAt){p.resolved=true;recordBossTacticalStrike(bossOpponentMemory(state,victim.id),source,false,ctx.game.time);note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});}
+  const strikes=pendingStrikes(robot.id);
+  if(!strikes.length)return;
+  const now=ctx.game.time;
+  const remaining=strikes.filter(p=>{
+   const victim=ctx.robots[p.victim],source=robot.attackSources.find(s=>s.key===p.source);
+   const invalid=!source||!victim?.mobile||!victim.visible
+    ||p.style==='sweep'&&!poseClear(robot,poseAt(robot,p,now-p.started));
+   if(invalid){
+    if(!p.rearKick){state.followup=null;ctx.combat.nextStrike[robot.id]=now+.4;}
+    return false;
    }
-  }
-  if(ctx.game.time>=p.endsAt){
-   setPendingStrikes(robot.id,[]);
+   if(!p.resolved&&now>=p.started+p.timing.windupSec){
+    let segment;
+    if(p.style==='sweep'){
+     const age=now-p.started;
+     segment=sweepContact(robot,victim,p,p.lastAge??0,age);p.lastAge=age;
+     if(segment&&!sightClear(robot.center,victim.center))segment=null;
+    }else segment=movingStrikeContact(robot,victim,p);
+    if(segment)applyHit(robot,victim,p,segment);
+    else if(now>=p.impactAt){
+     p.resolved=true;
+     recordBossTacticalStrike(bossOpponentMemory(state,victim.id),source,false,now);
+     note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});
+    }
+   }
+   if(now<p.endsAt)return true;
+   if(p.rearKick)return false;
    if(p.comboIndex===1&&robot.attackSources.some(s=>s.kind!=='head'&&root(s.key)!==root(p.source))){
-    state.followup={victim:p.victim,exclude:root(p.source),at:ctx.game.time+BOSS_CONFIG.tactics.followupDelay};
-   }else{state.followup=null;ctx.combat.nextStrike[robot.id]=ctx.game.time+BOSS_CONFIG.tactics.seriesRest;}
-  }
+    state.followup={victim:p.victim,exclude:root(p.source),at:now+BOSS_CONFIG.tactics.followupDelay};
+   }else{state.followup=null;ctx.combat.nextStrike[robot.id]=now+BOSS_CONFIG.tactics.seriesRest;}
+   return false;
+  });
+  if(remaining.length!==strikes.length)setPendingStrikes(robot.id,remaining);
  }
- function begin(robot,candidate,timing,{style='jab',comboIndex}={}){
+ function begin(robot,candidate,timing,{style='jab',comboIndex,rearKick=false}={}){
   const target=candidate.victim,source=candidate.source;
   const p={victim:target.id,segment:candidate.segment,source:source.key,aim:{...(candidate.aim??target.center)},direction:robot.angle,style,comboIndex,timing,
    started:ctx.game.time,impactAt:ctx.game.time+timing.windupSec+timing.thrustSec,endsAt:ctx.game.time+duration(timing),at:ctx.game.time+timing.windupSec,resolved:false};
-  setPendingStrikes(robot.id,[p]);ctx.combat.nextStrike[robot.id]=p.endsAt;
-  state.lastAttackSource=source.key;
+  if(rearKick){
+   const [primary]=pendingStrikes(robot.id);
+   primary.rearKickStarted=true;
+   p.rearKick=true;
+   setPendingStrikes(robot.id,[primary,p]);
+  }else{
+   setPendingStrikes(robot.id,[p]);ctx.combat.nextStrike[robot.id]=p.endsAt;
+   state.lastAttackSource=source.key;
+  }
   ctx.combat.strikes++;ctx.combat.fighterSwings[robot.id]++;
   note('combat-windup',{from:robot.id,to:target.id,source:source.key,bossStyle:style,comboIndex});
  }
  function planCombat(robot){
-  if(!robot.visible||!robot.mobile||ctx.combat.finished||state.charge||ctx.combat.pending[robot.id]||robot.actualPose.leap||ctx.game.time<robot.combatRecoverUntil)return;
+  if(!robot.visible||!robot.mobile||ctx.combat.finished||state.charge||robot.actualPose.leap||ctx.game.time<robot.combatRecoverUntil)return;
   const cfg=BOSS_CONFIG.tactics,now=ctx.game.time;
+  const [primary,secondary]=pendingStrikes(robot.id);
+  if(primary){
+   // Keep the front attack committed, but let a spare leg react to an
+   // opponent that comes within its real reach during the swing.
+   if(!secondary&&!primary.rearKick&&!primary.rearKickStarted&&!primary.source.startsWith('leg-')){
+    const kick=rearKickCandidate(robot,primary.victim);
+    if(kick)begin(robot,kick,cfg.first,{style:'kick',rearKick:true});
+   }
+   return;
+  }
   if(state.quickStrike){
    const quick=state.quickStrike;state.quickStrike=null;
    const victim=ctx.robots[quick.victim];
@@ -227,15 +267,13 @@ export function createBossBehavior(){
   if(now<ctx.combat.nextStrike[robot.id])return;
   const target=targetFor(robot);if(!target)return;
   const seen=robot.canSee(target.center);
-  // Rear/side leg strikes may be sensed by the foot at contact distance even
-  // if the boss cannot see through the back of its own head.
-  if(!seen&&!ordinaryCandidates(robot,target).some(c=>c.source.kind==='leg'))return;
-  const wantsWide=state.cycles%(state.phase===2?2:3)===(state.phase===2?1:2);
-  const wide=wantsWide?wideCandidate(robot,target,cfg.sweep):null;
-  if(wide){state.cycles++;begin(robot,wide,cfg.sweep,{style:'sweep'});return;}
   const noFrontArms=!robot.attackSources.some(s=>s.kind==='arm'&&s.key.endsWith('-lower')&&!s.key.includes('pair2'));
   const options=ordinaryCandidates(robot,target).filter(c=>(seen||c.source.kind==='leg')&&(!noFrontArms||c.source.kind!=='head'));
-  const candidate=noFrontArms?(options.find(c=>c.source.kind==='leg')??options.find(c=>isBossStump(c.source))??options[0]):options[0];if(!candidate)return;
+  const wantsWide=state.cycles%(state.phase===2?2:3)===(state.phase===2?1:2);
+  const wide=wantsWide&&(seen||options.length)?wideCandidate(robot,target,cfg.sweep):null;
+  if(wide){state.cycles++;begin(robot,wide,cfg.sweep,{style:'sweep'});return;}
+  const preferred=noFrontArms?(options.find(c=>c.source.kind==='leg')??options.find(c=>isBossStump(c.source))??options[0]):options[0];
+  const candidate=preferred??rearKickCandidate(robot,target.id);if(!candidate)return;
   state.cycles++;begin(robot,candidate,candidate.source.kind==='head'?BOSS_CONFIG.combat:cfg.first,{comboIndex:candidate.source.kind==='head'?undefined:1});
  }
  return {state,intent,resolveCombat,planCombat};

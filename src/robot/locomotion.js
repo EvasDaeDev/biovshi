@@ -480,12 +480,15 @@ export function robotTick(robotState, dt, intent) {
     robotState.api.capsules = robotState.makeCapsules();
     return;
   }
-  if(!intent.manual&&pendingStrikes(robotState.id).some(p=>p.source.startsWith('leg-'))){
-    // Autonomous kicks keep planted supports; manual control keeps movement
-    // and turning available throughout every ordinary strike.
+  const strikes=intent.manual?[]:pendingStrikes(robotState.id);
+  if(strikes.some(p=>p.source.startsWith('leg-'))){
+    // Keep planted supports during an autonomous kick. A boss can still
+    // track the opponent in front while a leg attacks separately behind it.
     if(robotState.scene)robotState.api.endScene();
     robotState.vx=robotState.vy=robotState.requestedSpeed=0;
-    robotState.currentIntent={goal:{x:robotState.x,y:robotState.y},speed:0,mode:'лягается',lookPoint:null};
+    const primary=strikes[0];
+    const lookPoint=robotState.body?.isBoss&&!primary.source.startsWith('leg-')?primary.aim:null;
+    robotState.currentIntent={goal:{x:robotState.x,y:robotState.y},speed:0,mode:'лягается',lookPoint};
     robotState.updateHead(dt);
     return;
   }
