@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { createInertia, inertiaOffset, detachedCenter } from '../src/render/inertia.js';
 import { coreClearBone } from '../src/systems/collision.js';
-import { strikeCandidates } from '../src/systems/combat.js';
+import { strikeCandidates,queueCombatHit,flushCombatHits } from '../src/systems/combat.js';
 import { headGuardActive } from '../src/systems/ai.js';
 import { createRobot } from '../src/robot/robot.js';
 import { segmentDistance } from '../src/utils/math.js';
@@ -1166,4 +1166,26 @@ test('recovery replaces only severed segments, persists prosthetics, and death r
     await resetRound();
     assert.ok([...ctx.robots[0].actor.querySelectorAll('[data-skin-segment] image')].every(img=>img.getAttribute('href').endsWith('r_01.png')));
   }finally{ctx.root.__disposeTag();dom.window.close();}
+});
+
+
+test('reciprocal lethal head hits incapacitate both real robots in one physics tick',()=>{
+  const dom=setup();
+  const [first,second]=ctx.robots;
+  assert.ok(first?.mobile&&second?.mobile);
+  first.hp.set('head',1);
+  second.hp.set('head',1);
+  const registered=[];
+  ctx.combat.hitBatch=[];
+  queueCombatHit(first,second,'head',2,applied=>registered.push({from:first.id,applied}));
+  queueCombatHit(second,first,'head',2,applied=>registered.push({from:second.id,applied}));
+  assert.equal(first.mobile,true);
+  assert.equal(second.mobile,true);
+  flushCombatHits();
+  assert.deepEqual(registered,[{from:first.id,applied:true},{from:second.id,applied:true}]);
+  assert.equal(first.mobile,false);
+  assert.equal(second.mobile,false);
+  assert.equal(first.hp.get('head'),0);
+  assert.equal(second.hp.get('head'),0);
+  dom.window.close();
 });
