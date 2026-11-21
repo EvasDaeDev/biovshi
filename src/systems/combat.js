@@ -292,6 +292,21 @@ export function combatAttacks() {
   // before any attacker tests a collision this physics tick.
   for(const robot of ctx.robots)robot.refreshCombatCapsules?.();
   resolvePounceImpacts();
+  // Snapshot all due strike contacts before applying damage. A hit registered
+  // on this physics tick must not change another strike's collision geometry.
+  const contactSnapshot=new Map();
+  for(const attacker of ctx.robots){
+    if(attacker.body?.resolveCombat)continue;
+    for(const pending of pendingStrikes(attacker.id)){
+      if(pending.resolved||ctx.game.time<pending.impactAt)continue;
+      const victim=ctx.robots[pending.victim];
+      const src=attacker.attackSources.find(source=>source.key===pending.source);
+      const eligible=attacker.visible&&attacker.mobile&&src&&victim?.visible
+        &&victim.hasHead&&victim.segmentCount>0
+        &&(ctx.mode!=='tower'||!towerAllies(ctx.towerRun,attacker.id,victim.id,ctx.game.time));
+      contactSnapshot.set(pending,eligible?struckSegment(attacker,victim,pending):null);
+    }
+  }
   // Каждый удар: замах -> движение -> касание -> возврат в опору.
   for (const attacker of ctx.robots) {
     const id = attacker.id;
@@ -300,10 +315,8 @@ export function combatAttacks() {
       if (!pending.resolved && ctx.game.time >= pending.impactAt) {
         pending.resolved = true;
         const victim = ctx.robots[pending.victim];
-        const src = attacker.attackSources.find(s => s.key === pending.source);
-        if (attacker.visible && attacker.mobile && src && victim?.visible && victim.hasHead && victim.segmentCount > 0
-          &&(ctx.mode!=='tower'||!towerAllies(ctx.towerRun,id,victim.id,ctx.game.time))) {
-          const touched = struckSegment(attacker, victim, pending);
+        if (contactSnapshot.has(pending)) {
+          const touched = contactSnapshot.get(pending)??null;
           const stats=touched?patientCombatStats(id,attacker):null;
           const damage=touched&&random()<(stats.effects?.[1]??critChance(stats.effective[1]))?2:1;
           if (touched && victim.damage(touched, id, damage)) {
