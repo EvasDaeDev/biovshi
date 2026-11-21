@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {makeCapsules} from '../src/robot/collision.js';
-import {strikeProgress,struckSegment,queueCombatHit,flushCombatHits} from '../src/systems/combat.js';
+import {strikeProgress,struckSegment,movingStrikeContact,queueCombatHit,flushCombatHits} from '../src/systems/combat.js';
 import {CONFIG} from '../src/config.js';
 import {ctx} from '../src/game/state.js';
 
@@ -151,4 +151,37 @@ test('mixed boss and player hits share the same deferred damage batch',()=>{
     {id:1,segment:'arm-1-lower',from:0,amount:1,allowIncapacitated:true},
     {id:0,segment:'head',from:1,amount:2,allowIncapacitated:true}
   ]);
+});
+
+
+test('moving opponent can be hit during thrust, but never during windup',()=>{
+  const timing=CONFIG.combat;
+  const p={source:'arm-1-lower',started:0,aim:{x:25,y:0},timing};
+  const attacker={center:{x:0,y:0},attackPose:sample=>{
+    const age=ctx.game.time-sample.started;
+    const q=Math.max(0,Math.min(1,(age-timing.windupSec)/timing.thrustSec));
+    return {kind:'arm',tip:{x:20*q,y:0}};
+  }};
+  const victim={center:{x:10,y:0},capsules:[{
+    segment:'arm-1-lower',a:{x:10,y:0},b:{x:10,y:0},r:1
+  }],isDamageable:key=>key==='arm-1-lower'};
+  ctx.obstacles=[];
+  ctx.game={time:timing.windupSec-.001};
+  assert.equal(movingStrikeContact(attacker,victim,p),null,'windup has no damaging contact');
+  ctx.game.time=timing.windupSec+.12;
+  assert.equal(movingStrikeContact(attacker,victim,p),'arm-1-lower','contact occurs before the impact deadline');
+  assert.ok(ctx.game.time<timing.windupSec+timing.thrustSec);
+});
+
+test('active strike contact sampling does not restart after full thrust',()=>{
+  const timing=CONFIG.combat;
+  const p={source:'arm-1-lower',started:0,aim:{x:20,y:0},timing};
+  const attacker={center:{x:0,y:0},attackPose:()=>({kind:'arm',tip:{x:0,y:0}})};
+  const victim={center:{x:100,y:0},capsules:[{
+    segment:'arm-1-lower',a:{x:100,y:0},b:{x:100,y:0},r:1
+  }],isDamageable:()=>true};
+  ctx.obstacles=[];
+  ctx.game={time:timing.windupSec+timing.thrustSec+.1};
+  assert.equal(movingStrikeContact(attacker,victim,p),null);
+  assert.ok(p.lastContactAge<=timing.windupSec+timing.thrustSec);
 });
