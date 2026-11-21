@@ -1,4 +1,5 @@
 import {limbKey} from './body.js';
+import {pendingStrikes} from '../systems/strikes.js';
 import {limbCapsuleClear} from '../systems/surface-contact.js';
 import { clamp } from '../utils/math.js';
 import { arenaClearance } from "../game/arena.js";
@@ -168,6 +169,11 @@ export function validContact(robotState, l) {
 export function makeCapsules(robotState) {
   // Incapacitated robots remain drawn but never obstruct other fighters.
   if (!robotState.mobile()) return [];
+  // Keep damage capsules aligned with the current visual attacking pose.
+  const activePoses = pendingStrikes(robotState.id).map(p=>robotState.attackPose(p)).filter(Boolean);
+  const headPose = activePoses.find(p=>p.kind==='head');
+  const headShift = headPose?{x:headPose.tip.x-headPose.base.x,y:headPose.tip.y-headPose.base.y}:{x:0,y:0};
+  const headPoint = p=>({x:p.x+headShift.x,y:p.y+headShift.y});
   const out = [],
     push = (a, b, r, segment) => {
       r *= (robotState.scale??ctx.scale);
@@ -193,12 +199,15 @@ export function makeCapsules(robotState) {
   for (let i = 1; i < robotState.tail.length; i++) push(robotState.tail[i - 1], robotState.tail[i], 3, 'tail-' + (i - 1));
   push(robotState.chest, robotState.chest, 19, 'spine-0');
   push(robotState.pelvis, robotState.pelvis, 24, robotState.pelvisKey??'spine-3');
-  push(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13*(robotState.body?.headSizeFactor??1), 'head');
-  push(robotState.local(robotState.headFrame, 25 + 14*(robotState.body?.headSizeFactor??1) + robotState.headMotion, 0), robotState.local(robotState.headFrame, 25 + 14*(robotState.body?.headSizeFactor??1) + robotState.headMotion, 0), 2.5*(robotState.body?.headSizeFactor??1), 'head');
+  const headCenter=headPoint(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0));
+  push(headCenter,headCenter,13*(robotState.body?.headSizeFactor??1),'head');
+  const headNose=headPoint(robotState.local(robotState.headFrame, 25 + 14*(robotState.body?.headSizeFactor??1) + robotState.headMotion, 0));
+  push(headNose,headNose,2.5*(robotState.body?.headSizeFactor??1),'head');
   for (const l of [...robotState.arms, ...robotState.legs]) {
     const a = robotState.origin(l),
       ls = robotState.lengths(l),
-      p = ik(a, robotState.handEnd(l), ...ls, l.kind === 'arm' ? l.side : -l.side);
+      strike=activePoses.find(p=>p.limb===l),
+      p = strike?{joint:strike.joint,end:strike.tip}:ik(a, robotState.handEnd(l), ...ls, l.kind === 'arm' ? l.side : -l.side);
     const prefix = `${limbKey(l)}-`;
     push(a, p.joint, (l.kind === 'arm' ? 4.8 : 6.8)*(l.massScale??1), prefix + 'upper');
     push(p.joint, p.end, (l.kind === 'arm' ? 3.8 : 4.8)*(l.massScale??1), prefix + 'lower');
