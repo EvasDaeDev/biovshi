@@ -288,6 +288,9 @@ export function towerFighterCombatBonus(id){
 }
 export function combatAttacks() {
   if (ctx.combat.finished) return;
+  // Movement has advanced all bodies; refresh their currently animated hit geometry
+  // before any attacker tests a collision this physics tick.
+  for(const robot of ctx.robots)robot.refreshCombatCapsules?.();
   resolvePounceImpacts();
   // Каждый удар: замах -> движение -> касание -> возврат в опору.
   for (const attacker of ctx.robots) {
@@ -367,6 +370,9 @@ export function combatAttacks() {
       for(const best of selected)note('combat-windup',{from:id,to:best.victim.id,source:best.source.key});
     }
   }
+  // Strike planning changes the animated pose after robot.tick() built capsules.
+  // Keep rendering and subsequent collision queries on the same pose immediately.
+  for(const robot of ctx.robots)robot.refreshCombatCapsules?.();
   const mobile = ctx.robots.filter(r => r.mobile && r.visible && r.segmentCount > 0);
   // A headbutt that wins the fight must still complete its backward hop
   // and landing recovery before switching to the victory animation.
