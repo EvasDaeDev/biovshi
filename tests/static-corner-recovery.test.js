@@ -71,12 +71,13 @@ test('a patient can leave the same corner after losing a forearm without losing 
  }finally{ctx.root.__disposeTag();dom.window.close();}
 });
 
-test('a manual command can leave a body overlap between two opponents',()=>{
+for(const [x,offset,angle] of [[312,12,0],[350,24,Math.PI/2]])test(
+ `a manual command can leave a body overlap between two opponents at angle ${angle}`,()=>{
  const dom=fixture();
  try{
   ctx.obstacles=[];
   const player=createRobot(0,{x:350,y:350,angle:0});
-  const peers=[createRobot(1,{x:312,y:338,angle:0}),createRobot(2,{x:312,y:362,angle:0})];
+  const peers=[createRobot(1,{x,y:350-offset,angle}),createRobot(2,{x,y:350+offset,angle:-angle})];
   ctx.robots=[player,...peers];
   for(const robot of ctx.robots)robot.setVisible(true);
   assert.equal(player.clear(),false);

@@ -55,14 +55,16 @@ export function peerBodyOverlap(robotState){
   const depths=new Map();
   const body=robotState.makeCapsules(false,true);
   for(const peer of robotState.peerRobots()){
-    let depthSquared=0;
+    let deepest=0,torso=0;
     for(const a of body)for(const b of solidCapsules(peer.capsules)){
       const radius=a.r+b.r+.15;
       if(a.maxX+radius<b.minX||a.minX-radius>b.maxX||a.maxY+radius<b.minY||a.minY-radius>b.maxY)continue;
       const depth=radius-segmentDistance(a.a,a.b,b.a,b.b);
-      if(depth>0)depthSquared+=depth*depth;
+      deepest=Math.max(deepest,depth);
+      if(a.segment!=='head'&&b.segment!=='head')torso=Math.max(torso,depth);
     }
-    if(depthSquared>0)depths.set(peer.id,depthSquared);
+    if(deepest>0)depths.set(peer.id,{depth:deepest,torso,
+      separation:Math.hypot(robotState.x-peer.x,robotState.y-peer.y)});
   }
   return depths;
 }
@@ -80,8 +82,13 @@ export function rigClear(robotState) {
     if(!robotState.clearCircle(center,13*headScale*scale,strictPeers)||
        !robotState.clearCircle(nose,2.5*headScale*scale,strictPeers))return false;
   }
-  if(!strictPeers)for(const [peer,depth] of peerBodyOverlap(robotState)){
-    if(depth>(baseline.get(peer)??0)+1e-7)return false;
+  if(!strictPeers)for(const [peer,contact] of peerBodyOverlap(robotState)){
+    const before=baseline.get(peer);
+    if(!before||contact.torso>before.torso+1e-7)return false;
+    if(contact.depth<=before.depth+1e-7)continue;
+    // As the body moves away, its spine can slide under an already touching
+    // head. Neither a new opponent contact nor deeper torso contact is needed.
+    if(contact.separation<=before.separation+1e-7)return false;
   }
   return [...robotState.arms,...robotState.legs].every(l=>!robotState.healthy(`${limbKey(l)}-upper`)||robotState.limbClear(l));
 }
