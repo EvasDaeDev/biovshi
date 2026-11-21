@@ -303,9 +303,6 @@
   image-rendering:auto;
 }
 
-/* Keep eliminated opponents subdued while their status remains legible. */
-#robot-tag-hops-v22 .robot-card.tower-card-retired::after{opacity:.35}
-
 #robot-tag-hops-v22 #tower-floor-preview .tower-arena-map:has(>.tower-boss-drop){
   display:grid;grid-template-columns:auto minmax(0,1fr);row-gap:8px;
 }
