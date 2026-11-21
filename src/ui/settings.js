@@ -12,7 +12,7 @@ export function initializeSettings() {
   const globalButton=root.querySelector('#game-nav-settings');
   const buttons=[button,launchButton,towerButton,globalButton].filter(Boolean);
   let opener=button;
-  panel.querySelector('#settings-build-version').textContent=typeof __BUILD_VERSION__==='string'?__BUILD_VERSION__:'0.1.0+dev';
+  panel.querySelector('#settings-build-version').textContent=typeof __BUILD_VERSION__==='string'?__BUILD_VERSION__:'0.9.0+dev';
   for(const trigger of buttons)trigger.innerHTML=uiIcon('settings');
   const controlMode=root.querySelector('#tower-control-mode');
   ctx.towerControlMode=loadControlMode(winStorage(doc));
