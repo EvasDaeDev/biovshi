@@ -44,6 +44,7 @@ function wideCandidate(robot,target,timing,exclude){
 }
 function applyHit(robot,victim,p,segment){
  p.resolved=true;const damage=bossDamage(random(),patientCombatStats(robot.id,robot).effective[1]);
+ const source=robot.attackSources.find(s=>s.key===p.source);
  // Boss jabs and sweeps share the same physical-tick damage commit as ordinary
  // strikes. Their hit decisions are made before any same-tick incapacitation.
  queueCombatHit(robot,victim,segment,damage,applied=>{
@@ -51,7 +52,7 @@ function applyHit(robot,victim,p,segment){
   if(victim.mobile)victim.reactToHit(robot,segment);
   ctx.combat.hits++;ctx.combat.fighterHits[robot.id]++;ctx.combat.fighterTaken[victim.id]++;ctx.combat.lastHitTime=ctx.game.time;
   ctx.agentAI[robot.id].lastHitAt=ctx.game.time;ctx.agentAI[victim.id].lastHitAt=ctx.game.time;
-  recordBossTacticalStrike(bossOpponentMemory(robot.body.behavior.state,victim.id),robot.attackSources.find(s=>s.key===p.source),true,ctx.game.time);
+  recordBossTacticalStrike(bossOpponentMemory(robot.body.behavior.state,victim.id),source,true,ctx.game.time);
   note('combat-strike',{from:robot.id,to:victim.id,source:p.source,segment,bossStyle:p.style??'jab'});
  });
 }
