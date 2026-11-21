@@ -73,6 +73,7 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   const launch=root.querySelector('#launch-game');
   const read=welcome.querySelector('#startup-read-intro');
   assert.equal(welcome.open,true);
+  assert.equal(welcome.querySelector('h2').textContent,'Приветствуем в нашем ЦЕНТРЕ');
   assert.equal(document.activeElement,read);
   launch.click();
   assert.equal(ctx.startup.phase,'demo','the welcome blocks the menu');
@@ -110,6 +111,38 @@ test('skipping the welcome keeps the intro closed and opens the menu',()=>{
     skip.click();
     assert.equal(welcome.open,false);
     assert.equal(root.querySelector('#startup-intro').open,false);
+    assert.equal(root.querySelector('#launch-overlay').hidden,false);
+    assert.equal(dom.window.document.activeElement,root.querySelector('#launch-game'));
+    root.__disposeTag();
+  }finally{dom.window.close();}
+});
+
+
+
+test('only a press and click on the lore backdrop dismisses it',()=>{
+  const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const dom=new JSDOM(html);
+  try{
+    const root=dom.window.document.querySelector('#robot-tag-hops-v22');
+    root.__disposeTag=()=>{};
+    showStartupWelcome(root);
+    const welcome=root.querySelector('#startup-welcome');
+    const intro=root.querySelector('#startup-intro');
+    const dispatch=(target,type,x)=>target.dispatchEvent(new dom.window.MouseEvent(type,{bubbles:true,clientX:x,clientY:200}));
+    dispatch(welcome,'pointerdown',10);
+    dispatch(welcome,'click',10);
+    assert.equal(welcome.open,true,'a backdrop click leaves the welcome open');
+    root.querySelector('#startup-read-intro').click();
+    intro.getBoundingClientRect=()=>({left:100,right:500,top:100,bottom:500});
+    dispatch(intro,'pointerdown',101);
+    dispatch(intro,'click',101);
+    assert.equal(intro.open,true,'clicking inside the panel padding keeps it open');
+    dispatch(intro,'pointerdown',101);
+    dispatch(intro,'click',20);
+    assert.equal(intro.open,true,'dragging from the panel to the backdrop keeps it open');
+    dispatch(intro,'pointerdown',20);
+    dispatch(intro,'click',20);
+    assert.equal(intro.open,false);
     assert.equal(root.querySelector('#launch-overlay').hidden,false);
     assert.equal(dom.window.document.activeElement,root.querySelector('#launch-game'));
     root.__disposeTag();

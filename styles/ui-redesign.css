@@ -11,6 +11,10 @@
   --ui-credit:#63e780;
   --ui-debit:#ff7171;
   --ui-accent:#a88753;
+  --ui-action-red:#8b4936;
+  --ui-action-red-edge:#ad674a;
+  --ui-action-red-hover:#a0523c;
+  --ui-action-red-text:#fff0d3;
 }
 #robot-tag-hops-v22 #tower-preparation{
   padding:clamp(8px,1.6vw,18px);
@@ -1076,15 +1080,15 @@
   width:100%;
   margin:0;
   padding:10px 15px;
-  background:#8b4936;
-  border:1px solid #ad674a;
-  color:#fff0d3;
+  background:var(--ui-action-red);
+  border:1px solid var(--ui-action-red-edge);
+  color:var(--ui-action-red-text);
   box-shadow:none;
   font-size:clamp(16px,2.2vw,25px);
   letter-spacing:.055em;
 }
 #robot-tag-hops-v22 #launch-overlay #launch-game:hover{
-  background:#a0523c;
+  background:var(--ui-action-red-hover);
 }
 #robot-tag-hops-v22 #launch-overlay .tower-menu-block{
   grid-area:3 / 2;
@@ -2000,7 +2004,7 @@ html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower
 #robot-tag-hops-v22 .startup-dialog h2{margin:0;font-size:clamp(24px,5vw,40px);line-height:1.15}
 #robot-tag-hops-v22 .startup-dialog p{margin:0 0 .85em}
 #robot-tag-hops-v22 .startup-dialog .startup-subtitle{margin:.4em 0 1.3em;color:#ddc79b}
-#robot-tag-hops-v22 .startup-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin-top:22px}
+#robot-tag-hops-v22 .startup-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:22px}
 #robot-tag-hops-v22 .startup-actions button{
   min-height:44px;
   padding:8px 16px;
@@ -2011,5 +2015,10 @@ html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower
   font:700 16px/1.2 system-ui,sans-serif;
   cursor:pointer;
 }
-#robot-tag-hops-v22 .startup-actions .startup-primary{background:#e7c577;color:#22271f}
+#robot-tag-hops-v22 .startup-actions .startup-primary{
+  background:var(--ui-action-red);
+  border-color:var(--ui-action-red-edge);
+  color:var(--ui-action-red-text);
+}
+#robot-tag-hops-v22 .startup-actions .startup-primary:hover{background:var(--ui-action-red-hover)}
 #robot-tag-hops-v22 .startup-actions button:focus-visible{outline:2px solid #fff2b4;outline-offset:3px}
