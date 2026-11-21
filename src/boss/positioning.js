@@ -8,6 +8,9 @@ const direction=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x);
 const turn=(p,a)=>({x:p.x*Math.cos(a)-p.y*Math.sin(a),
  y:p.x*Math.sin(a)+p.y*Math.cos(a)});
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+export const isBossStump=s=>s?.kind==='arm'&&s.key.endsWith('-upper');
+export const isBossFullArm=s=>s?.kind==='arm'&&s.key.endsWith('-lower');
+export const bossNeedsShortRange=robot=>!robot.attackSources.some(isBossFullArm);
 
 // Memories are per opponent and persist for the entire encounter. A turn,
 // missed attack, or single evasive movement cannot reset accumulated evidence.
@@ -61,7 +64,7 @@ export function chooseBossStance(robot,target,memory){
  const cfg=BOSS_CONFIG.tactics;
  const limbs=robot.attackSources.filter(s=>s.kind==='arm'||s.kind==='leg');
  if(!limbs.length)return null;
- const arms=limbs.filter(s=>s.kind==='arm');
+ const arms=limbs.filter(isBossFullArm);
  const bearing=direction(robot,target.center),v=target.velocity??{x:0,y:0};
  const horizon=cfg.positionPredictionSec;
  const lead={x:target.center.x+clamp(v.x*horizon,-12,12),
@@ -91,7 +94,7 @@ export function chooseBossStance(robot,target,memory){
    // Moving a giant body is expensive. Prefer viable short moves and modest
    // turns; choose a kick when the arms have genuinely been destroyed.
    const score=travel*.4+Math.abs(rotation)*18+headRisk+failure*12+directRisk+
-    (source.kind==='leg'&&arms.length?42:0)+(side&&side!==memory.side?5:0);
+    (source.kind==='leg'&&arms.length?42:0)+(isBossStump(source)?18:0)+(side&&side!==memory.side?5:0);
    options.push({goal,heading,source:source.key,kind:source.kind,score,
     targetAt:{...target.center},side,travel});
   }
@@ -107,25 +110,30 @@ export function chooseBossStance(robot,target,memory){
 export function bossSideWeaponIntent(robot,target,memory){
  const cfg=BOSS_CONFIG.tactics;
  const weapons=robot.attackSources.filter(s=>s.kind==='arm'||s.kind==='leg');
- const frontArms=weapons.filter(s=>s.kind==='arm'&&!s.key.includes('pair2'));
- if(frontArms.length)return null;
- const rearArms=weapons.filter(s=>s.kind==='arm');
+ const fullArms=weapons.filter(isBossFullArm);
+ if(fullArms.length)return null;
+ const stumps=weapons.filter(isBossStump);
  const legs=weapons.filter(s=>s.kind==='leg');
- const kind=rearArms.length?'arm':'leg';
- const options=kind==='arm'?rearArms:legs;
+ if(!memory.choiceUntil||ctx.game.time>=memory.choiceUntil){
+  memory.shortRangeCycle=(memory.shortRangeCycle??0)+1;
+  memory.choice=stumps.length&&(!legs.length||memory.shortRangeCycle%3===0)?'stump':'leg';
+  memory.choiceUntil=ctx.game.time+cfg.positionCommitSec*2;
+ }
+ const kind=memory.choice==='stump'&&stumps.length?'stump':legs.length?'leg':'stump';
+ const options=kind==='leg'?legs:stumps;
  if(!options.length)return null;
  const preferred=options.find(s=>s.side===memory.side)??options[0];
  const side=preferred.side||1;
  const bearing=direction(robot,target.center);
- const relative=kind==='leg'?cfg.sideKickBearing:cfg.sideArmBearing;
+ const relative=kind==='leg'?cfg.sideKickBearing:0;
  // Opponent lies on the active side of the selected foot/rear arm.
  const heading=wrap(bearing-side*relative);
  const align=Math.abs(wrap(heading-robot.angle));
  const dist=distance(robot,target.center);
- const mode=kind==='leg'?'сближается для удара ногой':'заходит к задней руке';
+ const mode=kind==='leg'?'сближается для удара ногой':'сближается для удара культёй';
  if(align>cfg.positionAlignTolerance){
   return {goal:{x:robot.x,y:robot.y},speed:0,brake:true,heading,
-   lookPoint:target.center,mode:kind==='leg'?'разворачивает ноги':'разворачивает задние руки'};
+   lookPoint:target.center,mode:kind==='leg'?'разворачивает ноги':'разворачивает культю'};
  }
  // Approach in short steps while maintaining the committed SIDE heading.
  // Manual retreat accepts a world-space direction and still uses the usual
@@ -133,12 +141,13 @@ export function bossSideWeaponIntent(robot,target,memory){
  const targetVelocity=target.velocity??{x:0,y:0};
  const lead={x:target.center.x+clamp(targetVelocity.x*cfg.positionPredictionSec,-10,10),
   y:target.center.y+clamp(targetVelocity.y*cfg.positionPredictionSec,-10,10)};
- const offset=turn({x:kind==='leg'?-13:8,y:side*cfg.sideStanceLateral},heading);
+ const offset=turn(kind==='leg'?{x:-13,y:side*cfg.sideStanceLateral}:
+  {x:preferred.point.x-robot.x+12*(robot.scale??1),y:preferred.point.y-robot.y},heading-robot.angle);
  const stance={x:lead.x-offset.x,y:lead.y-offset.y};
  const dx=stance.x-robot.x,dy=stance.y-robot.y,gap=Math.hypot(dx,dy);
  if(gap<cfg.positionStopGap){
   return {goal:{x:robot.x,y:robot.y},speed:0,brake:true,heading,
-   lookPoint:target.center,mode:'готовит удар'};
+   lookPoint:target.center,mode:kind==='leg'?'готовит удар ногой':'готовит удар культёй'};
  }
  const step=Math.min(gap,cfg.sideApproachStep);
  let goal={x:robot.x+dx/gap*step,y:robot.y+dy/gap*step};
@@ -149,7 +158,7 @@ export function bossSideWeaponIntent(robot,target,memory){
   const alt={x:robot.x+lateral.x*step,y:robot.y+lateral.y*step};
   if(!coreClearCircle(alt,cfg.positionClearance))
    return {goal:{x:robot.x,y:robot.y},speed:0,brake:true,heading,
-    lookPoint:target.center,mode:'ищет сектор для удара ногой'};
+    lookPoint:target.center,mode:kind==='leg'?'ищет сектор для удара ногой':'ищет сектор для удара культёй'};
   goal=alt;
  }
  const mx=goal.x-robot.x,my=goal.y-robot.y,mag=Math.hypot(mx,my)||1;
@@ -164,7 +173,7 @@ export function bossPositionIntent(robot,target,memory,now){
  if(dist>cfg.positionMaxGap)return null;
  const available=robot.attackSources.filter(s=>s.kind==='arm'||s.kind==='leg');
  if(!available.length)return null;
- const hasArms=available.some(s=>s.kind==='arm');
+ const hasArms=available.some(isBossFullArm);
  const valid=memory.plan&&available.some(s=>s.key===memory.plan.source);
  if(!valid||now>=memory.planUntil||
   distance(memory.planTarget??target.center,target.center)>cfg.positionTargetReplanCm){
