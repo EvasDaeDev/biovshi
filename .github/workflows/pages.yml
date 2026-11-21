@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   workflow_run:
     workflows: [Request test preview deployment]
-    branches: [experiment/tower-bosses]
+    branches: [test/combat-hit-sync]
     types: [completed]
 
 permissions:
@@ -36,7 +36,7 @@ jobs:
       - name: Check out test game
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || 'experiment/tower-bosses' }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || 'test/combat-hit-sync' }}
           path: preview
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -60,11 +60,11 @@ jobs:
       - name: Install test dependencies
         working-directory: preview
         run: npm ci
-      - name: Test experimental game and isolated storage
+      - name: Test preview game and isolated storage
         working-directory: preview
         run: npm test -- --test-concurrency=2 --test-timeout=120000
         timeout-minutes: 12
-      - name: Build experimental game with bosses every fifth floor
+      - name: Build combat synchronization test preview
         working-directory: preview
         run: npm run build -- --mode test
       - name: Assemble both versions
