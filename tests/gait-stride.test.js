@@ -41,6 +41,12 @@ test('both hands and feet stay planted until a slightly longer stride is needed'
   assert.equal(long.limb.to.x,17,kind+' should relocate further, not merely speed up');
  }
 });
+test('the longer default hand can remain planted at its forward rest point',()=>{
+ const {state,limb}=gaitRig('arm',1,50);
+ limb.foot=state.rest(limb);
+ contacts(state,0,{});
+ assert.equal(limb.phase,1);
+});
 test('support emergencies remain independent of ordinary step rhythm',()=>{
  const {state,limb}=gaitRig('leg',-1,5);
  state.validContact=()=>false;

@@ -1,4 +1,4 @@
-import {limbKey} from '../robot/body.js';
+import {limbKey,limbRig} from '../robot/body.js';
 import {pendingStrikes} from '../systems/strikes.js';
 import {fighterLabel} from '../game/patients.js';
 import { clamp, smooth } from '../utils/math.js';
@@ -87,9 +87,12 @@ export function draw(robotState, dt) {
       dot(robotState.spineDots[i], robotState.spine[i]);
       attr(robotState.spineDots[i], 'opacity', i === 0 ? Number(robotState.healthy('spine-0')) : Number(robotState.healthy('spine-' + Math.min((robotState.spineSegmentTotal??4)-1, i - 1))));
     }
-    attr(robotState.pelvicBar, 'd', robotState.healthy(robotState.pelvisKey??'spine-3') ? path([robotState.local(robotState.pelvis, -5, -12), robotState.local(robotState.pelvis, -5, 12)]) : '');
-    // Shoulder girdle belongs to the unbreakable chest and joins both arm roots.
-    attr(robotState.shoulderBar, 'd', path([robotState.local(robotState.chest, 3, -15), robotState.local(robotState.chest, 3, 15)]));
+    const bar=(frame,kind)=>{
+      const [x,y]=limbRig(robotState.body,{kind}).root;
+      return path([robotState.local(frame,x,-y),robotState.local(frame,x,y)]);
+    };
+    attr(robotState.pelvicBar,'d',robotState.healthy(robotState.pelvisKey??'spine-3')?bar(robotState.pelvis,'leg'):'');
+    attr(robotState.shoulderBar,'d',bar(robotState.chest,'arm'));
   }
   attr(robotState.neck, 'd', path([robotState.local(robotState.chest, 3, 0), robotState.local(robotState.headFrame, 18 + robotState.headMotion, 0)]));
   robotState.headCenter = robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0);

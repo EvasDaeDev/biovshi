@@ -326,8 +326,12 @@ export function contacts(robotState, dt, previous) {
   const pending = limbs.filter(l => l.phase >= 1 && !robotState.lifted(l)).map(l => {
     const a = robotState.origin(l),
       r = robotState.rest(l),
-      error = Math.hypot(r.x - l.foot.x, r.y - l.foot.y) / (robotState.scale??ctx.scale),
-      urgent = !robotState.validContact(l) || !robotState.limbClear(l) || Math.hypot(l.foot.x - a.x, l.foot.y - a.y) > 44 * (robotState.scale??ctx.scale),
+      scale=robotState.scale??ctx.scale,
+      error = Math.hypot(r.x - l.foot.x, r.y - l.foot.y) / scale,
+      // A longer relaxed reach should not immediately lift a newly planted hand.
+      replantReach=l.kind==='arm'&&l.anchor===undefined&&!robotState.body?.isBoss
+        ?Math.max(44*scale,Math.hypot(r.x-a.x,r.y-a.y)+8*scale):44*scale,
+      urgent = !robotState.validContact(l) || !robotState.limbClear(l) || Math.hypot(l.foot.x - a.x, l.foot.y - a.y) > replantReach,
       cycle = (robotState.gait / (Math.PI * 2) + (l.kind === 'arm' ? l.side === 1 ? 0 : .5 : l.side === -1 ? 0 : .5)) % 1;
     return {
       l,

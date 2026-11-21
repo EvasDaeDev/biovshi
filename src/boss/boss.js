@@ -14,7 +14,7 @@ export function createBoss(id,start,encounter){
  if(ctx.towerGarage?.[id])ctx.towerGarage[id].stats=bossStats(encounter.floor);
  const anatomy=bossAnatomy(encounter.variant),textureIndex=Math.max(0,BOSS_TEXTURES.indexOf(encounter.texture));
  const behavior=BOSS_CONFIG.behaviorEnabled?createBossBehavior():null;
- return createRobot(id,bossSpawn(start,anatomy),{...anatomy,isBoss:true,behavior,
+ return createRobot(id,bossSpawn(start,anatomy),{...anatomy,behavior,
   ...(behavior?{intent:behavior.intent,resolveCombat:behavior.resolveCombat,planCombat:behavior.planCombat,strikePose:sweepPose,paint:paintBossTelegraph}:{}),scaleMultiplier:BOSS_CONFIG.scale,speedFactor:BOSS_CONFIG.speedFactor,turnFactor:BOSS_CONFIG.turnFactor,
   traumaEnabled:false,failFromOilLoss:destroyFromBloodLoss,combat:BOSS_CONFIG.combat,allowPounce:false,
   skinParts:bossSkinParts(anatomy),skinKey:bossTextureKey(textureIndex),name:bossName(encounter.floor),arenaLabel:bossName(encounter.floor)});

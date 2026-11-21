@@ -32,6 +32,10 @@ test('pounce plants feet, crouches, extends both legs and folds them before land
    const feet=r.limbs.map(l=>({...l.foot})),start={x:r.x,y:r.y};
    const legs=r.limbs.filter(l=>l.kind==='leg');
    const initial=legs.map(l=>distance(hip(r,l),l.foot));
+   const reach=legs.map(l=>['upper','lower'].reduce((sum,part)=>{
+    const bone=r.capsules.find(c=>c.segment===`leg-${l.side}-${part}`);
+    return sum+distance(bone.a,bone.b);
+   },0));
    const max=[0,0];let crouched;
    for(let i=1;i<=60;i++){
     ctx.game.time=10+i/60;r.tick(1/60,intent);
@@ -47,7 +51,7 @@ test('pounce plants feet, crouches, extends both legs and folds them before land
     if(i===57)legs.forEach(l=>assert.ok(distance(hip(r,l),l.foot)<40,'legs bend for landing'));
    }
    crouched.forEach((v,j)=>assert.ok(v<initial[j]));
-   max.forEach(v=>assert.ok(v>62&&v<65,'both legs reach almost full extension'));
+   max.forEach((v,j)=>assert.ok(v>reach[j]*.95&&v<reach[j],'both legs reach almost full extension'));
    assert.equal(ctx.game.events.filter(e=>e.type==='pounce-launch').length,1);
   }finally{dom.window.close();}
  }
