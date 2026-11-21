@@ -48,6 +48,9 @@
   .caption span{color:var(--amber);font-weight:700}
   .card{padding:15px 16px;border-bottom:1px solid var(--line)}
   .card:last-child{border:0}
+  .edit-modes{display:grid;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .mode-hint{margin:0;color:var(--mute);font-size:12px}
+  .joint.mirrored .handle{stroke:var(--amber);stroke-dasharray:2 2}
   .field{display:grid;gap:5px}
   .field label{color:var(--mute);font-size:13px;font-weight:650}
   .field select,.field input{width:100%}
@@ -131,6 +134,11 @@
         </div>
         <p id="reference" class="coords-ref"></p>
         <label class="snap"><input id="snap" type="checkbox" checked>Привязка перетаскивания к 1 см</label>
+        <div class="edit-modes" role="group" aria-label="Режимы правки позы">
+          <label class="snap"><input id="lock-lengths" type="checkbox" aria-describedby="mode-hint">Фиксировать длины сегментов</label>
+          <label class="snap"><input id="mirror-y" type="checkbox" aria-describedby="mode-hint">Симметрия по Y</label>
+          <p id="mode-hint" class="mode-hint"></p>
+        </div>
       </section>
       <section class="card">
         <h2>Длины связанных костей</h2>
@@ -169,6 +177,114 @@ const bridges=[
   ['hips','leg--1-root','leg-1-root'],
   ['neck','spine-0','head-back']
 ];
+const girdles={
+  'spine-0':['arm--1-root','arm-1-root'],
+  'spine-4':['leg--1-root','leg-1-root']
+};
+const attachmentRoots=new Map(Object.entries(girdles).flatMap(([parent,roots])=>
+  roots.map(root=>[root,parent])));
+const parents=new Map([
+  ...project.parts.map(([,a,b])=>[b,a]),
+  ...attachmentRoots,
+  ['head-back','spine-0']
+]);
+const children=new Map(Object.keys(project.nodes).map(id=>[id,[]]));
+for(const [child,parent] of parents)children.get(parent).push(child);
+const mirrored=new Map(Object.keys(project.nodes).flatMap(id=>{
+  const match=id.match(/^(arm|leg)-(-?1)-(root|joint|tip)$/);
+  return match?[[id,match[1]+'-'+(-Number(match[2]))+'-'+match[3]]]:[];
+}));
+const mirrorPoint=([x,y])=>[x,-y];
+const vector=([x,y],[ox,oy])=>[x-ox,y-oy];
+const distance=(a,b)=>Math.hypot(...vector(a,b));
+const magnitude=pair=>Math.hypot(...pair);
+const geometryEpsilon=1e-9;
+
+function visitBranch(id,visit){
+  visit(id);
+  for(const child of children.get(id))visitBranch(child,visit);
+}
+
+function translatePose(pose,dx,dy){
+  for(const [id,[x,y]] of Object.entries(pose))pose[id]=[x+dx,y+dy];
+}
+
+function rotateBranch(pose,id,pivot,cos,sin){
+  visitBranch(id,key=>{
+    const [x,y]=vector(pose[key],pivot);
+    pose[key]=[pivot[0]+cos*x-sin*y,pivot[1]+sin*x+cos*y];
+  });
+}
+
+function bendSide(pose,root,joint,tip){
+  const [dx,dy]=vector(pose[tip],pose[root]);
+  const [jx,jy]=vector(pose[joint],pose[root]);
+  return dx*jy-dy*jx;
+}
+
+// Solve a two-segment limb against a fixed root. A point outside its reach
+// is projected onto the nearest reachable circle.
+function moveLimbTip(pose,tip,target){
+  const joint=parents.get(tip),root=parents.get(joint),anchor=pose[root];
+  const upper=distance(anchor,pose[joint]),lower=distance(pose[joint],pose[tip]);
+  const wanted=vector(target,anchor),wantedLength=magnitude(wanted);
+  const radius=Math.max(Math.abs(upper-lower),Math.min(wantedLength,upper+lower));
+  if(radius<geometryEpsilon){
+    pose[tip]=[...anchor];
+    return;
+  }
+  const direction=wantedLength>geometryEpsilon?wanted:vector(pose[tip],anchor);
+  const angle=Math.atan2(direction[1],direction[0]);
+  const x=Math.cos(angle),y=Math.sin(angle);
+  const previousBend=bendSide(pose,root,joint,tip);
+  const side=Math.sign(Math.abs(previousBend)>geometryEpsilon?previousBend:
+    bendSide(project.baseline,root,joint,tip))||1;
+  const along=Math.min(upper,Math.max(-upper,((upper-lower)*(upper+lower)+radius*radius)/(2*radius)));
+  const bend=side*Math.sqrt(Math.max(0,upper*upper-along*along));
+  pose[joint]=[anchor[0]+x*along-y*bend,anchor[1]+y*along+x*bend];
+  pose[tip]=[anchor[0]+x*radius,anchor[1]+y*radius];
+}
+
+function moveWithLengths(pose,id,target){
+  const parent=parents.get(id);
+  if(!parent){
+    translatePose(pose,...vector(target,pose[id]));
+    return;
+  }
+  if(id.endsWith('-tip')){
+    moveLimbTip(pose,id,target);
+    return;
+  }
+  const pivot=pose[parent],original=vector(pose[id],pivot),wanted=vector(target,pivot);
+  if(magnitude(original)<geometryEpsilon||magnitude(wanted)<geometryEpsilon)return;
+  const angle=Math.atan2(wanted[1],wanted[0])-Math.atan2(original[1],original[0]);
+  const cos=Math.cos(angle),sin=Math.sin(angle);
+  const roots=attachmentRoots.has(id)?girdles[parent]:[id];
+  for(const root of roots)rotateBranch(pose,root,pivot,cos,sin);
+}
+
+function editedPose(base,id,target,lock,symmetry){
+  const opposite=symmetry?mirrored.get(id):undefined;
+  const pose=cp(base);
+  if(!lock){
+    pose[id]=symmetry&&!opposite?[target[0],0]:target;
+    if(opposite)pose[opposite]=mirrorPoint(pose[id]);
+    return pose;
+  }
+  // A symmetric girdle keeps both attachment points and its current width.
+  if(symmetry&&attachmentRoots.has(id))return pose;
+  if(symmetry&&!opposite){
+    translatePose(pose,target[0]-base[id][0],0);
+    return pose;
+  }
+  moveWithLengths(pose,id,target);
+  if(opposite)moveWithLengths(pose,opposite,mirrorPoint(pose[id]));
+  return pose;
+}
+
+function samePose(a,b){
+  return Object.keys(a).every(id=>distance(a[id],b[id])<geometryEpsilon);
+}
 
 function svgElement(tag,attributes,parent){
   const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
@@ -268,18 +384,27 @@ function editStatus(message='',error=false){
 }
 function render(){
   const pose=poses[patient];
+  const lock=$('lock-lengths').checked,symmetry=$('mirror-y').checked;
+  const opposite=symmetry?mirrored.get(selected):undefined;
   for(const [key,a,b] of project.parts){
     const {group,part}=pieces.get(key);
     group.setAttribute('transform','matrix('+skinMatrix(pose[a],pose[b],part).join(' ')+')');
     line(bones.get(key),pose[a],pose[b]);
-    bones.get(key).classList.toggle('highlight',selected===a||selected===b);
+    bones.get(key).classList.toggle('highlight',selected===a||selected===b||opposite===a||opposite===b);
   }
   for(const [key,a,b] of bridges)line(bones.get(key),pose[a],pose[b]);
   line($('neck'),offset(pose['spine-0'],pose['spine-1'],-1.5),offset(pose['head-back'],pose['head-front'],1.5));
   for(const [id,handle] of joints){
     const [x,y]=pose[id];
     set(handle,{transform:'translate('+x+' '+y+')','aria-pressed':String(id===selected)});
+    handle.classList.toggle('mirrored',id===opposite);
   }
+  const hints=[];
+  if(symmetry)hints.push('Парные точки редактируются зеркально относительно линии Y = 0.');
+  if(lock&&symmetry&&attachmentRoots.has(selected))hints.push('При двух включённых режимах плечи и бёдра закреплены.');
+  else if(lock&&symmetry&&!opposite)hints.push('Осевые точки перемещают всю позу вдоль X.');
+  else if(lock)hints.push('Кисти и стопы сгибают конечности в пределах их досягаемости.');
+  $('mode-hint').textContent=hints.join(' ');
   $('node').value=selected;
   $('patient').value=String(patient);
   if(document.activeElement!==$('x'))$('x').value=round(pose[selected][0]);
@@ -290,10 +415,9 @@ function render(){
   $('lengths').replaceChildren();
   for(const [,a,b] of project.parts.filter(([,a,b])=>a===selected||b===selected)){
     const other=a===selected?b:a;
-    const [x,y]=pose[selected], [ox,oy]=pose[other];
     const row=document.createElement('li'),label=document.createElement('span'),measure=document.createElement('strong');
     label.textContent=project.nodes[other].label;
-    measure.textContent=format.format(Math.hypot(x-ox,y-oy))+' см';
+    measure.textContent=format.format(distance(pose[selected],pose[other]))+' см';
     row.append(label,measure);$('lengths').append(row);
   }
   const history=histories[patient];
@@ -314,11 +438,17 @@ function travelHistory(direction){
   poses[patient]=history[direction].pop();
   render();
 }
-function updatePoint(next,useHistory=true){
-  const pose=poses[patient];
-  if(next.every((v,i)=>v===pose[selected][i]))return;
-  if(useHistory)remember(cp(pose));
-  pose[selected]=next;
+function updatePoint(target,before=null){
+  const current=poses[patient],base=before??current;
+  const next=editedPose(base,selected,target,$('lock-lengths').checked,$('mirror-y').checked);
+  if(samePose(current,next))return;
+  if(Object.values(next).some(point=>point.some(value=>!Number.isFinite(value)||Math.abs(value)>500))){
+    editStatus('Точки позы должны оставаться в пределах ±500 см.',true);
+    return;
+  }
+  if(!before)remember(current);
+  poses[patient]=next;
+  if($('status').classList.contains('error'))editStatus();
   render();
 }
 function worldPoint(event){
@@ -339,7 +469,7 @@ svg.addEventListener('pointerdown',event=>{
   svg.setPointerCapture(event.pointerId);
   if(node){
     selected=node.dataset.joint;
-    drag={id:event.pointerId,point,original:[...poses[patient][selected]],before:cp(poses[patient])};
+    drag={id:event.pointerId,point,original:[...poses[patient][selected]],before:poses[patient]};
     render();
   }else{
     drag={id:event.pointerId,point,pan:true,axes:svg.getScreenCTM().inverse(),camera:[...camera],client:[event.clientX,event.clientY]};
@@ -358,35 +488,41 @@ svg.addEventListener('pointermove',event=>{
   updatePoint(point.map((value,i)=>{
     const position=drag.original[i]+value-drag.point[i];
     return constrain(snap?Math.round(position):round(position));
-  }),false);
+  }),drag.before);
 });
-function endDrag(event){
-  if(drag?.id!==event.pointerId)return;
-  if(!drag.pan&&poses[patient][selected].some((value,i)=>value!==drag.original[i]))remember(drag.before);
+function finishDrag(){
+  if(!drag)return;
+  if(!drag.pan&&!samePose(poses[patient],drag.before))remember(drag.before);
   drag=null;
   render();
 }
-for(const event of ['pointerup','pointercancel','lostpointercapture'])svg.addEventListener(event,endDrag);
+for(const event of ['pointerup','pointercancel','lostpointercapture'])svg.addEventListener(event,e=>{
+  if(drag?.id===e.pointerId)finishDrag();
+});
 
 svg.addEventListener('keydown',event=>{
   const directions={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
   const arrow=directions[event.key];
   if(!arrow)return;
   event.preventDefault();
+  finishDrag();
   updatePoint(poses[patient][selected].map((value,i)=>constrain(round(value+arrow[i]*(event.shiftKey ? .1 : 1)))));
 });
 document.addEventListener('keydown',event=>{
   if(event.target.matches('input,select,textarea')||!(event.ctrlKey||event.metaKey))return;
   if(!['z','y'].includes(event.key.toLowerCase()))return;
   event.preventDefault();
+  finishDrag();
   travelHistory(event.shiftKey||event.key.toLowerCase()==='y'?'redo':'undo');
 });
-$('node').onchange=()=>{selected=$('node').value;render();};
-$('patient').onchange=()=>{patient=Number($('patient').value);applyAtlas();render();fit();};
+$('node').onchange=()=>{const id=$('node').value;finishDrag();selected=id;render();};
+$('patient').onchange=()=>{const id=Number($('patient').value);finishDrag();patient=id;applyAtlas();render();fit();};
+for(const id of ['lock-lengths','mirror-y'])$(id).onchange=()=>{finishDrag();render();};
 for(const [axis,index] of [['x',0],['y',1]]){
   const input=$(axis);
   input.onchange=()=>{
     const value=input.valueAsNumber;
+    finishDrag();
     const position=[...poses[patient][selected]];
     if(Number.isFinite(value)){position[index]=constrain(round(value));updatePoint(position);}
     input.value=round(poses[patient][selected][index]);
@@ -399,9 +535,9 @@ for(const [control,targets] of [['show-grid',['grid']],['show-textures',['textur
 $('zoom-in').onclick=()=>zoom(.8);
 $('zoom-out').onclick=()=>zoom(1.25);
 $('zoom-fit').onclick=fit;
-$('undo').onclick=()=>travelHistory('undo');
-$('redo').onclick=()=>travelHistory('redo');
-$('reset').onclick=()=>{remember(cp(poses[patient]));poses[patient]=cp(project.baseline);render();fit();};
+$('undo').onclick=()=>{finishDrag();travelHistory('undo');};
+$('redo').onclick=()=>{finishDrag();travelHistory('redo');};
+$('reset').onclick=()=>{finishDrag();remember(cp(poses[patient]));poses[patient]=cp(project.baseline);render();fit();};
 function exportDocument(){
   return {format:'biovshi-patient-rig',version:1,sourceCommit:project.source,units:'cm',
     origin:'initial-chest',xAxis:'right',yAxis:'down',
@@ -436,6 +572,7 @@ $('file').onchange=async()=>{
   const file=$('file').files[0];if(!file)return;
   try{
     const incoming=importDocument(JSON.parse(await file.text()));
+    finishDrag();
     incoming.forEach((pose,i)=>{remember(cp(poses[i]),i);poses[i]=pose;});
     render();fit();editStatus('Координаты из JSON загружены.');
   }catch(error){editStatus(error.message||'Не удалось открыть JSON.',true);}
