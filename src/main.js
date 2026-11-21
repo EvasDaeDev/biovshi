@@ -27,6 +27,7 @@ let cancelled=false,initialLoading=null;
 let launchAccepted=false;
 async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,enterFight=false,loading=null}){
  loading?.update('Создаём пациентов…',{done:1,total:6});
+ if(ctx.towerFloorBake)await ctx.towerFloorBake;
  initializeGame({textures,session,entry,arenaId,tower});
  await applyTextures();if(cancelled||ctx.disposed)return;
  loading?.update('Рисуем портреты пациентов…',{done:2,total:6});

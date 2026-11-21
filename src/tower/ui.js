@@ -1,3 +1,4 @@
+import {bakeRoundFloor} from '../render/floor-history.js';
 import {artifactDropChance,bossRepeatDropChance,ARTIFACT_COMPLETION_REWARD,ARTIFACT_PIECE_COUNT} from './artifacts.js';
 import {bossName} from '../boss/names.js';
 import {setPaused} from '../ui/controls.js';
@@ -764,6 +765,11 @@ export function updateTowerHud(){
 }
 export function settleTower(winner){
   if(ctx.towerSettled)return;ctx.towerSettled=true;
+  if(ctx.floorCanvas){
+    // Capture the completed fight before its player, arena or tower can change.
+    ctx.towerFloorBake=bakeRoundFloor().catch(error=>console.warn('Tower floor baking:',error))
+      .finally(()=>{ctx.towerFloorBake=null;});
+  }
   const t=towerFor(ctx.betting,ctx.towerPlayer),won=winner===0,cleared=won?t.level:t.wins;
   ctx.towerOutcome={won,floor:t.level,cleared,record:Math.max(t.record,cleared),newRecord:cleared>t.record,
     runKills:t.runKills,runCoins:t.runCoins,floorCoins:ctx.towerFloorCoins??0,time:ctx.round.elapsedSec,
@@ -845,7 +851,7 @@ export function installTowerUI({enterFight=false}={}){
   ctx.root.querySelector('#tower-wallet').hidden=ctx.mode!=='tower';
   const menu=ctx.root.querySelector('#launch-overlay');
   ctx.root.querySelector('#menu-player').onchange=e=>{ctx.betting.towerPlayerId=Number(e.target.value);bettingSave();refreshMenu();};
-  ctx.root.querySelector('#tower-reset').onclick=()=>{if(confirm('Сбросить башню выбранного игрока? Действующая ДМС будет аннулирована без возврата монет. Банк, личный рекорд и артефакты сохранятся. Тариф следующей ДМС не изменится.')){resetTower(ctx.betting,ctx.menuPlayer);bettingSave();refreshMenu();}};
+  ctx.root.querySelector('#tower-reset').onclick=()=>{if(confirm('Сбросить башню выбранного игрока? Следы боёв на аренах будут очищены. Действующая ДМС будет аннулирована без возврата монет. Банк, личный рекорд и артефакты сохранятся. Тариф следующей ДМС не изменится.')){resetTower(ctx.betting,ctx.menuPlayer);bettingSave();refreshMenu();}};
   ctx.root.querySelector('#launch-tower').onclick=()=>{
     ctx.audio?.unlock();
     if(!ctx.betting){menu.hidden=true;ctx.afterSetup='menu';bettingSetup();return;}

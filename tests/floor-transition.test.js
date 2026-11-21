@@ -72,3 +72,76 @@ test('a lost tower floor never bakes the unconscious player or surviving opponen
   assert.equal(ctx.robots[1].mobile,true);assert.equal(ctx.robots[3].mobile,true);
  }finally{closeFloor(dom);}
 });
+
+test('Tower floors survive a loss and reload, stay private, and clear at a cycle change or reset',async()=>{
+ const dom=setup(),originalImage=globalThis.Image;
+ const {initializeFloor}=await import('../src/render/floor-history.js');
+ const {betNewSession}=await import('../src/betting/ledger.js');
+ const {bettingLoad}=await import('../src/betting/storage.js');
+ const {completeTower,resetTower,towerFor}=await import('../src/tower/model.js');
+ const {settleTower}=await import('../src/tower/ui.js');
+ const stored=new Map();
+ globalThis.indexedDB={open(){
+  const request={};
+  queueMicrotask(()=>{
+   request.result={close(){},transaction(){
+    const tx={objectStore(){return {
+     get(key){
+      const operation={result:stored.get(key)};
+      queueMicrotask(()=>{operation.onsuccess?.();tx.oncomplete();});
+      return operation;
+     },
+     put(value,key){stored.set(key,value);queueMicrotask(()=>tx.oncomplete());return {};}
+    };}};
+    return tx;
+   }};
+   request.onsuccess();
+  });
+  return request;
+ }};
+ globalThis.Image=class {
+  naturalWidth=1024;naturalHeight=1024;
+  set src(value){queueMicrotask(()=>this.onload?.());}
+  async decode(){}
+ };
+ dom.window.HTMLCanvasElement.prototype.getContext=()=>({
+  drawImage(){},getImageData(){return {data:new Uint8ClampedArray([10,20,30,255])};},putImageData(){}
+ });
+ dom.window.HTMLCanvasElement.prototype.toDataURL=()=> 'data:image/png;base64,FLOOR';
+ dom.window.HTMLCanvasElement.prototype.toBlob=callback=>callback(new Blob(['floor']));
+ let session=betNewSession(['A','B'],100);
+ async function enter(player,arenaId){
+  ctx.arenaRenderer=null;
+  ctx.towerPlayer=player;
+  initializeGame({session,entry:'tower',arenaId,tower:towerFor(session,player)});
+  ctx.towerSettled=false;
+  await initializeFloor();
+  ctx.arenaRenderer={rasterizeRemains:()=>document.createElement('canvas'),render(){}};
+ }
+ async function finish(winner){
+  ctx.combat.finished=true;ctx.combat.winner=winner;
+  settleTower(winner);
+  await ctx.towerFloorBake;
+  await ctx.floorSavePromise;
+ }
+ const clean=()=>assert.equal(ctx.floorCanvas,ctx.cleanFloorCanvas);
+ const marked=()=>assert.notEqual(ctx.floorCanvas,ctx.cleanFloorCanvas);
+ try{
+  await enter(0,'ward');clean();await finish(null);
+  ctx.arenaFloors.clear();session=bettingLoad();assert.ok(session);
+  await enter(0,'ward');marked();
+  await enter(0,'ring');clean();await finish(null);
+  await enter(1,'ward');clean();await finish(null);
+  for(let i=1;i<30;i++)completeTower(session,0,true,()=>.99);
+  await enter(0,'ward');marked();await finish(0);
+  assert.equal(towerFor(session,0).level,31);
+  await enter(0,'ward');clean();
+  await enter(0,'ring');clean();await finish(null);
+  await enter(0,'ring');marked();
+  resetTower(session,0);
+  await enter(0,'ring');clean();
+  await enter(1,'ward');marked();
+ }finally{
+  globalThis.Image=originalImage;delete globalThis.indexedDB;closeFloor(dom);
+ }
+});

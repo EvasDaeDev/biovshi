@@ -137,13 +137,12 @@ export function draw(robotState, dt) {
   }
   for (const l of [...robotState.arms, ...robotState.legs]) {
     const strikePose=strikePoses.find(p=>p.limb===l);
-    const attackEnd = (strikePose?.kind === 'arm' || strikePose?.kind === 'leg') && strikePose.limb === l ? strikePose.tip : robotState.handEnd(l);
-    const a = robotState.origin(l),
-      solved = ik(a, attackEnd, ...robotState.lengths(l), l.kind === 'arm' ? l.side : -l.side);
+    const a=robotState.origin(l),
+      solved=strikePose?{joint:strikePose.joint,end:strikePose.tip}
+        :ik(a,robotState.handEnd(l),...robotState.lengths(l),l.kind==='arm'?l.side:-l.side);
     const prefix = `${limbKey(l)}-`;
-    const stumpStrike = (strikePose?.kind === 'arm' || strikePose?.kind === 'leg') && strikePose.limb === l && !strikePose.complete;
     if (!skinned || l.kind === 'extra') {
-      attr(l.upper, 'd', robotState.healthy(prefix + 'upper') ? path([a, stumpStrike ? strikePose.tip : solved.joint]) : '');
+      attr(l.upper, 'd', robotState.healthy(prefix + 'upper') ? path([a, solved.joint]) : '');
       attr(l.lower, 'd', robotState.healthy(prefix + 'lower') ? path([solved.joint, solved.end]) : '');
       attr(l.joint, 'display', robotState.healthy(prefix + 'upper') || robotState.healthy(prefix + 'lower') ? '' : 'none');
       attr(l.endShape, 'display', robotState.healthy(prefix + 'lower') ? '' : 'none');

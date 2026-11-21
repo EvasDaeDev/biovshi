@@ -12,7 +12,7 @@ export function isSolidBody(capsule) {
   return capsule.segment === 'head' || capsule.segment?.startsWith('spine-');
 }
 const bodyCapsuleCache=new WeakMap();
-function solidCapsules(capsules){
+export function solidCapsules(capsules){
   let bodies=bodyCapsuleCache.get(capsules);
   if(!bodies){bodies=capsules.filter(isSolidBody);bodyCapsuleCache.set(capsules,bodies);}
   return bodies;
@@ -51,14 +51,39 @@ export function limbClear(robotState, l, endpoint = robotState.handEnd(l)) {
   if (!robotState.healthy(`${limbKey(l)}-lower`)) return clear(a,solved.joint,r[0]);
   return clear(a,solved.joint,r[0])&&clear(solved.joint,solved.end,r[1])&&clear(solved.end,solved.end,r[2]);
 }
+export function peerBodyOverlap(robotState){
+  const depths=new Map();
+  const body=robotState.makeCapsules(false,true);
+  for(const peer of robotState.peerRobots()){
+    let depthSquared=0;
+    for(const a of body)for(const b of solidCapsules(peer.capsules)){
+      const radius=a.r+b.r+.15;
+      if(a.maxX+radius<b.minX||a.minX-radius>b.maxX||a.maxY+radius<b.minY||a.minY-radius>b.maxY)continue;
+      const depth=radius-segmentDistance(a.a,a.b,b.a,b.b);
+      if(depth>0)depthSquared+=depth*depth;
+    }
+    if(depthSquared>0)depths.set(peer.id,depthSquared);
+  }
+  return depths;
+}
 export function rigClear(robotState) {
-  // Проверяем только физически сохранившиеся части. Отделённый таз,
-  // позвоночник и конечности больше не могут блокировать шаг своего владельца.
-  if (!robotState.clearCircle(robotState.chest, 19 * (robotState.scale??ctx.scale))) return false;
-  if (robotState.healthy(robotState.pelvisKey??'spine-3') && !robotState.clearCircle(robotState.pelvis, 24 * (robotState.scale??ctx.scale))) return false;
-  for (let i = 1; i < robotState.spine.length; i++) if (robotState.healthy('spine-' + (i - 1)) && !robotState.clearBone(robotState.spine[i - 1], robotState.spine[i], 17 * (robotState.scale??ctx.scale))) return false;
-  for (let i = 1; i < robotState.tail.length; i++) if (robotState.healthy('tail-' + (i - 1)) && !robotState.clearBone(robotState.tail[i - 1], robotState.tail[i], 3 * (robotState.scale??ctx.scale), false)) return false;
-  return (!robotState.hasHead() || robotState.clearCircle(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0), 13 * (robotState.body?.headSizeFactor??1) * (robotState.scale??ctx.scale)) && robotState.clearCircle(robotState.local(robotState.headFrame, 25 + 14*(robotState.body?.headSizeFactor??1) + robotState.headMotion, 0), 2.5 * (robotState.body?.headSizeFactor??1) * (robotState.scale??ctx.scale))) && [...robotState.arms, ...robotState.legs].filter(l => robotState.healthy(`${limbKey(l)}-upper`)).every(l => robotState.limbClear(l));
+  const scale=robotState.scale??ctx.scale,baseline=robotState.stepPeerOverlap;
+  const strictPeers=!baseline?.size;
+  if (!robotState.clearCircle(robotState.chest,19*scale,strictPeers)) return false;
+  if (robotState.healthy(robotState.pelvisKey??'spine-3') && !robotState.clearCircle(robotState.pelvis,24*scale,strictPeers)) return false;
+  for (let i = 1; i < robotState.spine.length; i++) if (robotState.healthy('spine-' + (i - 1)) && !robotState.clearBone(robotState.spine[i - 1],robotState.spine[i],17*scale,strictPeers)) return false;
+  for (let i = 1; i < robotState.tail.length; i++) if (robotState.healthy('tail-' + (i - 1)) && !robotState.clearBone(robotState.tail[i - 1],robotState.tail[i],3*scale,false)) return false;
+  if(robotState.hasHead()){
+    const headScale=robotState.body?.headSizeFactor??1;
+    const center=robotState.local(robotState.headFrame,25+robotState.headMotion,0);
+    const nose=robotState.local(robotState.headFrame,25+14*headScale+robotState.headMotion,0);
+    if(!robotState.clearCircle(center,13*headScale*scale,strictPeers)||
+       !robotState.clearCircle(nose,2.5*headScale*scale,strictPeers))return false;
+  }
+  if(!strictPeers)for(const [peer,depth] of peerBodyOverlap(robotState)){
+    if(depth>(baseline.get(peer)??0)+1e-7)return false;
+  }
+  return [...robotState.arms,...robotState.legs].every(l=>!robotState.healthy(`${limbKey(l)}-upper`)||robotState.limbClear(l));
 }
 export function freeBlockedJoint(robotState, l, dt) {
   const a = robotState.origin(l),
@@ -166,11 +191,11 @@ export function validContact(robotState, l) {
     lateral = p => (-(p.x - frame.x) * Math.sin(frame.angle) + (p.y - frame.y) * Math.cos(frame.angle)) * l.side;
   return lateral(l.foot) > 2 * (robotState.scale??ctx.scale) && lateral(solved.joint) > 2 * (robotState.scale??ctx.scale);
 }
-export function makeCapsules(robotState) {
+export function makeCapsules(robotState,animateStrikes=true,bodyOnly=false) {
   // Incapacitated robots remain drawn but never obstruct other fighters.
   if (!robotState.mobile()) return [];
   // Keep damage capsules aligned with the current visual attacking pose.
-  const activePoses = pendingStrikes(robotState.id).map(p=>robotState.attackPose(p)).filter(Boolean);
+  const activePoses = animateStrikes?pendingStrikes(robotState.id).map(p=>robotState.attackPose(p)).filter(Boolean):[];
   const headPose = activePoses.find(p=>p.kind==='head');
   const headShift = headPose?{x:headPose.tip.x-headPose.base.x,y:headPose.tip.y-headPose.base.y}:{x:0,y:0};
   const headPoint = p=>({x:p.x+headShift.x,y:p.y+headShift.y});
@@ -196,13 +221,23 @@ export function makeCapsules(robotState) {
       });
     };
   for (let i = 1; i < robotState.spine.length; i++) push(robotState.spine[i - 1], robotState.spine[i], 17, 'spine-' + (i - 1));
-  for (let i = 1; i < robotState.tail.length; i++) push(robotState.tail[i - 1], robotState.tail[i], 3, 'tail-' + (i - 1));
+  if(!bodyOnly)for (let i = 1; i < robotState.tail.length; i++) push(robotState.tail[i - 1], robotState.tail[i], 3, 'tail-' + (i - 1));
   push(robotState.chest, robotState.chest, 19, 'spine-0');
   push(robotState.pelvis, robotState.pelvis, 24, robotState.pelvisKey??'spine-3');
-  const headCenter=headPoint(robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0));
-  push(headCenter,headCenter,13*(robotState.body?.headSizeFactor??1),'head');
-  const headNose=headPoint(robotState.local(robotState.headFrame, 25 + 14*(robotState.body?.headSizeFactor??1) + robotState.headMotion, 0));
-  push(headNose,headNose,2.5*(robotState.body?.headSizeFactor??1),'head');
+  const headCenter=robotState.local(robotState.headFrame,25+robotState.headMotion,0);
+  const headNose=robotState.local(robotState.headFrame,25+14*(robotState.body?.headSizeFactor??1)+robotState.headMotion,0);
+  const addHead=(center,nose)=>{
+    push(center,center,13*(robotState.body?.headSizeFactor??1),'head');
+    push(nose,nose,2.5*(robotState.body?.headSizeFactor??1),'head');
+  };
+  addHead(headCenter,headNose);
+  if(headPose){
+    const physical=out.filter(isSolidBody);
+    if(robotState.healthy('head'))out.splice(-2);
+    addHead(headPoint(headCenter),headPoint(headNose));
+    bodyCapsuleCache.set(out,physical);
+  }
+  if(bodyOnly)return out;
   for (const l of [...robotState.arms, ...robotState.legs]) {
     const a = robotState.origin(l),
       ls = robotState.lengths(l),

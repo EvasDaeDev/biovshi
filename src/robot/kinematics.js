@@ -72,7 +72,7 @@ export function attackPose(robotState, p) {
   };
   const dx = p.aim.x - shoulder.x,
     dy = p.aim.y - shoulder.y,
-    d = Math.hypot(dx, dy) || 1;
+    distance = Math.hypot(dx,dy),d=distance||1;
   const maxReach = complete ? upper + lower - .2 : upper - .2; // upper-only stump reaches about half as far
   const desired = {
     x: shoulder.x + dx / d * Math.min(maxReach, d),
@@ -91,6 +91,15 @@ export function attackPose(robotState, p) {
   };
   const wind = progress.wind,
     reach = progress.reach;
+  if(!complete){
+    // A stump rotates about its root; its surviving bone keeps its full length.
+    const baseAngle=Math.atan2(base.y-shoulder.y,base.x-shoulder.x);
+    const rearAngle=Math.atan2(rear.y-shoulder.y,rear.x-shoulder.x);
+    const aimAngle=distance>1e-9?Math.atan2(dy,dx):baseAngle;
+    const angle=baseAngle+wrap(rearAngle-baseAngle)*wind+wrap(aimAngle-baseAngle)*reach;
+    const tip={x:shoulder.x+Math.cos(angle)*upper,y:shoulder.y+Math.sin(angle)*upper};
+    return {kind:l.kind,limb:l,shoulder,joint:tip,tip,base,progress,complete};
+  }
   const tip = {
     x: base.x + (rear.x - base.x) * wind + (desired.x - base.x) * reach,
     y: base.y + (rear.y - base.y) * wind + (desired.y - base.y) * reach
@@ -112,16 +121,8 @@ export function attackPose(robotState, p) {
     tip.x = shoulder.x + vx / dist * maxReach;
     tip.y = shoulder.y + vy / dist * maxReach;
   }
-  return {
-    kind: l.kind,
-    limb: l,
-    shoulder,
-    joint: complete ? ik(shoulder,tip,upper,lower,l.kind==='arm'?l.side:-l.side).joint : tip,
-    tip,
-    base,
-    progress,
-    complete
-  };
+  const solved=ik(shoulder,tip,upper,lower,l.kind==='arm'?l.side:-l.side);
+  return {kind:l.kind,limb:l,shoulder,joint:solved.joint,tip:solved.end,base,progress,complete};
 }
 export function hornPoints(robotState, side) {
   return [robotState.local(robotState.headFrame, 24 + robotState.headMotion, side * 8), robotState.local(robotState.headFrame, 44 + robotState.headMotion, side * 10), robotState.local(robotState.headFrame, 32 + robotState.headMotion, side * 4)];

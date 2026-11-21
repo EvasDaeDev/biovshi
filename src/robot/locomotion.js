@@ -8,7 +8,7 @@ import { CONFIG } from "../config.js";
 import { ctx } from "../game/state.js";
 import { coreClearBone, nearestObstaclePoint } from "../systems/collision.js";
 import { ik, segmentDistance } from "../utils/math.js";
-import { isSolidBody } from "./collision.js";
+import { isSolidBody,peerBodyOverlap,solidCapsules } from "./collision.js";
 import { robotContinueVictory } from "./scenes.js";
 import { note } from "../game/events.js";
 export function hasGoal(robotState) {
@@ -78,7 +78,7 @@ export function retreatFromBoundary(robotState, dt) {
     distance = CONFIG.movement.boundaryRetreatSpeedCm * CONFIG.movement.speedMultiplier * patientMovementMultiplier(robotState.id,robotState.api,0) * dt;
   let best = null,
     bestScore = -Infinity;
-  const peerBodies = robotState.peerRobots().flatMap(r => r.capsules.filter(isSolidBody));
+  const peerBodies = robotState.peerRobots().flatMap(r=>solidCapsules(r.capsules));
   for (let index = 0; index < 16; index++) {
     const turn = index * Math.PI / 8;
     const dx = Math.cos(heading + turn) * distance,
@@ -571,6 +571,11 @@ export function robotTick(robotState, dt, intent) {
     y: robotState.y
   };
   // Сохраняем опоры: при тесном контакте небезопасный шаг откатывается целиком.
+  // Recoil and independently advanced opponents can leave an existing
+  // overlap. A commanded step may reduce it while walls and supports stay solid.
+  if(intent.manual&&intent.speed>0&&robotState.peerRobots().length){
+    robotState.stepPeerOverlap=peerBodyOverlap(robotState);
+  }
   const previousHeadMotion = robotState.headMotion;
   robotState.headMotion = 0;
   if (!robotState.rigClear()) robotState.headMotion = previousHeadMotion;
@@ -675,6 +680,7 @@ export function robotTick(robotState, dt, intent) {
     robotState.allLimbs().forEach((l, i) => Object.assign(l, previousLimbs[i]));
     robotState.vx = robotState.vy = 0;
   }
+  robotState.stepPeerOverlap=null;
   // Учитываем итоговое перемещение ПОСЛЕ отката небезопасного шага.
   if(!intent.manual||intent.navigate&&intent.speed>0)robotState.watchProgress(dt, old);
   robotState.api.capsules = robotState.makeCapsules();

@@ -1,4 +1,5 @@
 import {obstacleVertices} from '../game/arena.js';
+import {solidCapsules} from '../robot/collision.js';
 import {ctx} from '../game/state.js';
 import {clamp,segmentDistance} from '../utils/math.js';
 const cache=new WeakMap();
@@ -46,14 +47,13 @@ export function translateWholePose(state,dx,dy){
  if(state.recoverySwing)for(const p of [state.recoverySwing.from,state.recoverySwing.to])if(p)points.add(p);
  for(const p of points)if(p){p.x+=dx;p.y+=dy;}state.x+=dx;state.y+=dy;
 }
-const solid=c=>c.segment==='head'||c.segment?.startsWith('spine-');
 function measure(state,tolerance,skipClearPeers=false){
- const caps=state.makeCapsules(),contacts=[];let cost=0,peerCost=0;
+ const caps=state.makeCapsules(false),contacts=[];let cost=0,peerCost=0;
  for(const c of caps)for(const hit of staticContacts(c)){
   const allow=isLimb(c)?tolerance:0,excess=hit.depth-allow;
   if(excess>1e-6){contacts.push({...hit,excess});cost+=excess*excess*(isLimb(c)?1:10);}
  }
- if(!skipClearPeers||contacts.length)for(const other of state.peerRobots())for(const a of caps.filter(solid))for(const b of other.capsules.filter(solid)){
+ if(!skipClearPeers||contacts.length)for(const other of state.peerRobots())for(const a of solidCapsules(caps))for(const b of solidCapsules(other.capsules)){
   const depth=a.r+b.r+.15-segmentDistance(a.a,a.b,b.a,b.b);if(depth>0)peerCost+=depth*depth*10;
  }
  return {cost:cost+peerCost,staticCost:cost,peerCost,contacts};

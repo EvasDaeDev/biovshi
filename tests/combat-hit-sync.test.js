@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {makeCapsules} from '../src/robot/collision.js';
+import {makeCapsules,solidCapsules} from '../src/robot/collision.js';
 import {strikeProgress,struckSegment,movingStrikeContact,queueCombatHit,flushCombatHits} from '../src/systems/combat.js';
+import {attackPose} from '../src/robot/kinematics.js';
 import {CONFIG} from '../src/config.js';
 import {ctx} from '../src/game/state.js';
 
@@ -39,10 +40,12 @@ test('head damage capsules follow the rendered headbutt offset',()=>{
   const {robot,strike}=fixture('head');
   const base={x:25,y:0};
   robot.attackPose=()=>({kind:'head',base,tip:{x:34,y:7}});
-  const capsules=makeCapsules(robot).filter(c=>c.segment==='head');
+  const animated=makeCapsules(robot);
+  const capsules=animated.filter(c=>c.segment==='head');
   assert.equal(capsules.length,2);
   assert.deepEqual(capsules[0].a,{x:34,y:7});
   assert.deepEqual(capsules[1].a,{x:48,y:7});
+  assert.deepEqual(solidCapsules(animated).filter(c=>c.segment==='head').map(c=>c.a),[base,{x:39,y:0}]);
   ctx.combat.pending[0]=null;
   const idle=makeCapsules(robot).filter(c=>c.segment==='head');
   assert.deepEqual(idle[0].a,base);
@@ -184,4 +187,25 @@ test('active strike contact sampling does not restart after full thrust',()=>{
   ctx.game={time:timing.windupSec+timing.thrustSec+.1};
   assert.equal(movingStrikeContact(attacker,victim,p),null);
   assert.ok(p.lastContactAge<=timing.windupSec+timing.thrustSec);
+});
+
+test('forearm and shin loss leave fixed-length stumps throughout attacks',()=>{
+  for(const kind of ['arm','leg']){
+    const {robot,limb,strike}=fixture();
+    if(kind==='leg'){limb.kind='leg';limb.key='leg-1';robot.arms=[];robot.legs=[limb];}
+    strike.source=`${limb.key}-upper`;
+    strike.aim={x:5,y:0};
+    robot.angle=0;
+    robot.healthy=key=>key!==`${limb.key}-lower`;
+    robot.attackPose=p=>attackPose(robot,p);
+    for(let i=0;i<=60;i++){
+      ctx.game.time=i/60;
+      const pose=robot.attackPose(strike);
+      const length=Math.hypot(pose.tip.x-pose.shoulder.x,pose.tip.y-pose.shoulder.y);
+      assert.ok(Math.abs(length-12)<1e-9);
+      const capsules=makeCapsules(robot);
+      assert.deepEqual(capsules.find(c=>c.segment===strike.source).b,pose.tip);
+      assert.ok(!capsules.some(c=>c.segment===`${limb.key}-lower`));
+    }
+  }
 });

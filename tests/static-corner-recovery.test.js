@@ -70,3 +70,23 @@ test('a patient can leave the same corner after losing a forearm without losing 
   assert.equal(robot.segmentCount,segments);assert.deepEqual([...robot.hp],health);
  }finally{ctx.root.__disposeTag();dom.window.close();}
 });
+
+test('a manual command can leave a body overlap between two opponents',()=>{
+ const dom=fixture();
+ try{
+  ctx.obstacles=[];
+  const player=createRobot(0,{x:350,y:350,angle:0});
+  const peers=[createRobot(1,{x:312,y:338,angle:0}),createRobot(2,{x:312,y:362,angle:0})];
+  ctx.robots=[player,...peers];
+  for(const robot of ctx.robots)robot.setVisible(true);
+  assert.equal(player.clear(),false);
+  const health=[...player.hp];
+  for(let i=0;i<180;i++){
+   ctx.game.time+=1/60;
+   player.tick(1/60,{manual:true,goal:{x:470,y:350},speed:45,mode:'chase',lookPoint:null});
+  }
+  assert.ok(player.x>400,'the patient moves out of the crowd under the held command');
+  assert.equal(player.clear(),true);
+  assert.deepEqual([...player.hp],health);
+ }finally{ctx.root.__disposeTag();dom.window.close();}
+});
