@@ -23,8 +23,8 @@
 
 ## Telegram Mini Apps SDK
 
-В тестовой интеграции используется неизменённый официальный JavaScript SDK Telegram:
+Основная и тестовая веб-сборки загружают официальную копию JavaScript SDK в окружении Telegram.
 https://telegram.org/js/telegram-web-app.js?65
 
 Копия размещена в `public/vendor/telegram-web-app-65.js` для загрузки с адреса игры.
-Источник, дата получения и контрольная сумма указаны в соседнем JSON.
+Источник, дата получения и контрольная сумма указаны в [метаданных SDK](public/vendor/telegram-web-app-65.json). [Подробности интеграции](docs/TELEGRAM.md).
