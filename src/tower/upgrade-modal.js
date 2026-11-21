@@ -219,6 +219,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
  }
  function setTab(next){
   const surgeryUnlocked=run.level>=TOWER_SURGERY_MIN_LEVEL;
+  const previous=activeTab;
   activeTab=next==='artifacts'?'artifacts':next==='surgery'&&surgeryUnlocked?'surgery':'mutations';
   hoverMutation=null;surgeryPreviewEnabled=false;
   for(const [button,id] of tabs){
@@ -231,6 +232,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   // Artifacts use the same right-hand tab panel as the other two views.
   // Keep the patient and current parameters visible in the left column.
   paint();
+  if(activeTab!==previous)content.scrollTop=0;
  }
  function refresh(){
   renderWallet(wallet);
@@ -290,6 +292,7 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   else overlay.setAttribute('open','');
   setTab(tab);
   paper.scrollTop=0;
+  content.scrollTop=0;
   // Do not preview the first reward merely because keyboard focus is moved
   // into a newly opened dialog. Preview starts on an intentional item focus
   // or pointer hover, and installed items otherwise show one value only.
