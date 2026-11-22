@@ -20,6 +20,7 @@ import {initializePixiArena} from './render/pixi-scene.js';
 import {initializeDiagnostics} from './render/diagnostics.js';
 import {preloadTextures} from './assets/preload.js';
 import {sceneTextureKeys} from './assets/manifest.js';
+import {prepareOfflineGame} from './assets/offline.js';
 import {createLoadingScreen} from './ui/loading-screen.js';
 import {showStartupIntro} from './ui/startup-intro.js';
 import {bettingLoad,bettingSave} from './betting/storage.js';
@@ -76,6 +77,16 @@ async function boot(){
  const root=document.getElementById('robot-tag-hops-v22');
  const loading=createLoadingScreen({staged:true});initialLoading=loading;
  root.inert=true;
+ const preparingOffline=typeof __OFFLINE_BUILD__!=='undefined'&&__OFFLINE_BUILD__;
+ if(preparingOffline)try{
+   loading.update('Проверяем автономную копию игры…');
+   await prepareOfflineGame(document.defaultView,{onProgress:(done,total)=>
+     loading.update('Скачиваем игру для работы без интернета…',{done,total,phase:'textures'})});
+ }catch(error){
+   console.error('Offline game installation:',error);
+   loading.fail('Не удалось скачать всю игру. Проверьте подключение и обновите страницу.');
+   return;
+ }
  const [textures]=await Promise.all([
   preloadTextures({keys:sceneTextureKeys(),onProgress:(done,total)=>
    loading.update('Загружаем текстуры пациентов и арены…',{done,total,phase:'textures'})}),

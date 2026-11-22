@@ -3,14 +3,15 @@ import {execFileSync} from 'node:child_process';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {copyRuntimeAssets,verifyRuntimeAssets} from './scripts/runtime-assets.mjs';
+import {writeOfflineWorker} from './scripts/offline-build.mjs';
 import {buildVersion} from './scripts/build-version.mjs';
 
-export default defineConfig(({mode})=>{
+export default defineConfig(({mode,command})=>{
   const testBuild=mode==='test';
   let sourceCommit=null;try{sourceCommit=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();}catch{/* Source archives may not contain Git metadata. */}
   return {
   base: './',
-  define: { __TEST_BUILD__: JSON.stringify(testBuild), __INLINE_ASSETS__: '{}', __BUILD_SOURCE__: JSON.stringify(sourceCommit), __BUILD_VERSION__: JSON.stringify(buildVersion+(testBuild?'-test':'')) },
+  define: { __OFFLINE_BUILD__:JSON.stringify(command==='build'), __TEST_BUILD__: JSON.stringify(testBuild), __INLINE_ASSETS__: '{}', __BUILD_SOURCE__: JSON.stringify(sourceCommit), __BUILD_VERSION__: JSON.stringify(buildVersion+(testBuild?'-test':'')) },
   publicDir: 'public',
   plugins:[{
     name:'build-channel',
@@ -20,12 +21,15 @@ export default defineConfig(({mode})=>{
         .replace('ПРОТОКОЛ № 001 · ДОПУСК НА АРЕНУ','ТЕСТОВАЯ СБОРКА · БОСС КАЖДЫЙ 5-Й ЭТАЖ');
     },
     generateBundle(){this.emitFile({type:'asset',fileName:'build-info.json',source:JSON.stringify({channel:testBuild?'test':'main',bossEvery:5,sourceCommit})+'\n'});},
-    async writeBundle(outputOptions){
+    async writeBundle(outputOptions,bundle){
       const root=fileURLToPath(new URL('.',import.meta.url));
       const output=path.resolve(root,outputOptions.dir??'dist');
       const report=await copyRuntimeAssets(path.join(root,'public'),output,{warn:message=>console.warn(message)});
-      if(report.missing.length)throw Error('Missing runtime source files: '+report.missing.join(', '));
-      await verifyRuntimeAssets(output);
+      const missing=[...report.missing,...report.missingLocations];
+      if(missing.length)throw Error('Missing runtime source files: '+missing.join(', '));
+      const files=[...Object.keys(bundle),...report.files];
+      await writeOfflineWorker(output,files);
+      await verifyRuntimeAssets(output,[...files,'offline-worker.js']);
       console.log('Curated runtime assets:',report.copied,'files,',report.bytes,'bytes');
     },
   }],

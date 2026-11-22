@@ -29,17 +29,18 @@ export function assertRuntimePath(file){
 
 export async function copyRuntimeAssets(sourceRoot,destinationRoot,{warn=()=>{}}={}){
   let copied=0,bytes=0;
-  const missing=[],missingLocations=[];
+  const files=[],missing=[],missingLocations=[];
   const locations=[];
   const manifestPath='locations/active.json';
   try{
     const raw=await fs.readFile(path.join(sourceRoot,manifestPath),'utf8');
-    locations.push(manifestPath);
     const manifest=JSON.parse(raw);
     if(manifest?.version!==1||!Array.isArray(manifest.active)||manifest.active.length>128)
       throw Error('Invalid location manifest');
+    locations.push(manifestPath);
     for(const id of new Set(manifest.active.filter(validLocationId)))locations.push('locations/'+id+'.json');
   }catch(error){
+    missingLocations.push(manifestPath);
     if(error.code!=='ENOENT')warn('Could not read active locations: '+error.message);
   }
   for(const relative of [...requiredRuntimePaths(),...locations]){
@@ -55,16 +56,16 @@ export async function copyRuntimeAssets(sourceRoot,destinationRoot,{warn=()=>{}}
     const destination=path.join(destinationRoot,relative);
     await fs.mkdir(path.dirname(destination),{recursive:true});
     await fs.copyFile(source,destination);
-    bytes+=info.size;copied++;
+    files.push(relative);bytes+=info.size;copied++;
   }
   if(missing.length)warn('Runtime files not found: '+missing.join(', '));
   if(missingLocations.length)warn('Active locations not found: '+missingLocations.join(', '));
-  return {copied,bytes,missing};
+  return {copied,bytes,files,missing,missingLocations};
 }
 
-export async function verifyRuntimeAssets(directory){
+export async function verifyRuntimeAssets(directory,expectedFiles=requiredRuntimePaths()){
   const root=path.resolve(directory);
-  const expected=new Set(requiredRuntimePaths());
+  const expected=new Set(expectedFiles);
   const found=[];
   async function walk(folder,prefix=''){
     for(const entry of await fs.readdir(folder,{withFileTypes:true})){
@@ -72,14 +73,11 @@ export async function verifyRuntimeAssets(directory){
       if(FORBIDDEN_RUNTIME_PATH.test(relative))throw Error('Artist source leaked into build: '+relative);
       if(entry.isDirectory())await walk(path.join(folder,entry.name),relative);
       else if(entry.isFile())found.push(relative);
+      else throw Error('Unsupported packaged entry: '+relative);
     }
   }
   await walk(root);
-  const unexpected=found.filter(file=>{
-    // Vite emits hashed scripts/styles, manifest and build info.
-    if(!file.startsWith('assets/')&&!file.startsWith('vendor/'))return false;
-    return !expected.has(file)&&!/^assets\/[^/]+\.(?:js|css|js\.map|css\.map)$/.test(file);
-  });
+  const unexpected=found.filter(file=>!expected.has(file));
   if(unexpected.length)throw Error('Unexpected packaged assets: '+unexpected.join(', '));
   const inventory=new Set(found);
   const missing=[...expected].filter(file=>!inventory.has(file));

@@ -33,6 +33,9 @@ test('runtime packager copies allowlisted assets, not PSD or nested _src',async(
     await fs.unlink(path.join(dist,known));
     await assert.rejects(()=>verifyRuntimeAssets(dist),/Missing packaged assets/);
     await fs.writeFile(path.join(dist,known),'runtime');
+    await fs.writeFile(path.join(dist,'archive.docx'),'editor source');
+    await assert.rejects(()=>verifyRuntimeAssets(dist),/Unexpected packaged assets: archive.docx/);
+    await fs.unlink(path.join(dist,'archive.docx'));
     await fs.mkdir(path.join(dist,'assets/_src'),{recursive:true});
     await fs.writeFile(path.join(dist,'assets/_src/should-fail.png'),'invalid');
     await assert.rejects(()=>verifyRuntimeAssets(dist),/Artist source leaked/);
