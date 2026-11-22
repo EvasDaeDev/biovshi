@@ -1,6 +1,6 @@
 export function showStartupIntro(root){
  const intro=root.querySelector('#startup-intro');
- const forward=intro.querySelector('[data-startup-dismiss]');
+ const forward=intro.querySelector('[data-paper-dismiss]');
  const launch=root.querySelector('#launch-game');
  let pressedBackdrop=false;
 

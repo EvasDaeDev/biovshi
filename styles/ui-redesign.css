@@ -1976,30 +1976,29 @@ html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower
   background:#4e6931;
 }
 
-/* Startup dialogs use screen pixels inside the scaled game root. */
-#robot-tag-hops-v22 .startup-dialog{
-  --startup-top:max(12px,env(safe-area-inset-top),var(--telegram-inset-top,0px));
-  --startup-right:max(12px,env(safe-area-inset-right),var(--telegram-inset-right,0px));
-  --startup-bottom:max(12px,env(safe-area-inset-bottom),var(--telegram-inset-bottom,0px));
-  --startup-left:max(12px,env(safe-area-inset-left),var(--telegram-inset-left,0px));
+/* Reading dialogs use screen pixels inside the scaled game root. */
+#robot-tag-hops-v22 .paper-dialog{
+  --paper-dialog-top:max(12px,env(safe-area-inset-top),var(--telegram-inset-top,0px));
+  --paper-dialog-right:max(12px,env(safe-area-inset-right),var(--telegram-inset-right,0px));
+  --paper-dialog-bottom:max(12px,env(safe-area-inset-bottom),var(--telegram-inset-bottom,0px));
+  --paper-dialog-left:max(12px,env(safe-area-inset-left),var(--telegram-inset-left,0px));
   position:fixed;
-  inset:var(--startup-top) var(--startup-right) var(--startup-bottom) var(--startup-left);
+  inset:var(--paper-dialog-top) var(--paper-dialog-right) var(--paper-dialog-bottom) var(--paper-dialog-left);
   zoom:calc(1 / var(--interface-scale,1));
-  width:min(700px,calc(100vw - var(--startup-left) - var(--startup-right)));
+  width:min(700px,calc(100vw - var(--paper-dialog-left) - var(--paper-dialog-right)));
   max-width:none;
-  max-height:calc(100dvh - var(--startup-top) - var(--startup-bottom));
+  max-height:calc(100dvh - var(--paper-dialog-top) - var(--paper-dialog-bottom));
   margin:auto;
   padding:clamp(16px,4vw,36px);
   overflow:auto;
   overscroll-behavior:contain;
   border:1px solid #817153;
-  background:#22271f;
+  background:rgb(34 39 31 / 92%);
   color:#f0e2c2;
   box-shadow:0 20px 56px #0009;
   font:16px/1.55 system-ui,sans-serif;
 }
-#robot-tag-hops-v22 .startup-dialog::backdrop{background:#0a0d0abb}
-#robot-tag-hops-v22 #startup-intro{background:rgb(34 39 31 / 92%)}
+#robot-tag-hops-v22 .paper-dialog::backdrop{background:#0a0d0abb}
 #robot-tag-hops-v22 #startup-intro-title{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
@@ -2016,10 +2015,10 @@ html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower
   height:1px;
   background:#817153;
 }
-#robot-tag-hops-v22 .startup-dialog p{margin:0 0 .85em}
-#robot-tag-hops-v22 .startup-dialog .startup-subtitle{margin:.4em 0 1.3em;color:#ddc79b}
-#robot-tag-hops-v22 .startup-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:22px}
-#robot-tag-hops-v22 .startup-actions button{
+#robot-tag-hops-v22 .paper-dialog p{margin:0 0 .85em}
+#robot-tag-hops-v22 .paper-dialog .paper-dialog-subtitle{margin:.4em 0 1.3em;color:#ddc79b}
+#robot-tag-hops-v22 .paper-dialog-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:22px}
+#robot-tag-hops-v22 .paper-dialog-actions button{
   min-height:44px;
   padding:8px 16px;
   border:1px solid #a69061;
@@ -2029,10 +2028,34 @@ html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower
   font:700 16px/1.2 system-ui,sans-serif;
   cursor:pointer;
 }
-#robot-tag-hops-v22 .startup-actions .startup-primary{
+#robot-tag-hops-v22 .paper-dialog-actions .paper-dialog-primary{
   background:var(--ui-action-red);
   border-color:var(--ui-action-red-edge);
   color:var(--ui-action-red-text);
 }
-#robot-tag-hops-v22 .startup-actions .startup-primary:hover{background:var(--ui-action-red-hover)}
-#robot-tag-hops-v22 .startup-actions button:focus-visible{outline:2px solid #fff2b4;outline-offset:3px}
+#robot-tag-hops-v22 .paper-dialog-actions .paper-dialog-primary:hover{background:var(--ui-action-red-hover)}
+#robot-tag-hops-v22 .paper-dialog-actions button:focus-visible{outline:2px solid #fff2b4;outline-offset:3px}
+
+#robot-tag-hops-v22 #archive-note-number{margin:0;text-align:center;outline:none}
+#robot-tag-hops-v22 #archive-note-title{margin:0 0 .6em}
+#robot-tag-hops-v22 #archive-note-text{white-space:pre-line;overflow-wrap:anywhere}
+#robot-tag-hops-v22 .tower-notes{border-top:1px solid var(--ui-edge);margin-top:14px;padding-top:14px}
+#robot-tag-hops-v22 .tower-note-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
+#robot-tag-hops-v22 .tower-note-reward{display:flex;justify-content:center;margin:10px 0}
+#robot-tag-hops-v22 .tower-note-card{
+  display:grid;
+  justify-items:center;
+  align-content:center;
+  min-width:64px;
+  min-height:64px;
+  gap:3px;
+  padding:6px;
+  border:1px solid var(--ui-edge);
+  background:var(--ui-surface-raised);
+  color:var(--ui-text);
+  font-weight:700;
+  cursor:pointer;
+}
+#robot-tag-hops-v22 .tower-note-card img{width:44px;height:44px;object-fit:contain}
+#robot-tag-hops-v22 .tower-note-card:hover,
+#robot-tag-hops-v22 .tower-note-card:focus-visible{border-color:var(--ui-selected)}

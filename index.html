@@ -91,9 +91,9 @@
       <p class="launch-footnote">СИГНАЛ ПОДАН · ПАЦИЕНТЫ ГОТОВЫ</p>
     </div>
   </div>
-  <dialog id="startup-intro" class="startup-dialog" aria-modal="true" aria-labelledby="startup-intro-title">
+  <dialog id="startup-intro" class="paper-dialog" aria-modal="true" aria-labelledby="startup-intro-title">
     <h2 id="startup-intro-title" tabindex="-1" autofocus>ЭКЦЕПРИ</h2>
-    <p class="startup-subtitle"><em>Экспериментальный центр протезирования и имплантации</em></p>
+    <p class="paper-dialog-subtitle"><em>Экспериментальный центр протезирования и имплантации</em></p>
     <p>Когда-то здесь создавали будущее.</p>
     <p>По заказам частных военных корпораций Центр разрабатывал универсальных солдат — живучих, послушных и способных продолжать бой даже после потери большей части тела. Конечности заменяли протезами, органы — имплантами, а человеческие возможности расширяли до пределов, которые прежде считались невозможными.</p>
     <p>Потом закончилось финансирование.</p>
@@ -104,8 +104,17 @@
     <p>Особой популярностью пользуется <strong>Башня</strong> — многоуровневая программа испытаний, где каждый следующий этаж опаснее предыдущего. Победителям полагаются деньги, модификации и право продолжить эксперимент.</p>
     <p>Проигравшим — медицинская помощь. По возможности.</p>
     <p><strong>Добро пожаловать в Центр.</strong><br><em>Ваше здоровье по-прежнему является нашим главным научным интересом.</em></p>
-    <footer class="startup-actions">
-      <button type="button" class="startup-primary" data-startup-dismiss>ВПЕРЕД</button>
+    <footer class="paper-dialog-actions">
+      <button type="button" class="paper-dialog-primary" data-paper-dismiss>ВПЕРЕД</button>
+    </footer>
+  </dialog>
+  <dialog id="archive-note-reader" class="paper-dialog" aria-modal="true" aria-labelledby="archive-note-number">
+    <h2 id="archive-note-number" tabindex="-1" autofocus></h2>
+    <p id="archive-note-sender" class="paper-dialog-subtitle"></p>
+    <h3 id="archive-note-title"></h3>
+    <p id="archive-note-text"></p>
+    <footer class="paper-dialog-actions">
+      <button type="button" class="paper-dialog-primary" data-paper-dismiss>ЗАКРЫТЬ</button>
     </footer>
   </dialog>
   <div id="tower-preparation" class="bet-overlay" role="dialog" aria-modal="true" aria-labelledby="tower-prep-title" hidden><div class="bet-panel">

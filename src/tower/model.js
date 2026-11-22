@@ -1,3 +1,4 @@
+import {awardArchiveNote,newArchiveNotes} from './archive-notes.js';
 import {newInsurance,validInsurance,purchaseInsurance} from './insurance.js';
 import {towerSegmentDropChance,awardTowerSegments,normalizeTowerSegmentInventory,validTowerSegmentInventory} from './segments.js';
 import {validTowerMutationState,grantTowerMutationDraft,normalizeTowerMutationInventory} from './mutations.js';
@@ -59,7 +60,9 @@ export function normalizeTower(t){
  return t;
 }
 export function towerFor(session,player){
- if(!session.players[player])throw Error('Игрок не найден.');
+ const owner=session.players[player];
+ if(!owner)throw Error('Игрок не найден.');
+ owner.archiveNotes??=newArchiveNotes();
  session.towers??={};const t=normalizeTower(session.towers[player]??=newTower());ensureBossEncounter(t);return t;
 }
 export function validTower(t){
@@ -131,7 +134,9 @@ export function completeTower(session,player,won,random=Math.random){
    // the legacy reward UI remains enabled until its full replacement lands.
    if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random,towerSegmentDropChance(previousBossWins),previousBossWins);
    else grantTowerMutationDraft(t,random,previousBossWins);
-  }}
+  }
+  awardArchiveNote(session.players[player].archiveNotes,random);
+ }
  else {
   const c=t.insurance.checkpoint,next=newTower(undefined,t.record,t.artifacts,t.insurance);
   if(c){

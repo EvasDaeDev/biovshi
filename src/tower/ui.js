@@ -27,6 +27,7 @@ import {installTowerInput} from './input.js';
 import {SKILLS,skillHintAttributes,formatSkillPoints} from '../ui/patient.js';
 import {renderTowerFloorChoices} from './floor-selector.js';
 import {artifactCollectionMarkup} from './artifact-ui.js';
+import {archiveCollectionMarkup,archiveRewardMarkup} from './archive-note-ui.js';
 import {formatChips} from '../ui/currency.js';
 import {applyTowerStatChange} from './economy.js';
 import {installTowerUpgradeWindow} from './upgrade-modal.js';
@@ -711,7 +712,7 @@ export function towerPreparation(){
     proceed.focus();
   }
   if(!t.mutationDraft)showCycleNotice();
-  ctx.root.querySelector('#tower-prep-artifacts').innerHTML=`<h3 class="tower-artifact-title">КОЛЛЕКЦИЯ АРТЕФАКТОВ · ${t.artifacts.pieces.length}/${ARTIFACT_PIECE_COUNT}</h3>`+artifactCollectionMarkup(t.artifacts)+`<p class="artifact-bonus-note">ПОЛНЫЙ АРТЕФАКТ: +${formatChips(ARTIFACT_COMPLETION_REWARD)}</p>`;
+  ctx.root.querySelector('#tower-prep-artifacts').innerHTML=`<h3 class="tower-artifact-title">КОЛЛЕКЦИЯ АРТЕФАКТОВ · ${t.artifacts.pieces.length}/${ARTIFACT_PIECE_COUNT}</h3>`+artifactCollectionMarkup(t.artifacts)+`<p class="artifact-bonus-note">ПОЛНЫЙ АРТЕФАКТ: +${formatChips(ARTIFACT_COMPLETION_REWARD)}</p>`+archiveCollectionMarkup(ctx.betting.players[ctx.towerPlayer].archiveNotes);
   ctx.root.querySelector('#tower-prep-error').textContent='';
   const insuranceButton=ctx.root.querySelector('#tower-insurance');
   const insuranceStatus=ctx.root.querySelector('#tower-insurance-status');
@@ -819,8 +820,10 @@ export function settleTower(winner){
    fragmentChance:artifactDropChance(t.artifacts,t.level)
   }:null;
   const priorPieces=[...t.artifacts.pieces];
+  const notes=ctx.betting.players[ctx.towerPlayer].archiveNotes,priorNoteCount=notes.length;
   const balanceBefore=ctx.betting.players[ctx.towerPlayer].balance;
   const next=completeTower(ctx.betting,ctx.towerPlayer,won);
+  ctx.towerOutcome.note=notes[priorNoteCount]??null;
   const bonus=ctx.betting.players[ctx.towerPlayer].balance-balanceBefore;
   ctx.towerOutcome.artifactBonus=bonus;
   if(bonus){ctx.towerFloorCoins=(ctx.towerFloorCoins??0)+bonus;ctx.towerOutcome.floorCoins=ctx.towerFloorCoins;ctx.towerOutcome.runCoins=t.runCoins;}
@@ -845,6 +848,7 @@ export function towerResults(){
     ${won&&o.cleared%5===0?`<strong class="tower-milestone">РУБЕЖ: ${o.cleared} ЭТАЖЕЙ</strong>`:''}
     <div class="tower-result-numbers${won?' has-skill-reward':''}"><div><strong>${o.cleared}</strong><span>ЭТАЖЕЙ ПРОЙДЕНО</span></div><div><strong>${o.record}</strong><span>ЛИЧНЫЙ РЕКОРД</span></div><div><strong>${formatChips(coins)}</strong><span>МОНЕТ ЗА ЭТАЖ</span></div>${won?'<div class="tower-skill-reward"><strong>+1</strong><span>ПОЛУЧЕНО ОЧКО НАВЫКОВ</span></div>':''}</div>
     ${won&&o.artifact!=null?artifactCollectionMarkup(t.artifacts,o.artifact,o.artifactBonus):''}
+    ${won&&o.note!=null?archiveRewardMarkup(o.note):''}
     ${won&&o.bossLoot?`<p class="tower-boss-loot-chances">ПОБЕДА НАД ЭТИМ БОССОМ: №${o.bossLoot.previousWins+1}<span>СЕГМЕНТЫ: ${o.bossLoot.segmentChance===null?draftLabel:o.bossLoot.segments?'ПОЛУЧЕНЫ: '+o.bossLoot.segments:'НЕ ВЫПАЛИ'} · ШАНС: ${o.bossLoot.segmentChance===null?'—':(o.bossLoot.segmentChance*100).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%'}</span><span>ФРАГМЕНТ: ${o.bossLoot.fragment?'ПОЛУЧЕН':o.bossLoot.fragmentChance===0?'КОЛЛЕКЦИЯ СОБРАНА':'НЕ ВЫПАЛ'} · ШАНС: ${(o.bossLoot.fragmentChance*100).toLocaleString('ru-RU',{maximumFractionDigits:1})}%</span></p>`:''}
     ${o.runKills==null?'':`<p>ВСЕГО ПРОТИВНИКОВ ВЫРУБЛЕНО: ${o.runKills}</p>`}
   </div>`;
@@ -885,7 +889,7 @@ export function installTowerUI({enterFight=false}={}){
   ctx.root.querySelector('#tower-wallet').hidden=ctx.mode!=='tower';
   const menu=ctx.root.querySelector('#launch-overlay');
   ctx.root.querySelector('#menu-player').onchange=e=>{ctx.betting.towerPlayerId=Number(e.target.value);bettingSave();refreshMenu();};
-  ctx.root.querySelector('#tower-reset').onclick=()=>{if(confirm('Сбросить башню выбранного игрока? Следы боёв на аренах будут очищены. Действующая ДМС будет аннулирована без возврата монет. Банк, личный рекорд и артефакты сохранятся. Тариф следующей ДМС не изменится.')){resetTower(ctx.betting,ctx.menuPlayer);bettingSave();refreshMenu();}};
+  ctx.root.querySelector('#tower-reset').onclick=()=>{if(confirm('Сбросить башню выбранного игрока? Следы боёв на аренах будут очищены. Действующая ДМС будет аннулирована без возврата монет. Банк, личный рекорд, артефакты и записки сохранятся. Тариф следующей ДМС не изменится.')){resetTower(ctx.betting,ctx.menuPlayer);bettingSave();refreshMenu();}};
   ctx.root.querySelector('#launch-tower').onclick=()=>{
     ctx.audio?.unlock();
     if(!ctx.betting){menu.hidden=true;ctx.afterSetup='menu';bettingSetup();return;}

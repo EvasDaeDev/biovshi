@@ -80,7 +80,7 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   assert.equal(ctx.startup.phase,'demo','the intro blocks the menu');
   assert.equal(document.activeElement,intro.querySelector('h2'));
   assert.equal(intro.querySelector('strong').textContent,'Башня');
-  const forward=intro.querySelector('[data-startup-dismiss]');
+  const forward=intro.querySelector('[data-paper-dismiss]');
   assert.equal(forward.textContent,'ВПЕРЕД');
   forward.click();
   assert.equal(intro.open,false);
