@@ -110,6 +110,10 @@
   --game-font-label: 'Oswald', Arial, sans-serif;
   --game-font-body: 'Oranienbaum', Georgia, serif;
   --game-font-title: 'Rubik Distressed', Georgia, serif;
+  --game-tracking-body: .02em;
+  --game-tracking-label: .045em;
+  --game-tracking-heading: .06em;
+  --game-tracking-title: .055em;
 }
 
 #robot-tag-hops-v22,
@@ -118,24 +122,44 @@
 .biovshi-hint {
   --font-sans: var(--game-font-body);
   font-family: var(--game-font-body);
+  letter-spacing: var(--game-tracking-body);
 }
 
-#robot-tag-hops-v22 :is(h1,h2,h3,h4,h5,h6,button,select,summary,label,th,
+#robot-tag-hops-v22 :is(p,li,td) {
+  letter-spacing: var(--game-tracking-body);
+}
+
+#robot-tag-hops-v22 :is(button,select,summary,label,th,
   .patient-name,.tower-player-name,.tower-enemy-label,.tower-mutation-title,
   .tower-surgery-title,.tower-arena-map strong,.tower-reroll-caption,
   .tower-preview-label,.tower-upgrade-stat>span,.credits-stamp,.arena-pause-label,
-  .bet-hud-player-name,.patient-trauma-label),
-#robot-tag-hops-v22 svg text,
-#game-tutorial :is(h2,button,.tutorial-progress),
+  .bet-hud-player-name,.patient-trauma-label,.tower-stat-preview>span,
+  .tower-reroll-price),
+#robot-tag-hops-v22 .settings-panel :is(.graphics-control,.tower-control-setting,.audio-controls label,.render-diagnostics label),
+#robot-tag-hops-v22 #tower-floor-preview .tower-challenge-detail-row>strong,
+#game-tutorial :is(button,.tutorial-progress),
 #texture-loading :is(.loading-subtitle,.loading-dismiss) {
   font-family: var(--game-font-label);
+  letter-spacing: var(--game-tracking-label);
+}
+
+#robot-tag-hops-v22 svg text {
+  font-family: var(--game-font-label);
+}
+
+#robot-tag-hops-v22 :is(h1,h2,h3,h4,h5,h6),
+#game-tutorial h2 {
+  font-family: var(--game-font-label);
+  letter-spacing: var(--game-tracking-heading);
 }
 
 #robot-tag-hops-v22 :is(#launch-title,#startup-intro-title,#tag7hop-intro-title>span) {
   font-family: var(--game-font-title);
   font-weight: 400;
+  letter-spacing: var(--game-tracking-title);
 }
 
 #robot-tag-hops-v22 #tower-floor-preview .tower-challenge-detail-row>span {
   font-family: var(--game-font-body);
+  letter-spacing: var(--game-tracking-body);
 }

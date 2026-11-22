@@ -14,7 +14,7 @@
 #game-tutorial .tutorial-mascot{display:block;flex:0 0 120px;width:120px;height:auto;max-width:23%;aspect-ratio:280/288;object-fit:contain;image-rendering:pixelated;pointer-events:none;filter:drop-shadow(0 2px 4px #0008)}
 #game-tutorial .tutorial-group[data-corner^="top"] .tutorial-mascot{transform:rotate(180deg)}
 #game-tutorial .tutorial-bubble{position:relative;display:flex;flex-direction:column;flex:1;min-width:0;max-height:inherit;overflow:hidden;padding:20px;border:1px solid #dbb763;border-radius:18px;background:rgb(27 29 20 / 82%);box-shadow:0 4px 20px #0005;pointer-events:auto;}
-#game-tutorial .tutorial-progress{margin:0 0 8px;color:#d4c298;font-size:12px;letter-spacing:.04em}
+#game-tutorial .tutorial-progress{margin:0 0 8px;color:#d4c298;font-size:12px}
 #game-tutorial h2{margin:0 0 10px;color:#ffdb8c;font-size:23px;line-height:1.15}
 #game-tutorial #tutorial-text{min-height:0;margin:0 0 16px;overflow:auto;overflow-wrap:anywhere;white-space:pre-line}
 #game-tutorial .tutorial-progress,#game-tutorial h2,#game-tutorial .tutorial-actions,#game-tutorial .tutorial-skip{flex-shrink:0}

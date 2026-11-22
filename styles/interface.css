@@ -419,7 +419,7 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 
 #texture-loading{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(ellipse at center,#29312b,#101713 65%,#070a09);color:#e9dfc4;font-family:var(--game-font-body)}
 #texture-loading .loading-center{box-sizing:border-box;width:min(600px,82vw);text-align:center;padding:24px 10px;z-index:1}
-#texture-loading .loading-subtitle{margin:18px 0 50px;font-size:clamp(11px,1.55vw,16px);font-weight:800;letter-spacing:.2em;color:#a5a690}
+#texture-loading .loading-subtitle{margin:18px 0 50px;font-size:clamp(11px,1.55vw,16px);font-weight:800;color:#a5a690}
 #texture-loading .loading-status{font-size:clamp(14px,2vw,20px);font-weight:800;min-height:1.6em;margin:0 0 14px}
 #texture-loading .loading-track{height:9px;border:1px solid #7e775d;background:#080e0b;overflow:hidden;border-radius:3px}
 #texture-loading .loading-fill{height:100%;width:0;background:linear-gradient(90deg,#a56a2c,#ffcd6b);transition:width .18s}

@@ -429,7 +429,7 @@
 }
 #robot-tag-hops-v22 .tower-upgrade-heading-actions .tower-upgrade-settings{
   min-height:40px;padding:7px 10px;font-size:12px;font-weight:700;
-  letter-spacing:.03em;white-space:nowrap;cursor:pointer;
+  white-space:nowrap;cursor:pointer;
   background:#343a2f;color:#eee0bd;border:1px solid #8e7c58;
 }
 #robot-tag-hops-v22 .tower-upgrade-heading-actions .tower-upgrade-settings:hover{
@@ -493,7 +493,6 @@
   height:44px;
   padding:9px 12px;
   white-space:nowrap;
-  letter-spacing:.025em;
 }
 #robot-tag-hops-v22 #game-nav-back{
   left:12px;
@@ -641,7 +640,6 @@
 #robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel h2{
   margin:3px 0 10px;
   color:#f0e4c5;
-  letter-spacing:.065em;
   text-align:center;
 }
 #robot-tag-hops-v22 #bet-overlay[data-view="betting"] .bet-panel
@@ -761,7 +759,6 @@
 #robot-tag-hops-v22 #bet-overlay[data-view="garage"] .bet-panel h2{
   color:#efe1c4;
   text-align:center;
-  letter-spacing:.055em;
 }
 #robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-intro-note,
 #robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-purchase-note{
@@ -795,7 +792,6 @@
 }
 #robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-patient h3{
   color:#f4e7c9;
-  letter-spacing:.02em;
 }
 #robot-tag-hops-v22 #bet-overlay[data-view="garage"] .garage-patient .patron-name{
   background:transparent;
@@ -898,7 +894,6 @@
 #robot-tag-hops-v22 #gladiator-results #gladiator-results-title{
   color:#f3e7cd;
   text-align:center;
-  letter-spacing:.04em;
 }
 #robot-tag-hops-v22 #gladiator-results :is(.gladiator-results-summary,#bet-result-summary p){
   color:#dfd3b8;
@@ -1040,7 +1035,6 @@
   overflow-wrap:anywhere;
   line-height:1.02;
   color:#f0e2c2;
-  letter-spacing:.055em;
 }
 #robot-tag-hops-v22 #launch-overlay .launch-subtitle{
   grid-area:3 / 1;
@@ -1049,7 +1043,6 @@
   padding-top:5px;
   font-size:13px;
   color:#c5b89b;
-  letter-spacing:.14em;
 }
 #robot-tag-hops-v22 #launch-overlay .launch-subtitle{
   display:flex;
@@ -1058,7 +1051,6 @@
   max-width:100%;
   font-size:clamp(16px,1.35vw,18px);
   line-height:1.48;
-  letter-spacing:normal;
   overflow-wrap:break-word;
 }
 #robot-tag-hops-v22 #launch-overlay .launch-subtitle strong{
@@ -1087,7 +1079,6 @@
   color:var(--ui-action-red-text);
   box-shadow:none;
   font-size:clamp(16px,2.2vw,25px);
-  letter-spacing:.055em;
 }
 #robot-tag-hops-v22 #launch-overlay #launch-game:hover{
   background:var(--ui-action-red-hover);
@@ -1716,7 +1707,6 @@
   line-height:18px;
   font-size:11px;
   font-weight:800;
-  letter-spacing:.035em;
   visibility:hidden;
 }
 #robot-tag-hops-v22 #tower-preparation #tower-stats .tower-preview-label.is-active{
@@ -1871,7 +1861,6 @@
 }
 #robot-tag-hops-v22 #tower-floor-preview .tower-reroll-line .tower-reroll-caption{
   font-size:10px;
-  letter-spacing:0;
   white-space:nowrap;
 }
 #robot-tag-hops-v22 #tower-floor-preview .tower-reroll-line .tower-reroll-price{
