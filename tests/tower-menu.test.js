@@ -9,7 +9,7 @@ const hooks=registerHooks({load(url,context,next){
  const stubs={
   '/src/assets/preload.js':`import {ASSETS} from './manifest.js';export const preloadTextures=async()=>Object.fromEntries(Object.keys(ASSETS.textures).map(k=>[k,{loaded:false}]));export const loadTextureImage=async()=>{throw Error('No test image decoder')};export const releaseTextureImage=()=>{};`,
   '/src/render/textures.js':'export const applyTextures=async()=>{};',
-  '/src/render/floor-history.js':'export const initializeFloor=async()=>{};export const cleanFloor=async()=>{};export const bakeRoundFloor=async()=>{};',
+  '/src/render/floor-history.js':'export const initializeFloor=async()=>{};export const cleanFloor=async()=>{};let pendingBake;export const holdFloorBake=promise=>{pendingBake=promise;};export const bakeRoundFloor=()=>pendingBake;',
   '/src/render/pixi-scene.js':'export const initializePixiArena=async()=>{};'
  };
  const entry=Object.entries(stubs).find(([path])=>url.endsWith(path));
@@ -18,6 +18,7 @@ const hooks=registerHooks({load(url,context,next){
 const {ctx}=await import('../src/game/state.js');
 const {advanceStartup}=await import('../src/game/session.js');
 const {bettingLoad}=await import('../src/betting/storage.js');
+const {holdFloorBake}=await import('../src/render/floor-history.js');
 async function until(fn){for(let i=0;i<100;i++){if(fn())return;await new Promise(resolve=>setImmediate(resolve));}assert.ok(fn(),'application transition completed');}
 async function enterTower(){
  const oldRobots=ctx.robots;
@@ -50,7 +51,7 @@ async function launchTower(){
  assert.equal(document.querySelector('#tower-stick').hidden,ctx.towerControlMode==='direction',
    'only explicit direction control hides the physical stick');
 }
-test('boot menu creates shared players, switches modes and restarts a saved floor with no duplicate rewards',async()=>{
+test('boot menu starts spectator fights after mode changes and restarts a saved floor with no duplicate rewards',async()=>{
  const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://menu.test/',pretendToBeVisual:true});
  for(const key of ['document','localStorage','Event'])globalThis[key]=dom.window[key];
  globalThis.matchMedia=()=>({matches:false});globalThis.ResizeObserver=class{observe(){}disconnect(){}};globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
@@ -65,6 +66,13 @@ test('boot menu creates shared players, switches modes and restarts a saved floo
   document.querySelector('#launch-tower').click();document.querySelector('#bet-count').value='1';document.querySelector('#bet-count').dispatchEvent(new Event('input'));
   document.querySelector('#bet-names input').value='Общий игрок';document.querySelector('#bet-setup-form').dispatchEvent(new Event('submit',{cancelable:true}));
   assert.equal(document.querySelector('#launch-overlay').hidden,false);assert.equal(ctx.betting.players[0].name,'Общий игрок');assert.equal(document.querySelector('#launch-setup').classList.contains('is-new-game'),true);
+  await enterTower();document.querySelector('#game-nav-back').click();
+  assert.equal(ctx.startup.phase,'menu');assert.equal(ctx.paused,true);
+  await document.querySelector('#launch-game').onclick();
+  assert.equal(ctx.startup.phase,'spawning','the first spectator launch after Tower preparation must build a new arena');
+  advanceStartup(10);assert.equal(ctx.startup.phase,'running');assert.equal(ctx.paused,false);assert.equal(ctx.button.disabled,false);
+  assert.equal(ctx.root.querySelector('.arena-pause-label').hidden,true);
+  ctx.button.click();assert.equal(ctx.paused,true);ctx.openMainMenu();
   await enterTower();assert.equal(document.querySelector('#launch-overlay').hidden,true);await launchTower();assert.equal(ctx.robots.length,2);
   const controlMode=document.querySelector('#tower-control-mode'),stick=document.querySelector('#tower-stick');
   controlMode.value='direction';controlMode.dispatchEvent(new Event('change'));
@@ -77,5 +85,18 @@ test('boot menu creates shared players, switches modes and restarts a saved floo
   assert.equal(bettingLoad().players[0].balance,210);
   await ctx.startSetup();assert.equal(ctx.mode,'spectator');assert.ok(document.querySelector('#bet-setup-form'));
   assert.equal(document.querySelector('.paper-dialog[open]'),null,'mode changes do not reopen the intro');
+  ctx.openMainMenu();await document.querySelector('#launch-totalizator').onclick();
+  document.querySelector('#bet-fight').click();advanceStartup(10);
+  assert.equal(ctx.startup.phase,'running');assert.equal(ctx.paused,false);
+  ctx.combat.finished=true;ctx.resultsPanel.hidden=false;
+  let finishBake;
+  holdFloorBake(new Promise(resolve=>{finishBake=resolve;}));
+  const oldRound=ctx.resultsAgain.onclick();
+  ctx.openMainMenu();await document.querySelector('#launch-totalizator').onclick();
+  document.querySelector('#bet-fight').click();
+  finishBake();await oldRound;
+  assert.equal(ctx.startup.phase,'spawning','the retired round must not reopen stakes over a new fight');
+  assert.equal(ctx.betOverlay.hidden,true);
+  advanceStartup(10);assert.equal(ctx.startup.phase,'running');assert.equal(ctx.paused,false);assert.equal(ctx.button.disabled,false);
  }finally{ctx.root?.__disposeTag?.();dom.window.close();hooks.deregister();}
 });

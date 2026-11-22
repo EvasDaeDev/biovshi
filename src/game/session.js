@@ -18,6 +18,7 @@ import { resetHitEffects } from '../render/hit-effects.js';
 export async function resetRound(destination='betting') {
   if(ctx.floorBaking)return;
   if(ctx.combat.finished){
+    const startup=ctx.startup,phase=startup.phase;
     ctx.floorBaking=true;
     ctx.resultsAgain.disabled=true;if(ctx.resultsProcedure)ctx.resultsProcedure.disabled=true;
     const controller=new AbortController();let timeout;
@@ -32,6 +33,8 @@ export async function resetRound(destination='betting') {
       console.warn('Floor baking:',error);
       ctx.lastFloorBakeError='Следы последнего боя не удалось добавить. Предыдущий пол сохранён; можно продолжить игру.';
     }finally{clearTimeout(timeout);controller.abort();ctx.floorBaking=false;ctx.resultsAgain.disabled=false;if(ctx.resultsProcedure)ctx.resultsProcedure.disabled=false;}
+    // Leaving results while the floor is saving retires this transition.
+    if(ctx.disposed||ctx.startup!==startup||startup.phase!==phase)return;
   }
   ctx.streamerMascot?.finishCountdown?.();
   ctx.afterSetup=destination;ctx.exhibition=false;resetCombatLog();ctx.streamerMascot?.reset();

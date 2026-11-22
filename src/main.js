@@ -61,12 +61,13 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,
  initializeGameNavigation();
  initializeTutorial();
  launchButton.onclick=()=>{
-   if(launchAccepted){ctx.audio?.unlock();ctx.startDemo();return;}
+   // The preloaded demo is reusable only while the opening menu still owns it.
+   if(launchAccepted||ctx.startup.phase!=='demo')return ctx.startDemo();
    // AudioContext.resume() must happen synchronously in this user gesture.
    audio.unlock();
    launchAccepted=true;
    gate.hidden=true;
-   if(ctx.startup.phase==='demo')startSpawnSequence();else if(ctx.startup.phase==='running'){setPaused(false);}
+   startSpawnSequence();
  };
  ctx.root.querySelector('#launch-setup').onclick=()=>{audio.unlock();launchAccepted=true;ctx.startSetup();};
  if(launchAccepted&&ctx.startup.phase==='demo')startSpawnSequence();
