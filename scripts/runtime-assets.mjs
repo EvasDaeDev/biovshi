@@ -3,10 +3,13 @@ import path from 'node:path';
 import {ASSETS} from '../src/assets/manifest.js';
 import {validLocationId} from '../src/game/location-geometry.js';
 
-export const FONT_RUNTIME_ASSETS=['Oswald','Oranienbaum','RubikDistressed'].flatMap(family=>[
-  ...['cyrillic','cyrillic-ext','latin','latin-ext'].map(subset=>'fonts/'+family+'-'+subset+'.woff2'),
-  'fonts/'+family+'-OFL.txt',
-]);
+const latinAndCyrillic=['cyrillic','latin','latin-ext'];
+export const FONT_RUNTIME_ASSETS=[
+  ...latinAndCyrillic.map(subset=>'fonts/KellySlab-'+subset+'.woff2'),
+  ...['IBMPlexMono-regular','IBMPlexMono-italic','IBMPlexMono-bold','RubikDistressed'].flatMap(face=>
+    [...latinAndCyrillic,'cyrillic-ext'].map(subset=>'fonts/'+face+'-'+subset+'.woff2')),
+  ...['KellySlab','IBMPlexMono','RubikDistressed'].map(family=>'fonts/'+family+'-OFL.txt'),
+];
 
 // Only gameplay resources, installation icons, fonts and pinned Telegram SDK are
 // shipped. Never copy arbitrary public/ files (including artist sources).

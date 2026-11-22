@@ -25,12 +25,12 @@
 
 ## Шрифты
 
-Шрифты распространяются по SIL Open Font License 1.1. В сборку входят оригинальные файлы WOFF2 из Google Fonts с кириллицей и латиницей, включая расширенные наборы, и тексты лицензий.
+Шрифты распространяются по SIL Open Font License 1.1. В сборку входят оригинальные файлы WOFF2 из Google Fonts с кириллицей и латиницей и тексты лицензий.
 
 | Шрифт | Правообладатели | Исходный проект | Лицензия |
 | --- | --- | --- | --- |
-| Oswald | The Oswald Project Authors | [OswaldFont](https://github.com/googlefonts/OswaldFont) | [OFL 1.1](public/fonts/Oswald-OFL.txt) |
-| Oranienbaum | Oleg Pospelov, Jovanny Lemonad | [Google Fonts](https://github.com/google/fonts/tree/main/ofl/oranienbaum) | [OFL 1.1](public/fonts/Oranienbaum-OFL.txt) |
+| Kelly Slab | Denis Masharov | [Google Fonts](https://github.com/google/fonts/tree/main/ofl/kellyslab) | [OFL 1.1](public/fonts/KellySlab-OFL.txt) |
+| IBM Plex Mono | IBM Corp. | [IBM Plex](https://github.com/IBM/plex) | [OFL 1.1](public/fonts/IBMPlexMono-OFL.txt) |
 | Rubik Distressed | The Rubik Filtered Project Authors | [Rubik Filtered](https://github.com/NaN-xyz/Rubik-Filtered) | [OFL 1.1](public/fonts/RubikDistressed-OFL.txt) |
 
 ## Другие звуковые и графические материалы

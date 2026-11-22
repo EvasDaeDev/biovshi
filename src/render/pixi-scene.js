@@ -15,7 +15,7 @@ import {segmentHitTintMatrix,SEGMENT_HIT_TINT} from './robot-skin.js';
 // The hidden SVG is a scene description for the existing animation code, not a
 // second renderer. Only changed nodes are synchronized; atlases become native
 // Pixi sprites sharing GPU sources. No per-frame SVG serialization or readback.
-const HUD_FONT=['Oswald','Arial','sans-serif'];
+const HUD_FONT=['Kelly Slab','Georgia','serif'];
 
 export class PixiArena {
   constructor(pixi,app) {
@@ -430,7 +430,7 @@ export async function initializePixiArena() {
   const svg=ctx.svg;
   const [pixi]=await Promise.all([
     import('pixi.js'),
-    svg.ownerDocument.fonts?.load('700 16px '+HUD_FONT[0],'Пациент 0:00').catch(()=>[]),
+    svg.ownerDocument.fonts?.load('700 16px '+JSON.stringify(HUD_FONT[0]),'Пациент 0:00').catch(()=>[]),
   ]);
   // Use Pixi's CSP-compatible uniform sync; keep the site's existing CSP intact.
   await import('pixi.js/unsafe-eval');

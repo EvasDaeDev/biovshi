@@ -97,7 +97,7 @@ test('arena lettering retains its proportions and renders outside the lens filte
   robot.label.setAttribute('textLength','1');
   arena.flush();
   assert.equal(visual.text,'Пациент');
-  assert.equal(visual.style.fontFamily[0],'Oswald');
+  assert.equal(visual.style.fontFamily[0],'Kelly Slab');
   assert.deepEqual([visual.scale.x,visual.scale.y],[1,1]);
   assert.equal(visual.parent,object,'text inherits the actor position');
   assert.equal(visual.parentRenderLayer,arena.textLayer);
