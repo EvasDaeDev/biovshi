@@ -1014,7 +1014,7 @@
   overscroll-behavior:contain;
   text-align:left;
   border:1px solid #817153;
-  border-radius:0!important;
+  border-radius:0;
   background:#22271f;
   background-image:none;
   color:var(--ui-text);
@@ -1251,7 +1251,7 @@
   background:#22271f;
   background-image:none;
   border:1px solid #827254;
-  border-radius:0!important;
+  border-radius:0;
   box-shadow:0 20px 58px #000a;
   color:#dfd5bd;
 }
