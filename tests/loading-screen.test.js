@@ -4,17 +4,20 @@ import {JSDOM} from 'jsdom';
 import fs from 'node:fs';
 import {createLoadingScreen} from '../src/ui/loading-screen.js';
 
-test('branded loader shows title, actual progress, status and one fixed streamer line without delaying completion',()=>{
- const dom=new JSDOM('<div id="texture-loading">Подготовка арены…</div><main id="game"></main>',{
+test('loader shows actual progress, status and one fixed streamer line without delaying completion',()=>{
+ const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const dom=new JSDOM(html,{
   url:'https://loading.test/',pretendToBeVisual:true
  });
  const win=dom.window;
  win.setInterval=()=>assert.fail('The streamer line needs no rotation timer');
  win.HTMLCanvasElement.prototype.getContext=()=>null;
  win.Image=class{set src(url){this.url=url;}};
+ const initial=win.document.getElementById('texture-loading');
+ assert.equal(initial.textContent,'Запуск клиники…');
  const loader=createLoadingScreen({document:win.document});
  const element=loader.element;
- assert.equal(element.querySelector('.loading-title').textContent,'ЭКЦЕПРИ');
+ assert.doesNotMatch(element.textContent,/ЭКЦЕПРИ|ECCEPRY/i);
  const line='Музыка и звук влияют на восприятие игры. Не выключайте их!';
  assert.deepEqual([...element.querySelectorAll('.loading-tip')].map(node=>node.textContent),[line]);
  loader.update('Загружаем текстуры…',{done:3,total:8});
@@ -90,5 +93,5 @@ test('loading status uses measured phases',()=>{
  assert.match(main,/loading\?\.update\('Настраиваем графику арены/);
  assert.match(main,/progress\.close\(\)/);
  const css=fs.readFileSync(new URL('../styles/interface.css',import.meta.url),'utf8');
- assert.match(css,/loading-title/);assert.match(css,/loading-streamer/);
+ assert.match(css,/loading-streamer/);
 });

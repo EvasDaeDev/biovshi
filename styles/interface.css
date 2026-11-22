@@ -419,7 +419,6 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 
 #texture-loading{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(ellipse at center,#29312b,#101713 65%,#070a09);color:#e9dfc4;font-family:Arial,sans-serif}
 #texture-loading .loading-center{box-sizing:border-box;width:min(600px,82vw);text-align:center;padding:24px 10px;z-index:1}
-#texture-loading .loading-title{margin:0;font-size:clamp(54px,12vw,124px);font-weight:1000;line-height:1;letter-spacing:.09em;color:#f0ca83;text-shadow:0 5px #54392b}
 #texture-loading .loading-subtitle{margin:18px 0 50px;font-size:clamp(11px,1.55vw,16px);font-weight:800;letter-spacing:.2em;color:#a5a690}
 #texture-loading .loading-status{font-size:clamp(14px,2vw,20px);font-weight:800;min-height:1.6em;margin:0 0 14px}
 #texture-loading .loading-track{height:9px;border:1px solid #7e775d;background:#080e0b;overflow:hidden;border-radius:3px}
@@ -544,7 +543,6 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
     padding:clamp(6px,1.6vh,16px) 10px 0;
     flex:none;
   }
-  #texture-loading .loading-title{font-size:clamp(40px,15vh,92px);letter-spacing:.055em}
   #texture-loading .loading-subtitle{margin:7px 0 clamp(10px,3vh,18px);font-size:clamp(10px,2vh,14px)}
   #texture-loading .loading-status{font-size:clamp(14px,2.8vh,18px);margin:0 0 9px;min-height:1.3em}
   #texture-loading .loading-percent{margin:7px 0}
@@ -561,7 +559,6 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 }
 @media(max-width:700px) and (min-height:651px){
   #texture-loading .loading-center{padding-top:clamp(32px,8vh,90px)}
-  #texture-loading .loading-title{font-size:clamp(48px,13vw,88px)}
   #texture-loading .loading-subtitle{margin:12px 0 30px}
   #texture-loading .loading-streamer{left:3vw;bottom:3%;gap:8px}
   #texture-loading .loading-tip{margin:0 0 24px;width:min(55vw,310px);max-width:none}

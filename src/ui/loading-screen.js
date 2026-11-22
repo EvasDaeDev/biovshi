@@ -5,7 +5,6 @@ export function createLoadingScreen({document:doc=globalThis.document,staged=fal
  if(!node.isConnected)doc.body.prepend(node);
  node.id='texture-loading';node.replaceChildren();node.setAttribute('role','status');
  node.setAttribute('aria-live','polite');node.setAttribute('aria-busy','true');
- const title=doc.createElement('h1');title.className='loading-title';title.textContent='ЭКЦЕПРИ';
  const sub=doc.createElement('div');sub.className='loading-subtitle';sub.textContent='ПАЦИЕНТЫ ГОТОВЯТСЯ К ПРОЦЕДУРЕ';
  const status=doc.createElement('p');status.className='loading-status';status.textContent='Запуск клиники…';
  const meter=doc.createElement('div');meter.className='loading-track';meter.setAttribute('aria-hidden','true');
@@ -17,7 +16,7 @@ export function createLoadingScreen({document:doc=globalThis.document,staged=fal
  line.textContent='Музыка и звук влияют на восприятие игры. Не выключайте их!';
  host.append(canvas,line);
  const dismissButton=doc.createElement('button');dismissButton.type='button';dismissButton.className='loading-dismiss';dismissButton.textContent='ЗАКРЫТЬ';dismissButton.hidden=true;
- const center=doc.createElement('div');center.className='loading-center';center.append(title,sub,status,meter,percent,dismissButton);
+ const center=doc.createElement('div');center.className='loading-center';center.append(sub,status,meter,percent,dismissButton);
  node.append(center,host);
  let closed=false,failed=false,started=0,raf=0,atlas=null,highestProgress=0;
  const win=doc.defaultView;
