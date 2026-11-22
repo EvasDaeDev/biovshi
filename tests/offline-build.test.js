@@ -18,53 +18,57 @@ const assets={
  'locations/active.json':'{"active":["ward"]}',
  'locations/ward.json':'{"id":"ward"}',
 };
-async function workerFixture(){
+async function workerFixture({release=assets,stores=new Map(),openTabs=[]}={}){
  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'biovshi-offline-'));
  try{
-  await Promise.all(Object.entries(assets).map(async([file,content])=>{
+  await Promise.all(Object.entries(release).map(async([file,content])=>{
    const output=path.join(directory,file);
    await fs.mkdir(path.dirname(output),{recursive:true});
    await fs.writeFile(output,content);
   }));
-  await writeOfflineWorker(directory,Object.keys(assets));
+  await writeOfflineWorker(directory,Object.keys(release));
   const code=await fs.readFile(path.join(directory,'offline-worker.js'),'utf8');
-  const stores=new Map(),listeners=new Map(),requested=[],progress=[];
-  let network=true,corrupt=null,claimed=false;
+  const listeners=new Map(),requested=[],progress=[];
+  let network=true,corrupt=null,claimed=false,skippedWaiting=false;
   const caches={
    async keys(){return [...stores.keys()];},
    async delete(key){return stores.delete(key);},
+   async match(url,{cacheName}){return stores.get(cacheName)?.get(url)?.clone();},
    async open(key){
     if(!stores.has(key))stores.set(key,new Map());
     const store=stores.get(key);
     return {
      async match(url){return store.get(url)?.clone();},
      async put(url,response){store.set(url,response);},
+     async keys(){return [...store.keys()].map(url=>({url}));},
+     async delete(request){return store.delete(request.url);},
     };
    },
   };
   vm.runInNewContext(code,{
-   URL,Uint8Array,AbortController,setTimeout,clearTimeout,crypto:webcrypto,caches,
+   URL,Response,Uint8Array,AbortController,setTimeout,clearTimeout,crypto:webcrypto,caches,
    fetch:async url=>{
     if(!network)throw Error('Offline');
     const address=new URL(url);
     const file=address.pathname.slice(new URL(scope).pathname.length);
     requested.push(file);
-    return new Response(file===corrupt?'incorrect bytes':assets[file],{status:Object.hasOwn(assets,file)?200:404});
+    return new Response(file===corrupt?'incorrect bytes':release[file],{status:Object.hasOwn(release,file)?200:404});
    },
    self:{
     registration:{scope},
     addEventListener:(name,fn)=>listeners.set(name,fn),
-    clients:{matchAll:async()=>[{url:scope,postMessage:data=>progress.push(data)}],
+    skipWaiting:async()=>{skippedWaiting=true;},
+    clients:{matchAll:async options=>options.includeUncontrolled?[{url:scope,postMessage:data=>progress.push(data)}]:openTabs,
      claim:async()=>{claimed=true;}},
    },
   });
   return {
-   caches,requested,progress,get claimed(){return claimed;},
+   caches,requested,progress,get claimed(){return claimed;},get skippedWaiting(){return skippedWaiting;},
    disconnect(){network=false;},corrupt(file){corrupt=file;},
    lifecycle(type){let result;listeners.get(type)({waitUntil(promise){result=promise;}});return result;},
-   request(file,mode='same-origin'){
+   request(file,mode='same-origin',clientId=''){
     let response;
-    listeners.get('fetch')({request:{url:new URL(file,scope).href,method:'GET',mode},respondWith(promise){response=promise;}});
+    listeners.get('fetch')({clientId,request:{url:new URL(file,scope).href,method:'GET',mode},respondWith(promise){response=promise;}});
     return response;
    },
   };
@@ -73,17 +77,15 @@ async function workerFixture(){
 
 test('an installed web build serves the entire verified release without a network',async()=>{
  const w=await workerFixture();
- const older='biovshi-offline:'+scope+':older';
  const preview='biovshi-offline:'+scope+'test/:older';
- await w.caches.open(older);
  await w.caches.open(preview);
  await w.lifecycle('install');
  assert.equal(w.claimed,false);
+ assert.equal(w.skippedWaiting,true);
  assert.equal(w.progress.at(-1).done,Object.keys(assets).length);
  assert.deepEqual([...w.requested].sort(),Object.keys(assets).sort());
  await w.lifecycle('activate');
  assert.equal(w.claimed,true);
- assert.ok(!(await w.caches.keys()).includes(older));
  assert.ok((await w.caches.keys()).includes(preview));
 
  w.disconnect();
@@ -96,6 +98,33 @@ test('an installed web build serves the entire verified release without a networ
  assert.equal(w.request('assets/source.psd'),undefined);
 });
 
+test('regular reloads use the new release while already open tabs keep their own verified assets',async()=>{
+ const stores=new Map();
+ const previous=await workerFixture({stores});
+ await previous.lifecycle('install');
+ await previous.lifecycle('activate');
+ const firstCache=(await previous.caches.keys())[0];
+ const secondRelease={...assets,'index.html':'<script src="assets/game-v2.js"></script>','assets/game-v2.js':'bootV2()',
+  'assets/atlas.png':'second atlas'};
+ delete secondRelease['assets/game.js'];
+ const next=await workerFixture({release:secondRelease,stores,openTabs:[{id:'old-tab'}]});
+ await next.lifecycle('install');
+ assert.equal(next.skippedWaiting,true,'activation does not require the last tab to close');
+ await next.lifecycle('activate');
+ next.disconnect();
+ assert.equal(await (await next.request('', 'navigate')).text(),secondRelease['index.html']);
+ assert.equal(await (await next.request('index.html','navigate')).text(),secondRelease['index.html']);
+ assert.equal(await (await next.request('assets/game.js','same-origin','old-tab')).text(),assets['assets/game.js']);
+ assert.equal(await (await next.request('assets/atlas.png','same-origin','old-tab')).text(),assets['assets/atlas.png']);
+ assert.equal(await (await next.request('assets/atlas.png','same-origin','reloaded-tab')).text(),secondRelease['assets/atlas.png']);
+
+ const third=await workerFixture({release:{...secondRelease,'assets/atlas.png':'third atlas'},stores,openTabs:[{id:'reloaded-tab'}]});
+ await third.lifecycle('install');
+ await third.lifecycle('activate');
+ assert.ok(!(await third.caches.keys()).includes(firstCache),'closed tabs no longer retain their release');
+ assert.equal(await (await third.request('assets/atlas.png','same-origin','reloaded-tab')).text(),secondRelease['assets/atlas.png']);
+});
+
 test('a mixed release retries the mismatched file and never activates a partial cache',async()=>{
  const w=await workerFixture();
  await w.caches.open('biovshi-offline:'+scope+':previous');
@@ -103,6 +132,7 @@ test('a mixed release retries the mismatched file and never activates a partial 
  await assert.rejects(w.lifecycle('install'),/File differs from the published build/);
  assert.equal(w.requested.filter(file=>file==='assets/atlas.png').length,2);
  assert.equal(w.claimed,false);
+ assert.equal(w.skippedWaiting,false);
  assert.deepEqual(await w.caches.keys(),['biovshi-offline:'+scope+':previous']);
 });
 

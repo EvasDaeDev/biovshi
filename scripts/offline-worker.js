@@ -2,8 +2,10 @@
 const scope=self.registration.scope;
 const cachePrefix='biovshi-offline:'+scope+':';
 const cacheName=cachePrefix+OFFLINE_VERSION;
+const clientCacheName=cachePrefix+'clients';
 const entry=new URL('index.html',scope).href;
 const files=new Map(OFFLINE_FILES.map(([path,hash])=>[new URL(path,scope).href,hash]));
+const clientKey=id=>new URL('__offline_client__/'+encodeURIComponent(id),scope).href;
 
 async function fetchAsset(url,hash){
   for(const retry of [false,true]){
@@ -51,14 +53,32 @@ async function installOfflineGame(){
   }
 }
 
-self.addEventListener('install',event=>event.waitUntil(installOfflineGame()));
+self.addEventListener('install',event=>event.waitUntil((async()=>{
+  await installOfflineGame();
+  await self.skipWaiting();
+})()));
 self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
-    // A new version waits until tabs of the previous version are closed.
-    for(const name of await caches.keys()){
-      if(name.startsWith(cachePrefix)&&name!==cacheName)await caches.delete(name);
+    const older=(await caches.keys()).filter(name=>name.startsWith(cachePrefix)&&name!==cacheName&&name!==clientCacheName);
+    if(older.length){
+      // The previously active release is the last installed cache before ours.
+      // Already controlled tabs keep that release (or their existing pin).
+      const clients=await self.clients.matchAll({type:'window'});
+      const pins=await caches.open(clientCacheName);
+      const retained=new Set(),live=new Set();
+      for(const client of clients){
+        const key=clientKey(client.id);
+        live.add(key);
+        const saved=await (await pins.match(key))?.text();
+        const version=older.includes(saved)?saved:older.at(-1);
+        retained.add(version);
+        if(saved!==version)await pins.put(key,new Response(version));
+      }
+      for(const request of await pins.keys())if(!live.has(request.url))await pins.delete(request);
+      for(const name of older)if(!retained.has(name))await caches.delete(name);
+    }else{
+      await self.clients.claim();
     }
-    await self.clients.claim();
   })());
 });
 self.addEventListener('fetch',event=>{
@@ -69,9 +89,14 @@ self.addEventListener('fetch',event=>{
   if(navigation){
     url.search='';url.hash='';
     if(url.href!==scope&&url.href!==entry)return;
-  }else if(!files.has(url.href))return;
+  }else if(!files.has(url.href)&&(!event.clientId||!url.href.startsWith(scope)))return;
   event.respondWith((async()=>{
-    const cached=await (await caches.open(cacheName)).match(navigation?entry:url.href);
+    let version=cacheName;
+    if(!navigation&&event.clientId){
+      const pin=await caches.match(clientKey(event.clientId),{cacheName:clientCacheName});
+      if(pin)version=await pin.text();
+    }
+    const cached=await (await caches.open(version)).match(navigation?entry:url.href);
     return cached??fetch(request);
   })());
 });
