@@ -123,7 +123,8 @@
 #robot-tag-hops-v22 :is(h1,h2,h3,h4,h5,h6,button,select,summary,label,th,
   .patient-name,.tower-player-name,.tower-enemy-label,.tower-mutation-title,
   .tower-surgery-title,.tower-arena-map strong,.tower-reroll-caption,
-  .tower-preview-label,.tower-upgrade-stat>span,.credits-stamp),
+  .tower-preview-label,.tower-upgrade-stat>span,.credits-stamp,.arena-pause-label,
+  .bet-hud-player-name,.patient-trauma-label),
 #robot-tag-hops-v22 svg text,
 #game-tutorial :is(h2,button,.tutorial-progress),
 #texture-loading :is(.loading-subtitle,.loading-dismiss) {

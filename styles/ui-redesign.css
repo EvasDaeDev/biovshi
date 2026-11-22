@@ -1328,6 +1328,12 @@
 #robot-tag-hops-v22 #arena-settings .settings-panel .credits-view{
   background:#292f28;
 }
+#robot-tag-hops-v22 #arena-settings .credits-view .credits-section h4{
+  color:#e5d6b7;
+}
+#robot-tag-hops-v22 #arena-settings .credits-view a{
+  color:#e5c58e;
+}
 #robot-tag-hops-v22 #arena-settings .settings-panel .credits-stamp,
 #robot-tag-hops-v22 #arena-settings .settings-panel .settings-copyright{
   color:#a99d85;
