@@ -1999,9 +1999,23 @@ html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower
   font:16px/1.55 system-ui,sans-serif;
 }
 #robot-tag-hops-v22 .startup-dialog::backdrop{background:#0a0d0abb}
-#robot-tag-hops-v22 #startup-welcome{width:min(460px,calc(100vw - var(--startup-left) - var(--startup-right)))}
 #robot-tag-hops-v22 #startup-intro{background:rgb(34 39 31 / 92%)}
-#robot-tag-hops-v22 .startup-dialog h2{margin:0;font-size:clamp(24px,5vw,40px);line-height:1.15}
+#robot-tag-hops-v22 #startup-intro-title{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center;
+  gap:clamp(8px,2vw,20px);
+  margin:0;
+  outline:none;
+  font-size:clamp(24px,5vw,40px);
+  line-height:1.15;
+}
+#robot-tag-hops-v22 #startup-intro-title::before,
+#robot-tag-hops-v22 #startup-intro-title::after{
+  content:"";
+  height:1px;
+  background:#817153;
+}
 #robot-tag-hops-v22 .startup-dialog p{margin:0 0 .85em}
 #robot-tag-hops-v22 .startup-dialog .startup-subtitle{margin:.4em 0 1.3em;color:#ddc79b}
 #robot-tag-hops-v22 .startup-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:22px}

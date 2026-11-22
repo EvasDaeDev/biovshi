@@ -14,7 +14,7 @@ test('branded loader shows title, actual progress, status and one fixed streamer
  win.Image=class{set src(url){this.url=url;}};
  const loader=createLoadingScreen({document:win.document});
  const element=loader.element;
- assert.equal(element.querySelector('.loading-title').textContent,'БИОВШИ');
+ assert.equal(element.querySelector('.loading-title').textContent,'ЭКЦЕПРИ');
  const line='Музыка и звук влияют на восприятие игры. Не выключайте их!';
  assert.deepEqual([...element.querySelectorAll('.loading-tip')].map(node=>node.textContent),[line]);
  loader.update('Загружаем текстуры…',{done:3,total:8});

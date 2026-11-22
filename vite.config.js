@@ -16,7 +16,7 @@ export default defineConfig(({mode})=>{
     name:'build-channel',
     transformIndexHtml(html){
       if(!testBuild)return html;
-      return html.replace('<title>БИОВШИ — Гладиаторские бои</title>','<title>БИОВШИ · ТЕСТОВАЯ СБОРКА</title>')
+      return html.replace('<title>ЭКЦЕПРИ (ECCEPRY) — Гладиаторские бои</title>','<title>ЭКЦЕПРИ (ECCEPRY) · ТЕСТОВАЯ СБОРКА</title>')
         .replace('ПРОТОКОЛ № 001 · ДОПУСК НА АРЕНУ','ТЕСТОВАЯ СБОРКА · БОСС КАЖДЫЙ 5-Й ЭТАЖ');
     },
     generateBundle(){this.emitFile({type:'asset',fileName:'build-info.json',source:JSON.stringify({channel:testBuild?'test':'main',bossEvery:5,sourceCommit})+'\n'});},

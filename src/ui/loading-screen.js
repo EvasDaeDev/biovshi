@@ -5,7 +5,7 @@ export function createLoadingScreen({document:doc=globalThis.document,staged=fal
  if(!node.isConnected)doc.body.prepend(node);
  node.id='texture-loading';node.replaceChildren();node.setAttribute('role','status');
  node.setAttribute('aria-live','polite');node.setAttribute('aria-busy','true');
- const title=doc.createElement('h1');title.className='loading-title';title.textContent='БИОВШИ';
+ const title=doc.createElement('h1');title.className='loading-title';title.textContent='ЭКЦЕПРИ';
  const sub=doc.createElement('div');sub.className='loading-subtitle';sub.textContent='ПАЦИЕНТЫ ГОТОВЯТСЯ К ПРОЦЕДУРЕ';
  const status=doc.createElement('p');status.className='loading-status';status.textContent='Запуск клиники…';
  const meter=doc.createElement('div');meter.className='loading-track';meter.setAttribute('aria-hidden','true');

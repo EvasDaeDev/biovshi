@@ -59,7 +59,7 @@ test('boot menu creates shared players, switches modes and restarts a saved floo
  globalThis.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(0)});
  try{
   await import('../src/main.js');await until(()=>!document.querySelector('#texture-loading'));
-  document.querySelector('#startup-welcome [data-startup-dismiss]').click();
+  document.querySelector('#startup-intro [data-startup-dismiss]').click();
   assert.equal(document.querySelector('#launch-overlay').hidden,false);
   assert.equal(document.querySelector('#launch-setup').classList.contains('is-new-game'),false);
   document.querySelector('#launch-tower').click();document.querySelector('#bet-count').value='1';document.querySelector('#bet-count').dispatchEvent(new Event('input'));
@@ -76,6 +76,6 @@ test('boot menu creates shared players, switches modes and restarts a saved floo
   await enterTower();await launchTower();assert.equal(ctx.robots[1].hasHead,true);advanceStartup(10);ctx.robots[1].damage('head',0,100);assert.equal(ctx.betting.players[0].balance,210,'no duplicate payout after mode switch');
   assert.equal(bettingLoad().players[0].balance,210);
   await ctx.startSetup();assert.equal(ctx.mode,'spectator');assert.ok(document.querySelector('#bet-setup-form'));
-  assert.equal(document.querySelector('.startup-dialog[open]'),null,'mode changes do not reopen the welcome');
+  assert.equal(document.querySelector('.startup-dialog[open]'),null,'mode changes do not reopen the intro');
  }finally{ctx.root?.__disposeTag?.();dom.window.close();hooks.deregister();}
 });
