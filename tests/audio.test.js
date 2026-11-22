@@ -7,7 +7,7 @@ import {emitGameEvent} from '../src/game/event-bus.js';
 import {ASSETS} from '../src/assets/manifest.js';
 
 const flush=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve();};
-function setup(){
+function setup({phase='running',musicOffsets}={}){
  const dom=new JSDOM(fs.readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://audio.test/'});
  const sources=[],gains=[],convolvers=[];
  const context={state:'suspended',currentTime:0,sampleRate:48000,destination:{},resume(){this.state='running';return Promise.resolve();},
@@ -16,12 +16,16 @@ function setup(){
   createGain(){const param={value:1,events:[],cancelScheduledValues(t){this.events.push(['cancel',t]);},setValueAtTime(v,t){this.value=v;this.events.push(['set',v,t]);},linearRampToValueAtTime(v,t){this.events.push(['ramp',v,t]);},exponentialRampToValueAtTime(v,t){this.events.push(['exp',v,t]);},setTargetAtTime(v,t,tau){this.events.push(['target',v,t,tau]);}};const gain={gain:param,connections:[],connect(node){this.connections.push(node);},disconnect(){this.disconnected=true;}};gains.push(gain);return gain;},
   createBufferSource(){const source={playbackRate:{value:1},connect(node){this.gain=node;},disconnect(){},start(...args){this.started=true;this.startArgs=args;},stop(){this.stopped=true;}};sources.push(source);return source;}};
  context.createOscillator=()=>{const oscillator={frequency:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){},start(){this.started=true;},stop(){this.stopped=true;this.onended?.();}};sources.push(oscillator);return oscillator;};
- const state={root:dom.window.document.querySelector('#robot-tag-hops-v22'),startup:{phase:'running'},paused:false,combat:{finished:false,unarmedDeadline:[null,null]},robots:[{id:0,visible:true,mobile:true},{id:1,visible:true,mobile:true}]};
+ const state={root:dom.window.document.querySelector('#robot-tag-hops-v22'),startup:{phase},paused:false,combat:{finished:false,unarmedDeadline:[null,null]},robots:[{id:0,visible:true,mobile:true},{id:1,visible:true,mobile:true}]};
  const target=new EventTarget();
- const audio=createAudio({state,storage:dom.window.localStorage,eventTarget:target,contextFactory:()=>context,bufferLoader:async(_context,path)=>path===ASSETS.sounds.music?{duration:120}:path});
+ const audio=createAudio({state,storage:dom.window.localStorage,eventTarget:target,contextFactory:()=>context,musicOffsets,bufferLoader:async(_context,path)=>{
+  if(path===ASSETS.sounds.music)return {path,duration:120};
+  if(path===ASSETS.sounds.menuMusic)return {path,duration:180};
+  return path;
+ }});
  return {audio,state,context,sources,gains,convolvers,dom,target,unlock:async()=>{target.dispatchEvent(new Event('pointerdown'));await flush();},finish(){audio.dispose();dom.window.close();}};
 }
-const live=(sources,key)=>sources.filter(s=>s.started&&!s.stopped&&(key==='music'?s.buffer?.duration===120:s.buffer===ASSETS.sounds[key]));
+const live=(sources,key)=>sources.filter(s=>s.started&&!s.stopped&&((s.buffer?.path??s.buffer)===ASSETS.sounds[key]));
 
 test('app deactivation stops music and pending effects; activation resumes music at its saved offset',async()=>{
  const f=setup();try{
@@ -33,6 +37,51 @@ test('app deactivation stops music and pending effects; activation resumes music
   f.state.appInactive=false;f.audio.sync();await flush();
   assert.equal(live(f.sources,'music')[0].startArgs[1],12);assert.equal(f.state.paused,false);
  }finally{f.finish();}
+});
+
+test('menu music loops at 85% of the music slider and resumes after combat, mute and arena replacement',async()=>{
+ const musicOffsets=new Map();
+ const f=setup({phase:'menu',musicOffsets});
+ try{
+  await f.unlock();
+  const menu=live(f.sources,'menuMusic')[0];
+  assert.ok(menu.loop);
+  assert.equal(menu.playbackRate.value,1);
+  assert.equal(menu.gain.gain.value,.85);
+  assert.deepEqual(menu.gain.connections,[f.gains[1]]);
+  f.audio.setVolume('sounds',0);
+  f.state.startup.phase='tower-ready';
+  f.audio.sync();
+  assert.deepEqual(live(f.sources,'menuMusic'),[menu]);
+
+  f.context.currentTime=190;
+  f.state.startup.phase='running';
+  f.audio.sync();await flush();
+  assert.ok(menu.stopped);
+  assert.deepEqual(live(f.sources,'music')[0].startArgs,[0,0]);
+
+  f.context.currentTime=210;
+  menu.onended?.();
+  f.state.combat.finished=true;
+  f.audio.sync();await flush();
+  const resumed=live(f.sources,'menuMusic')[0];
+  assert.deepEqual(resumed.startArgs,[0,10]);
+
+  f.context.currentTime=215;
+  f.audio.setVolume('music',0);
+  assert.ok(resumed.stopped);
+  f.context.currentTime=220;
+  f.audio.setVolume('music',40);await flush();
+  assert.deepEqual(live(f.sources,'menuMusic')[0].startArgs,[0,15]);
+  assert.equal(f.gains[1].gain.value,.4);
+  f.context.currentTime=222;
+ }finally{f.finish();}
+
+ const next=setup({phase:'betting',musicOffsets});
+ try{
+  await next.unlock();
+  assert.deepEqual(live(next.sources,'menuMusic')[0].startArgs,[0,17]);
+ }finally{next.finish();}
 });
 
 test('effects unlock on gesture, use per-patient pitch, and a critical replaces a normal hit',async()=>{

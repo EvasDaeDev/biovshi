@@ -50,8 +50,8 @@ export function initializeGameNavigation(){
   nav.dataset.screen=screen;
   syncNativeBack();
  };
- const protectedDialog='#game-action-confirm[open],#tower-module-replacement[open],#tower-upgrade-window[open],.betting-input-dialog[open],#tower-cycle-notice[open]';
- const nativeBackDialogs='#game-action-confirm[open],#tower-module-replacement[open],#tower-upgrade-window[open],.betting-input-dialog[open],#game-tutorial[open]';
+ const protectedDialog='.startup-dialog[open],#game-action-confirm[open],#tower-module-replacement[open],#tower-upgrade-window[open],.betting-input-dialog[open],#tower-cycle-notice[open]';
+ const nativeBackDialogs='.startup-dialog[open],#game-action-confirm[open],#tower-module-replacement[open],#tower-upgrade-window[open],.betting-input-dialog[open],#game-tutorial[open]';
  const syncNativeBack=()=>ctx.platform?.setBackAvailable?.(
   ctx.settingsOpen||!back.hidden||Boolean(root.querySelector(nativeBackDialogs))
  );
@@ -86,6 +86,8 @@ export function initializeGameNavigation(){
   const loading=doc.querySelector('#texture-loading[aria-busy]');
   if(loading){loading.querySelector('.loading-dismiss:not([hidden])')?.click();return;}
   if(root.querySelector('#landscape-required[open],#tower-cycle-notice[open]'))return;
+  const startupDialog=root.querySelector('.startup-dialog[open]');
+  if(startupDialog){startupDialog.querySelector('[data-startup-dismiss]').click();return;}
   if(root.querySelector('#game-tutorial[open]')){root.querySelector('#game-tutorial .tutorial-skip')?.click();return;}
   if(root.querySelector('#game-action-confirm[open]')){root.querySelector('#game-action-confirm-close,.game-action-confirm-close')?.click();return;}
   if(root.querySelector('#tower-module-replacement[open]')){root.querySelector('.tower-replacement-close')?.click();return;}

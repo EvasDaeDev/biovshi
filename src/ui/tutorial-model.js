@@ -15,7 +15,7 @@ export function writeTutorial(storage,state){try{storage?.setItem(TUTORIAL_STORA
 
 export function tutorialChapter(c,{ignoreBlocked=false}={}){
  const root=c.root,visible=id=>{const node=root.querySelector(id);return node&&!node.hidden;};
- if(!ignoreBlocked&&(c.settingsOpen||c.orientationBlocked||root.inert||root.querySelector('#tower-cycle-notice[open], #game-action-confirm[open], #tower-module-replacement[open]')))return null;
+ if(!ignoreBlocked&&(c.settingsOpen||c.orientationBlocked||root.inert||root.querySelector('#startup-intro[open], #tower-cycle-notice[open], #game-action-confirm[open], #tower-module-replacement[open]')))return null;
  if(visible('#launch-overlay'))return 'menu';
  if(visible('#tower-preparation')){
   if(visible('#tower-upgrade-window[open]'))return 'tower-shelter';

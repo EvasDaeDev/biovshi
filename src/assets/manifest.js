@@ -70,6 +70,7 @@ export const ASSETS = {
     drag: 'assets/sounds/effects/step_1.mp3',
     step: 'assets/sounds/effects/step_1.mp3',
     music: 'assets/sounds/music/music_01.mp3',
+    menuMusic: 'assets/music/Long20Three.mp3',
   },
 };
 export function assetUrl(file) {

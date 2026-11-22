@@ -20,15 +20,20 @@ import {initializePixiArena} from './render/pixi-scene.js';
 import {initializeDiagnostics} from './render/diagnostics.js';
 import {preloadTextures} from './assets/preload.js';
 import {createLoadingScreen} from './ui/loading-screen.js';
+import {showStartupIntro} from './ui/startup-intro.js';
 import {bettingLoad,bettingSave} from './betting/storage.js';
 import {startSpawnSequence} from './game/session.js';
 let cancelled=false,initialLoading=null;
 // Only a full page load requires the explicit sound/simulation gesture.
 let launchAccepted=false;
+const musicOffsets=new Map();
 async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,enterFight=false,loading=null}){
  loading?.update('Создаём пациентов…',{done:1,total:6});
  if(ctx.towerFloorBake)await ctx.towerFloorBake;
  initializeGame({textures,session,entry,arenaId,tower});
+ const audio=createAudio({musicOffsets});ctx.audio=audio;
+ const dispose=ctx.root.__disposeTag;
+ ctx.root.__disposeTag=()=>{audio.dispose();if(ctx.audio===audio)ctx.audio=null;dispose();};
  await applyTextures();if(cancelled||ctx.disposed)return;
  loading?.update('Рисуем портреты пациентов…',{done:2,total:6});
  await preparePatientPortraits();if(cancelled||ctx.disposed)return;
@@ -39,9 +44,6 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,
  if(cancelled||ctx.disposed)return;
  if(ctx.startup.phase==='garage')garageOpen();
  initializeDiagnostics();
- const audio=createAudio();ctx.audio=audio;
- const dispose=ctx.root.__disposeTag;
- ctx.root.__disposeTag=()=>{audio.dispose();if(ctx.audio===audio)ctx.audio=null;dispose();};
  const gate=ctx.root.querySelector('#launch-overlay');
  const launchButton=ctx.root.querySelector('#launch-game');
  gate.hidden=launchAccepted;
@@ -149,7 +151,9 @@ async function boot(){
  ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});setPaused(true);ctx.afterSetup='menu';bettingSetup();};
  ctx.startDemo=()=>transition({session:ctx.betting,entry:'auto',arenaId:ctx.betting?.arenaId??'ward'});
  await prepare({textures,session,arenaId:session?.arenaId??'ward',loading});
- if(cancelled||ctx.disposed){loading.close();return;}root.inert=false;loading.close();
+ if(cancelled||ctx.disposed){loading.close();return;}
+ root.inert=false;loading.close();
+ showStartupIntro(root);
 }
 boot().catch(error=>{
  console.error('Game startup:',error);

@@ -2,40 +2,36 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
 import fs from 'node:fs';
-import {createLoadingScreen,LOADING_TIP_MS,LOADING_TIPS} from '../src/ui/loading-screen.js';
+import {createLoadingScreen} from '../src/ui/loading-screen.js';
 
-test('branded loader shows title, actual progress, status and streamer advice without delaying completion',()=>{
+test('branded loader shows title, actual progress, status and one fixed streamer line without delaying completion',()=>{
  const dom=new JSDOM('<div id="texture-loading">Подготовка арены…</div><main id="game"></main>',{
   url:'https://loading.test/',pretendToBeVisual:true
  });
  const win=dom.window;
- let tips=0,cleared=0,frames=0;
- win.setInterval=(fn,ms)=>{assert.equal(ms,1500);tips++;return 31;};
- win.clearInterval=id=>{assert.equal(id,31);cleared++;};
- win.requestAnimationFrame=()=>++frames;win.cancelAnimationFrame=()=>{};
+ win.setInterval=()=>assert.fail('The streamer line needs no rotation timer');
  win.HTMLCanvasElement.prototype.getContext=()=>null;
  win.Image=class{set src(url){this.url=url;}};
- const loader=createLoadingScreen({document:win.document,random:()=>0});
+ const loader=createLoadingScreen({document:win.document});
  const element=loader.element;
- assert.equal(element.querySelector('.loading-title').textContent,'БИОВШИ');
- assert.equal(element.querySelector('.loading-tip').textContent,LOADING_TIPS[0]);
- assert.equal(tips,1);assert.equal(LOADING_TIP_MS,1500);
+ assert.equal(element.querySelector('.loading-title').textContent,'ЭКЦЕПРИ');
+ const line='Музыка и звук влияют на восприятие игры. Не выключайте их!';
+ assert.deepEqual([...element.querySelectorAll('.loading-tip')].map(node=>node.textContent),[line]);
  loader.update('Загружаем текстуры…',{done:3,total:8});
  assert.equal(element.querySelector('.loading-status').textContent,'Загружаем текстуры…');
  assert.equal(element.querySelector('.loading-percent').textContent,'38%');
  assert.equal(element.querySelector('.loading-fill').style.width,'38%');
  loader.update('Арена готова!',{done:6,total:6});
  assert.equal(element.querySelector('.loading-percent').textContent,'100%');
+ assert.equal(element.querySelector('.loading-tip').textContent,line);
  loader.close();loader.close();
- assert.equal(cleared,1);
  assert.equal(win.document.getElementById('texture-loading'),null);
  dom.window.close();
 });
 
-test('loader can report an error and stops rotating tips',()=>{
+test('loader can report a network error',()=>{
  const dom=new JSDOM('<body></body>',{url:'https://loading.test/'});
- const win=dom.window;let cancelled=0;
- win.setInterval=()=>7;win.clearInterval=()=>{cancelled++;};
+ const win=dom.window;
  win.HTMLCanvasElement.prototype.getContext=()=>null;
  win.Image=class{set src(url){}};
  const loader=createLoadingScreen({document:win.document});
@@ -43,14 +39,12 @@ test('loader can report an error and stops rotating tips',()=>{
  assert.equal(loader.element.querySelector('.loading-status').textContent,'Ошибка сети');
  assert.equal(loader.element.getAttribute('aria-busy'),'false');
  loader.close();
- assert.equal(cancelled,1);
  dom.window.close();
 });
 
 test('initial loading progress never resets between textures and scene preparation',()=>{
  const dom=new JSDOM('<body></body>',{url:'https://loading.test/'});
  const win=dom.window;
- win.setInterval=()=>1;win.clearInterval=()=>{};
  win.HTMLCanvasElement.prototype.getContext=()=>null;
  win.Image=class{set src(url){}};
  const loader=createLoadingScreen({document:win.document,staged:true});
@@ -73,8 +67,6 @@ test('initial loading progress never resets between textures and scene preparati
 test('failed loading screen remains visible until its own close action',()=>{
  const dom=new JSDOM('<body></body>',{url:'https://loading.test/'});
  const win=dom.window;
- let cleared=0;
- win.setInterval=()=>1;win.clearInterval=()=>{cleared++;};
  win.HTMLCanvasElement.prototype.getContext=()=>null;
  win.Image=class{set src(url){}};
  const loader=createLoadingScreen({document:win.document});
@@ -85,7 +77,6 @@ test('failed loading screen remains visible until its own close action',()=>{
   assert.equal(loader.element.getAttribute('role'),'alert');
   assert.equal(loader.element.getAttribute('aria-busy'),'false');
   assert.equal(loader.element.querySelector('.loading-dismiss').hidden,false);
-  assert.equal(cleared,1);
   loader.update('Поздняя загрузка',{done:6,total:6});
   assert.match(loader.element.querySelector('.loading-status').textContent,/Ошибка загрузки/);
   loader.element.querySelector('.loading-dismiss').click();
