@@ -15,7 +15,7 @@ test('main menu keeps all gameplay entry points in landscape layout',()=>{
   }
   assert.match(css,/#robot-tag-hops-v22 #launch-overlay \.launch-paper\s*\{[\s\S]*?display:grid;\s*grid-template-columns:minmax\(0,\.87fr\) minmax\(0,1\.13fr\)/);
   assert.match(css,/#robot-tag-hops-v22 #launch-overlay #tower-reset\s*\{[\s\S]*?border:1px solid #83514a/);
-  assert.match(css,/@media\(max-width:690px\)/);
+  assert.match(css,/#launch-overlay \.launch-paper\s*\{[^}]*grid-template-rows:repeat\(5,auto\);[^}]*overflow-y:auto;/);
  }finally{dom.window.close();}
 });
 
