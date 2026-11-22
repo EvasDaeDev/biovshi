@@ -38,9 +38,10 @@ test('joining a later round preserves existing money and history, survives reloa
   betResolve(s,2);assert.equal(s.jackpot,50);
   const previous=structuredClone(s);bettingOpen();
   const player=betAddPlayer(s,'  Третий  ');
-  const {archiveNotes,...details}=player;
+  const {archiveNotes,unreadArchiveNoteIds,...details}=player;
   assert.deepEqual(details,{id:2,name:'Третий',balance:100});
   assert.equal(archiveNotes.length,1);
+  assert.deepEqual(unreadArchiveNoteIds,archiveNotes);
   assert.ok(archiveNotes[0]>=1&&archiveNotes[0]<=52);
   assert.deepEqual(s.players.slice(0,2),previous.players);assert.deepEqual(s.history,previous.history);
   assert.equal(s.jackpot,previous.jackpot);assert.deepEqual(s.garage,previous.garage);

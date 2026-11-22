@@ -1803,7 +1803,10 @@ html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower
  box-shadow:0 0 0 1px #4b1818;pointer-events:none;
 }
 #robot-tag-hops-v22 #tower-upgrade-open .tower-new-dot{top:5px;right:6px;width:15px;height:15px}
-#robot-tag-hops-v22 .tower-inventory-item.is-new{position:relative}
+#robot-tag-hops-v22 .tower-inventory-item.is-new,
+#robot-tag-hops-v22 .tower-note-card,
+#robot-tag-hops-v22 .tower-upgrade-tab.has-new-items{position:relative}
+#robot-tag-hops-v22 .tower-upgrade-tab.has-new-items{padding-inline-end:24px}
 
 /* Preparation: align patient controls with the full height of the arena card. */
 #robot-tag-hops-v22 #tower-preparation .tower-prep-workspace{

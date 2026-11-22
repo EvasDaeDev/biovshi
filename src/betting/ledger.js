@@ -1,4 +1,4 @@
-import {newArchiveNotes} from '../tower/archive-notes.js';
+import {initializePlayerArchive} from '../tower/archive-notes.js';
 import {newGarage} from '../garage/model.js';
 import {arenaDefinition} from '../game/arenas.js';
 export const BET_WIN_PERCENT = 85;
@@ -32,11 +32,10 @@ export function betNewSession(names, capital = STARTING_CAPITAL) {
     jackpot: 0,
     jackpotRounds: 0,
     lockedJackpot: 0,
-    players: names.map((name, id) => ({
+    players: names.map((name, id) => initializePlayerArchive({
       id,
       name,
-      balance: capital,
-      archiveNotes: newArchiveNotes()
+      balance: capital
     })),
     bets: [],
     history: [],
@@ -69,7 +68,7 @@ export function betAddPlayer(s,name){
   if(!clean||clean.length>32)throw Error('Введите имя от 1 до 32 символов.');
   const issued=(s.players.length+1)*s.capital+(s.topUps??0)+(s.towerEarned??0);
   if(!Number.isSafeInteger(issued)||issued>16000000)throw Error('Общий выпуск фишек не может превышать 16 000 000.');
-  const player={id:s.players.length,name:clean,balance:s.capital,archiveNotes:newArchiveNotes()};
+  const player=initializePlayerArchive({id:s.players.length,name:clean,balance:s.capital});
   s.players.push(player);
   return player;
 }

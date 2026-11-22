@@ -1263,6 +1263,7 @@ test('closing skill redistribution confirmation preserves balance and saved stat
 
 test('Shelter and unviewed segment cards show red badges until the stack is opened',()=>{
  const session=betNewSession(['Инвентарь'],200),run=towerFor(session,0);
+ session.players[0].unreadArchiveNoteIds=[];
  run.segmentRewardsEnabled=true;run.preparing=true;
  run.segmentInventory=[{id:'seg1',type:'servo',site:'arm-1-upper',rarity:0}];
  run.unseenSegmentIds=['seg1'];run.nextSegmentId=2;

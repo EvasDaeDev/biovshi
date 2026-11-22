@@ -19,7 +19,7 @@ const create=(tag,className,text)=>{
 const format=n=>(Math.round(n*100)/100).toLocaleString('ru-RU',{maximumFractionDigits:2});
 const statNames=['СКОРОСТЬ','СИЛА','МАНЁВРЕННОСТЬ'];
 
-export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,surgeryPanel,artifactPanel,renderWallet=()=>{}}){
+export function installTowerUpgradeWindow({root,run,archiveOwner,statsPanel,mutationPanel,surgeryPanel,artifactPanel,renderWallet=()=>{}}){
  const previous=root.querySelector('#tower-upgrade-window');
  if(previous?.open&&typeof previous.close==='function')previous.close();
  previous?.remove();
@@ -234,6 +234,18 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   paint();
   if(activeTab!==previous)content.scrollTop=0;
  }
+ function refreshNewItems(){
+  const hasNotes=Boolean(archiveOwner?.unreadArchiveNoteIds?.length);
+  const hasSegments=run.segmentRewardsEnabled&&towerUnreadSegments(run).size>0;
+  for(const [button,visible,label] of [[launch,hasNotes||hasSegments,'Новые предметы'],[artifactTab,hasNotes,'Новые записки']]){
+   button.querySelector('.tower-new-dot')?.remove();
+   button.classList.toggle('has-new-items',Boolean(visible));
+   if(!visible)continue;
+   const dot=create('span','tower-new-dot');dot.setAttribute('aria-label',label);
+   button.append(dot);
+  }
+ }
+ overlay.addEventListener('archive-note-read',refreshNewItems);
  function refresh(){
   renderWallet(wallet);
   surgeryTab.disabled=run.level<TOWER_SURGERY_MIN_LEVEL;
@@ -241,13 +253,8 @@ export function installTowerUpgradeWindow({root,run,statsPanel,mutationPanel,sur
   surgeryTab.title=surgeryTab.disabled?'Откроется после победы над вторым боссом на 10-м этаже':'Операции и пересадки';
   if(hoverMutation&&(![...mutationPanel.querySelectorAll('[data-mutation-type]')].some(button=>button.dataset.mutationType===hoverMutation.type)||(!run.mutationDraft&&!hoverMutation.id)))hoverMutation=null;
   launch.textContent=run.mutationDraft?'УБЕЖИЩЕ · ВЫБРАТЬ НАГРАДУ':'УБЕЖИЩЕ · ИНВЕНТАРЬ';
-  const hasNew=run.segmentRewardsEnabled&&towerUnreadSegments(run).size>0;
   launch.classList.toggle('has-reward',Boolean(run.mutationDraft));
-  launch.classList.toggle('has-new-items',hasNew);
-  if(hasNew){
-   const dot=create('span','tower-new-dot');dot.setAttribute('aria-label','Новые предметы');
-   launch.append(dot);
-  }
+  refreshNewItems();
   for(const [index,button] of [...mutationPanel.querySelectorAll('.tower-mutation-option')].entries()){
    const id=run.mutationDraft?.options[index];
    const value=id?{type:id,rarity:run.mutationDraft?.rarity??0}:null;

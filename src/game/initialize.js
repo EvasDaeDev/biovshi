@@ -14,6 +14,7 @@ import {formatChips} from '../ui/currency.js';
 import {trackPlayerBalances} from '../ui/currency-animation.js';
 import {initializeHints} from '../ui/hints.js';
 import {initializeArchiveNoteReader} from '../tower/archive-note-ui.js';
+import {markArchiveNoteSeen} from '../tower/archive-notes.js';
 import { initializeArenaExpand } from '../ui/arena-expand.js';
 import { initializeSettings } from '../ui/settings.js';
 import { initializeOrientation } from '../ui/orientation.js';
@@ -495,5 +496,9 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   initializeSettings();
   initializeArenaExpand();
   initializeHints();
-  initializeArchiveNoteReader(root);
+  initializeArchiveNoteReader(root,id=>{
+    if(!markArchiveNoteSeen(ctx.betting?.players[ctx.towerPlayer],id))return false;
+    bettingSave({animateBalances:false});
+    return true;
+  });
 }

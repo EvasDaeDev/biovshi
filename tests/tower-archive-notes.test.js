@@ -50,12 +50,16 @@ test('older saves receive a starter note once and keep any existing collection',
   ctx.BET_STORAGE='archive-note-migration';
   const session=betNewSession(['А','Б']);
   delete session.players[0].archiveNotes;
+  delete session.players[0].unreadArchiveNoteIds;
+  delete session.players[1].unreadArchiveNoteIds;
   session.players[1].archiveNotes=[4,52];
   localStorage.setItem(ctx.BET_STORAGE,JSON.stringify(session));
   const loaded=bettingLoad();
   assert.ok(validArchiveNotes(loaded.players[0].archiveNotes));
   assert.equal(loaded.players[0].archiveNotes.length,1);
   assert.deepEqual(loaded.players[1].archiveNotes,[4,52]);
+  assert.deepEqual(loaded.players[0].unreadArchiveNoteIds,loaded.players[0].archiveNotes);
+  assert.deepEqual(loaded.players[1].unreadArchiveNoteIds,[]);
   assert.deepEqual(bettingLoad().players,loaded.players);
  }finally{
   globalThis.localStorage=originalStorage;
@@ -68,14 +72,24 @@ test('the Shelter and victory rewards open the same reader without repeating set
  const f=startBossScenario({floor:5});
  try{
   const player=f.session.players[0];
-  player.archiveNotes=[4];
+  player.archiveNotes=[4];player.unreadArchiveNoteIds=[4];
   towerPreparation();
-  document.querySelector('#tower-upgrade-open').click();
+  const launch=document.querySelector('#tower-upgrade-open');
+  assert.ok(launch.querySelector('.tower-new-dot'));
+  launch.click();
   const shelter=document.querySelector('#tower-upgrade-window');
-  [...shelter.querySelectorAll('.tower-upgrade-tab')].find(tab=>tab.textContent==='АРТЕФАКТЫ').click();
+  const artifactsTab=shelter.querySelector('[data-upgrade-tab=artifacts]');
+  assert.ok(artifactsTab.querySelector('.tower-new-dot'));
+  artifactsTab.click();
   const starter=shelter.querySelector('.tower-notes [data-archive-note="4"]');
   assert.match(starter.querySelector('img').src,/note_pla\.png$/);
+  assert.ok(starter.querySelector('.tower-new-dot'));
+  assert.ok(launch.querySelector('.tower-new-dot'),'opening the tab leaves the note unread');
   starter.click();
+  assert.equal(starter.querySelector('.tower-new-dot'),null);
+  assert.equal(artifactsTab.querySelector('.tower-new-dot'),null);
+  assert.equal(launch.querySelector('.tower-new-dot'),null);
+  assert.deepEqual(bettingLoad().players[0].unreadArchiveNoteIds,[]);
   const reader=document.querySelector('#archive-note-reader');
   assert.equal(reader.open,true);
   assert.equal(reader.querySelector('#archive-note-number').textContent,'Записка № 04');
@@ -108,7 +122,11 @@ test('the Shelter and victory rewards open the same reader without repeating set
   assert.deepEqual(player.archiveNotes,[4,1]);
   const reward=document.querySelector('#bet-result-summary .tower-note-card');
   assert.equal(reward.textContent.trim(),'№ 01');
+  assert.ok(reward.querySelector('.tower-new-dot'));
+  assert.deepEqual(bettingLoad().players[0].unreadArchiveNoteIds,[1]);
   reward.click();
+  assert.equal(reward.querySelector('.tower-new-dot'),null);
+  assert.deepEqual(bettingLoad().players[0].unreadArchiveNoteIds,[]);
   assert.equal(reader.open,true);
   assert.equal(reader.querySelector('#archive-note-title').textContent,archiveNote(1).title);
   assert.equal(document.querySelector('#gladiator-results').hidden,false);

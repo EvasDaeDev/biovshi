@@ -687,7 +687,8 @@ export function towerPreparation(){
     refreshSites();
   }
   renderSurgery();
-  upgradeModal=installTowerUpgradeWindow({root:ctx.root,run:t,statsPanel:fields,mutationPanel,surgeryPanel,
+  const archiveOwner=ctx.betting.players[ctx.towerPlayer];
+  upgradeModal=installTowerUpgradeWindow({root:ctx.root,run:t,archiveOwner,statsPanel:fields,mutationPanel,surgeryPanel,
     artifactPanel:ctx.root.querySelector('#tower-prep-artifacts'),renderWallet:target=>renderTowerPlayerWallet(target)});
   // Put Shelter among the bottom primary controls, between insurance and fight.
   const footer=panel.querySelector('.bet-actions');
@@ -712,7 +713,7 @@ export function towerPreparation(){
     proceed.focus();
   }
   if(!t.mutationDraft)showCycleNotice();
-  ctx.root.querySelector('#tower-prep-artifacts').innerHTML=`<h3 class="tower-artifact-title">КОЛЛЕКЦИЯ АРТЕФАКТОВ · ${t.artifacts.pieces.length}/${ARTIFACT_PIECE_COUNT}</h3>`+artifactCollectionMarkup(t.artifacts)+`<p class="artifact-bonus-note">ПОЛНЫЙ АРТЕФАКТ: +${formatChips(ARTIFACT_COMPLETION_REWARD)}</p>`+archiveCollectionMarkup(ctx.betting.players[ctx.towerPlayer].archiveNotes);
+  ctx.root.querySelector('#tower-prep-artifacts').innerHTML=`<h3 class="tower-artifact-title">КОЛЛЕКЦИЯ АРТЕФАКТОВ · ${t.artifacts.pieces.length}/${ARTIFACT_PIECE_COUNT}</h3>`+artifactCollectionMarkup(t.artifacts)+`<p class="artifact-bonus-note">ПОЛНЫЙ АРТЕФАКТ: +${formatChips(ARTIFACT_COMPLETION_REWARD)}</p>`+archiveCollectionMarkup(archiveOwner);
   ctx.root.querySelector('#tower-prep-error').textContent='';
   const insuranceButton=ctx.root.querySelector('#tower-insurance');
   const insuranceStatus=ctx.root.querySelector('#tower-insurance-status');
@@ -848,7 +849,7 @@ export function towerResults(){
     ${won&&o.cleared%5===0?`<strong class="tower-milestone">РУБЕЖ: ${o.cleared} ЭТАЖЕЙ</strong>`:''}
     <div class="tower-result-numbers${won?' has-skill-reward':''}"><div><strong>${o.cleared}</strong><span>ЭТАЖЕЙ ПРОЙДЕНО</span></div><div><strong>${o.record}</strong><span>ЛИЧНЫЙ РЕКОРД</span></div><div><strong>${formatChips(coins)}</strong><span>МОНЕТ ЗА ЭТАЖ</span></div>${won?'<div class="tower-skill-reward"><strong>+1</strong><span>ПОЛУЧЕНО ОЧКО НАВЫКОВ</span></div>':''}</div>
     ${won&&o.artifact!=null?artifactCollectionMarkup(t.artifacts,o.artifact,o.artifactBonus):''}
-    ${won&&o.note!=null?archiveRewardMarkup(o.note):''}
+    ${won&&o.note!=null?archiveRewardMarkup(o.note,ctx.betting.players[ctx.towerPlayer].unreadArchiveNoteIds.includes(o.note)):''}
     ${won&&o.bossLoot?`<p class="tower-boss-loot-chances">ПОБЕДА НАД ЭТИМ БОССОМ: №${o.bossLoot.previousWins+1}<span>СЕГМЕНТЫ: ${o.bossLoot.segmentChance===null?draftLabel:o.bossLoot.segments?'ПОЛУЧЕНЫ: '+o.bossLoot.segments:'НЕ ВЫПАЛИ'} · ШАНС: ${o.bossLoot.segmentChance===null?'—':(o.bossLoot.segmentChance*100).toLocaleString('ru-RU',{maximumFractionDigits:1})+'%'}</span><span>ФРАГМЕНТ: ${o.bossLoot.fragment?'ПОЛУЧЕН':o.bossLoot.fragmentChance===0?'КОЛЛЕКЦИЯ СОБРАНА':'НЕ ВЫПАЛ'} · ШАНС: ${(o.bossLoot.fragmentChance*100).toLocaleString('ru-RU',{maximumFractionDigits:1})}%</span></p>`:''}
     ${o.runKills==null?'':`<p>ВСЕГО ПРОТИВНИКОВ ВЫРУБЛЕНО: ${o.runKills}</p>`}
   </div>`;

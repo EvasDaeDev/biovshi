@@ -1,5 +1,5 @@
 import {ARENAS,arenaDefinition} from '../game/arenas.js';
-import {newArchiveNotes,validArchiveNotes} from '../tower/archive-notes.js';
+import {initializePlayerArchive,validArchiveNotes,validUnreadArchiveNotes} from '../tower/archive-notes.js';
 import {validTower,normalizeTower} from '../tower/model.js';
 import {newGarage,validStats,normalizePatronage,normalizePatient} from '../garage/model.js';
 import { ctx } from "../game/state.js";
@@ -66,8 +66,9 @@ export function bettingLoad() {
     const total = s.players.reduce((n, p) => n + p.balance, 0) + s.jackpot + (s.phase === 'running' ? s.lockedJackpot + s.bets.reduce((n, b) => n + b.amount, 0) : 0);
     if (total + s.shopSpent + s.insuranceSpent + s.surgerySpent + s.towerEconomySpent + s.mutationSpent !== s.players.length * s.capital + s.topUps + s.towerEarned) throw Error();
     if (!s.players.every(p=>p.archiveNotes===undefined||validArchiveNotes(p.archiveNotes))) throw Error();
-    const migrateNotes=s.players.some(p=>p.archiveNotes===undefined);
-    if(migrateNotes)for(const player of s.players)player.archiveNotes??=newArchiveNotes();
+    if (!s.players.every(p=>p.unreadArchiveNoteIds===undefined||validUnreadArchiveNotes(p.unreadArchiveNoteIds,p.archiveNotes))) throw Error();
+    const migrateNotes=s.players.some(p=>p.archiveNotes===undefined||p.unreadArchiveNoteIds===undefined);
+    if(migrateNotes)s.players.forEach(initializePlayerArchive);
     if (betRefund(s)) ctx.betNotice = 'Предыдущий бой был прерван: ставки возвращены, пациенты восстановлены по сохранённым данным, джекпот сохранён.';
     if(migrateArtifacts||migrateNotes){try{localStorage.setItem(ctx.BET_STORAGE,JSON.stringify(s));}catch{ctx.betStorageAvailable=false;}}
     return s;

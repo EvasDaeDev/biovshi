@@ -11,6 +11,25 @@ export function newArchiveNotes(random=Math.random){
  return [ARCHIVE_NOTES[Math.floor(random()*ARCHIVE_NOTE_COUNT)].id];
 }
 
+export function initializePlayerArchive(player){
+ if(player.archiveNotes===undefined){
+  player.archiveNotes=newArchiveNotes();
+  player.unreadArchiveNoteIds=[...player.archiveNotes];
+ }else player.unreadArchiveNoteIds??=[];
+ return player;
+}
+
+export function validUnreadArchiveNotes(ids,owned){
+ return Array.isArray(ids)&&new Set(ids).size===ids.length&&ids.every(id=>owned?.includes(id));
+}
+
+export function markArchiveNoteSeen(player,id){
+ const index=player?.unreadArchiveNoteIds?.indexOf(id)??-1;
+ if(index<0)return false;
+ player.unreadArchiveNoteIds.splice(index,1);
+ return true;
+}
+
 export function validArchiveNotes(ids){
  return Array.isArray(ids)&&ids.length>0&&ids.length<=ARCHIVE_NOTE_COUNT
   &&new Set(ids).size===ids.length&&ids.every(id=>Boolean(archiveNote(id)));
@@ -19,6 +38,8 @@ export function validArchiveNotes(ids){
 export function awardArchiveNote(ids,random=Math.random){
  if(ids.length<ARCHIVE_NOTE_COUNT&&random()<ARCHIVE_NOTE_DROP_CHANCE){
   const available=ARCHIVE_NOTES.filter(note=>!ids.includes(note.id));
-  ids.push(available[Math.floor(random()*available.length)].id);
+  const id=available[Math.floor(random()*available.length)].id;
+  ids.push(id);
+  return id;
  }
 }

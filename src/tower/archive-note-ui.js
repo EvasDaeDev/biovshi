@@ -10,26 +10,26 @@ const senders={
 };
 const noteNumber=id=>'№ '+String(id).padStart(2,'0');
 
-function noteButton(id){
+function noteButton(id,unread){
  const sender=senders[archiveNote(id).role],number=noteNumber(id);
- return `<button type="button" class="tower-note-card" data-archive-note="${id}" aria-haspopup="dialog" aria-label="Записка ${number} · ${sender.name}">
-  <img src="${assetUrl(sender.icon)}" alt="" width="64" height="64"><span>${number}</span>
+ return `<button type="button" class="tower-note-card" data-archive-note="${id}" aria-haspopup="dialog" aria-label="${unread?'Новая записка':'Записка'} ${number} · ${sender.name}">
+  <img src="${assetUrl(sender.icon)}" alt="" width="64" height="64"><span>${number}</span>${unread?'<span class="tower-new-dot" aria-label="Новая записка"></span>':''}
  </button>`;
 }
 
-export function archiveCollectionMarkup(ids){
- const cards=[...ids].sort((a,b)=>a-b).map(noteButton).join('');
+export function archiveCollectionMarkup({archiveNotes,unreadArchiveNoteIds}){
+ const cards=[...archiveNotes].sort((a,b)=>a-b).map(id=>noteButton(id,unreadArchiveNoteIds.includes(id))).join('');
  return `<section class="tower-notes" aria-labelledby="tower-notes-title">
-  <h3 id="tower-notes-title" class="tower-artifact-title">ЗАПИСКИ · ${ids.length}/${ARCHIVE_NOTE_COUNT}</h3>
+  <h3 id="tower-notes-title" class="tower-artifact-title">ЗАПИСКИ · ${archiveNotes.length}/${ARCHIVE_NOTE_COUNT}</h3>
   <div class="tower-note-grid">${cards}</div>
  </section>`;
 }
 
-export function archiveRewardMarkup(id){
- return `<section class="tower-note-reward" aria-label="Получена записка">${noteButton(id)}</section>`;
+export function archiveRewardMarkup(id,unread){
+ return `<section class="tower-note-reward" aria-label="Получена записка">${noteButton(id,unread)}</section>`;
 }
 
-export function initializeArchiveNoteReader(root){
+export function initializeArchiveNoteReader(root,onRead){
  const dialog=root.querySelector('#archive-note-reader');
  const heading=dialog.querySelector('#archive-note-number');
  const sender=dialog.querySelector('#archive-note-sender');
@@ -60,6 +60,11 @@ export function initializeArchiveNoteReader(root){
   else dialog.setAttribute('open','');
   heading.focus({preventScroll:true});
   dialog.scrollTop=0;
+  if(onRead(note.id)){
+   button.querySelector('.tower-new-dot')?.remove();
+   button.setAttribute('aria-label','Записка '+noteNumber(note.id)+' · '+senders[note.role].name);
+   button.dispatchEvent(new root.ownerDocument.defaultView.Event('archive-note-read',{bubbles:true}));
+  }
  }
  function cancel(event){
   event.preventDefault();
