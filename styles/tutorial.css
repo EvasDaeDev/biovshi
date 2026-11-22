@@ -1,5 +1,5 @@
 /* Tutorial lives outside the scaled game root, in the browser's top layer. */
-#game-tutorial{position:fixed;inset:0;box-sizing:border-box;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background:transparent;color:#f4e9cf;overflow:hidden;font:17px/1.4 Arial,sans-serif;overscroll-behavior:contain;}
+#game-tutorial{position:fixed;inset:0;box-sizing:border-box;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;background:transparent;color:#f4e9cf;overflow:hidden;font:17px/1.4 var(--game-font-body);overscroll-behavior:contain;}
 #game-tutorial[hidden]{display:none}
 #game-tutorial::backdrop{background:transparent}
 #game-tutorial *{box-sizing:border-box}

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
-import {Container,UniformGroup,Rectangle,Filter,DOMAdapter} from 'pixi.js';
+import {Container,RenderLayer,UniformGroup,Rectangle,Filter,DOMAdapter} from 'pixi.js';
 import {CONFIG} from '../src/config.js';
 import {ctx} from '../src/game/state.js';
 import {ArenaPostEffects,POST_EFFECTS_STORAGE,POST_VERTEX,POST_FRAGMENT,postEffectUniforms,
@@ -22,7 +22,7 @@ function setup(){
 }
 function engine(){
   const filters=[];
-  const p={Container,UniformGroup,Rectangle,Filter:{from(options){
+  const p={Container,RenderLayer,UniformGroup,Rectangle,Filter:{from(options){
     const filter={...options,enabled:true,glProgram:options.gl,destroy(){this.destroyed=true;}};
     filters.push(filter);return filter;
   }}};
@@ -47,25 +47,26 @@ test('film look preserves the calibrated optics and one-pass texture budget',()=
 });
 
 test('one filter covers the entire arena viewport, keeps Retina resolution and is fully bypassed when disabled',()=>{
-  const dom=setup(),{p,app,filters}=engine(),scene=new Container();app.stage.addChild(scene);
-  const post=new ArenaPostEffects(p,app,ctx.root),seed=ctx.seed;
-  assert.equal(filters.length,1);assert.deepEqual(app.stage.filters,[post.filter]);
+  const dom=setup(),{p,app,filters}=engine(),scene=new Container(),labels=new RenderLayer();app.stage.addChild(scene,labels);
+  const post=new ArenaPostEffects(p,app,ctx.root,scene),seed=ctx.seed;
+  assert.equal(filters.length,1);assert.deepEqual(scene.filters,[post.filter]);
+  assert.ok(!app.stage.filters?.length,'the filter does not affect the text layer');
   assert.equal(post.filter.resolution,2);assert.equal(post.filter.padding,0);
-  assert.deepEqual([app.stage.filterArea.x,app.stage.filterArea.y,app.stage.filterArea.width,app.stage.filterArea.height],[0,0,700,700]);
-  post.resize(375,375);assert.equal(app.stage.filterArea.width,375);
+  assert.deepEqual([scene.filterArea.x,scene.filterArea.y,scene.filterArea.width,scene.filterArea.height],[0,0,700,700]);
+  post.resize(375,375);assert.equal(scene.filterArea.width,375);
   post.update(8.5);assert.equal(post.uniforms.uniforms.uGrainTime,102);
   const exposure=post.uniforms.uniforms.uExposure;
   assert.equal(exposure,filmExposure(8.5));post.update(8.5);
   assert.equal(post.uniforms.uniforms.uExposure,exposure,'paused time freezes exposure');
   const uniforms=post.uniforms,filter=post.filter;
   post.setEnabled(false);post.update(9);
-  assert.equal(app.stage.filters,null);assert.equal(app.stage.filterArea,null);
+  assert.equal(scene.filters,null);assert.equal(scene.filterArea,null);
   assert.equal(post.uniforms.uniforms.uGrainTime,102,'disabled effects perform no uniform animation');
   assert.equal(post.uniforms.uniforms.uExposure,exposure);
   for(let i=0;i<100;i++){post.setEnabled(true);post.setEnabled(false);}
   post.setEnabled(true);assert.equal(filters.length,1);assert.equal(post.filter,filter);assert.equal(post.uniforms,uniforms);
-  assert.deepEqual(app.stage.children,[scene]);assert.equal(ctx.seed,seed);
-  post.destroy();post.destroy();assert.equal(filter.destroyed,true);assert.equal(app.stage.filters,null);
+  assert.deepEqual(app.stage.children,[scene,labels]);assert.equal(ctx.seed,seed);
+  post.destroy();post.destroy();assert.equal(filter.destroyed,true);assert.equal(scene.filters,null);
   app.stage.destroy({children:true});dom.window.close();
 });
 
@@ -106,14 +107,14 @@ test('post-effects switch works on pause while patient cards remain visible and 
 test('a failed post pass is bypassed without discarding the WebGL arena; reduced motion freezes grain',()=>{
   const dom=setup(),{p,app}=engine();globalThis.matchMedia=()=>({matches:true});
   const arena=new PixiArena(p,app);arena.ambient=new Container();arena.nightComposition=new Container();
-  arena.postEffects=new ArenaPostEffects(p,app,ctx.root);
+  arena.postEffects=new ArenaPostEffects(p,app,ctx.root,arena.scene);
   arena.postEffects.update(100);assert.equal(arena.postEffects.uniforms.uniforms.uGrainTime,0);assert.equal(arena.postEffects.uniforms.uniforms.uExposure,1);
   let renders=0,refreshes=0;
-  app.render=()=>{renders++;if(app.stage.filters)throw new Error('shader failure');};
+  app.render=()=>{renders++;if(arena.scene.filters)throw new Error('shader failure');};
   ctx.refreshPostEffectsControl=()=>{refreshes++;};const warning=console.warn;console.warn=()=>{};
   try{arena.render();}finally{console.warn=warning;}
   assert.equal(renders,2);assert.equal(refreshes,1);assert.equal(arena.postEffects.available,false);
-  assert.equal(app.stage.filters,null);assert.equal(ctx.root.dataset.postEffects,'off');
+  assert.equal(arena.scene.filters,null);assert.equal(ctx.root.dataset.postEffects,'off');
   arena.postEffects.setEnabled(true);assert.equal(arena.postEffects.enabled,false);
   arena.postEffects.destroy();arena.nightComposition.destroy();app.stage.destroy({children:true});
   ctx.refreshPostEffectsControl=null;dom.window.close();

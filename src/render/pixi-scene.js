@@ -15,13 +15,13 @@ import {segmentHitTintMatrix,SEGMENT_HIT_TINT} from './robot-skin.js';
 // The hidden SVG is a scene description for the existing animation code, not a
 // second renderer. Only changed nodes are synchronized; atlases become native
 // Pixi sprites sharing GPU sources. No per-frame SVG serialization or readback.
+const HUD_FONT=['Oswald','Arial','sans-serif'];
+
 export class PixiArena {
   constructor(pixi,app) {
     this.p=pixi;this.app=app;this.records=new Map();this.dirty=new Set();
     this.sources=new Map();this.frames=new Map();this.gradients=new Map();this.owned=new Set();
-    this.world=new pixi.Container();this.content=new pixi.Container();
-    this.app.stage.eventMode='none';this.app.stage.addChild(this.world);
-    this.world.addChild(this.content);
+    this.app.stage.eventMode='none';this.createScene();
     this.disposed=false;this.svg=ctx.svg;
     this.palette={};
     const css=ctx.svg.ownerDocument.defaultView.getComputedStyle(ctx.svg);
@@ -146,8 +146,8 @@ export class PixiArena {
     this.resizeObserver.observe(ctx.stage);this.resize();
     this.canvas.addEventListener('webglcontextlost',this.onLost=e=>{e.preventDefault();this.contextLost=true;});
     this.canvas.addEventListener('webglcontextrestored',this.onRestored=()=>{this.contextLost=false;this.render();});
-    try {this.postEffects=new ArenaPostEffects(this.p,this.app,ctx.root);}catch(error){
-      this.app.stage.filters=null;this.postEffectsError=error.message;ctx.root.dataset.postEffects='off';console.warn('Arena post effects unavailable:',error);
+    try {this.postEffects=new ArenaPostEffects(this.p,this.app,ctx.root,this.scene);}catch(error){
+      this.scene.filters=null;this.postEffectsError=error.message;ctx.root.dataset.postEffects='off';console.warn('Arena post effects unavailable:',error);
     }
     this.suspended=false;
     this.render();
@@ -160,9 +160,11 @@ export class PixiArena {
     const gradient=/url\(#/.test(node.getAttribute('fill')||'');
     let visual=null;
     if(viewport||gradient)visual=new this.p.Sprite(this.p.Texture.EMPTY);
-    else if(tag==='text')visual=new this.p.Text({text:'',style:{fontFamily:'Arial',fontSize:12,fill:'#ffffff'},resolution:2});
+    else if(tag==='text')visual=new this.p.Text({text:'',style:{fontFamily:HUD_FONT,fontSize:12,fill:'#ffffff'},resolution:2});
     else if(['path','circle','ellipse','rect','polygon'].includes(tag))visual=new this.p.Graphics();
     const object=new this.p.Container();if(visual)object.addChild(visual);
+    // Text keeps its world transform but is drawn after the lens pass.
+    if(tag==='text')this.textLayer.attach(visual);
     const inherited=parent?.style??this.defaults;
     const record={node,object,visual,viewport,parent,style:{...inherited},children:[],tag};
     this.records.set(node,record);
@@ -308,13 +310,11 @@ export class PixiArena {
       const label=node.classList.contains('robot-label'),timer=node===ctx.timerOutput;
       const size=timer?Math.min(12*716/(ctx.fieldSide||700),24)*3:label?12*716/(ctx.fieldSide||700):node.classList.contains('crit-label')?10*716/(ctx.fieldSide||700):12;
       const colour=node.style.fill||node.getAttribute('fill')||(timer?'#ffffff':label?'#d3cead':'#d2d5bf');
-      const key=[node.textContent,size,colour,node.getAttribute('textLength')].join('|');
+      const key=[node.textContent,size,colour].join('|');
       if(record.textKey!==key){
         record.textKey=key;visual.text=node.textContent;
-        visual.style={fontFamily:'Arial',fontSize:size,fontWeight:label||!timer?'700':'500',fill:this.colour(colour),
+        visual.style={fontFamily:HUD_FONT,fontSize:size,fontWeight:label||!timer?'700':'500',fill:this.colour(colour),
           ...(label?{stroke:{color:'#26312b',width:3,join:'round'}}:{})};
-        visual.scale.set(1);
-        const length=number('textLength');if(length&&visual.width>length)visual.scale.x=length/visual.width;
       }
       visual.anchor.set(node.getAttribute('text-anchor')==='middle'?.5:0,timer?.5:.8);
       visual.position.set(number('x'),number('y'));return;
@@ -399,17 +399,22 @@ export class PixiArena {
     if(this.halo){this.halo.texture.destroy(true);this.halo.filter.destroy();this.halo.gold.destroy();}
     this.postEffects?.destroy();
     this.nightComposition?.destroy({children:true});
-    this.world.destroy({children:true});
+    this.textLayer.detachAll();this.textLayer.destroy();this.scene.destroy({children:true});
     for(const frame of this.frames.values())frame.destroy(false);
     for(const texture of this.owned)texture.destroy(true);
     this.records.clear();this.dirty.clear();this.sources.clear();this.frames.clear();this.gradients.clear();this.owned.clear();
     this.halo=this.postEffects=this.nightComposition=this.nightLights=this.nightTexture=this.floor=this.ambient=null;
     this.width=this.height=null;
   }
+  createScene() {
+    // The filter viewport is in screen coordinates, outside the world camera.
+    this.scene=new this.p.Container();this.world=new this.p.Container();this.content=new this.p.Container();
+    this.textLayer=new this.p.RenderLayer();
+    this.app.stage.addChild(this.scene,this.textLayer);
+    this.scene.addChild(this.world);this.world.addChild(this.content);
+  }
   resetScene() {
-    this.clearScene();
-    this.world=new this.p.Container();this.content=new this.p.Container();
-    this.app.stage.addChild(this.world);this.world.addChild(this.content);
+    this.clearScene();this.createScene();
   }
   destroy() {
     if(this.disposed)return;this.disposed=true;this.suspend();this.clearScene();
@@ -423,7 +428,10 @@ export async function initializePixiArena() {
   // DOM-only tests and older embedded browsers retain the previous renderer.
   if(!win.WebGLRenderingContext&&!win.WebGL2RenderingContext)return null;
   const svg=ctx.svg;
-  const pixi=await import('pixi.js');
+  const [pixi]=await Promise.all([
+    import('pixi.js'),
+    svg.ownerDocument.fonts?.load('700 16px '+HUD_FONT[0],'Пациент 0:00').catch(()=>[]),
+  ]);
   // Use Pixi's CSP-compatible uniform sync; keep the site's existing CSP intact.
   await import('pixi.js/unsafe-eval');
   if(ctx.disposed||ctx.svg!==svg)return null;

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ASSETS } from '../src/assets/manifest.js';
 import {buildVersion} from './build-version.mjs';
+import {FONT_RUNTIME_ASSETS} from './runtime-assets.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const mime = { '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.webp':'image/webp', '.svg':'image/svg+xml', '.ogg':'audio/ogg', '.mp3':'audio/mpeg', '.wav':'audio/wav', '.woff2':'font/woff2' };
 const assets = {};
@@ -22,6 +23,14 @@ for (const match of [...html.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)
   const css = await fs.readFile(path.join(root, match[1].replace(/^\//,'')), 'utf8');
   html = html.replace(match[0], '<style>'+css+'</style>');
 }
+// Preserve the same local fonts and license downloads in the single-file build.
+for (const relative of FONT_RUNTIME_ASSETS) {
+  const font=relative.endsWith('.woff2');
+  const url='data:'+(font?'font/woff2':'text/plain;charset=utf-8')+';base64,'+
+    (await fs.readFile(path.join(root,'public',relative))).toString('base64');
+  if(font)html=html.replaceAll('url(/'+relative+')','url('+url+')');
+  else html=html.replaceAll('href="./'+relative+'"','href="'+url+'"');
+}
 // Keep browser icons self-contained when opening the HTML through file://.
 // App installation metadata applies to the hosted version only.
 for (const match of [...html.matchAll(/<link rel="(?:icon|apple-touch-icon)"[^>]*href="([^"]+)"[^>]*>/g)]) {
@@ -35,4 +44,4 @@ html = html.replace(/<link rel="manifest"[^>]*>\s*/g, '');
 html = html.replace(/<script type="module" src="[^"]+"><\/script>/, () => '<script>'+code.replace(/<\/script/gi,'<\\/script')+'</script>');
 await fs.mkdir(path.join(root,'dist'),{recursive:true});
 await fs.writeFile(path.join(root,'dist/biovshi.html'),html);
-console.log('Standalone: dist/biovshi.html (textures and sounds embedded)');
+console.log('Standalone: dist/biovshi.html (textures, sounds and fonts embedded)');

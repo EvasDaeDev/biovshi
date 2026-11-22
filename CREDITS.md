@@ -23,6 +23,16 @@
 
 Указание авторства распространяется на соответствующую запись; оно не означает, что авторы музыки поддерживают или одобряют игру.
 
+## Шрифты
+
+Шрифты распространяются по SIL Open Font License 1.1. В сборку входят оригинальные файлы WOFF2 из Google Fonts с кириллицей и латиницей, включая расширенные наборы, и тексты лицензий.
+
+| Шрифт | Правообладатели | Исходный проект | Лицензия |
+| --- | --- | --- | --- |
+| Oswald | The Oswald Project Authors | [OswaldFont](https://github.com/googlefonts/OswaldFont) | [OFL 1.1](public/fonts/Oswald-OFL.txt) |
+| Oranienbaum | Oleg Pospelov, Jovanny Lemonad | [Google Fonts](https://github.com/google/fonts/tree/main/ofl/oranienbaum) | [OFL 1.1](public/fonts/Oranienbaum-OFL.txt) |
+| Rubik Distressed | The Rubik Filtered Project Authors | [Rubik Filtered](https://github.com/NaN-xyz/Rubik-Filtered) | [OFL 1.1](public/fonts/RubikDistressed-OFL.txt) |
+
 ## Другие звуковые и графические материалы
 
 Сведения об источниках остальных используемых ресурсов будут добавляться сюда по мере проверки их лицензий. Этот файл не изменяет условия лицензирования сторонних материалов.

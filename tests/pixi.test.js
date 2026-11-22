@@ -83,9 +83,29 @@ function bridge(){
     for(const record of arena.dirty){arena.sync(record);if(record.structureDirty){record.structureDirty=false;arena.children(record);}}
     arena.dirty.clear();
   };
-  arena.finish=()=>{arena.observer.disconnect();arena.world.destroy({children:true});source.destroy(true);for(const texture of arena.frames.values())texture.destroy(false);};
+  arena.finish=()=>{arena.observer.disconnect();arena.textLayer.detachAll();arena.app.stage.destroy({children:true});source.destroy(true);for(const texture of arena.frames.values())texture.destroy(false);};
   return arena;
 }
+
+test('arena lettering retains its proportions and renders outside the lens filter',()=>{
+ const dom=setup(),arena=bridge();
+ try{
+  const [robot]=ctx.robots;
+  const {visual,object}=arena.records.get(robot.label);
+  Object.defineProperty(visual,'width',{value:100});
+  robot.label.textContent='Пациент';
+  robot.label.setAttribute('textLength','1');
+  arena.flush();
+  assert.equal(visual.text,'Пациент');
+  assert.equal(visual.style.fontFamily[0],'Oswald');
+  assert.deepEqual([visual.scale.x,visual.scale.y],[1,1]);
+  assert.equal(visual.parent,object,'text inherits the actor position');
+  assert.equal(visual.parentRenderLayer,arena.textLayer);
+  assert.deepEqual(arena.app.stage.children,[arena.scene,arena.textLayer]);
+  robot.label.remove();arena.flush();
+  assert.equal(arena.textLayer.renderLayerChildren.includes(visual),false);
+ }finally{arena.finish();ctx.root.__disposeTag();dom.window.close();}
+});
 
 test('Pixi clips tower flashlight texture and nearby light, follows gaze and width, and preserves fallback',()=>{
  const dom=setup();ctx.mode='tower';ctx.towerRun={patient:0};
@@ -338,7 +358,7 @@ test('arena replacement clears GPU scene resources while retaining the renderer 
  let filterDestroyed=0;arena.postEffects={destroy(){filterDestroyed++;}};
  const oldWorld=arena.world,oldTexture=arena.texture({width:16,height:16});arena.width=900;arena.height=700;
  arena.suspend();assert.equal(canvas.isConnected,false);assert.equal(arena.suspended,true);assert.equal(arena.disposed,false);
- arena.resetScene();assert.equal(arena.app,app);assert.equal(arena.app.stage,stage);assert.equal(appDestroyed,0);assert.equal(filterDestroyed,1);assert.ok(oldWorld.destroyed);assert.ok(oldTexture.destroyed);assert.equal(arena.records.size,0);assert.equal(arena.sources.size,0);assert.equal(arena.frames.size,0);assert.equal(arena.gradients.size,0);assert.equal(arena.owned.size,0);assert.equal(arena.width,null);assert.equal(stage.children.length,1);
- arena.resetScene();assert.equal(stage.children.length,1);assert.equal(appDestroyed,0);
+ arena.resetScene();assert.equal(arena.app,app);assert.equal(arena.app.stage,stage);assert.equal(appDestroyed,0);assert.equal(filterDestroyed,1);assert.ok(oldWorld.destroyed);assert.ok(oldTexture.destroyed);assert.equal(arena.records.size,0);assert.equal(arena.sources.size,0);assert.equal(arena.frames.size,0);assert.equal(arena.gradients.size,0);assert.equal(arena.owned.size,0);assert.equal(arena.width,null);assert.deepEqual(stage.children,[arena.scene,arena.textLayer]);
+ arena.resetScene();assert.deepEqual(stage.children,[arena.scene,arena.textLayer]);assert.equal(appDestroyed,0);
  arena.destroy();assert.equal(appDestroyed,1);ctx.root.__disposeTag();dom.window.close();
 });

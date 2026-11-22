@@ -3,7 +3,12 @@ import path from 'node:path';
 import {ASSETS} from '../src/assets/manifest.js';
 import {validLocationId} from '../src/game/location-geometry.js';
 
-// Only gameplay resources, installation icons and pinned Telegram SDK are
+export const FONT_RUNTIME_ASSETS=['Oswald','Oranienbaum','RubikDistressed'].flatMap(family=>[
+  ...['cyrillic','cyrillic-ext','latin','latin-ext'].map(subset=>'fonts/'+family+'-'+subset+'.woff2'),
+  'fonts/'+family+'-OFL.txt',
+]);
+
+// Only gameplay resources, installation icons, fonts and pinned Telegram SDK are
 // shipped. Never copy arbitrary public/ files (including artist sources).
 export const EXTRA_RUNTIME_ASSETS=[
   'assets/textures/UI/icons/app_ico_64.png',
@@ -11,6 +16,7 @@ export const EXTRA_RUNTIME_ASSETS=[
   'manifest.webmanifest',
   'vendor/telegram-web-app-65.js',
   'vendor/telegram-web-app-65.json',
+  ...FONT_RUNTIME_ASSETS,
 ];
 export const FORBIDDEN_RUNTIME_PATH=/(^|\/)\_src(\/|$)|\.psd$/i;
 export const requiredRuntimePaths=()=>[...new Set([

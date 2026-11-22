@@ -479,7 +479,7 @@
   border:1px solid #887957;
   background:#282e25;
   color:#e7ddc6;
-  font-family:var(--font-sans);
+  font-family:var(--game-font-label);
   font-size:12px;
   font-weight:800;
   line-height:1;
@@ -1037,6 +1037,7 @@
   grid-area:2 / 1;
   margin:0;
   font-size:clamp(34px,5vw,64px);
+  overflow-wrap:anywhere;
   line-height:1.02;
   color:#f0e2c2;
   letter-spacing:.055em;
@@ -1997,7 +1998,7 @@
   background:rgb(34 39 31 / 92%);
   color:#f0e2c2;
   box-shadow:0 20px 56px #0009;
-  font:16px/1.55 system-ui,sans-serif;
+  font:16px/1.55 var(--game-font-body);
 }
 #robot-tag-hops-v22 .paper-dialog::backdrop{background:#0a0d0abb}
 #robot-tag-hops-v22 #startup-intro-title{
@@ -2026,7 +2027,7 @@
   border-radius:5px;
   background:#2e3429;
   color:#f0e2c2;
-  font:700 16px/1.2 system-ui,sans-serif;
+  font:700 16px/1.2 var(--game-font-label);
   cursor:pointer;
 }
 #robot-tag-hops-v22 .paper-dialog-actions .paper-dialog-primary{

@@ -161,8 +161,8 @@ export function validatePostShader(gl,source) {
 }
 
 export class ArenaPostEffects {
-  constructor(pixi,app,root) {
-    this.app=app;this.root=root;this.available=true;this.enabled=false;this.disposed=false;
+  constructor(pixi,app,root,scene=app.stage) {
+    this.scene=scene;this.root=root;this.available=true;this.enabled=false;this.disposed=false;
     this.rectangle=new pixi.Rectangle(0,0,1,1);
     this.reduced=Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
     const initial=postEffectUniforms();
@@ -186,8 +186,8 @@ export class ArenaPostEffects {
   setEnabled(enabled) {
     this.enabled=Boolean(enabled)&&this.available;
     // Null removes the filter pass entirely, rather than running a neutral shader.
-    this.app.stage.filters=this.enabled?[this.filter]:null;
-    this.app.stage.filterArea=this.enabled?this.rectangle:null;
+    this.scene.filters=this.enabled?[this.filter]:null;
+    this.scene.filterArea=this.enabled?this.rectangle:null;
     this.root.dataset.postEffects=this.enabled?'on':'off';
   }
   resize(width,height) {this.rectangle.width=width;this.rectangle.height=height;}

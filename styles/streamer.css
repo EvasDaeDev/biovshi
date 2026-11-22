@@ -20,7 +20,7 @@
  position:absolute;left:94%;bottom:55%;z-index:1;
  box-sizing:border-box;width:max-content;max-width:min(280px,45vw);
  margin:0;padding:0;border:0;background:none;color:#f2e6c4;
- font:700 18.6667px/1.2 "Arial Narrow",Arial,sans-serif;
+ font:700 18.6667px/1.2 var(--game-font-body);
  text-align:left;overflow-wrap:anywhere;
  text-shadow:0 1px 2px #000,1px 0 2px #000,-1px 0 2px #000;
  pointer-events:none;
