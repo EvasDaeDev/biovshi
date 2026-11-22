@@ -11,6 +11,9 @@ test('preflight checks and decodes every texture once; later requests reuse load
     async decode(){decodes++;}
   };
   try{
+    const progress=[];
+    await preloadTextures({keys:['robotA','robotB'],onProgress:(done,total)=>progress.push([done,total])});
+    assert.deepEqual(progress,[[0,2],[1,2],[2,2]]);
     const first=await preloadTextures(),second=await preloadTextures();
     assert.ok(Object.values(first).every(status=>status.loaded));
     assert.deepEqual(second,first);
