@@ -2129,8 +2129,8 @@ html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-heading
 #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-heading{padding-bottom:4px}
 #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-wallet{padding-block:4px}
 #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-tab{
-  padding:5px;
-  font-size:12px;
+  padding:5px 3px;
+  font-size:clamp(10px,1.65vw,12px);
   overflow-wrap:anywhere;
 }
 #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-tab.has-new-items{padding-inline-end:17px}
@@ -2154,6 +2154,10 @@ html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-heading
 @media(min-width:561px){
   #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-paper{
     grid-template-rows:auto auto minmax(125px,1fr) auto;
+  }
+  #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-stat-values{
+    grid-template-columns:repeat(2,minmax(0,1fr)) minmax(0,1.35fr);
+    line-height:1.35;
   }
   #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-content{
     flex:1 1 0;
@@ -2186,6 +2190,7 @@ html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-heading
   #robot-tag-hops-v22.fit-sheets #tower-preparation>.bet-panel{
     padding:6px 8px 0;
     gap:5px;
+    line-height:1.4;
   }
   #robot-tag-hops-v22.fit-sheets #tower-preparation .tower-player-wallet{padding-bottom:4px}
   #robot-tag-hops-v22.fit-sheets #tower-preparation .tower-prep-header h2{
@@ -2194,6 +2199,19 @@ html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-heading
   #robot-tag-hops-v22.fit-sheets #tower-preparation :is(#tower-floor-preview,#tower-stats){
     padding:6px;
     gap:5px;
+  }
+  #robot-tag-hops-v22.fit-sheets #tower-preparation #tower-floor-preview{align-content:start}
+  #robot-tag-hops-v22.fit-sheets #tower-preparation #tower-stats{margin:0}
+  #robot-tag-hops-v22.fit-sheets #tower-preparation #tower-stats .tower-stat-confirm{
+    flex-wrap:nowrap;
+    gap:5px;
+  }
+  #robot-tag-hops-v22.fit-sheets #tower-preparation #tower-stats .tower-stat-confirm>button{
+    flex:1 1 0;
+    min-width:0;
+    padding-inline:5px;
+    font-size:12px;
+    overflow-wrap:anywhere;
   }
   #robot-tag-hops-v22.fit-sheets #tower-preparation #tower-floor-preview .tower-arena-overview{
     grid-template-columns:minmax(0,1fr) minmax(84px,112px);
