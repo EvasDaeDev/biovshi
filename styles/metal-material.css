@@ -1,0 +1,96 @@
+/* The material is painted as background layers. Existing colours, shadows,
+   content, outlines, and stacking order continue to come from the UI theme. */
+@property --metal-hover {
+  syntax:"<percentage>";
+  inherits:false;
+  initial-value:0%;
+}
+
+:root{
+  --ui-panel-radius:6px;
+  --ui-button-radius:4px;
+  --ui-inner-radius:3px;
+  --metal-hover-duration:150ms;
+  --metal-press-duration:100ms;
+  --metal-press-offset:2px;
+}
+
+#robot-tag-hops-v22 :is(.launch-paper,.settings-panel,.bet-panel,.gladiator-results-card,
+  .tower-upgrade-paper,.tag7hop-intro-card,.paper-dialog,.game-action-confirm,.patron-popup,
+  .tower-replacement-dialog,.tower-cycle-dialog,.betting-input-dialog),
+#game-tutorial .tutorial-bubble{
+  --metal-radius:var(--ui-panel-radius);
+}
+
+#robot-tag-hops-v22 :is(.tower-menu-block,#tower-floor-preview,#tower-stats,.tower-upgrade-wallet,
+  .tower-upgrade-content,.tower-upgrade-stats,.garage-patient,.bet-pool,.bet-hud-player,
+  .gladiator-result-total,.robot-card,.credits-view){
+  --metal-radius:var(--ui-inner-radius);
+}
+
+#robot-tag-hops-v22 :is(.launch-paper,.settings-panel,.bet-panel,.gladiator-results-card,
+  .tower-upgrade-paper,.tag7hop-intro-card,.paper-dialog,.game-action-confirm,.patron-popup,
+  .tower-replacement-dialog,.tower-cycle-dialog,.betting-input-dialog)
+  :is(button,summary):not(.tower-upgrade-settings,.game-action-confirm-close,.tower-reroll-line,#tower-reset),
+#robot-tag-hops-v22 .game-nav-back-control,
+#game-tutorial button:not(.tutorial-skip){
+  --metal-radius:var(--ui-button-radius);
+  --metal-base-image:none;
+  transition:--metal-hover var(--metal-hover-duration) ease,
+    background-color var(--metal-hover-duration) ease,
+    border-color var(--metal-hover-duration) ease,translate var(--metal-press-duration) ease;
+}
+
+#robot-tag-hops-v22 :is(.launch-paper,.settings-panel,.bet-panel,.gladiator-results-card,
+  .tower-upgrade-paper,.tag7hop-intro-card,.paper-dialog,.game-action-confirm,.patron-popup,
+  .tower-replacement-dialog,.tower-cycle-dialog,.betting-input-dialog,
+  .tower-menu-block,#tower-floor-preview,#tower-stats,.tower-upgrade-wallet,
+  .tower-upgrade-content,.tower-upgrade-stats,.garage-patient,.bet-pool,.bet-hud-player,
+  .gladiator-result-total,.robot-card,.credits-view,.game-nav-back-control),
+#robot-tag-hops-v22 :is(.launch-paper,.settings-panel,.bet-panel,.gladiator-results-card,
+  .tower-upgrade-paper,.tag7hop-intro-card,.paper-dialog,.game-action-confirm,.patron-popup,
+  .tower-replacement-dialog,.tower-cycle-dialog,.betting-input-dialog)
+  :is(button,summary):not(.tower-upgrade-settings,.game-action-confirm-close,.tower-reroll-line,#tower-reset),
+#game-tutorial :is(.tutorial-bubble,button:not(.tutorial-skip)){
+  border-radius:var(--metal-radius)!important;
+  background-image:
+    var(--metal-top,none),var(--metal-bottom,none),var(--metal-left,none),var(--metal-right,none),
+    linear-gradient(rgb(255 255 255 / var(--metal-hover,0%)),rgb(255 255 255 / var(--metal-hover,0%))),
+    var(--metal-surface,none),
+    linear-gradient(180deg,#ffffff0b,transparent 14px,transparent calc(100% - 12px),#00000024),
+    var(--metal-base-image,none)!important;
+  background-position:top,bottom,left,right,center,center,center,center,center,center,center!important;
+  background-repeat:repeat-x,repeat-x,repeat-y,repeat-y,no-repeat,repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat!important;
+  background-size:192px 8px,192px 8px,8px 192px,8px 192px,auto,512px 512px,auto,auto,auto,auto,auto!important;
+  background-clip:padding-box!important;
+  background-origin:padding-box!important;
+}
+
+/* Hover never changes the cached artwork. Use the original focus and state outlines. */
+@media(hover:hover){
+  #robot-tag-hops-v22 :is(.launch-paper,.settings-panel,.bet-panel,.gladiator-results-card,
+    .tower-upgrade-paper,.tag7hop-intro-card,.paper-dialog,.game-action-confirm,.patron-popup,
+    .tower-replacement-dialog,.tower-cycle-dialog,.betting-input-dialog)
+    :is(button,summary):hover:not(:disabled,[aria-disabled="true"],.tower-upgrade-settings,.game-action-confirm-close,.tower-reroll-line,#tower-reset),
+  #robot-tag-hops-v22 .game-nav-back-control:hover,
+  #game-tutorial button:hover:not(:disabled,.tutorial-skip){
+    --metal-hover:6%;
+  }
+}
+
+#robot-tag-hops-v22 :is(.launch-paper,.settings-panel,.bet-panel,.gladiator-results-card,
+  .tower-upgrade-paper,.tag7hop-intro-card,.paper-dialog,.game-action-confirm,.patron-popup,
+  .tower-replacement-dialog,.tower-cycle-dialog,.betting-input-dialog)
+  :is(button,summary):active:not(:disabled,[aria-disabled="true"],.tower-upgrade-settings,.game-action-confirm-close,.tower-reroll-line,#tower-reset),
+#robot-tag-hops-v22 .game-nav-back-control:active,
+#game-tutorial button:active:not(:disabled,.tutorial-skip){
+  translate:0 var(--metal-press-offset);
+}
+
+@media(prefers-reduced-motion:reduce){
+  :root{
+    --metal-hover-duration:0ms;
+    --metal-press-duration:0ms;
+    --metal-press-offset:0px;
+  }
+}

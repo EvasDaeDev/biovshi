@@ -23,6 +23,7 @@ import {sceneTextureKeys} from './assets/manifest.js';
 import {prepareOfflineGame} from './assets/offline.js';
 import {createLoadingScreen} from './ui/loading-screen.js';
 import {showStartupIntro} from './ui/startup-intro.js';
+import {installMetalMaterials} from './ui/metal-material.js';
 import {bettingLoad,bettingSave} from './betting/storage.js';
 import {startSpawnSequence} from './game/session.js';
 let cancelled=false,initialLoading=null;
@@ -91,6 +92,7 @@ async function boot(){
   preloadTextures({keys:sceneTextureKeys(),onProgress:(done,total)=>
    loading.update('Загружаем текстуры пациентов и арены…',{done,total,phase:'textures'})}),
   loadLocations(new URL('./locations/',document.baseURI)),
+  installMetalMaterials(document),
  ]);
  if(cancelled){loading.close();return;}
  loading.update('Текстуры загружены. Запускаем игру…',{done:0,total:6});

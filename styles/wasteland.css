@@ -48,7 +48,8 @@ html body #robot-tag-hops-v22 .viz-controls #tag7hop-speed[aria-pressed="true"] 
 html body #robot-tag-hops-v22 #tag7hop-status {color:#d6bd8b;text-shadow:0 1px #000}
 #robot-tag-hops-v22 #render-fps {color:#a99d7c}
 #robot-tag-hops-v22 .robot-card {
- background:linear-gradient(180deg,#2c2d23,#191b17);
+ --metal-base-image:linear-gradient(180deg,#2c2d23,#191b17);
+ background:var(--metal-base-image);
  border:1px solid #555743;
  color:#e2d3b5;
  box-shadow:inset 0 0 0 1px #ffffff08,0 5px 14px #0007;
@@ -63,21 +64,27 @@ html body #robot-tag-hops-v22 #tag7hop-status {color:#d6bd8b;text-shadow:0 1px #
 #robot-tag-hops-v22 #bet-hud .bet-hud-bank {color:#dfc8a0}
 #robot-tag-hops-v22 #bet-hud .bet-hud-bank strong {color:#d9ae65}
 #robot-tag-hops-v22 .bet-hud-player {
- background:linear-gradient(130deg,#2b2d22,#1c1e18);
+ --metal-base-image:linear-gradient(130deg,#2b2d22,#1c1e18);
+ background:var(--metal-base-image);
  border:1px solid #575440;border-left:3px solid var(--fighter,#71634b);
  color:#d7c9a8;
 }
 #robot-tag-hops-v22 :is(.bet-hud-player-name,.bet-hud-player-balance) {color:#e0cfae}
 #robot-tag-hops-v22 .settings-overlay,
 #robot-tag-hops-v22 .bet-overlay {background:rgba(9,11,8,.88);backdrop-filter:blur(2px)}
+/* The spectator start card still uses the archival paper colours. */
+#robot-tag-hops-v22 .tag7hop-intro-card {
+ --metal-base-image:var(--paper-finish);
+}
 /* Discolored archival sheets: paper texture uses CSS only (no download or bitmap). */
 #robot-tag-hops-v22 :is(.settings-panel,.bet-panel,.gladiator-results-card,.tag7hop-intro-card,.launch-paper,.patron-popup) {
- background-color:var(--paper);
- background-image:
+ --paper-finish:
    repeating-linear-gradient(0deg,transparent 0 3px,#422e1005 4px 5px),
    radial-gradient(ellipse at 13% 8%,#fff3c342 0,transparent 52%),
    radial-gradient(ellipse at 91% 96%,#60411934 0,transparent 48%),
    linear-gradient(105deg,#b29b6c,#e2cd9c 12%,#d6bf8e 75%,#baa476);
+ background-color:var(--paper);
+ background-image:var(--paper-finish);
  color:var(--paper-ink);
  border:1px solid var(--paper-rule);
  border-radius:1px !important;
