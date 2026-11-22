@@ -82,7 +82,17 @@ test('the Shelter and victory rewards open the same reader without repeating set
   assert.equal(reader.querySelector('#archive-note-sender').textContent,'Отправитель: Пациент');
   assert.equal(reader.querySelector('#archive-note-text').textContent,archiveNote(4).text);
   assert.match(archiveNote(4).text,/\n/);
-  reader.querySelector('[data-paper-dismiss]').click();
+  reader.getBoundingClientRect=()=>({left:100,right:500,top:100,bottom:500});
+  const dispatch=(type,x)=>reader.dispatchEvent(new document.defaultView.MouseEvent(type,{bubbles:true,clientX:x,clientY:200}));
+  dispatch('pointerdown',120);
+  dispatch('click',120);
+  assert.equal(reader.open,true,'a tap inside the panel leaves the note open');
+  dispatch('pointerdown',120);
+  dispatch('click',20);
+  assert.equal(reader.open,true,'dragging from the panel does not close the note');
+  dispatch('pointerdown',20);
+  dispatch('click',20);
+  assert.equal(reader.open,false);
   assert.equal(shelter.open,true);
   assert.equal(document.activeElement,starter);
   shelter.querySelector('.tower-upgrade-close').click();
@@ -102,6 +112,14 @@ test('the Shelter and victory rewards open the same reader without repeating set
   assert.equal(reader.open,true);
   assert.equal(reader.querySelector('#archive-note-title').textContent,archiveNote(1).title);
   assert.equal(document.querySelector('#gladiator-results').hidden,false);
+  dispatch('pointerdown',20);
+  dispatch('click',20);
+  assert.equal(reader.open,false);
+  assert.equal(document.querySelector('#gladiator-results').hidden,false);
+  assert.equal(document.activeElement,reward);
+  reward.click();
+  reader.querySelector('[data-paper-dismiss]').click();
+  assert.equal(reader.open,false,'the close button still works after reopening');
   assert.deepEqual(bettingLoad().players[0].archiveNotes,[4,1]);
  }finally{f.close();}
 });

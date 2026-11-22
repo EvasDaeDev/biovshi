@@ -1,4 +1,5 @@
 import {ASSETS,assetUrl} from '../assets/manifest.js';
+import {listenForBackdropDismissal} from '../ui/dialog-backdrop.js';
 import {archiveNote,ARCHIVE_NOTE_COUNT} from './archive-notes.js';
 
 const senders={
@@ -66,12 +67,14 @@ export function initializeArchiveNoteReader(root){
  }
 
  closeButton.onclick=()=>close();
+ const removeBackdropListener=listenForBackdropDismissal(dialog,close);
  dialog.addEventListener('cancel',cancel);
  root.addEventListener('click',read);
  const dispose=root.__disposeTag;
  root.__disposeTag=()=>{
   root.removeEventListener('click',read);
   dialog.removeEventListener('cancel',cancel);
+  removeBackdropListener();
   closeButton.onclick=null;
   close(false);
   dispose();
