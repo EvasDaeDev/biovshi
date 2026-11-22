@@ -19,7 +19,7 @@ import {applyTextures} from './render/textures.js';
 import {initializePixiArena} from './render/pixi-scene.js';
 import {initializeDiagnostics} from './render/diagnostics.js';
 import {preloadTextures} from './assets/preload.js';
-import {sceneTextureKeys} from './assets/manifest.js';
+import {ASSETS,assetUrl,sceneTextureKeys} from './assets/manifest.js';
 import {prepareOfflineGame} from './assets/offline.js';
 import {createLoadingScreen} from './ui/loading-screen.js';
 import {showStartupIntro} from './ui/startup-intro.js';
@@ -89,11 +89,14 @@ async function boot(){
    loading.fail('Не удалось скачать всю игру. Проверьте подключение и обновите страницу.');
    return;
  }
+ const menuBackground=document.querySelector('#menu-background img');
+ menuBackground.src=assetUrl(ASSETS.textures.uiMenuBackground);
  const [textures]=await Promise.all([
   preloadTextures({keys:sceneTextureKeys(),onProgress:(done,total)=>
    loading.update('Загружаем текстуры пациентов и арены…',{done,total,phase:'textures'})}),
   loadLocations(new URL('./locations/',document.baseURI)),
   installMetalMaterials(document),
+  menuBackground.decode?.().catch(()=>{}),
  ]);
  if(cancelled){loading.close();return;}
  loading.update('Текстуры загружены. Запускаем игру…',{done:0,total:6});

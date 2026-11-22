@@ -2,6 +2,7 @@ import {bossAssets} from '../boss/assets.js';
 // Paths are relative to public/. Use null to keep the current appearance and silence.
 export const ASSETS = {
   textures: {
+    uiMenuBackground:'assets/textures/UI/menu-background.webp',
     ...bossAssets(),
     uiBone:'assets/textures/UI/icons/bone_01.png',
     uiDice:'assets/textures/UI/dice.png',

@@ -122,6 +122,7 @@ test('only a press and click on the lore backdrop dismisses it',()=>{
     assert.equal(intro.open,false);
     assert.equal(root.querySelector('#launch-overlay').hidden,false);
     assert.equal(dom.window.document.activeElement,root.querySelector('#launch-game'));
+    assert.equal(root.hasAttribute('data-intro-dismissed'),true);
     root.__disposeTag();
   }finally{dom.window.close();}
 });

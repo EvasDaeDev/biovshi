@@ -12,6 +12,7 @@ export function showStartupIntro(root){
  }
  function dismiss(){
   close();
+  root.dataset.introDismissed='';
   launch.focus({preventScroll:true});
  }
  function cancel(event){

@@ -1,0 +1,60 @@
+/* A viewport layer outside the scaled game root and its safe-area padding. */
+html > body {isolation:isolate}
+#menu-background {
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  opacity:0;
+}
+#menu-background img {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center bottom;
+}
+#menu-background::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(175deg,rgb(0 0 0 / 58%),rgb(0 0 0 / 43%) 52%,rgb(0 0 0 / 50%));
+  animation:menu-shade 10s ease-in-out infinite;
+  animation-play-state:var(--menu-shade-motion,paused);
+}
+
+body:not(:has(> #texture-loading)):has(> #robot-tag-hops-v22[data-intro-dismissed]
+  :is(#launch-overlay,#tower-preparation,#bet-overlay,#gladiator-results,#arena-settings):not([hidden])) > #menu-background {
+  opacity:1;
+  transition:opacity 900ms ease-out;
+  --menu-shade-motion:running;
+}
+@keyframes menu-shade {
+  0%,38%,100% {opacity:1}
+  42%,72% {opacity:.94}
+  47%,81% {opacity:.99}
+}
+
+/* Reveal the shared image around the original panels. Keep the arena mounted
+   for round results and scene transitions, but out of sight behind the sheets. */
+#robot-tag-hops-v22[data-intro-dismissed]:has(:is(#launch-overlay,#tower-preparation,#bet-overlay,#gladiator-results,#arena-settings):not([hidden])) {
+  background:transparent;
+}
+#robot-tag-hops-v22[data-intro-dismissed]:has(:is(#launch-overlay,#tower-preparation,#bet-overlay,#gladiator-results,#arena-settings):not([hidden]))
+  :is(.tag7hop-layout,.atmosphere-controls,#bet-hud) {
+  visibility:hidden;
+}
+#robot-tag-hops-v22[data-intro-dismissed] :is(#launch-overlay,#bet-overlay,#gladiator-results,#tower-preparation,#tower-upgrade-window) {
+  background:transparent;
+  backdrop-filter:none;
+}
+#robot-tag-hops-v22[data-intro-dismissed] #tower-upgrade-window::backdrop {background:rgb(0 0 0 / 22%)}
+#robot-tag-hops-v22[data-intro-dismissed] #arena-settings {
+  background:rgb(0 0 0 / 22%);
+  backdrop-filter:none;
+}
+
+@media(prefers-reduced-motion:reduce) {
+  #menu-background {transition:none!important}
+  #menu-background::after {animation:none!important}
+}
