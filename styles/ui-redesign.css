@@ -1508,9 +1508,6 @@
     height:clamp(240px,55dvh,400px);
   }
 }
-html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower-upgrade-window .tower-upgrade-content:has(> #tower-upgrade-mutation-page:not([hidden])){
-  height:clamp(240px,calc(var(--game-height,100dvh) * .55),400px);
-}
 #robot-tag-hops-v22 #tower-upgrade-window .tower-mutation-action-area .tower-mutation-install{
   display:inline-flex;
   align-items:center;
@@ -2062,3 +2059,113 @@ html:is(.telegram-app,.telegram-launch) #robot-tag-hops-v22.mobile-layout #tower
 #robot-tag-hops-v22 .tower-note-card img{width:44px;height:44px;object-fit:contain}
 #robot-tag-hops-v22 .tower-note-card:hover,
 #robot-tag-hops-v22 .tower-note-card:focus-visible{border-color:var(--ui-selected)}
+
+/* Small windows use the visible screen rectangle, independently of the
+   scaled landscape arena. Account for safe insets only once. */
+#robot-tag-hops-v22.fit-sheets{
+  --sheet-top:max(var(--sheet-offset-top,0px),env(safe-area-inset-top,0px));
+  --sheet-right:max(var(--sheet-offset-right,0px),env(safe-area-inset-right,0px));
+  --sheet-bottom:max(var(--sheet-offset-bottom,0px),env(safe-area-inset-bottom,0px));
+  --sheet-left:max(var(--sheet-offset-left,0px),env(safe-area-inset-left,0px));
+  --sheet-width:calc(var(--sheet-layout-width,100vw) - var(--sheet-left) - var(--sheet-right));
+  --sheet-height:calc(var(--sheet-layout-height,100dvh) - var(--sheet-top) - var(--sheet-bottom));
+  --sheet-control-gutter:8px;
+}
+html #robot-tag-hops-v22.fit-sheets :is(#launch-overlay,#arena-settings,#bet-overlay,#tower-preparation,#gladiator-results,#tower-upgrade-window){
+  inset:var(--sheet-top) var(--sheet-right) var(--sheet-bottom) var(--sheet-left);
+  width:auto;
+  height:auto;
+  zoom:calc(1 / var(--interface-scale,1));
+  --game-height:var(--sheet-height);
+  --ui-touch-target:44px;
+  --ui-touch-type:14px;
+  --ui-touch-note:12px;
+}
+html #robot-tag-hops-v22.fit-sheets :is(#launch-overlay,#bet-overlay,#tower-preparation,#gladiator-results,#tower-upgrade-window){
+  padding:60px 10px 10px;
+}
+#robot-tag-hops-v22.fit-sheets #arena-settings{padding:10px}
+html #robot-tag-hops-v22.fit-sheets :is(#launch-overlay,#arena-settings,#bet-overlay,#tower-preparation,#gladiator-results,#tower-upgrade-window)>
+:is(.launch-paper,.settings-panel,.bet-panel,.gladiator-results-card,.tower-upgrade-paper){
+  max-width:100%;
+  max-height:100%;
+  min-height:0;
+}
+#robot-tag-hops-v22.fit-sheets #game-navigation{
+  top:calc(var(--sheet-top) / var(--interface-scale,1));
+  left:calc(var(--sheet-left) / var(--interface-scale,1));
+  right:calc(var(--sheet-right) / var(--interface-scale,1));
+}
+html #robot-tag-hops-v22.fit-sheets #game-navigation>button{
+  top:calc(var(--sheet-control-gutter) / var(--interface-scale,1));
+  min-height:calc(44px / var(--interface-scale,1));
+  height:calc(44px / var(--interface-scale,1));
+  font-size:calc(12px / var(--interface-scale,1));
+}
+html #robot-tag-hops-v22.fit-sheets #game-nav-back{
+  left:calc(var(--sheet-control-gutter) / var(--interface-scale,1));
+  min-width:calc(84px / var(--interface-scale,1));
+  padding:calc(6px / var(--interface-scale,1));
+}
+html #robot-tag-hops-v22.fit-sheets #game-nav-settings{
+  right:calc(var(--sheet-control-gutter) / var(--interface-scale,1));
+  width:calc(44px / var(--interface-scale,1));
+}
+html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-back{
+  top:calc(var(--sheet-top) + var(--sheet-control-gutter));
+  left:calc(var(--sheet-left) + var(--sheet-control-gutter));
+  min-width:84px;height:44px;font-size:12px;padding:6px;
+}
+html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-heading-actions .tower-upgrade-settings{
+  top:calc(var(--sheet-top) + var(--sheet-control-gutter));
+  right:calc(var(--sheet-right) + var(--sheet-control-gutter));
+  width:44px;height:44px;min-height:44px;padding:3px;
+}
+html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-paper{
+  display:flex;
+  flex-direction:column;
+  height:auto;
+  overflow:auto;
+}
+html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-paper>*{flex-shrink:0}
+html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window
+:is(.tower-upgrade-patient-panel,.tower-upgrade-inventory,.tower-upgrade-content),
+html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-content:has(> #tower-upgrade-mutation-page:not([hidden])){
+  flex:none;
+  align-self:stretch;
+  height:auto;
+  max-height:none;
+  overflow:visible;
+}
+html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window #tower-prep-mutations>
+:is(.tower-inventory-grid,.tower-legacy-stock){
+  max-height:none;
+  overflow:visible;
+}
+#robot-tag-hops-v22.fit-sheets #tower-preparation .tower-prep-header h2{
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+#robot-tag-hops-v22.fit-sheets #tower-preparation>.bet-panel>.bet-actions button{
+  padding-inline:5px;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+#robot-tag-hops-v22.fit-sheets :is(#tower-preparation .bet-actions,#gladiator-results .results-actions){
+  padding-bottom:8px;
+}
+#robot-tag-hops-v22.fit-sheets #gladiator-results .gladiator-results-table-wrap{
+  overflow-x:auto;
+}
+#robot-tag-hops-v22.fit-sheets :is(.paper-dialog,.game-action-confirm,.tower-replacement-dialog,.tower-cycle-dialog,.betting-input-dialog){
+  inset:var(--sheet-top) var(--sheet-right) var(--sheet-bottom) var(--sheet-left);
+  zoom:calc(1 / var(--interface-scale,1));
+  max-width:calc(var(--sheet-width) - 16px);
+  max-height:calc(var(--sheet-height) - 16px);
+  overflow:auto;
+}
+@media(max-width:720px){
+  #robot-tag-hops-v22.fit-sheets #bet-overlay[data-view="garage"] .garage-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}

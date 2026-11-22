@@ -328,19 +328,16 @@ for(const marker of ['telegram-app','telegram-launch'])test(`full stylesheet cas
   assert.deepEqual(padding(),{top:56,right:44,bottom:21,left:44});
   for(const side of ['top','right','bottom','left'])assert.equal(padding()[side],ctx.layoutViewport[side],'page offset and available geometry must use the same physical inset');
   const style=selector=>f.win.getComputedStyle(f.doc.querySelector(selector));
-  for(const selector of ['#game-navigation','#tower-preparation','#tower-upgrade-window']){
-   const positioned=style(selector);
-   for(const side of ['top','right','left']){
-    assert.ok(Math.abs(parseFloat(positioned.getPropertyValue(side))*ctx.layoutScale-padding()[side])<.01,selector+' respects the '+side+' inset');
-   }
-  }
+  assert.equal(ctx.root.classList.contains('fit-sheets'),true);
+  for(const [side,value] of Object.entries(padding()))
+   assert.equal(ctx.root.style.getPropertyValue('--sheet-offset-'+side),value+'px');
   assert.equal(style('#tower-preparation .bet-panel').maxHeight,'100%');
   assert.equal(style('.tower-reroll-line').flexWrap,'wrap');
   assert.equal(style('.tower-upgrade-paper').maxHeight,'100%');
   assert.equal(style('.tower-upgrade-paper').overflow,'auto');
-  assert.equal(style('.tower-upgrade-content').overflow,'hidden','modifier cards own the scroll region');
+  assert.equal(style('.tower-upgrade-content').overflow,'visible','the outer Shelter sheet owns scrolling');
   f.doc.querySelector('[data-upgrade-tab="artifacts"]').click();
-  assert.equal(style('.tower-upgrade-content').overflow,'visible','other tabs can use the phone sheet scroll');
+  assert.equal(style('.tower-upgrade-content').overflow,'visible');
   const patient=f.doc.querySelector('.tower-upgrade-table');
   assert.equal(patient.parentElement.className,'tower-upgrade-patient-panel');
   assert.equal(patient.nextElementSibling.id,'tower-upgrade-stats');

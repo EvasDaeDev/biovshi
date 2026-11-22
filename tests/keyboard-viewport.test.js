@@ -131,3 +131,19 @@ test('recreating the UI while the keyboard closes retains the unoccluded viewpor
   f.resize(844,150);assert.equal(f.doc.querySelector('.keyboard-input-panel'),null);
  }finally{f.dom.window.close();}
 });
+
+
+test('small overlays use visible screen bounds independently of the arena scale',()=>{
+ const f=setup();
+ try{
+  f.view.offsetLeft=14;f.view.offsetTop=12;
+  f.resize(645,270);
+  assert.equal(ctx.root.classList.contains('fit-sheets'),true);
+  const style=ctx.root.style;
+  assert.equal(style.getPropertyValue('--sheet-layout-width'),'844px');
+  assert.equal(style.getPropertyValue('--sheet-layout-height'),'390px');
+  const insets=Object.fromEntries(['top','right','bottom','left'].map(side=>[side,style.getPropertyValue('--sheet-offset-'+side)]));
+  assert.deepEqual(insets,{top:'12px',right:'185px',bottom:'108px',left:'14px'});
+  assert.ok(ctx.layoutScale<1);
+ }finally{f.close();}
+});

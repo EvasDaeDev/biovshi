@@ -1,4 +1,5 @@
 import {ctx} from '../game/state.js';
+import {contentViewport} from './geometry.js';
 
 // Keep one landscape layout. Only shrink it when its minimum usable size
 // cannot fit; CSS pixels, not the device's physical pixel count, matter here.
@@ -22,4 +23,14 @@ export function fitInterface(){
   ctx.root.classList.toggle('compact-layout',layout.width<1120);
   // A wide iPad still needs the touch toolbar; width alone cannot identify it.
   ctx.root.classList.toggle('mobile-layout',Boolean(ctx.touchDevice));
+
+  // Dialogs use visible screen coordinates, independent of the arena's zoom.
+  const sheet=contentViewport(win);
+  const fitSheets=Boolean(ctx.touchDevice||ctx.platform?.isTelegram||sheet.width<=950||sheet.height<=540);
+  ctx.root.classList.toggle('fit-sheets',fitSheets);
+  ctx.root.style.setProperty('--sheet-layout-width',win.innerWidth+'px');
+  ctx.root.style.setProperty('--sheet-layout-height',win.innerHeight+'px');
+  const gaps={top:sheet.y,left:sheet.x,right:win.innerWidth-sheet.x-sheet.width,bottom:win.innerHeight-sheet.y-sheet.height};
+  for(const [side,value] of Object.entries(gaps))
+    ctx.root.style.setProperty('--sheet-offset-'+side,Math.max(0,value)+'px');
 }
