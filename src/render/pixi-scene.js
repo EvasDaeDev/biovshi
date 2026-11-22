@@ -2,7 +2,7 @@ import {arenaRaster} from '../game/arena-dimensions.js';
 import { fittedCamera } from './camera.js';
 import { ctx } from '../game/state.js';
 import { CONFIG } from '../config.js';
-import { ASSETS, assetUrl } from '../assets/manifest.js';
+import { ASSETS, assetUrl, isTowerTexture } from '../assets/manifest.js';
 import { loadTextureImage } from '../assets/preload.js';
 import {arenaSpriteAtlasUrls,resolveArenaSpriteSource} from './pixi-sources.js';
 import { staticArenaImage,staticWallNodes } from './pixi-static.js';
@@ -37,7 +37,9 @@ export class PixiArena {
     this.owned.add(texture);return texture;
   }
   async prepareSources() {
-    const urls=[...arenaSpriteAtlasUrls(ASSETS.textures,assetUrl),...(ctx.liquidAtlasSources??[]),...(ctx.coolantAtlasSources??[])];
+    const textures=Object.fromEntries(Object.entries(ASSETS.textures).filter(([key])=>
+      ctx.textureAssets?.[key]?.loaded!==false&&(ctx.mode==='tower'||!isTowerTexture(key))));
+    const urls=[...arenaSpriteAtlasUrls(textures,assetUrl),...(ctx.liquidAtlasSources??[]),...(ctx.coolantAtlasSources??[])];
     await Promise.all([...new Set(urls.filter(Boolean))].map(async url=>{
       try{this.sources.set(url,this.texture(await loadTextureImage(url),url!==assetUrl(ASSETS.textures.flashlight)));}catch{/* Vector fallback is already prepared by the game. */}
     }));

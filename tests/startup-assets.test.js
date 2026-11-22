@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {ctx} from '../src/game/state.js';
-import {ASSETS} from '../src/assets/manifest.js';
+import {ASSETS,sceneTextureKeys} from '../src/assets/manifest.js';
 import {showStartupIntro} from '../src/ui/startup-intro.js';
 
 test('real startup waits for the texture check, reuses images for tinting and creates no redundant models',async()=>{
@@ -14,10 +14,10 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
   globalThis.addEventListener=dom.window.addEventListener.bind(dom.window);
   globalThis.removeEventListener=dom.window.removeEventListener.bind(dom.window);
-  const pending=[];let requests=0,released=false,staticRasters=0;
+  const pending=[],requests=[];let released=false,staticRasters=0;
   globalThis.Image=class{
     naturalWidth=256;naturalHeight=256;
-    set src(value){if(value.startsWith('data:image/svg+xml'))staticRasters++;else requests++;
+    set src(value){if(value.startsWith('data:image/svg+xml'))staticRasters++;else requests.push(value);
       if(released)queueMicrotask(()=>this.onload?.());else pending.push(()=>this.onload?.());}
     async decode(){}
   };
@@ -44,7 +44,9 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   const intro=root.querySelector('#startup-intro');
   assert.equal(intro.open,false,'the intro waits for loading');
   assert.equal(ctx.robots,undefined,'participants are not instantiated before checking images');
-  assert.equal(requests,Object.keys(ASSETS.textures).length);
+  assert.equal(requests.length,sceneTextureKeys().length);
+  for(const key of ['notePatient','artifact1_bg','towerMutation_piston','robotEnemy1'])
+    assert.ok(!requests.some(url=>url.endsWith(ASSETS.textures[key])),key+' is not requested during boot');
   released=true;for(const finish of pending)finish();
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(ctx.robots,undefined,'patients wait until active locations have been checked');
@@ -58,7 +60,7 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   assert.equal(ctx.startup.phase,'demo','simulation remains gated on initial load');
   assert.equal(root.querySelector('#launch-game').textContent,'ПОСМОТРЕТЬ БОЙ!');
   assert.equal(root.querySelector('#launch-overlay').hidden,false,'first load shows launch gate');
-  assert.equal(requests,Object.keys(ASSETS.textures).length,'tint preparation reuses preloaded images');
+  assert.equal(requests.length,sceneTextureKeys().length,'tint preparation reuses preloaded images');
   assert.ok(Object.values(ctx.textureAssets).every(status=>status.loaded));
   assert.equal(staticRasters,2,'ambient shading and the initial 1024 floor are prepared once');
   assert.equal(ctx.ambientGlowG.dataset.rasterized,'true');

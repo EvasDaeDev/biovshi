@@ -77,6 +77,12 @@ export const ASSETS = {
     menuMusic: 'assets/music/Long20Three.mp3',
   },
 };
+export const isTowerTexture=key=>/^(?:robotBoss|robotEnemy|towerSurgery_|towerMutation_)/.test(key);
+export function sceneTextureKeys(tower=false){
+  return Object.keys(ASSETS.textures).filter(key=>
+    !/^(?:ui|note|artifact|streamer)/.test(key)&&(tower||!isTowerTexture(key)));
+}
+
 export function assetUrl(file) {
   if (!file) return null;
   const inline = typeof __INLINE_ASSETS__ === 'undefined' ? {} : __INLINE_ASSETS__;

@@ -20,16 +20,19 @@ test('runtime packager copies allowlisted assets, not PSD or nested _src',async(
   const dir=await fs.mkdtemp(path.join(os.tmpdir(),'biovshi-pack-'));
   const source=path.join(dir,'public'),dist=path.join(dir,'dist');
   try{
-    const known=requiredRuntimePaths()[0];
-    for(const [filename,value] of [[known,'runtime'],['assets/textures/UI/_src/icons.png','do not ship'],['assets/textures/UI/artist.psd','do not ship']]){
+    const paths=requiredRuntimePaths(),known=paths[0];
+    for(const [filename,value] of [...paths.map(file=>[file,'runtime']),['assets/textures/UI/_src/icons.png','do not ship'],['assets/textures/UI/artist.psd','do not ship']]){
       const destination=path.join(source,filename);
       await fs.mkdir(path.dirname(destination),{recursive:true});
       await fs.writeFile(destination,value);
     }
     const report=await copyRuntimeAssets(source,dist);
-    assert.equal(report.copied,1);
+    assert.equal(report.copied,paths.length);
     assert.equal(await fs.readFile(path.join(dist,known),'utf8'),'runtime');
     assert.deepEqual((await verifyRuntimeAssets(dist)).unexpected,[]);
+    await fs.unlink(path.join(dist,known));
+    await assert.rejects(()=>verifyRuntimeAssets(dist),/Missing packaged assets/);
+    await fs.writeFile(path.join(dist,known),'runtime');
     await fs.mkdir(path.join(dist,'assets/_src'),{recursive:true});
     await fs.writeFile(path.join(dist,'assets/_src/should-fail.png'),'invalid');
     await assert.rejects(()=>verifyRuntimeAssets(dist),/Artist source leaked/);

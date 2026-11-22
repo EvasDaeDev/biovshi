@@ -19,6 +19,7 @@ import {applyTextures} from './render/textures.js';
 import {initializePixiArena} from './render/pixi-scene.js';
 import {initializeDiagnostics} from './render/diagnostics.js';
 import {preloadTextures} from './assets/preload.js';
+import {sceneTextureKeys} from './assets/manifest.js';
 import {createLoadingScreen} from './ui/loading-screen.js';
 import {showStartupIntro} from './ui/startup-intro.js';
 import {bettingLoad,bettingSave} from './betting/storage.js';
@@ -28,6 +29,11 @@ let cancelled=false,initialLoading=null;
 let launchAccepted=false;
 const musicOffsets=new Map();
 async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,enterFight=false,loading=null}){
+ if(!textures){
+   loading?.update('Загружаем текстуры пациентов и арены…',{done:0,total:6});
+   textures=await preloadTextures({keys:sceneTextureKeys(Boolean(tower))});
+ }
+ if(cancelled)return;
  loading?.update('Создаём пациентов…',{done:1,total:6});
  if(ctx.towerFloorBake)await ctx.towerFloorBake;
  initializeGame({textures,session,entry,arenaId,tower});
@@ -71,7 +77,7 @@ async function boot(){
  const loading=createLoadingScreen({staged:true});initialLoading=loading;
  root.inert=true;
  const [textures]=await Promise.all([
-  preloadTextures({onProgress:(done,total)=>
+  preloadTextures({keys:sceneTextureKeys(),onProgress:(done,total)=>
    loading.update('Загружаем текстуры пациентов и арены…',{done,total,phase:'textures'})}),
   loadLocations(new URL('./locations/',document.baseURI)),
  ]);
@@ -85,7 +91,7 @@ async function boot(){
    const progress=createLoadingScreen();
    ctx.keepArenaRenderer=true;
    let succeeded=false;
-   try{await prepare({textures,session,entry:'betting',arenaId,loading:progress});ctx.setArenaExpanded?.(expanded);succeeded=true;}
+   try{await prepare({session,entry:'betting',arenaId,loading:progress});ctx.setArenaExpanded?.(expanded);succeeded=true;}
    catch(error){progress.fail('Ошибка загрузки арены. Повторите действие.');throw error;}
    finally{ctx.keepArenaRenderer=false;root.inert=false;if(succeeded)progress.close();}
  };
@@ -93,7 +99,7 @@ async function boot(){
    const owned=!options.loading,progress=options.loading??createLoadingScreen();
    root.inert=true;ctx.audio?.unlock();launchAccepted=true;ctx.keepArenaRenderer=true;
    let succeeded=false;
-   try{await prepare({textures,...options,loading:progress});succeeded=true;}
+   try{await prepare({...options,loading:progress});succeeded=true;}
    catch(error){progress.fail('Не удалось подготовить арену.');throw error;}
    finally{ctx.keepArenaRenderer=false;root.inert=false;if(owned&&succeeded)progress.close();}
  };

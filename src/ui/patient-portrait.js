@@ -100,7 +100,8 @@ export function tintPortraitPixels(pixels,hex,brightness=1) {
   return pixels;
 }
 async function atlasPalette(url) {
-  if(!palettes.has(url))palettes.set(url,(async()=>{
+  if(!palettes.has(url)){
+   const pending=(async()=>{
     const image=await loadTextureImage(url),base=document.createElement('canvas');
     base.width=image.naturalWidth;base.height=image.naturalHeight;
     const draw=base.getContext('2d',{willReadFrequently:true});
@@ -114,13 +115,20 @@ async function atlasPalette(url) {
       variants[state]=canvas;
     }
     return variants;
-  })());
+   })();
+   palettes.set(url,pending);
+   pending.catch(()=>palettes.delete(url));
+  }
   return palettes.get(url);
 }
 export async function preparePatientPortraits() {
   const cards=ctx.cardNodes;
   try{androidAtlas=ctx.textureAssets?.robotAndroid?.loaded===false?null:await atlasPalette(assetUrl(ASSETS.textures.robotAndroid));}catch{androidAtlas=null;}
-  await Promise.all([1,2,3,4].map(async id=>{try{hatImages.set(id,await loadTextureImage(assetUrl(ASSETS.textures['hat'+id])));}catch{}}));
+  await Promise.all([1,2,3,4].map(async id=>{
+    const key='hat'+id;
+    if(ctx.textureAssets?.[key]?.loaded===false)return;
+    try{hatImages.set(id,await loadTextureImage(assetUrl(ASSETS.textures[key])));}catch{}
+  }));
   await Promise.all(cards.map(async(card,id)=>{
     const key=ctx.robots[id]?.body?.skinKey??['robotA','robotB','robotC','robotD'][patientSkin(id)];
     try{card.portraitAtlas=ctx.textureAssets?.[key]?.loaded===false?null:await atlasPalette(assetUrl(ASSETS.textures[key]));}

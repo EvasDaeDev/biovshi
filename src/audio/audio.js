@@ -115,9 +115,6 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
   let musicFadeEnd=null;
   const MUSIC_FADE_SECONDS=10;
   const warn=(key,error)=>{if(!warnings.has(key)){warnings.add(key);console.warn('Audio unavailable:',key,error);}};
-  // Fetch ahead without requiring a running audio device. Decode only once a
-  // context has been unlocked, and reuse it across arena replacements on iOS.
-  if(bufferLoader===decodeSound)for(const [key,file] of Object.entries(ASSETS.sounds))fetchSound(file).catch(error=>warn(key,error));
   function stop(voice){
     if(voice.cancelled)return;
     voice.cancelled=true;
@@ -251,7 +248,10 @@ export function createAudio({state=ctx,eventTarget=globalThis,storage=globalThis
       }
       // Predecode short pain clips after user interaction so the first injury
       // can start close to its intended +100 ms audio-clock deadline.
-      if(bufferLoader===decodeSound) {
+      if(bufferLoader===decodeSound&&!unlocked) {
+        // Fetch effects after the first gesture. Each music track is loaded when needed.
+        for(const [key,file] of Object.entries(ASSETS.sounds))
+          if(!isMusic(key))fetchSound(file).catch(error=>warn(key,error));
         for(const group of PAIN_SAMPLES)for(const key of group)
           bufferLoader(context,ASSETS.sounds[key]).catch(error=>warn(key,error));
         // The short combat leap must be ready before an unexpected takeoff.

@@ -51,13 +51,13 @@ export async function copyRuntimeAssets(sourceRoot,destinationRoot,{warn=()=>{}}
       if(error.code!=='ENOENT')throw error;
       (relative.startsWith('locations/')?missingLocations:missing).push(relative);continue;
     }
-    if(!info.isFile())throw Error('Runtime asset is not a file: '+relative);
+    if(!info.isFile()||info.size===0)throw Error('Invalid runtime file: '+relative);
     const destination=path.join(destinationRoot,relative);
     await fs.mkdir(path.dirname(destination),{recursive:true});
     await fs.copyFile(source,destination);
     bytes+=info.size;copied++;
   }
-  if(missing.length)warn('Optional atlas files not found: '+missing.join(', '));
+  if(missing.length)warn('Runtime files not found: '+missing.join(', '));
   if(missingLocations.length)warn('Active locations not found: '+missingLocations.join(', '));
   return {copied,bytes,missing};
 }
@@ -81,5 +81,8 @@ export async function verifyRuntimeAssets(directory){
     return !expected.has(file)&&!/^assets\/[^/]+\.(?:js|css|js\.map|css\.map)$/.test(file);
   });
   if(unexpected.length)throw Error('Unexpected packaged assets: '+unexpected.join(', '));
+  const inventory=new Set(found);
+  const missing=[...expected].filter(file=>!inventory.has(file));
+  if(missing.length)throw Error('Missing packaged assets: '+missing.join(', '));
   return {fileCount:found.length,unexpected};
 }

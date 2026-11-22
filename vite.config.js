@@ -24,6 +24,7 @@ export default defineConfig(({mode})=>{
       const root=fileURLToPath(new URL('.',import.meta.url));
       const output=path.resolve(root,outputOptions.dir??'dist');
       const report=await copyRuntimeAssets(path.join(root,'public'),output,{warn:message=>console.warn(message)});
+      if(report.missing.length)throw Error('Missing runtime source files: '+report.missing.join(', '));
       await verifyRuntimeAssets(output);
       console.log('Curated runtime assets:',report.copied,'files,',report.bytes,'bytes');
     },

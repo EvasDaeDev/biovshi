@@ -21,14 +21,29 @@ test('preflight checks and decodes every texture once; later requests reuse load
   }finally{globalThis.Image=original;}
 });
 
-test('missing and stalled textures resolve to failure without repeated network attempts or hanging startup',async()=>{
-  const original=globalThis.Image;let requests=0;
-  globalThis.Image=class{set src(value){requests++;if(value.includes('missing'))queueMicrotask(()=>this.onerror?.());}};
+test('transient failures retry once, reuse successful images and allow a later scene to recover',async()=>{
+  const original=globalThis.Image;const attempts=new Map();
+  globalThis.Image=class{
+    naturalWidth=256;
+    set src(url){
+      const tries=(attempts.get(url)??0)+1;
+      attempts.set(url,tries);
+      if(url.includes('stalled'))return;
+      const failures=url.includes('later')?2:1;
+      queueMicrotask(()=>tries<=failures?this.onerror?.():this.onload?.());
+    }
+  };
   try{
-    await assert.rejects(loadTextureImage('missing-texture.png'));
-    await assert.rejects(loadTextureImage('missing-texture.png'));
-    assert.equal(requests,1);
-    await assert.rejects(loadTextureImage('stalled-texture.png',{timeoutMs:5}),/timed out/);
-    assert.equal(requests,2);
+    const options={timeoutMs:10,retry:true};
+    const pending=loadTextureImage('retry-texture.png',options);
+    assert.equal(loadTextureImage('retry-texture.png',options),pending);
+    const recovered=await pending;
+    assert.equal(await loadTextureImage('retry-texture.png'),recovered);
+    assert.equal(attempts.get('retry-texture.png'),2);
+    await assert.rejects(loadTextureImage('later-texture.png',options));
+    assert.ok(await loadTextureImage('later-texture.png',options));
+    assert.equal(attempts.get('later-texture.png'),3);
+    await assert.rejects(loadTextureImage('stalled-texture.png',options),/timed out/);
+    assert.equal(attempts.get('stalled-texture.png'),2);
   }finally{globalThis.Image=original;}
 });
