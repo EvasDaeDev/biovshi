@@ -46,9 +46,10 @@ function install(next){
   if(ctx.arenaRenderer)ctx.arenaRenderer.replaceFloor(next);
   else ctx.floorImage.setAttribute('href',next.toDataURL('image/png'));
 }
-export async function initializeFloor(){
+export async function initializeFloor({ephemeral=false}={}){
   const {canvas:base}=await staticArenaImage([ctx.arenaContent.querySelector(':scope > rect'),ctx.svg.querySelector('#tag7hop-floor-decals'),ctx.grid],{pixels:SIZE});
   ctx.cleanFloorCanvas=base;ctx.floorImage=null;ctx.floorCanvas=base;ctx.floorRevision=0;
+  if(ephemeral||ctx.mode==='multiplayer'){install(base);return;}
   if(ctx.betting&&!ctx.betting.floorId){ctx.betting.floorId=globalThis.crypto?.randomUUID?.()??String(Date.now())+Math.random();bettingSave();}
   const scope=floorScope();
   const {key,generation,sessionId,arena}=scope;
@@ -79,7 +80,7 @@ export async function cleanFloor(){
   if(!ctx.cleanFloorCanvas||ctx.floorBaking)return;
   const scope=floorScope();
   ctx.lastFloorBakeError='';install(ctx.cleanFloorCanvas);ctx.floorRevision=(ctx.floorRevision??0)+1;
-  remember(scope,ctx.floorCanvas);persist(scope,ctx.floorCanvas);
+  if(ctx.mode!=='multiplayer'){remember(scope,ctx.floorCanvas);persist(scope,ctx.floorCanvas);}
 }
 // Only fresh remains are treated. The existing opaque floor is copied unchanged.
 export function mergeFloorPixels(base,layer){
@@ -96,6 +97,7 @@ export function mergeFloorPixels(base,layer){
   return base;
 }
 export async function bakeRoundFloor({signal}={}){
+  if(ctx.mode==='multiplayer')return;
   const source=ctx.floorCanvas,scope=floorScope();
   if(!source)return;
   // The final physics tick may still be depositing oil from the last strike.

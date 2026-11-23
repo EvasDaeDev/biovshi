@@ -114,10 +114,21 @@ test('LAN synchronizes rooms, slot limits, roles and the host-only start', async
   guest.send('room.ready', {ready: true}, roomId);
   await host.next('room.state', message => message.payload.canStart && message.payload.spectators === 1);
   host.send('match.start', {}, roomId);
-  await viewer.next('room.state', message => message.payload.phase === 'preparing');
+  const {payload: {matchId}} = await viewer.next('room.state', message => message.payload.phase === 'preparing');
   late.send('room.join', {playerName: 'Поздний зритель', role: 'spectator'}, roomId);
   assert.equal((await late.next('error')).payload.code, 'room_unavailable');
-  host.send('room.return', {}, roomId);
+  guest.send('match.host-ready', {matchId}, roomId);
+  assert.equal((await guest.next('error')).payload.code, 'host_only');
+  host.send('match.host-ready', {matchId}, roomId);
+  await viewer.next('room.state', message => message.payload.phase === 'running');
+  guest.send('match.finish', {matchId, winner: 1, elapsedSec: 5, reason: 'combat'}, roomId);
+  assert.equal((await guest.next('error')).payload.code, 'host_only');
+  host.send('match.finish', {matchId: 'obsolete', winner: 2, elapsedSec: 5, reason: 'combat'}, roomId);
+  assert.equal((await host.next('error')).payload.code, 'match_mismatch');
+  host.send('match.finish', {matchId, winner: 2, elapsedSec: 5.25, reason: 'combat'}, roomId);
+  const result = await viewer.next('room.state', message => message.payload.phase === 'results');
+  assert.deepEqual(result.payload.result, {winnerName: 'ИИ 1 · Быстрый', elapsedSec: 5.25, reason: 'combat'});
+  host.send('room.return', {matchId}, roomId);
   await guest.next('room.state', message => message.payload.phase === 'waiting' && !message.payload.canStart &&
     message.payload.members.length === 3);
 
@@ -132,6 +143,8 @@ test('LAN restores the same guest session before expiry and releases an expired 
   const origin = await setup(t, {reconnectMs: 1200});
   const [host, guest] = await Promise.all([connect(origin), connect(origin)]);
   const {roomId, payload: {memberId: hostId}} = await create(host);
+  host.send('room.select', {role: 'player', profile: 'tower', profileSummary: '5/3/4 очков'}, roomId);
+  await host.next('room.state', message => message.payload.members[0].profileSummary === '5/3/4 очков');
   host.send('room.select', {role: 'spectator', profile: 'basic'}, roomId);
   await host.next('room.state', message => message.payload.fighters === 0);
   host.send('match.start', {}, roomId);

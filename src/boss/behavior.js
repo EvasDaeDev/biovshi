@@ -78,14 +78,26 @@ export function createBossBehavior(){
   state.chargeHistory.splice(0,Math.max(0,state.chargeHistory.length-BOSS_CONFIG.tactics.chargeMemorySize));
   state.chargeOutcome=null;
  }
- function intent(robot){
+ function tryCharge(robot,target,now){
+  const cfg=BOSS_CONFIG.tactics;
+  if(now<state.nextChargeAt||Math.abs(wrap(Math.atan2(target.y-robot.y,target.x-robot.x)-robot.angle))>=.35)return null;
+  const plan=chargePlan(robot,target.center,{history:state.chargeHistory});
+  if(!plan){state.nextChargeAt=now+1;return null;}
+  state.charge={...plan,started:now,victim:target.id};
+  state.nextChargeAt=now+cfg.chargeCooldown*(state.phase===2?.8:1);
+  state.status='Готовит рывок';
+  note('boss-charge',{robot:robot.id,goal:plan.goal});
+  return {...hold(robot,plan.goal),heading:plan.direction};
+ }
+ function intent(robot,manual=null){
   updateBossPhase(robot,state);
   if(!robot.mobile||ctx.combat.finished)return hold(robot,null);
   const now=ctx.game.time,cfg=BOSS_CONFIG.tactics,target=targetFor(robot);
   updateChargeMemory(robot,now);
-  if(!target)return hold(robot,null);
+  if(!target)return manual??hold(robot,null);
   const memory=bossOpponentMemory(state,target.id);
-  if(robot.canSee(target.center)&&sightClear(robot.center,target.center))observeBossOpponent(robot,target,memory,now);
+  const visible=robot.canSee(target.center)&&sightClear(robot.center,target.center);
+  if(visible)observeBossOpponent(robot,target,memory,now);
   if(robot.movementLimbs===0){state.charge=null;return hold(robot,target.center);}
   if(state.charge&&robot.movementLimbs<2){
    state.charge=null;state.chargeOutcome=null;
@@ -127,6 +139,14 @@ export function createBossBehavior(){
    state.charge=null;
   }
   const pending=pendingStrikes(robot.id)[0];
+  if(manual){
+   if(visible&&!pending&&!state.followup&&now>=ctx.combat.nextStrike[robot.id]){
+    const charge=tryCharge(robot,target,now);
+    if(charge)return charge;
+   }
+   state.status=manual.mode;
+   return manual;
+  }
   if(pending){
    state.status=pending.rearKick?'Бьёт ногой':pending.style==='sweep'?'Широкий удар':pending.comboIndex?`Серия · ${pending.comboIndex}/2`:'Наносит удар';
    return hold(robot,pending.rearKick?null:pending.aim);
@@ -149,10 +169,9 @@ export function createBossBehavior(){
   const seen=robot.canSee(target.center)&&sightClear(robot.center,target.center);
   if(seen){state.lastSeen={...target.center};state.lastSeenAt=now;}
   if(!seen&&now-state.lastSeenAt>3){state.status='Ищет противника';return fighterIntent(robot);}
-  if(seen&&now>=state.nextChargeAt&&Math.abs(wrap(Math.atan2(target.y-robot.y,target.x-robot.x)-robot.angle))<.35){
-   const plan=chargePlan(robot,target.center,{history:state.chargeHistory});
-   if(plan){state.charge={...plan,started:now,victim:target.id};state.nextChargeAt=now+cfg.chargeCooldown*(state.phase===2?.8:1);state.status='Готовит рывок';note('boss-charge',{robot:robot.id,goal:plan.goal});return {...hold(robot,plan.goal),heading:plan.direction};}
-   state.nextChargeAt=now+1;
+  if(seen){
+   const charge=tryCharge(robot,target,now);
+   if(charge)return charge;
   }
   const armSources=robot.attackSources.filter(s=>s.kind==='arm');
   const noFrontArms=!armSources.some(s=>s.key.endsWith('-lower')&&!s.key.includes('pair2'));

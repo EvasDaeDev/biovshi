@@ -1,4 +1,5 @@
 import {towerResults} from '../tower/ui.js';
+import {fighterLabel} from '../game/patients.js';
 import {patientName} from './patient.js';
 import { ctx } from "../game/state.js";
 import { betWinnerNames } from "../betting/ledger.js";
@@ -15,6 +16,20 @@ export function resultPatientStatus(robot, isWinner = false) {
 export function showResults() {
   if (!ctx.combat.finished || !ctx.resultsPanel.hidden) return;
   if(ctx.mode==='tower'){renderBattleStatistics();towerResults();return;}
+  if(ctx.mode==='multiplayer'){
+    const winner=ctx.combat.winner;
+    ctx.root.querySelector('#tower-results-player').hidden=true;
+    ctx.root.querySelector('#tower-controls').hidden=true;
+    ctx.root.querySelector('#bet-result-summary').replaceChildren();
+    ctx.resultsTitle.textContent=winner!==null?'ПОБЕДИТЕЛЬ — '+fighterLabel(winner):
+      ctx.multiplayer.endedManually?'БОЙ ЗАВЕРШЁН ХОЗЯИНОМ':'НИЧЬЯ';
+    ctx.resultsSummary.textContent=`Длительность боя · ${formatRoundTime(ctx.round.elapsedSec)}`;
+    ctx.resultsAgain.textContent='В ЛОББИ';
+    renderBattleStatistics();
+    ctx.resultsPanel.hidden=false;
+    ctx.resultsAgain.focus?.();
+    return;
+  }
   ctx.root.querySelector('#tower-results-player').hidden=true;
   const winner = ctx.combat.winner;
   const names=betWinnerNames(ctx.betting,winner);

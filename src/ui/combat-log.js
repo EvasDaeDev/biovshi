@@ -16,6 +16,9 @@ export function combatLine(event){
  if(event.type==='segment-broken')return `${attacker} оторвал ${target} ${part}${event.damage===2?' мощным ударом':''}. ${pick(['Заберите вещи в регистратуре.','Возврату и обмену не подлежит.','Минус деталь, плюс свободное место.','Теперь чеши другой.','*****. А это ещё было нужно.'])}`;
  if(event.type==='robot-immobilized'&&event.knockoutCause==='blood-loss')return `${target} уничтожен: потеря крови.`;
  if(event.type==='robot-immobilized')return event.reason==='погиб'?`${target} погиб. ${pick(['Голову потерял. Буквально.','Выписан. Ногами вперёд.','Лечение окончено. Пациент тоже.'])}`:event.reason==='потерял сознание'?`${target} в отключке. ${pick(['Наконец-то тихий час.','Нашёл кнопку «пропустить этот ад».','На сегодня хватит бесплатной терапии.'])}`:`${target} выбыл. На сегодня с него хватит.`;
+ if(event.type==='combat-end'&&ctx.mode==='multiplayer'){
+  return event.outcome==='manual'?'Хозяин завершил бой.':event.winner===null?'Ничья.':`${patientName(event.winner)} победил.`;
+ }
  if(event.type==='combat-end')return event.winner===null?'Ничья. Все облажались, касса довольна.':`${patientName(event.winner)} победил. ${pick(['Лучший пациент — тот, кто ещё шевелится.','Приз — ещё один день в этом заведении.','Можете забрать выигрыш и остатки знакомых.','Санитар месяца. Без лицензии.'])}`;
  return null;
 }

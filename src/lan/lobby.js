@@ -1,9 +1,9 @@
-import {towerEnemyProfile, towerProfileEffect, TOWER_ENEMY_PROFILES} from '../tower/profiles.js';
+import {describeLanProfile, describeLanTower, lanAiName, lanProfiles} from './characters.js';
 import {createLanClient} from './client.js';
 import {LAN_ROOM_CODE} from './protocol.js';
 import './lobby.css';
 
-const phases = {waiting: 'Ожидание', preparing: 'Подготовка'};
+const phases = {waiting: 'Ожидание', preparing: 'Подготовка', running: 'Идёт бой', results: 'Результаты'};
 const roles = {player: 'Боец', spectator: 'Наблюдатель'};
 const SESSION_KEY = 'biovshi.lan.session.v1';
 
@@ -36,12 +36,6 @@ function options(entries, selected, disabled, key) {
   return select;
 }
 
-const profileOptions = Object.entries(TOWER_ENEMY_PROFILES).map(([id, profile]) => [id, profile.name]);
-function profileStats(id) {
-  const {speed, critical, maneuver} = towerProfileEffect(id);
-  return speed + '% скорость · ' + critical + '% крит · ' + maneuver + '% поворот';
-}
-
 function readSession() {
   try {
     const data = JSON.parse(sessionStorage.getItem(SESSION_KEY));
@@ -50,7 +44,7 @@ function readSession() {
   return null;
 }
 
-export function installLanLobby(root) {
+export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock}) {
   const launch = root.querySelector('#launch-lan');
   const dialog = root.querySelector('#lan-lobby');
   const find = id => dialog.querySelector('#lan-' + id);
@@ -68,6 +62,9 @@ export function installLanLobby(root) {
   const invite = LAN_ROOM_CODE.test(code) ? code : '';
   let rooms = [], arenas = [], origin = location.origin, connected = false, room = null, memberId = null;
   let session = readSession();
+  let activeMatch = null;
+  let hostWork = Promise.resolve();
+  let matchError = '';
 
   const client = createLanClient(onMessage);
   const arenaName = id => arenas.find(arena => arena.id === id)?.name ?? id;
@@ -78,6 +75,50 @@ export function installLanLobby(root) {
       if (next) sessionStorage.setItem(SESSION_KEY, JSON.stringify(next));
       else sessionStorage.removeItem(SESSION_KEY);
     } catch { /* Reconnection still works while this tab stays open. */ }
+  }
+
+  function reconcileHost() {
+    hostWork = hostWork.then(async () => {
+      const desired = connected && room?.hostId === memberId ? room.matchId : null;
+      if (activeMatch && activeMatch.id !== desired) {
+        activeMatch = null;
+        if (!dialog.open) dialog.showModal();
+        await leaveMatch();
+      }
+      if (!room || !connected || room.hostId !== memberId) return;
+      if (room.phase === 'preparing' && !activeMatch) {
+        const matchId = room.matchId;
+        const roomId = room.id;
+        const current = () => connected && room?.matchId === matchId && room.hostId === memberId;
+        const transmit = (type, payload = {}) => {
+          if (current()) client.send(type, {...payload, matchId}, roomId);
+        };
+        const match = {id: matchId, runtime: null, started: false};
+        activeMatch = match;
+        try {
+          match.runtime = await prepareMatch(room, memberId, {
+            onFinish: result => transmit('match.finish', result),
+            onReturn: () => transmit('room.return'),
+          });
+          transmit('match.host-ready');
+        } catch (error) {
+          console.error('LAN arena:', error);
+          matchError = /Не удалось разместить|Башни недоступен/.test(error.message)
+            ? error.message : 'Не удалось подготовить арену.';
+          status.textContent = matchError;
+          transmit('room.return');
+        }
+      }
+      if (room?.phase === 'running' && activeMatch?.id === room.matchId &&
+          activeMatch.runtime && !activeMatch.started) {
+        activeMatch.started = true;
+        dialog.close();
+        activeMatch.runtime.start();
+      }
+    }).catch(error => {
+      console.error('LAN scene transition:', error);
+      status.textContent = 'Не удалось восстановить главное меню. Обновите страницу.';
+    });
   }
 
   function renderList() {
@@ -178,8 +219,11 @@ export function installLanLobby(root) {
       if (!member.connected) labels.push('Нет связи');
       else if (member.id !== room.hostId && member.role === 'player') labels.push(member.ready ? 'Готов' : 'Не готов');
       item.append(node('strong', labels.join(' · ')));
-      if (member.role === 'player')
-        item.append(node('small', towerEnemyProfile(member.profile).name + ' · ' + profileStats(member.profile)));
+      if (member.role === 'player') {
+        const profile = describeLanProfile(member.profile);
+        const detail = member.profileSummary ?? profile.detail;
+        item.append(node('small', profile.name + ' · ' + detail));
+      }
       if (host && member.id !== own.id && room.phase === 'waiting')
         item.append(button('Исключить', () => send('room.kick', {memberId: member.id}),
           {disabled: locked, key: 'kick-' + member.id}));
@@ -189,9 +233,10 @@ export function installLanLobby(root) {
     const changeAi = ai => send('room.configure', {name: room.name, arenaId: room.arenaId, slots: room.slots, ai});
     room.ai.forEach((profile, index) => {
       const item = node('li');
-      item.append(node('strong', 'ИИ · ' + towerEnemyProfile(profile).name), node('small', profileStats(profile)));
+      const info = describeLanProfile(profile);
+      item.append(node('strong', lanAiName(profile, index)), node('small', info.detail));
       if (host && room.phase === 'waiting') {
-        const select = options(profileOptions, profile, locked, 'ai-profile-' + index);
+        const select = options(lanProfiles, profile, locked, 'ai-profile-' + index);
         select.onchange = () => changeAi(room.ai.map((id, slot) => slot === index ? select.value : id));
         item.append(field('Профиль ИИ', select),
           button('Убрать ИИ', () => changeAi(room.ai.filter((_, slot) => slot !== index)),
@@ -203,8 +248,10 @@ export function installLanLobby(root) {
     const ownOptions = node('div');
     ownOptions.className = 'lan-fields';
     const role = options(Object.entries(roles), own.role, locked, 'own-role');
-    const profile = options(profileOptions, own.profile, locked, 'own-profile');
-    role.onchange = profile.onchange = () => send('room.select', {role: role.value, profile: profile.value});
+    const ownProfiles = host && tower() ? [...lanProfiles, ['tower', 'Пациент из Башни']] : lanProfiles;
+    const profile = options(ownProfiles, own.profile, locked, 'own-profile');
+    role.onchange = profile.onchange = () => send('room.select', {role: role.value, profile: profile.value,
+      profileSummary: profile.value === 'tower' && role.value === 'player' ? describeLanTower(tower()) : undefined});
     ownOptions.append(field('Ваша роль', role));
     if (own.role === 'player') ownOptions.append(field('Пациент', profile));
 
@@ -212,22 +259,33 @@ export function installLanLobby(root) {
     actions.className = 'paper-dialog-actions';
     if (room.phase === 'waiting') {
       if (host) {
-        const start = button('Старт', () => send('match.start'), {disabled: locked || !room.canStart});
+        const start = button('Старт', () => {
+          matchError = '';
+          unlock();
+          send('match.start');
+        }, {disabled: locked || !room.canStart});
         start.className = 'paper-dialog-primary';
         actions.append(start);
       } else if (own.role === 'player') {
         actions.append(button(own.ready ? 'Не готов' : 'Готов', () => send('room.ready', {ready: !own.ready}),
           {disabled: locked, key: 'ready'}));
       }
-    } else if (host) {
-      actions.append(button('Вернуться в лобби', () => send('room.return'), {disabled: !connected}));
+    } else if (host && room.phase !== 'running') {
+      actions.append(button('Вернуться в лобби', () => send('room.return', {matchId: room.matchId}), {disabled: !connected}));
     }
     actions.append(button(host ? 'Закрыть комнату' : 'Выйти из комнаты',
       () => send(host ? 'room.close' : 'room.leave'), {disabled: !connected}));
 
     const children = [title, configuration, invitation];
-    if (room.phase === 'preparing') children.push(node('p', 'Состав зафиксирован. Боевой раунд появится на следующем этапе LAN.'));
-    else {
+    if (room.phase === 'preparing') children.push(node('p', 'Хозяин загружает арену.'));
+    if (room.phase === 'running') children.push(node('p', 'Бой идёт на устройстве хозяина. Здесь появится итог.'));
+    if (room.phase === 'results') {
+      const result = room.result;
+      children.push(node('h4', result.reason === 'manual' ? 'Хозяин завершил бой' :
+        result.winnerName === null ? 'Ничья' : 'Победитель · ' + result.winnerName),
+        node('p', 'Длительность · ' + result.elapsedSec.toFixed(1) + ' с'));
+    }
+    if (room.phase === 'waiting') {
       if (host) {
         children.push(renderSettings(locked, humans));
         children.push(button('Добавить ИИ', () => changeAi([...room.ai, 'basic']),
@@ -279,12 +337,15 @@ export function installLanLobby(root) {
         return;
       case 'room.state':
         room = payload;
-        status.textContent = '';
+        status.textContent = room.phase === 'waiting' ? matchError : '';
+        reconcileHost();
         break;
       case 'room.left':
         room = null;
         memberId = null;
         status.textContent = payload.reason;
+        matchError = '';
+        reconcileHost();
         storeSession(null);
         client.send('rooms.list');
         break;
@@ -294,11 +355,14 @@ export function installLanLobby(root) {
           room = null;
           memberId = null;
           storeSession(null);
+          reconcileHost();
           client.send('rooms.list');
         }
         break;
       case 'disconnected':
         connected = false;
+        activeMatch?.runtime?.pause();
+        reconcileHost();
         status.textContent = 'Связь с локальным сервером потеряна. Пробуем подключиться снова…';
         break;
     }
@@ -320,15 +384,17 @@ export function installLanLobby(root) {
       client.send('room.create', {name: roomName.value, playerName: name.value, arenaId: arenaSelect.value});
   };
   refresh.onclick = () => client.send('rooms.list');
-  back.onclick = () => dialog.close();
-  dialog.oncancel = event => {
-    if (room && connected) event.preventDefault();
-  };
-  dialog.onclose = () => {
+  function closeLobby() {
     connected = false;
     room = null;
     memberId = null;
     client.close();
+    dialog.close();
+  }
+  back.onclick = closeLobby;
+  dialog.oncancel = event => {
+    event.preventDefault();
+    if (!room || !connected) closeLobby();
   };
 
   if (invite || session) open();

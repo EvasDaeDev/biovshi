@@ -5,7 +5,7 @@ import {ROBOT_COLORS} from '../utils/colors.js';
 import {statMultiplier,critChance} from '../garage/model.js';
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 export {patientLetter} from '../game/patients.js';
-export const patientName=(id,{short=false}={})=>`<span class="patient-name" style="color:${ROBOT_COLORS[id%4]??'#dff6ff'}">${ctx.mode==='tower'?'':short?'':'Пациент '}${escapeName(fighterLabel(id))}</span>`;
+export const patientName=(id,{short=false}={})=>`<span class="patient-name" style="color:${ROBOT_COLORS[id%4]??'#dff6ff'}">${ctx.mode==='tower'||ctx.mode==='multiplayer'||short?'':'Пациент '}${escapeName(fighterLabel(id))}</span>`;
 export const SKILLS=[{name:'Скорость',icon:uiIcon('speed')},{name:'Сила',icon:uiIcon('strength')},{name:'Маневренность',icon:uiIcon('mobility')}];
 const pointsFormat=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2});
 export const formatSkillPoints=value=>pointsFormat.format(value);

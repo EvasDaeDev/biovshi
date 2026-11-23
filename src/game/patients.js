@@ -2,9 +2,12 @@ import {ctx} from './state.js';
 import {BASE_STATS,patientGeneration,statMultiplier} from '../garage/model.js';
 import {prostheticStatSnapshot} from '../garage/prosthetics.js';
 import {towerMutationSnapshot} from '../tower/mutations.js';
-export const patientGarage=()=>ctx.mode==='tower'?ctx.towerGarage:ctx.betting?.garage;
+export const patientGarage=()=>ctx.mode==='multiplayer'?ctx.multiplayer.fighters:
+ ctx.mode==='tower'?ctx.towerGarage:ctx.betting?.garage;
+export const usesTowerLoadout=id=>ctx.mode==='tower'?id===0:
+ ctx.mode==='multiplayer'&&ctx.multiplayer.fighters[id]?.profileId==='tower';
 const combatStatsCache=new WeakMap();
-const snapshotFor=(patient,robot,id)=>ctx.mode==='tower'&&id===0
+const snapshotFor=(patient,robot,id)=>usesTowerLoadout(id)
  ?towerMutationSnapshot(patient,robot):prostheticStatSnapshot(patient,robot);
 export function patientCombatStats(id,robot=ctx.robots?.[id]){
  const patient=patientGarage()?.[id],base=patient?.stats??BASE_STATS;
@@ -28,7 +31,8 @@ export function patientMovementMultiplier(id,robot,index){
  const snapshot=patientCombatStats(id,robot);
  return snapshot.effects?.[index]??statMultiplier(snapshot.effective[index]);
 }
-export const patientSkin=id=>ctx.mode==='tower'&&id===0?ctx.towerRun.patient:id%4;
+export const patientSkin=id=>ctx.mode==='tower'&&id===0?ctx.towerRun.patient:
+ ctx.mode==='multiplayer'?(ctx.multiplayer.fighters[id]?.skin??id%4):id%4;
 // Spreadsheet-style letters keep large tower floors readable after Z.
 export function patientLetter(id){
  if(!Number.isSafeInteger(id)||id<0)return '—';
@@ -40,6 +44,7 @@ export function patientIdentity(id){
  const generation=ctx.mode==='tower'?patientGeneration({generation:ctx.betting?.towerEnemyGenerations?.[id]}):patientGeneration(patientGarage()?.[id]);
  return patientLetter(id)+(generation?`-${generation}`:'');
 }
-export const fighterLabel=id=>ctx.mode==='tower'&&id===0?ctx.betting.players[ctx.towerPlayer].name
+export const fighterLabel=id=>ctx.mode==='multiplayer'?(ctx.multiplayer.fighters[id]?.name??patientIdentity(id)):
+ ctx.mode==='tower'&&id===0?ctx.betting.players[ctx.towerPlayer].name
  :ctx.mode==='tower'&&ctx.robots?.[id]?.isBoss?`Босс · ${ctx.robots[id].bossName}`
  :ctx.robots?.[id]?.patientIdentity??patientIdentity(id);

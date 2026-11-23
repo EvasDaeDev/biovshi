@@ -145,7 +145,7 @@ export function advanceStartup(dt) {
     ctx.startup.phase = 'running';
     note('combat-start', {});
     ctx.button.disabled = ctx.resetButton.disabled = false;
-    ctx.speedButton.disabled=ctx.mode==='tower';
+    ctx.speedButton.disabled=ctx.mode==='tower'||ctx.mode==='multiplayer';
   }
   paint();
 }

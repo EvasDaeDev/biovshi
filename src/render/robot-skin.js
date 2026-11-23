@@ -1,5 +1,5 @@
 import {limbKey} from '../robot/body.js';
-import {patientSkin,patientGarage} from '../game/patients.js';
+import {patientSkin,patientGarage,usesTowerLoadout} from '../game/patients.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
 import { CONFIG } from '../config.js';
 import { ctx } from '../game/state.js';
@@ -114,16 +114,16 @@ export function createRobotSkin(robot) {
     'spine-3','spine-2','spine-1','spine-0','head'];
   // Extra anatomical cells must finish loading before removing the vector
   // silhouette. The normal actor renderer retains its previous fast path.
-  const guarded=Boolean(robot.skinParts)&&ctx.mode==='tower'&&robot.id===0;
+  const guarded=Boolean(robot.skinParts)&&usesTowerLoadout(robot.id);
   const gate=guarded?createSkinReadiness(keys,()=>activate(true),()=>activate(false)):null;
   if(guarded)robot.ensureFallback();
   for(const key of keys) {
     const android=robot.prosthetics.includes(key)&&ctx.textureAssets?.robotAndroid?.loaded!==false;
-    const replacement=ctx.mode==='tower'&&robot.id===0?
-      towerUpgradeAtlas(patientGarage()?.[0],key):null;
+    const replacement=usesTowerLoadout(robot.id)?
+      towerUpgradeAtlas(patientGarage()?.[robot.id],key):null;
     const spriteUrl=replacement?assetUrl(replacement):
       android?assetUrl(ASSETS.textures.robotAndroid):url;
-    const rarity=replacement?towerUpgradeRarity(patientGarage()?.[0],key):0;
+    const rarity=replacement?towerUpgradeRarity(patientGarage()?.[robot.id],key):0;
     const piece=createPiece(key,spriteUrl,/^(arm|leg)/.test(key)?limbs:body,parts[key],rarity);
     piece.image.parentNode.setAttribute('data-fallback-src',android?assetUrl(ASSETS.textures.robotAndroid):url);
     piece.image.addEventListener('load',()=>{

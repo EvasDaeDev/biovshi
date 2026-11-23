@@ -134,6 +134,11 @@ function rotateMenuDescription() {
 }
 
 export function openMenu(){
+  if(ctx.mode==='multiplayer'){
+    if(!ctx.combat.finished&&!confirm('Завершить сетевой бой и вернуться в лобби?'))return false;
+    ctx.multiplayer.onReturn();
+    return true;
+  }
   const active=['spawning','running'].includes(ctx.startup.phase)&&!ctx.combat.finished;
   if(active&&!confirm('Вернуться в главное меню? Текущий бой будет отменён.'))return false;
   if(active){

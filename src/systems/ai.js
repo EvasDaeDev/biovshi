@@ -145,7 +145,10 @@ export function tacticalProfile() {
 // player still use the unchanged randomized tactical profile.
 export function fighterTacticalProfile(r){
   const standard=tacticalProfile();
-  if(ctx.mode!=='tower'||r.id===0||r.isBoss)return standard;
+  if(r.isBoss)return standard;
+  if(ctx.mode==='multiplayer'&&ctx.multiplayer.fighters[r.id]?.control==='ai')
+    return towerTacticalProfile(standard,patientGarage()?.[r.id]?.profileId);
+  if(ctx.mode!=='tower'||r.id===0)return standard;
   return towerTacticalProfile(standard,patientGarage()?.[r.id]?.profileId);
 }
 function pursuitProgress(ai, now, foe, distance, quietSeconds) {

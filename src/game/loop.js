@@ -12,6 +12,17 @@ import { combatAttacks } from "../systems/combat.js";
 import { advanceStartup } from "./session.js";
 import { paint } from "../render/frame.js";
 import { cameraUpdate } from "../render/camera.js";
+function fighterControl(robot){
+  if(ctx.mode==='multiplayer')return ctx.multiplayer.fighters[robot.id].control;
+  if(ctx.mode==='tower'&&robot.id===0)return 'local';
+  return 'ai';
+}
+function manualIntent(robot){
+  const intent=fighterControl(robot)==='local'?controlledIntent(robot):{
+    manual:true,mode:'ожидает команды',speed:0,goal:{x:robot.x,y:robot.y},lookPoint:null,brake:true,
+  };
+  return robot.body?.intent?robot.body.intent(robot,intent):intent;
+}
 export function step(dt) {
   if(ctx.appInactive||ctx.tutorial?.active)return;
   if (ctx.startup.phase !== 'running' || ctx.orientationBlocked || ctx.settingsOpen) return;
@@ -57,14 +68,16 @@ export function step(dt) {
   }
   if (ctx.brainDebt >= .1 || !ctx.intents.length) {
     ctx.brainDebt = 0;
-    ctx.intents = ctx.robots.map(r=>ctx.mode==='tower'&&r.id===0?controlledIntent(r):r.body?.intent?r.body.intent(r):fighterIntent(r));
+    ctx.intents = ctx.robots.map(r=>fighterControl(r)==='ai'?(r.body?.intent?r.body.intent(r):fighterIntent(r)):null);
   }
-  if(ctx.mode==='tower')ctx.intents[0]=controlledIntent(ctx.robots[0]);
-  for (const r of ctx.robots) r.tick(dt, ctx.intents[r.id]);
+  for (const r of ctx.robots) {
+    if(fighterControl(r)!=='ai')ctx.intents[r.id]=manualIntent(r);
+    r.tick(dt, ctx.intents[r.id]);
+  }
   // Detect an actual locomotion deadlock (not just lack of a target).
   // Change navigation goal and flank, rather than leaving the AI in speed=0 mode.
   for (const r of ctx.robots) {
-    if (!r.visible || !r.mobile || ctx.mode==='tower'&&r.id===0) continue;
+    if (!r.visible || !r.mobile || fighterControl(r)!=='ai') continue;
     const id = r.id,
       old = ctx.combat.lastPositions[id];
     if (old) {
@@ -136,7 +149,7 @@ export function frame(now) {
   } else {
     ctx.debt = 0;
     ctx.paintAt = now;
-    if(ctx.mode==='tower')ctx.clearTowerInput?.();
+    ctx.clearTowerInput?.();
   }
   // Changing viewBox repaints the whole arena. Do it only with a new game frame.
   if (painted) {

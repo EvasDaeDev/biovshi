@@ -38,7 +38,7 @@ import { paint } from "../render/frame.js";
 import { bettingCancel, bettingInit } from "../betting/ui.js";
 import { resetFrameClock } from "./clock.js";
 import { frame } from "./loop.js";
-export function initializeGame({textures=null,arenaId='ward',session=null,entry='auto',tower=null}={}) {
+export function initializeGame({textures=null,arenaId='ward',session=null,entry='auto',tower=null,multiplayer=null}={}) {
   // Dispose against the old bindings, then start from the original scene markup.
   // Reusing mutated SVG definitions can bake the previous arena into new layers.
   const root=document.getElementById('robot-tag-hops-v22');
@@ -47,7 +47,8 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   const svg=root.querySelector('#tag7hop-field');
   if(root.__arenaSvgTemplate===undefined)root.__arenaSvgTemplate=svg.innerHTML;
   else svg.innerHTML=root.__arenaSvgTemplate;
-  ctx.mode=tower?'tower':'spectator';
+  ctx.mode=multiplayer?'multiplayer':tower?'tower':'spectator';
+  ctx.multiplayer=multiplayer;
   root.dataset.gameMode=ctx.mode;
   // Body creation must see this session's prostheses, including on a fresh load.
   ctx.betting=session;
@@ -157,7 +158,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.SCAN_SPEED = CONFIG.vision.scanSpeedDeg * Math.PI / 180;
   ctx.TRACK_SPEED = CONFIG.vision.trackingSpeedDeg * Math.PI / 180;
   ctx.TRACK_LIMIT = Math.PI / 2;
-  ctx.ROBOT_COUNT = tower?towerEnemyCount(tower)+1:4;
+  ctx.ROBOT_COUNT = multiplayer?.fighters.length??(tower?towerEnemyCount(tower)+1:4);
   ctx.obstacles = ctx.arenaDefinition.obstacles.map(b => ({
     ...b,
     points: obstacleVertices(b)
@@ -446,9 +447,9 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   ctx.button.onclick = togglePause;
   ctx.speedButton.onclick = toggleSpeed;
   // click также обрабатывает одиночный тап; отдельный touch-обработчик удвоил бы переключение.
-  ctx.svg.onclick = ctx.mode==='tower'?null:()=>{if(ctx.mode!=='tower'&&ctx.startup.phase==='running'){togglePause();}};
-  ctx.svg.style.setProperty('touch-action', ctx.mode==='tower'?'none':'manipulation');
-  ctx.svg.style.setProperty('cursor', ctx.mode==='tower'?'default':'pointer');
+  ctx.svg.onclick = ctx.mode==='spectator'?()=>{if(ctx.mode==='spectator'&&ctx.startup.phase==='running')togglePause();}:null;
+  ctx.svg.style.setProperty('touch-action', ctx.mode==='spectator'?'manipulation':'none');
+  ctx.svg.style.setProperty('cursor', ctx.mode==='spectator'?'pointer':'default');
   resetFrameClock();
   ctx.paintAt = -Infinity;
   initializeOrientation();
@@ -473,7 +474,12 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
     "'": '&#39;'
   })[c]);
   ctx.exhibition=false;ctx.afterSetup=entry==='setup'?'procedure':'betting';
-  if(tower){
+  if(multiplayer||entry==='lan-menu'){
+    delete ctx.root.dataset.betRound;
+    ctx.betting=multiplayer?null:session;
+    ctx.betHud.hidden=true;ctx.intro.hidden=true;ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;
+    ctx.startup.phase=multiplayer?'lan-ready':'menu';
+  }else if(tower){
     delete ctx.root.dataset.betRound;
     ctx.betting=session;ctx.betHud.hidden=true;ctx.intro.hidden=true;ctx.betOverlay.hidden=true;ctx.resultsPanel.hidden=true;ctx.startup.phase='tower-ready';
   }else if(entry==='auto'){

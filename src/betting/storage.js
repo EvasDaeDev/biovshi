@@ -30,7 +30,7 @@ export function bettingSave({animateBalances=true}={}) {
   }
   trackPlayerBalances(ctx.betting,ctx.root,{animate:animateBalances});
 }
-export function bettingLoad() {
+export function bettingLoad({persistMigrations=true}={}) {
   try {
     const s = JSON.parse(localStorage.getItem(ctx.BET_STORAGE));
     if (!s) return null;
@@ -70,7 +70,7 @@ export function bettingLoad() {
     const migrateNotes=s.players.some(p=>p.archiveNotes===undefined||p.unreadArchiveNoteIds===undefined);
     if(migrateNotes)s.players.forEach(initializePlayerArchive);
     if (betRefund(s)) ctx.betNotice = 'Предыдущий бой был прерван: ставки возвращены, пациенты восстановлены по сохранённым данным, джекпот сохранён.';
-    if(migrateArtifacts||migrateNotes){try{localStorage.setItem(ctx.BET_STORAGE,JSON.stringify(s));}catch{ctx.betStorageAvailable=false;}}
+    if(persistMigrations&&(migrateArtifacts||migrateNotes)){try{localStorage.setItem(ctx.BET_STORAGE,JSON.stringify(s));}catch{ctx.betStorageAvailable=false;}}
     return s;
   } catch {
     ctx.betNotice = 'Не удалось загрузить сохранённую сессию. Можно начать новую игру.';

@@ -60,6 +60,7 @@ export function initializeGameNavigation(){
   update(); // MutationObserver may not have processed the last screen change yet.
   if(ctx.settingsOpen||back.hidden||root.querySelector(protectedDialog))return;
   const current=resolve(),destination=previousFor(current);
+  if(ctx.mode==='multiplayer'){if(current==='results')ctx.multiplayer.onReturn();return;}
   // Keep any partially edited bet slip before opening a different screen.
   if(current==='betting'&&betting.querySelector('#bet-stakes-form')){
    ctx.betDraft={session:ctx.betting,round:ctx.betting.round,

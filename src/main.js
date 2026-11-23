@@ -30,15 +30,15 @@ let cancelled=false,initialLoading=null;
 // Only a full page load requires the explicit sound/simulation gesture.
 let launchAccepted=false;
 const musicOffsets=new Map();
-async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,enterFight=false,loading=null}){
+async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,multiplayer=null,enterFight=false,loading=null}){
  if(!textures){
    loading?.update('Загружаем текстуры пациентов и арены…',{done:0,total:6});
-   textures=await preloadTextures({keys:sceneTextureKeys(Boolean(tower))});
+   textures=await preloadTextures({keys:sceneTextureKeys(Boolean(tower||multiplayer))});
  }
  if(cancelled)return;
  loading?.update('Создаём пациентов…',{done:1,total:6});
  if(ctx.towerFloorBake)await ctx.towerFloorBake;
- initializeGame({textures,session,entry,arenaId,tower});
+ initializeGame({textures,session,entry,arenaId,tower,multiplayer});
  const audio=createAudio({musicOffsets});ctx.audio=audio;
  const dispose=ctx.root.__disposeTag;
  ctx.root.__disposeTag=()=>{audio.dispose();if(ctx.audio===audio)ctx.audio=null;dispose();};
@@ -46,7 +46,7 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,
  loading?.update('Рисуем портреты пациентов…',{done:2,total:6});
  await preparePatientPortraits();if(cancelled||ctx.disposed)return;
  loading?.update('Подготавливаем поверхность арены…',{done:3,total:6});
- paintTelemetry();await initializeFloor();
+ paintTelemetry();await initializeFloor({ephemeral:entry==='lan-menu'});
  loading?.update('Настраиваем графику арены…',{done:4,total:6});
  await initializePixiArena();
  if(cancelled||ctx.disposed)return;
@@ -55,11 +55,11 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,
  const gate=ctx.root.querySelector('#launch-overlay');
  const launchButton=ctx.root.querySelector('#launch-game');
  gate.hidden=launchAccepted;
- installTowerUI({enterFight});
+ if(!multiplayer)installTowerUI({enterFight});
  loading?.update('Подключаем управление и интерфейс…',{done:5,total:6});
  initializeModalFocus();
  initializeGameNavigation();
- initializeTutorial();
+ if(!multiplayer)initializeTutorial();
  launchButton.onclick=()=>{
    // The preloaded demo is reusable only while the opening menu still owns it.
    if(launchAccepted||ctx.startup.phase!=='demo')return ctx.startDemo();
@@ -101,7 +101,7 @@ async function boot(){
  ]);
  if(cancelled){loading.close();return;}
  loading.update('Текстуры загружены. Запускаем игру…',{done:0,total:6});
- ctx.BET_STORAGE=SESSION_STORAGE;const session=bettingLoad();
+ ctx.BET_STORAGE=SESSION_STORAGE;const session=bettingLoad({persistMigrations:!lanServed});
  ctx.switchArena=async arenaId=>{
    if(arenaId===ctx.arenaId)return;
    const session=ctx.betting,expanded=ctx.arenaExpanded;
@@ -118,8 +118,8 @@ async function boot(){
    root.inert=true;ctx.audio?.unlock();launchAccepted=true;ctx.keepArenaRenderer=true;
    let succeeded=false;
    try{await prepare({...options,loading:progress});succeeded=true;}
-   catch(error){progress.fail('Не удалось подготовить арену.');throw error;}
-   finally{ctx.keepArenaRenderer=false;root.inert=false;if(owned&&succeeded)progress.close();}
+   catch(error){if(!options.recoverable)progress.fail('Не удалось подготовить арену.');throw error;}
+   finally{ctx.keepArenaRenderer=false;root.inert=false;if(owned&&(succeeded||options.recoverable))progress.close();}
  };
  ctx.openMainMenu=openMenu;
  ctx.startTower=async player=>{
@@ -174,12 +174,32 @@ async function boot(){
  ctx.startTotalizator=()=>{bettingCancel();return transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId});};
  ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});setPaused(true);ctx.afterSetup='menu';bettingSetup();};
  ctx.startDemo=()=>transition({session:ctx.betting,entry:'auto',arenaId:ctx.betting?.arenaId??'ward'});
- await prepare({textures,session,arenaId:session?.arenaId??'ward',loading});
+ await prepare({textures,session,entry:lanServed?'lan-menu':'auto',arenaId:session?.arenaId??'ward',loading});
  if(cancelled||ctx.disposed){loading.close();return;}
  root.inert=false;loading.close();
  if(lanServed){
-   const {installLanLobby}=await import('./lan/lobby.js');
-   if(installLanLobby(root))return;
+   const [{installLanLobby},{createLanRoster},{installLanHostArena}]=await Promise.all([
+     import('./lan/lobby.js'),import('./lan/characters.js'),import('./lan/host-arena.js'),
+   ]);
+   let previousSession=null;
+   const towerFrom=s=>s?.towers?.[s.towerPlayerId??0];
+   if(installLanLobby(root,{
+     unlock:()=>ctx.audio?.unlock(),
+     tower:()=>towerFrom(previousSession??ctx.betting),
+     async prepareMatch(room,memberId,actions){
+       previousSession=ctx.betting;
+       const fighters=createLanRoster(room,memberId,towerFrom(previousSession));
+       const multiplayer={fighters,...actions};
+       await transition({entry:'lan',arenaId:room.arenaId,multiplayer,recoverable:true});
+       return installLanHostArena(multiplayer);
+     },
+     async leaveMatch(){
+       const previous=previousSession;
+       previousSession=null;
+       await transition({entry:'lan-menu',session:previous,arenaId:previous?.arenaId??'ward',recoverable:true});
+       openMenu();
+     },
+   }))return;
  }
  showStartupIntro(root);
 }

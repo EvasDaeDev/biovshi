@@ -1,5 +1,6 @@
 import {ctx} from '../game/state.js';
-import {patientName} from '../ui/patient.js';
+import {patientName,SKILLS,skillValue} from '../ui/patient.js';
+import {lanBossStats} from '../lan/characters.js';
 import {skinMatrix} from '../render/robot-skin.js';
 import {ik} from '../utils/math.js';
 import {limbKey} from '../robot/body.js';
@@ -24,7 +25,15 @@ export function paintBossCard(card,robot){
  if(card.card.dataset.boss!=='true'){
   card.card.dataset.boss='true';
   card.card.querySelector('.robot-card-name strong').innerHTML=patientName(robot.id,{short:true});
-  for(const node of [card.strength,card.speed,card.maneuver]){
+  if(ctx.mode==='multiplayer'){
+   const stats=lanBossStats();
+   for(const [index,node] of [card.speed,card.strength,card.maneuver].entries()){
+    const value=skillValue(stats,index),label=SKILLS[index].name+' · '+value;
+    node.textContent=value;
+    node.parentElement.dataset.hint=label;
+    node.parentElement.setAttribute('aria-label',label);
+   }
+  }else for(const node of [card.strength,card.speed,card.maneuver]){
    node.innerHTML='<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" style="fill:currentColor;image-rendering:pixelated"><path d="M4 1h8v1h2v2h1v6h-2v2h-2v3H5v-3H3v-2H1V4h1V2h2zM3 5v4h4V5zm6 0v4h4V5zM7 10v2h2v-2zM6 13v2h1v-2zm3 0v2h1v-2z" fill-rule="evenodd"/></svg>';
    const field=node.parentElement;field.dataset.hint='Параметры босса неизвестны';field.setAttribute('aria-label','Параметры босса неизвестны');field.classList.remove('is-prosthetic');
   }

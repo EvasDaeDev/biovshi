@@ -21,6 +21,7 @@ export function initializeSettings() {
   const closeButton=panel.querySelector('#arena-settings-close');
   const tutorialButton=panel.querySelector('#tutorial-start');
   const menuButton=panel.querySelector('#settings-main-menu');
+  tutorialButton.disabled=ctx.mode==='multiplayer';
   const creditsOpen=panel.querySelector('#arena-credits-open');
   const creditsView=panel.querySelector('#arena-credits-view');
   const creditsBack=panel.querySelector('#arena-credits-back');

@@ -1,6 +1,6 @@
 import {limbKey,limbRig,PATIENT_HEAD_OFFSET,standardLimbs} from '../robot/body.js';
 import {CONFIG} from '../config.js';
-import {patientSkin,patientGarage} from '../game/patients.js';
+import {patientSkin,patientGarage,usesTowerLoadout} from '../game/patients.js';
 import {ctx} from '../game/state.js';
 import {ASSETS,assetUrl} from '../assets/manifest.js';
 import {loadTextureImage} from '../assets/preload.js';
@@ -140,10 +140,10 @@ export async function preparePatientPortraits() {
 export function paintPatientPortrait(card,id,states,bones=PORTRAIT_BONES) {
   const prosthetics=ctx.robots[id]?.prosthetics??patientGarage()?.[id]?.prosthetics??[];
   const hat=patientGarage()?.[id]?.head?.hat;
-  const upgrades=ctx.mode==='tower'&&id===0?
-   new Map(bones.map(b=>[b.key,towerUpgradeAtlas(patientGarage()?.[0],b.key)])
+  const upgrades=usesTowerLoadout(id)?
+   new Map(bones.map(b=>[b.key,towerUpgradeAtlas(patientGarage()?.[id],b.key)])
     .filter(([,url])=>Boolean(url)).map(([part,url])=>[part,assetUrl(url)])):new Map();
-  const rarity=ctx.mode==='tower'&&id===0?new Map(bones.map(b=>[b.key,towerUpgradeRarity(patientGarage()?.[0],b.key)])):new Map();
+  const rarity=usesTowerLoadout(id)?new Map(bones.map(b=>[b.key,towerUpgradeRarity(patientGarage()?.[id],b.key)])):new Map();
   const key=states.map(s=>s.key+':'+s.state+':'+s.opacity).join('|')+'|'+prosthetics.join(',')+'|'+hat+'|'+card.portrait.width+'x'+card.portrait.height+'|'+bones.map(b=>b.key+':'+b.matrix.join(',')).join(';')+'|'+[...upgrades].map(([part,url])=>part+':'+url+':'+(rarity.get(part)??0)).join(',');
   if(card.portraitStateKey!==key){
     card.portraitStateKey=key;card.portraitStates=Object.fromEntries(states.map(s=>[s.key,s.state]));

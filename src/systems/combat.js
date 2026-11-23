@@ -1,6 +1,6 @@
 import {pendingStrikes,setPendingStrikes} from './strikes.js';
 import {settleTower} from '../tower/ui.js';
-import {patientCombatStats} from '../game/patients.js';
+import {patientCombatStats,usesTowerLoadout} from '../game/patients.js';
 import {towerAttackInterval} from '../tower/mutations.js';
 import {towerAllies} from '../tower/relations.js';
 import {critChance} from '../garage/model.js';
@@ -319,7 +319,7 @@ export function finishingPounceInProgress(robot,time) {
     || time<(robot?.combatRecoverUntil??0);
 }
 export function towerFighterCombatBonus(id){
- if(ctx.mode!=='tower'||id!==0)return {crit:0,cooldownMultiplier:1};
+ if(!usesTowerLoadout(id))return {crit:0,cooldownMultiplier:1};
  const {crit,cooldownMultiplier}=patientCombatStats(0).combat;
  return {crit,cooldownMultiplier};
 }
@@ -422,7 +422,7 @@ export function combatAttacks() {
     if(selected.length){
       if(ctx.agentAI[id])ctx.agentAI[id].lastAttackSource=selected[0].source.key;
       const timing=attacker.body?.combat??CONFIG.combat;
-      const towerCombat=ctx.mode==='tower'&&id===0?patientCombatStats(id,attacker).combat:null;
+      const towerCombat=usesTowerLoadout(id)?patientCombatStats(id,attacker).combat:null;
       const recoveryReduction=towerCombat?.recoveryReduction??0;
       const spine=attacker.spineCount/(attacker.spineSegmentTotal??4);
       setPendingStrikes(id,selected.map(best=>({
@@ -443,6 +443,7 @@ export function combatAttacks() {
   // Strike planning changes the animated pose after robot.tick() built capsules.
   // Keep rendering and subsequent collision queries on the same pose immediately.
   for(const robot of ctx.robots)robot.refreshCombatCapsules?.();
+  if(ctx.mode==='multiplayer'&&ctx.robots.length===1)return;
   const mobile = ctx.robots.filter(r => r.mobile && r.visible && r.segmentCount > 0);
   // A headbutt that wins the fight must still complete its backward hop
   // and landing recovery before switching to the victory animation.
@@ -453,7 +454,9 @@ export function combatAttacks() {
     ctx.combat.finishedAt = ctx.game.time;
     ctx.combat.pending.fill(null); // Замахи больше не рисуются после финального удара.
     if(mobile.length===1&&ctx.combat.winner!==null)mobile[0].celebrateVictory();
-    if(ctx.mode==='tower')settleTower(ctx.combat.winner);else bettingSettle(ctx.combat.winner);
+    if(ctx.mode==='multiplayer')ctx.multiplayer.onFinish({winner:ctx.combat.winner,elapsedSec:ctx.round.elapsedSec,reason:'combat'});
+    else if(ctx.mode==='tower')settleTower(ctx.combat.winner);
+    else bettingSettle(ctx.combat.winner);
     // A tower attempt ends in defeat when its player drops, even if AI remain.
     const outcome=ctx.mode==='tower'&&ctx.combat.winner!==0?'defeat':ctx.combat.winner===null?'draw':'victory';
     note('combat-end', {
