@@ -50,6 +50,18 @@ test('dark settings preserve volume, quality and controls without text loss',()=
  }finally{dom.window.close();}
 });
 
+test('battle results are a separate screen outside the arena hidden by the menu backdrop',()=>{
+ const dom=new JSDOM(html);
+ try{
+  const doc=dom.window.document;
+  const root=doc.getElementById('robot-tag-hops-v22');
+  const results=doc.getElementById('gladiator-results');
+  assert.equal(results.parentElement,root);
+  assert.ok(results.querySelector('#gladiator-results-again'));
+  assert.equal(results.hidden,true);
+ }finally{dom.window.close();}
+});
+
 test('small landscape touch devices keep global controls fixed and full combat telemetry visible',async()=>{
  const {viewportLayout}=await import('../src/ui/viewport.js');
  const small=viewportLayout(844,390,12);
