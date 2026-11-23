@@ -1,7 +1,7 @@
 import {randomBytes, randomUUID} from 'node:crypto';
 import {validBattleSnapshot, validBattleView, validImpact, validMovement, validRemains} from '../src/lan/battle-protocol.js';
 import {createFloorCache, validFloorPatch} from '../src/lan/floor-sync.js';
-import {lanAiName, validLanProfile} from '../src/lan/characters.js';
+import {copyLanTowerLoadout, describeLanTower, lanAiName, validLanProfile} from '../src/lan/characters.js';
 import {
   LAN_COUNTDOWN_MS, LAN_HOST_HEARTBEAT_MS, LAN_LOADING_MS, LAN_MAX_FIGHTERS, LAN_RECONNECT_MS, LAN_ROOM_CODE, isLanMessage, lanMessage,
 } from '../src/lan/protocol.js';
@@ -104,7 +104,10 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
 
   function publishRoom(room) {
     const payload = state(room);
-    for (const member of room.members.values()) send(member.socket, 'room.state', payload, room.id);
+    for (const member of room.members.values()) {
+      const preparingHost = member.id === room.hostId && room.phase === preparing;
+      send(member.socket, 'room.state', preparingHost ? {...payload, players: room.matchPlayers} : payload, room.id);
+    }
     publishList();
   }
 
@@ -121,7 +124,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
     room.phase = waiting;
     room.matchId = null;
     room.result = null;
-    room.matchFighters = room.view = room.snapshot = room.remains = room.floor = room.inputSeq = null;
+    room.matchPlayers = room.matchFighters = room.view = room.snapshot = room.remains = room.floor = room.inputSeq = null;
     resetReady(room);
   }
 
@@ -270,15 +273,17 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
   }
 
   function select(room, member, payload) {
-    requireRoom(ROLES.has(payload.role) && (validLanProfile(payload.profile) ||
-      (member.id === room.hostId && payload.profile === 'tower')),
+    requireRoom(ROLES.has(payload.role) && (validLanProfile(payload.profile) || payload.profile === 'tower'),
       'invalid_profile', 'Выберите доступную роль и профиль.');
     requireRoom(member.role === 'player' || payload.role === 'spectator' || fighterCount(room) < room.slots,
       'slots_full', 'Все места бойцов заняты.');
-    const profileSummary = payload.role === 'player' && payload.profile === 'tower'
-      ? name(payload.profileSummary, 180) : undefined;
-    if (member.role !== payload.role || member.profile !== payload.profile || member.profileSummary !== profileSummary) {
-      Object.assign(member, {role: payload.role, profile: payload.profile, profileSummary});
+    const usingTower = payload.role === 'player' && payload.profile === 'tower';
+    const tower = usingTower ? copyLanTowerLoadout(payload.tower) : undefined;
+    requireRoom(!usingTower || tower, 'invalid_patient', 'Не удалось загрузить пациента из Башни.');
+    if (member.role !== payload.role || member.profile !== payload.profile ||
+        JSON.stringify(member.tower) !== JSON.stringify(tower)) {
+      Object.assign(member, {role: payload.role, profile: payload.profile, tower,
+        profileSummary: tower ? describeLanTower(tower) : undefined});
       resetReady(room);
     }
   }
@@ -388,12 +393,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         requireRoom(room.phase === preparing, 'invalid_phase', 'Комната уже вышла из подготовки.');
         requireRoom(validBattleView(payload.view, room.matchFighters.length),
           'invalid_view', 'Некорректная конфигурация арены.');
-        const players = [...room.members.values()].filter(item => item.role === 'player')
-          .map(({id, name, role, profile}) => ({id, name, role, profile}));
-        const hasTower = players.some(player => player.profile === 'tower');
-        requireRoom(hasTower === Boolean(payload.view.tower),
-          'invalid_view', 'Данные пациента из Башни не совпадают с составом.');
-        room.view = {starts: payload.view.starts, tower: payload.view.tower, players, ai: room.ai};
+        room.view = {starts: payload.view.starts, players: room.matchPlayers, ai: room.ai};
         room.phase = loading;
         room.loaded.add(room.hostId);
         beginCountdown(room);
@@ -447,8 +447,10 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         room.matchId = randomUUID();
         room.inputSeq = new Map();
         room.floor = createFloorCache();
+        room.matchPlayers = [...room.members.values()].filter(member => member.role === 'player')
+          .map(({id, name, role, profile, tower}) => ({id, name, role, profile, tower}));
         room.matchFighters = [
-          ...[...room.members.values()].filter(member => member.role === 'player').map(member => member.name),
+          ...room.matchPlayers.map(player => player.name),
           ...room.ai.map(lanAiName),
         ];
         break;

@@ -69,15 +69,8 @@ export function installLanHostSync(match) {
   };
 
   const starts = ctx.robots.map(encodeFrame);
-  const towerFighter = match.fighters.find(fighter => fighter.profileId === 'tower');
-  let tower = null;
-  if (towerFighter) {
-    const {name, control, memberId, profileId, ...loadout} = towerFighter;
-    tower = loadout;
-  }
-
   return {
-    view: {starts, tower},
+    view: {starts},
     resetInputs() { inputs.clear(); },
     sendResume() {
       if (match.onResume(snapshot([]))) {

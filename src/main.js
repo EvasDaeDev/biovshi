@@ -190,13 +190,13 @@ async function boot(){
        if(replica){
          previousSession=ctx.betting;
          const {view}=room;
-         const fighters=createLanRoster({members:view.players,ai:view.ai},memberId,null,{towerLoadout:view.tower});
+         const fighters=createLanRoster({members:view.players,ai:view.ai},memberId);
          const multiplayer={fighters,replica:true,starts:view.starts,...actions};
          await transition({entry:'lan',arenaId:room.arenaId,multiplayer,recoverable:true});
          return installLanGuestArena(multiplayer);
        }
        previousSession=ctx.betting;
-       const fighters=createLanRoster(room,memberId,towerFrom(previousSession));
+       const fighters=createLanRoster({members:room.players,ai:room.ai},memberId);
        const multiplayer={fighters,...actions};
        await transition({entry:'lan',arenaId:room.arenaId,multiplayer,recoverable:true});
        return installLanHostArena(multiplayer);

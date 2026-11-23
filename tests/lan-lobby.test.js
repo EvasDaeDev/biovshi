@@ -6,6 +6,7 @@ import test from 'node:test';
 import WebSocket from 'ws';
 import {startLanServer} from '../scripts/lan-server.mjs';
 import {lanMessage} from '../src/lan/protocol.js';
+import {createLanRoster, lanTowerCopy} from '../src/lan/characters.js';
 import {createFloorCache, LAN_FLOOR_BATCH, queueFloorPatch} from '../src/lan/floor-sync.js';
 
 const build = 'test-build';
@@ -120,7 +121,7 @@ test('LAN synchronizes rooms, slot limits, roles and the host-only start', async
   assert.equal((await late.next('error')).payload.code, 'room_unavailable');
   guest.send('match.host-ready', {matchId}, roomId);
   assert.equal((await guest.next('error')).payload.code, 'host_only');
-  host.send('match.host-ready', {matchId, view: {starts: Array(3).fill([350, 350, 0]), tower: null}}, roomId);
+  host.send('match.host-ready', {matchId, view: {starts: Array(3).fill([350, 350, 0])}}, roomId);
   await guest.next('room.state', message => message.payload.phase === 'loading');
   guest.send('match.loaded', {matchId}, roomId);
   const loaded = await host.next('room.state', message => message.payload.phase === 'loading' && message.payload.loaded === 2);
@@ -150,8 +151,9 @@ test('LAN restores the same guest session before expiry and releases an expired 
   const origin = await setup(t, {reconnectMs: 1200});
   const [host, guest] = await Promise.all([connect(origin), connect(origin)]);
   const {roomId, payload: {memberId: hostId}} = await create(host);
-  host.send('room.select', {role: 'player', profile: 'tower', profileSummary: '5/3/4 очков'}, roomId);
-  await host.next('room.state', message => message.payload.members[0].profileSummary === '5/3/4 очков');
+  const tower = lanTowerCopy({patient: 0, stats: [5, 3, 4]});
+  host.send('room.select', {role: 'player', profile: 'tower', tower}, roomId);
+  await host.next('room.state', message => message.payload.members[0].profileSummary?.startsWith('5/3/4 очков'));
   host.send('room.select', {role: 'spectator', profile: 'basic'}, roomId);
   await host.next('room.state', message => message.payload.fighters === 0);
   host.send('match.start', {}, roomId);
@@ -192,6 +194,74 @@ function battleSnapshot(matchId, seq) {
     winner: null, robots: [robot, robot], impacts: []};
 }
 
+test('LAN freezes separate Tower patients for the host and guest, and restores them on reconnect', async t => {
+  const origin = await setup(t);
+  const [host, guest] = await Promise.all([connect(origin), connect(origin)]);
+  const {roomId, payload: {memberId: hostId}} = await create(host, 'columns');
+  guest.send('room.join', {playerName: 'Гость', role: 'player'}, roomId);
+  const {payload: {memberId: guestId, resumeToken}} = await guest.next('room.entered');
+  const hostTower = lanTowerCopy({patient: 1, stats: [4, 3, 3], prosthetics: ['arm-1-lower']});
+  const guestCopy = lanTowerCopy({patient: 2, stats: [5, 6, 5],
+    surgeries: [{procedure: 'graft_arm', site: 'arm--1-upper'}], graftProsthetics: ['arm--1-graft-lower'],
+    mutations: ['optic'], equippedMutations: ['m1'],
+    mutationInventory: [{id: 'm1', type: 'optic', rarity: 2, obtainedAt: 6}],
+    equippedSegments: ['seg1'],
+    segmentInventory: [{id: 'seg1', type: 'servo', site: 'arm-1-lower', rarity: 2},
+      {id: 'seg2', type: 'turbo', site: 'leg-1-lower', rarity: 1}],
+  });
+  assert.ok(hostTower);
+  assert.ok(guestCopy);
+  assert.deepEqual(guestCopy.segmentInventory.map(item => item.id), ['seg1']);
+  host.send('room.select', {role: 'player', profile: 'tower', tower: hostTower}, roomId);
+  guest.send('room.select', {role: 'player', profile: 'tower',
+    tower: {...guestCopy, equippedSegments: ['seg404']}}, roomId);
+  assert.equal((await guest.next('error')).payload.code, 'invalid_patient');
+  guest.send('room.select', {role: 'player', profile: 'tower', tower: {...guestCopy, balance: 100},
+    profileSummary: 'подставная сводка'}, roomId);
+  const waiting = (await host.next('room.state', ({payload}) =>
+    payload.members.every(member => member.profile === 'tower'))).payload;
+  assert.ok(waiting.members.every(member => !('tower' in member) && member.profileSummary.includes('очков')));
+
+  guest.send('room.ready', {ready: true}, roomId);
+  await host.next('room.state', ({payload}) => payload.canStart && payload.members[1]?.ready);
+  const revisedGuest = {...guestCopy, stats: [6, 5, 5]};
+  guest.send('room.select', {role: 'player', profile: 'tower', tower: revisedGuest}, roomId);
+  await host.next('room.state', ({payload}) => !payload.canStart &&
+    payload.members[1]?.profileSummary?.startsWith('6/5/5') && !payload.members[1].ready);
+  guest.send('room.ready', {ready: true}, roomId);
+  await host.next('room.state', ({payload}) => payload.canStart && payload.members[1]?.ready);
+  host.send('match.start', {}, roomId);
+  const {payload: {matchId, players}} = await host.next('room.state', ({payload}) => payload.phase === 'preparing');
+  assert.deepEqual(players.map(player => player.tower), [hostTower, revisedGuest]);
+  assert.equal((await guest.next('room.state', ({payload}) => payload.phase === 'preparing')).payload.players, undefined);
+  guest.send('room.select', {role: 'player', profile: 'basic'}, roomId);
+  assert.equal((await guest.next('error')).payload.code, 'room_locked');
+
+  host.send('match.host-ready', {matchId, view: {
+    starts: [[300, 350, 0], [500, 350, 3.14]], players: [],
+  }}, roomId);
+  const {payload: {view}} = await guest.next('room.state', ({payload}) => payload.phase === 'loading');
+  assert.deepEqual(view.players, players);
+  const hostRoster = createLanRoster({members: players, ai: []}, hostId);
+  const guestRoster = createLanRoster({members: view.players, ai: view.ai}, guestId);
+  assert.deepEqual(hostRoster.map(({control, ...fighter}) => fighter),
+    guestRoster.map(({control, ...fighter}) => fighter));
+  assert.deepEqual(guestRoster.map(fighter => fighter.control), ['remote', 'local']);
+  guestRoster[1].stats[0]--;
+  assert.deepEqual(view.players[1].tower.stats, revisedGuest.stats);
+
+  guest.send('match.loaded', {matchId}, roomId);
+  await guest.next('room.state', ({payload}) => payload.phase === 'running');
+  guest.socket.close();
+  await host.next('room.state', ({payload}) => payload.members.some(member => member.id === guestId && !member.connected));
+  const resumed = await connect(origin);
+  resumed.send('session.resume', {token: resumeToken}, roomId);
+  assert.equal((await resumed.next('room.entered')).payload.memberId, guestId);
+  assert.deepEqual((await resumed.next('room.state')).payload.view.players, players);
+  host.send('room.close', {}, roomId);
+  await resumed.next('room.left');
+});
+
 test('LAN relays only the bound guest input and host snapshots, including a reconnect keyframe', async t => {
   const origin = await setup(t);
   const [host, guest, viewer] = await Promise.all([connect(origin), connect(origin, build, false), connect(origin)]);
@@ -204,7 +274,7 @@ test('LAN relays only the bound guest input and host snapshots, including a reco
   await host.next('room.state', message => message.payload.canStart && message.payload.members.length === 3);
   host.send('match.start', {}, roomId);
   const {payload: {matchId}} = await host.next('room.state', message => message.payload.phase === 'preparing');
-  const view = {starts: [[300, 350, 0], [400, 350, 3.14]], tower: null};
+  const view = {starts: [[300, 350, 0], [400, 350, 3.14]]};
   host.send('match.host-ready', {matchId, view}, roomId);
   await viewer.next('room.state', message => message.payload.view?.players.length === 2);
   guest.send('match.loaded', {matchId}, roomId);
@@ -268,7 +338,7 @@ test('LAN cancels preparation when an invited viewer never loads the arena', asy
   await viewer.next('room.entered');
   host.send('match.start', {}, roomId);
   const {payload: {matchId}} = await viewer.next('room.state', message => message.payload.phase === 'preparing');
-  host.send('match.host-ready', {matchId, view: {starts: [[350, 350, 0]], tower: null}}, roomId);
+  host.send('match.host-ready', {matchId, view: {starts: [[350, 350, 0]]}}, roomId);
   await viewer.next('room.state', message => message.payload.phase === 'loading');
   const waiting = await viewer.next('room.state', message => message.payload.phase === 'waiting' && message.payload.notice);
   assert.match(waiting.payload.notice, /Истекло время загрузки/);
@@ -308,7 +378,7 @@ test('LAN suspends a disconnected host, requires a new keyframe to resume, and a
   await host.next('room.state', message => message.payload.canStart && message.payload.members.length === 2);
   host.send('match.start', {}, roomId);
   const {payload: {matchId}} = await guest.next('room.state', message => message.payload.phase === 'preparing');
-  host.send('match.host-ready', {matchId, view: {starts: [[300, 350, 0], [400, 350, 3.14]], tower: null}}, roomId);
+  host.send('match.host-ready', {matchId, view: {starts: [[300, 350, 0], [400, 350, 3.14]]}}, roomId);
   await guest.next('room.state', message => message.payload.phase === 'loading');
   guest.send('match.loaded', {matchId}, roomId);
   await guest.next('room.state', message => message.payload.phase === 'running');

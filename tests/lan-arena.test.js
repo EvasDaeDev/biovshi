@@ -7,7 +7,7 @@ import {frame, step} from '../src/game/loop.js';
 import {patientCombatStats} from '../src/game/patients.js';
 import {advanceStartup} from '../src/game/session.js';
 import {ctx} from '../src/game/state.js';
-import {createLanRoster} from '../src/lan/characters.js';
+import {createLanRoster, lanTowerCopy} from '../src/lan/characters.js';
 import {validBattleSnapshot, validBattleView, validRemains} from '../src/lan/battle-protocol.js';
 import {installLanGuestArena} from '../src/lan/guest-arena.js';
 import {createOilDrop} from '../src/render/effects.js';
@@ -17,7 +17,7 @@ import {installLanHostArena} from '../src/lan/host-arena.js';
 import {newTower} from '../src/tower/model.js';
 import {showResults} from '../src/ui/results.js';
 
-function launch(t, {members, ai = [], local, tower, arenaId = 'ward', network}) {
+function launch(t, {members, ai = [], local, arenaId = 'ward', network}) {
   const dom = new JSDOM(readFileSync(new URL('../index.html', import.meta.url), 'utf8'), {
     url: 'http://127.0.0.1:8080/', pretendToBeVisual: true,
   });
@@ -29,7 +29,7 @@ function launch(t, {members, ai = [], local, tower, arenaId = 'ward', network}) 
   globalThis.cancelAnimationFrame = () => {};
   const results = [];
   let returned = false;
-  const multiplayer = {fighters: createLanRoster({members, ai}, local, tower),
+  const multiplayer = {fighters: createLanRoster({members, ai}, local),
     onFinish: result => results.push(result), onReturn: () => { returned = true; }, ...network};
   initializeGame({multiplayer, arenaId});
   t.after(() => { ctx.root.__disposeTag(); win.close(); });
@@ -45,9 +45,11 @@ const fighter = (id, profile) => ({id, role: 'player', name: id, profile});
 test('LAN solo scenario keeps running and ends manually without writing economy or Tower data', t => {
   const tower = newTower(2);
   tower.stats = [6, 4, 5];
-  tower.surgeries = [{procedure: 'extend_spine'}];
+  tower.surgeries = [{procedure: 'extend_spine', site: 'spine-1'}];
   const source = structuredClone(tower);
-  const {results, win, returned} = launch(t, {members: [fighter('хозяин', 'tower')], local: 'хозяин', tower});
+  const {results, win, returned} = launch(t, {
+    members: [{...fighter('хозяин', 'tower'), tower: lanTowerCopy(tower)}], local: 'хозяин',
+  });
   localStorage.setItem(ctx.BET_STORAGE, JSON.stringify({sentinel: true}));
   assert.equal(ctx.robots[0].body.spineSegments, 5);
   assert.deepEqual(patientCombatStats(0).base, tower.stats);

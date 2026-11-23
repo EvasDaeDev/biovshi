@@ -1,4 +1,4 @@
-import {describeLanProfile, describeLanTower, lanAiName, lanProfiles} from './characters.js';
+import {describeLanProfile, lanTowerCopy, lanAiName, lanProfiles} from './characters.js';
 import {queueFloorPatch} from './floor-sync.js';
 import {createLanClient} from './client.js';
 import {LAN_RECONNECT_MS, LAN_ROOM_CODE} from './protocol.js';
@@ -294,10 +294,11 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
     const ownOptions = node('div');
     ownOptions.className = 'lan-fields';
     const role = options(Object.entries(roles), own.role, locked, 'own-role');
-    const ownProfiles = host && tower() ? [...lanProfiles, ['tower', 'Пациент из Башни']] : lanProfiles;
+    const towerRun = tower();
+    const ownProfiles = towerRun ? [...lanProfiles, ['tower', 'Пациент из Башни']] : lanProfiles;
     const profile = options(ownProfiles, own.profile, locked, 'own-profile');
     role.onchange = profile.onchange = () => send('room.select', {role: role.value, profile: profile.value,
-      profileSummary: profile.value === 'tower' && role.value === 'player' ? describeLanTower(tower()) : undefined});
+      tower: profile.value === 'tower' && role.value === 'player' ? lanTowerCopy(towerRun) : undefined});
     ownOptions.append(field('Ваша роль', role));
     if (own.role === 'player') ownOptions.append(field('Пациент', profile));
 

@@ -66,21 +66,6 @@ function validRemainsSkin(skin) {
     (skin.hat === null || [1, 2, 3, 4].includes(skin.hat));
 }
 
-function safeData(value, depth = 0) {
-  if (value === null || typeof value === 'boolean' || bounded(value)) return true;
-  if (typeof value === 'string') return value.length < 256;
-  if (!value || typeof value !== 'object' || depth >= 7) return false;
-  if (Array.isArray(value)) return value.length <= 128 && value.every(item => safeData(item, depth + 1));
-  const entries = Object.entries(value);
-  return entries.length <= 64 && entries.every(([key, item]) => /^[a-z0-9_-]{1,48}$/i.test(key) &&
-    !['prototype', '__proto__', 'constructor'].includes(key) && safeData(item, depth + 1));
-}
-
 export function validBattleView(view, count) {
-  return view && vectors(view.starts, 3, LAN_MAX_FIGHTERS) && view.starts.length === count &&
-    (view.tower === null || safeData(view.tower) && vector(view.tower.stats, 3) &&
-      Number.isInteger(view.tower.skin) && view.tower.skin >= 0 && view.tower.skin < 4 &&
-      Array.isArray(view.tower.prosthetics) && view.tower.prosthetics.every(part => typeof part === 'string') &&
-      Array.isArray(view.tower.surgeries) && view.tower.surgeries.every(op =>
-        op && typeof op.procedure === 'string' && (op.site === undefined || typeof op.site === 'string')));
+  return view && vectors(view.starts, 3, LAN_MAX_FIGHTERS) && view.starts.length === count;
 }
