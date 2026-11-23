@@ -1,4 +1,4 @@
-import { ctx } from "../game/state.js";
+import { arenaViewPlayerId, ctx } from "../game/state.js";
 export function attr(e, k, v) {
   v = String(v);
   let m = ctx.cache.get(e);
@@ -20,7 +20,8 @@ export function el(tag, attrs, parent) {
 export function raiseRobotActor(actor) {
   const layer=ctx.actorsG,top=layer.lastElementChild;
   // SVG order also drives Pixi. Keep the highest enemy immediately under the player.
-  const before=!actor.hasAttribute('data-tower-player')&&top?.hasAttribute('data-tower-player')?top:null;
+  const before=top?.hasAttribute('data-tower-player')&&!actor.hasAttribute('data-tower-player')&&
+    arenaViewPlayerId()>=0?top:null;
   if(actor.parentNode!==layer||actor.nextElementSibling!==before)layer.insertBefore(actor,before);
 }
 export function dot(e, p, r) {
