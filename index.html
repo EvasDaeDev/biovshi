@@ -92,9 +92,34 @@
       </div>
       <button id="launch-totalizator" type="button" hidden>ТОТАЛИЗАТОР</button>
       <button id="launch-setup" type="button">СОЗДАТЬ ИГРУ</button>
+      <button id="launch-lan" type="button" hidden>ИГРА ПО ЛОКАЛЬНОЙ СЕТИ</button>
       <p class="launch-footnote">СИГНАЛ ПОДАН · ПАЦИЕНТЫ ГОТОВЫ</p>
     </div>
   </div>
+  <dialog id="lan-lobby" class="paper-dialog" aria-labelledby="lan-title">
+    <h2 id="lan-title">Локальная сеть</h2>
+    <p id="lan-status" role="status"></p>
+    <section id="lan-browser" aria-label="Список и создание комнат">
+      <label><span>Ваше имя</span><input id="lan-player-name" maxlength="24" value="Пациент" required></label>
+      <div class="lan-row">
+        <h3>Комнаты</h3>
+        <button id="lan-refresh" type="button" disabled>Обновить</button>
+      </div>
+      <ul id="lan-rooms" class="lan-list"></ul>
+      <form id="lan-create">
+        <label><span>Название комнаты</span><input id="lan-room-name" maxlength="48" value="Арена" required></label>
+        <label><span>Арена</span><select id="lan-arena" required></select></label>
+        <button type="submit" disabled>Создать комнату</button>
+      </form>
+      <details>
+        <summary>Адрес LAN-сервера</summary>
+        <a id="lan-address"></a>
+        <img id="lan-server-qr" alt="QR-код адреса сервера" width="144" height="144" loading="lazy">
+      </details>
+    </section>
+    <section id="lan-room" aria-label="Комната" hidden></section>
+    <footer class="paper-dialog-actions"><button id="lan-back" type="button">Главное меню</button></footer>
+  </dialog>
   <dialog id="startup-intro" class="paper-dialog" aria-modal="true" aria-labelledby="startup-intro-title">
     <h2 id="startup-intro-title" tabindex="-1" autofocus>ЭКЦЕПРИ</h2>
     <p class="paper-dialog-subtitle"><em>Экспериментальный центр протезирования и имплантации</em></p>

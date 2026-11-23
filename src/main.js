@@ -79,7 +79,8 @@ async function boot(){
  const root=document.getElementById('robot-tag-hops-v22');
  const loading=createLoadingScreen({staged:true});initialLoading=loading;
  root.inert=true;
- const preparingOffline=typeof __OFFLINE_BUILD__!=='undefined'&&__OFFLINE_BUILD__;
+ const lanServed=document.querySelector('meta[name="biovshi-lan"][content="1"]')!==null;
+ const preparingOffline=!lanServed&&typeof __OFFLINE_BUILD__!=='undefined'&&__OFFLINE_BUILD__;
  if(preparingOffline)try{
    loading.update('Проверяем автономную копию игры…');
    await prepareOfflineGame(document.defaultView,{onProgress:(done,total)=>
@@ -176,6 +177,10 @@ async function boot(){
  await prepare({textures,session,arenaId:session?.arenaId??'ward',loading});
  if(cancelled||ctx.disposed){loading.close();return;}
  root.inert=false;loading.close();
+ if(lanServed){
+   const {installLanLobby}=await import('./lan/lobby.js');
+   if(installLanLobby(root))return;
+ }
  showStartupIntro(root);
 }
 boot().catch(error=>{

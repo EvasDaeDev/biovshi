@@ -1,0 +1,93 @@
+#robot-tag-hops-v22 #launch-lan:not([hidden]) {
+  min-height: 44px;
+  border: 1px solid #a69061;
+  color: #f0e2c2;
+  background: #2e3429;
+}
+
+#lan-lobby form, #lan-lobby .lan-row {
+  display: flex;
+  gap: .6rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+#lan-lobby label {
+  display: grid;
+  gap: .25rem;
+  min-width: 0;
+}
+
+#lan-lobby input, #lan-lobby select, #lan-lobby button {
+  min-height: 44px;
+}
+
+#lan-lobby button {
+  padding: .45rem .75rem;
+  border: 1px solid #a69061;
+  border-radius: 5px;
+  color: #f0e2c2;
+  background: #2e3429;
+  font: 700 1rem/1.2 var(--game-font-label);
+}
+
+#lan-lobby button:disabled {
+  opacity: .6;
+}
+
+#lan-lobby :is(button, input, select, summary, a):focus-visible {
+  outline: 2px solid #fff2b4;
+  outline-offset: 2px;
+}
+
+#lan-lobby input, #lan-lobby select {
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: .35rem;
+  color: inherit;
+  background: #161713;
+  border: 1px solid #838063;
+  font: inherit;
+}
+
+#lan-lobby input[type="number"] {
+  width: 6rem;
+}
+
+#lan-lobby .lan-list {
+  list-style: none;
+  padding: 0;
+}
+
+#lan-lobby .lan-list li {
+  border-top: 1px solid #6a654b;
+  padding: .65rem 0;
+  overflow-wrap: anywhere;
+}
+
+#lan-lobby small, #lan-lobby details img {
+  display: block;
+  margin: .4rem 0;
+}
+
+#lan-lobby .lan-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: .6rem;
+  margin: 1rem 0;
+}
+
+#lan-lobby details a {
+  color: inherit;
+  overflow-wrap: anywhere;
+}
+
+#lan-lobby .lan-invited {
+  border-top-color: #ddc79b;
+  color: #fff2b4;
+}
+
+#lan-lobby #lan-status:empty {
+  display: none;
+}

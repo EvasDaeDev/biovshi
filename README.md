@@ -29,6 +29,11 @@ npm run preview      # Проверка обычной сборки через �
 Если нужны обе сборки, выполняйте `build` перед `standalone`: обычная сборка очищает
 `dist/`. Готовые файлы появляются в `dist/` после выполнения команд.
 
+## Локальная сеть
+
+Тестовое LAN-лобби доступно в ветке `test/lan-multiplayer`.
+[Запуск сервера и проверка комнат](docs/LAN_MULTIPLAYER.md#запуск-тестового-лобби).
+
 ## Редакторы
 
 - [Редактор локаций](https://evasdaedev.github.io/biovshi/test/Editors/location-editor.html) открывается прямо в браузере. Стены, препятствия, пивоты и старты Башни сохраняются в JSON. Активный каталог находится в [`public/locations/active.json`](public/locations/active.json).
