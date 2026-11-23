@@ -1,3 +1,4 @@
+import {installLanHostSync} from './host-sync.js';
 import {note} from '../game/events.js';
 import {startSpawnSequence} from '../game/session.js';
 import {ctx} from '../game/state.js';
@@ -30,7 +31,9 @@ export function installLanHostArena(match) {
   ctx.resultsProcedure.onclick = null;
 
   if (localId >= 0) installTowerInput({localId});
+  const network = match.onSnapshot ? installLanHostSync(match) : null;
   return {
+    ...network,
     start() {
       controls.hidden = localId < 0;
       startSpawnSequence();

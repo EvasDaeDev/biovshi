@@ -178,15 +178,23 @@ async function boot(){
  if(cancelled||ctx.disposed){loading.close();return;}
  root.inert=false;loading.close();
  if(lanServed){
-   const [{installLanLobby},{createLanRoster},{installLanHostArena}]=await Promise.all([
-     import('./lan/lobby.js'),import('./lan/characters.js'),import('./lan/host-arena.js'),
+   const [{installLanLobby},{createLanRoster},{installLanHostArena},{installLanGuestArena}]=await Promise.all([
+     import('./lan/lobby.js'),import('./lan/characters.js'),import('./lan/host-arena.js'),import('./lan/guest-arena.js'),
    ]);
    let previousSession=null;
    const towerFrom=s=>s?.towers?.[s.towerPlayerId??0];
    if(installLanLobby(root,{
      unlock:()=>ctx.audio?.unlock(),
      tower:()=>towerFrom(previousSession??ctx.betting),
-     async prepareMatch(room,memberId,actions){
+     async prepareMatch(room,memberId,actions,{replica=false}={}){
+       if(replica){
+         previousSession=ctx.betting;
+         const {view}=room;
+         const fighters=createLanRoster({members:view.players,ai:view.ai},memberId,null,{towerLoadout:view.tower});
+         const multiplayer={fighters,replica:true,starts:view.starts,...actions};
+         await transition({entry:'lan',arenaId:room.arenaId,multiplayer,recoverable:true});
+         return installLanGuestArena(multiplayer);
+       }
        previousSession=ctx.betting;
        const fighters=createLanRoster(room,memberId,towerFrom(previousSession));
        const multiplayer={fighters,...actions};

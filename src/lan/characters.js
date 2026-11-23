@@ -61,13 +61,13 @@ export function describeLanTower(run) {
     (copy.surgeries?.length ?? 0) + ' операций';
 }
 
-export function createLanRoster(room, localMemberId, tower) {
+export function createLanRoster(room, localMemberId, tower, {towerLoadout=null}={}) {
   function fighter(name, profileId, memberId = null) {
     const control = memberId === null ? 'ai' : memberId === localMemberId ? 'local' : 'remote';
     const boss = bosses.get(profileId);
     if (boss) return {name, control, memberId, profileId, boss: boss.id, stats: [...BASE_STATS]};
     if (profileId === 'tower') {
-      const copy = lanTowerCopy(control === 'local' ? tower : null);
+      const copy = towerLoadout ?? lanTowerCopy(control === 'local' ? tower : null);
       if (!copy) throw Error('Локальный пациент из Башни недоступен.');
       return {name, control, memberId, profileId, ...copy};
     }

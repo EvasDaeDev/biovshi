@@ -7,7 +7,7 @@ import {ctx} from '../game/state.js';
 import {CONFIG} from '../config.js';
 // Extra clearance lets the rig turn at path corners without clipping its limbs.
 const navigationPadding=()=>70*ctx.scale;
-export function controlledIntent(robot){
+export function controlledIntent(robot,input=ctx.towerInput){
   if(ctx.mode!=='multiplayer'&&ctx.towerControlMode==='direction'){
     const goal=ctx.towerDestination;
     const moving=Boolean(goal&&Math.hypot(goal.x-robot.x,goal.y-robot.y)>8);
@@ -15,12 +15,12 @@ export function controlledIntent(robot){
     return {manual:true,navigate:true,navigationPadding:navigationPadding(),mode:moving?'идёт к точке':'удерживает позицию',
       speed:moving?CONFIG.movement.chaseSpeedCm:0,goal:goal?{x:goal.x,y:goal.y}:{x:robot.x,y:robot.y},lookPoint:null,brake:!moving};
   }
-  const {x=0,y=0}=ctx.towerInput??{},length=Math.hypot(x,y),moving=length>.12;
+  const {x=0,y=0}=input??{},length=Math.hypot(x,y),moving=length>.12;
   return {manual:true,mode:moving?'управляется':'ожидает команды',speed:moving?CONFIG.movement.chaseSpeedCm*Math.min(1,length):0,
     goal:moving?{x:robot.x+x/length*80,y:robot.y+y/length*80}:{x:robot.x,y:robot.y},
     lookPoint:null,brake:!moving};
 }
-export function installTowerInput({localId=null}={}){
+export function installTowerInput({localId=null,onRelease}={}){
   const lan=localId!==null;
   const direction=()=>!lan&&ctx.towerControlMode==='direction';
   const keys=new Set(),doc=ctx.root.ownerDocument,win=doc.defaultView;
@@ -35,6 +35,7 @@ export function installTowerInput({localId=null}={}){
   const reset=()=>{
     const captured=pointer;pointer=null;keys.clear();ctx.towerInput={x:0,y:0};knob.style.transform='translate(0px,0px)';
     if(captured!==null&&stick.hasPointerCapture?.(captured))stick.releasePointerCapture(captured);
+    onRelease?.();
   };
   const update=()=>{ctx.towerInput={x:Number(keys.has('ArrowRight')||keys.has('KeyD'))-Number(keys.has('ArrowLeft')||keys.has('KeyA')),y:Number(keys.has('ArrowDown')||keys.has('KeyS'))-Number(keys.has('ArrowUp')||keys.has('KeyW'))};};
   const key=e=>{

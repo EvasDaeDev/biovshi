@@ -1,3 +1,4 @@
+import {LAN_FRAME_BYTES} from '../src/lan/battle-protocol.js';
 import {createReadStream} from 'node:fs';
 import {readFile, realpath, stat} from 'node:fs/promises';
 import {createServer} from 'node:http';
@@ -58,7 +59,7 @@ export async function startLanServer({host = '127.0.0.1', port = 8080, dist = DI
     },
   });
 
-  const ws = new WebSocketServer({noServer: true, maxPayload: 4096, perMessageDeflate: false});
+  const ws = new WebSocketServer({noServer: true, maxPayload: LAN_FRAME_BYTES, perMessageDeflate: false});
   let rooms, origin, authorities;
   const server = createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');

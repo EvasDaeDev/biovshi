@@ -17,6 +17,7 @@ import { paintVictoryGlow } from './victory-glow.js';
 import { emitGameEvent } from '../game/event-bus.js';
 import { paintTorsoShadow } from './ground-spots.js';
 export function visualOffset(robotState) {
+  if (robotState.replicaPose) return robotState.replicaPose.offset;
   if (robotState.spawnVisual?.airborne) return robotState.spawnVisual;
   if (robotState.corpseInertia) return inertiaOffset(robotState.corpseInertia);
   if (robotState.scene && (robotState.mode === 'cover' || robotState.mode === 'eat') && robotState.attackVisual) {
@@ -33,6 +34,7 @@ export function visualOffset(robotState) {
   };
 }
 export function visualRotation(robotState) {
+  if(robotState.replicaPose)return robotState.replicaPose.turn*Math.PI/180;
   return robotState.leap?.kind === 'rebound' && !robotState.leap.launched && robotState.leap.turnDuration ? robotState.leap.turn * smooth((ctx.game.time - robotState.leap.started) / robotState.leap.turnDuration) : 0;
 }
 export function visiblePoint(robotState, p) {
@@ -46,7 +48,10 @@ export function visiblePoint(robotState, p) {
   };
 }
 export function bodyTransform(robotState, height) {
-  if (!height) return '';
+  return liftTransform(robotState, liftScale(robotState,height));
+}
+function liftScale(robotState,height) {
+  if (!height) return 1;
   let factor = 1 + height * .065;
   const center = robotState.visiblePoint({
     x: robotState.x,
@@ -59,7 +64,9 @@ export function bodyTransform(robotState, height) {
       if (delta > 0) factor = Math.min(factor, (n.c - n.nx * center.x - n.ny * center.y) / delta);
     }
   }
-  factor = Math.max(1, factor);
+  return Math.max(1, factor);
+}
+function liftTransform(robotState,factor){
   return factor > 1.0001 ? `translate(${robotState.x} ${robotState.y}) scale(${factor}) translate(${-robotState.x} ${-robotState.y})` : '';
 }
 // Проверяем всю дистанцию пары прыжков до отрыва от земли.
@@ -97,7 +104,10 @@ export function draw(robotState, dt) {
   attr(robotState.neck, 'd', path([robotState.local(robotState.chest, 3, 0), robotState.local(robotState.headFrame, 18 + robotState.headMotion, 0)]));
   robotState.headCenter = robotState.local(robotState.headFrame, 25 + robotState.headMotion, 0);
   robotState.mouthPoint = robotState.local(robotState.headFrame, 34 + robotState.headMotion, 0);
-  const strikePoses=pendingStrikes(robotState.id).map(p=>robotState.attackPose(p)).filter(Boolean);
+  const replica=robotState.replicaPose;
+  const head=replica?.headStrike;
+  const strikePoses=replica?(head.x||head.y?[{kind:'head',base:{x:0,y:0},tip:head}]:[]):
+    pendingStrikes(robotState.id).map(p=>robotState.attackPose(p)).filter(Boolean);
   const strikePose=strikePoses.find(p=>p.kind==='head');
   attr(robotState.neck, 'display', robotState.hasHead() ? '' : 'none');
   if (!skinned) {
@@ -138,11 +148,12 @@ export function draw(robotState, dt) {
     for(const node of [robotState.head,robotState.nose,robotState.mouth,...robotState.horns])
       attr(node,'transform',`${node.getAttribute('transform')||''} translate(${x} ${y}) scale(${factor}) translate(${-x} ${-y})`);
   }
-  for (const l of [...robotState.arms, ...robotState.legs]) {
+  for (const [index,l] of [...robotState.arms, ...robotState.legs].entries()) {
     const strikePose=strikePoses.find(p=>p.limb===l);
-    const a=robotState.origin(l),
-      solved=strikePose?{joint:strikePose.joint,end:strikePose.tip}
-        :ik(a,robotState.handEnd(l),...robotState.lengths(l),l.kind==='arm'?l.side:-l.side);
+    const a=replica?.limbs[index][0]??robotState.origin(l);
+    const solved=replica?{joint:replica.limbs[index][1],end:replica.limbs[index][2]}:
+      strikePose?{joint:strikePose.joint,end:strikePose.tip}:
+      ik(a,robotState.handEnd(l),...robotState.lengths(l),l.kind==='arm'?l.side:-l.side);
     const prefix = `${limbKey(l)}-`;
     if (!skinned || l.kind === 'extra') {
       attr(l.upper, 'd', robotState.healthy(prefix + 'upper') ? path([a, solved.joint]) : '');
@@ -154,6 +165,8 @@ export function draw(robotState, dt) {
     }
     l.pose = [a, solved.joint, solved.end];
   }
+  if(robotState.paintedReplica)robotState.paintedReplica.headStrike=strikePose?
+    {x:strikePose.tip.x-strikePose.base.x,y:strikePose.tip.y-strikePose.base.y}:{x:0,y:0};
   paintRobotSkin(robotState,strikePoses);
   paintHeadDecor(robotState,strikePose);
   paintTorsoShadow(robotState);
@@ -167,7 +180,8 @@ export function visionAngle(robotState) {
 }
 export function robotPaint(robotState) {
   if (!robotState.visible) return;
-  const spawn = robotState.spawnVisual = spawnAppearance(robotState);
+  const replica=robotState.replicaPose;
+  const spawn = robotState.spawnVisual = replica??spawnAppearance(robotState);
   attr(robotState.actor,'opacity',spawn.opacity.toFixed(3));
   attr(robotState.floor,'opacity',spawn.opacity.toFixed(3));
   const victorious = ctx.combat.finished && ctx.combat.winner === robotState.id;
@@ -178,13 +192,27 @@ export function robotPaint(robotState) {
   const elapsedHit = robotState.hitReaction ? ctx.game.time - robotState.hitReaction.start : Infinity;
   const hitPhase = clamp(elapsedHit / (robotState.hitReaction?.duration || 1), 0, 1);
   const recoilTilt = robotState.hitReaction && hitPhase < 1 ? robotState.hitReaction.twist * Math.sin(Math.PI * hitPhase) * (1 - hitPhase) : 0;
-  attr(robotState.actor, 'transform', `translate(${robotState.x + offset.x} ${robotState.y + offset.y}) rotate(${robotState.visualRotation() * 180 / Math.PI + recoilTilt}) scale(${spawn.scale}) translate(${-robotState.x} ${-robotState.y})`);
+  const turn=replica?.turn??(robotState.visualRotation()*180/Math.PI+recoilTilt);
+  attr(robotState.actor, 'transform', `translate(${robotState.x + offset.x} ${robotState.y + offset.y}) rotate(${turn}) scale(${spawn.scale}) translate(${-robotState.x} ${-robotState.y})`);
   const height = robotState.scene && robotState.mode === 'cover' ? robotState.coverHeightStart * (1 - smooth((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec)) + (1 - robotState.coverHeightStart) * .7 * Math.sin(Math.PI * clamp((ctx.game.time - robotState.scene.started) / CONFIG.attack.coverApproachSec, 0, 1)) : robotState.scene && robotState.mode === 'hops' ? robotState.hopHeight() : robotState.leap ? jumpHeight(robotState) : robotState.mode === 'startle' && robotState.scene ? Math.sin(Math.PI * clamp((ctx.game.time - robotState.scene.started) / CONFIG.attack.startleSec, 0, 1)) * .55 : 0;
-  attr(robotState.limbG, 'transform', robotState.bodyTransform(height));
-  attr(robotState.bodyG, 'transform', robotState.bodyTransform(height));
+  const lift=replica?.lift??liftScale(robotState,height);
+  const transform=liftTransform(robotState,lift);
+  attr(robotState.limbG, 'transform', transform);
+  attr(robotState.bodyG, 'transform', transform);
+  if(ctx.mode==='multiplayer'&&!replica)robotState.paintedReplica={offset,turn,scale:spawn.scale,opacity:spawn.opacity,lift};
   attr(robotState.actor, 'class', 'robot');
   robotState.draw(0);
   robotState.body?.paint?.(robotState);
+  if(!replica)paintRobotTrails(robotState,spawn);
+  const name = robotState.body?.arenaLabel??fighterLabel(robotState.id);
+  if (robotState.label.textContent !== name) robotState.label.textContent = name;
+  attr(robotState.label, 'x', robotState.spine[2].x);
+  attr(robotState.label, 'y', robotState.spine[2].y - 18);
+  attr(robotState.label, 'opacity', '1');
+  attr(robotState.label, 'display', ctx.mode==='tower'?'none':'');
+}
+
+function paintRobotTrails(robotState,spawn){
   if(robotState.corpsePuddlePending&&inertiaOffset(robotState.corpseInertia).settled) {
     const center=robotState.visiblePoint(robotState.api.center);
     createOilDrop(robotState.id,center.x,center.y,CONFIG.oil.settledPuddleRadiusCm);
@@ -221,11 +249,4 @@ export function robotPaint(robotState) {
     attr(robotState.trailNodes[i], 'fill', 'var(--night-trail)');
     if (sample) dot(robotState.trailNodes[i], sample);
   }
-  const name = robotState.body?.arenaLabel??fighterLabel(robotState.id);
-  if (robotState.label.textContent !== name) robotState.label.textContent = name;
-  attr(robotState.label, 'x', robotState.spine[2].x);
-  attr(robotState.label, 'y', robotState.spine[2].y - 18);
-  attr(robotState.label, 'opacity', '1');
-  attr(robotState.label, 'display', ctx.mode==='tower'?'none':'');
 }
-

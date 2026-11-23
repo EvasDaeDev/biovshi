@@ -1,3 +1,4 @@
+import {captureRobotReplica,applyRobotReplica} from './replica.js';
 import {limbKey,standardLimbs,bodySegments,bodyParents} from './body.js';
 import {patientSkin,patientGarage,patientIdentity} from '../game/patients.js';
 import { clamp } from '../utils/math.js';
@@ -591,6 +592,10 @@ function createRobot(id, start, body = {}) {
     beginScene: robotBeginScene.bind(null, robotState),
     endScene: robotEndScene.bind(null, robotState),
     cancelNavigation() { robotState.route=[];robotState.routeGoal=null;robotState.routeIndex=0;robotState.routePadding=70*robotState.scale;robotState.recoveryUntil=0;robotState.stuckFor=0;robotState.boundaryRecovery=false;robotState.boundaryBlockedFor=0; },
+    ...(ctx.mode==='multiplayer'?{
+      captureReplica:()=>captureRobotReplica(robotState),
+      applyReplica:view=>applyRobotReplica(robotState,view),
+    }:{}),
     tick: robotTick.bind(null, robotState),
     paint: robotPaint.bind(null, robotState)
   };

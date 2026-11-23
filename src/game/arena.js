@@ -1,3 +1,4 @@
+import {decodeFrame} from '../robot/replica.js';
 import {planNeutralRigSpawns} from '../boss/spawn.js';
 import {bossAnatomy} from '../boss/anatomy.js';
 import {BOSS_TEXTURES} from '../boss/assets.js';
@@ -166,7 +167,8 @@ export function chooseSpawnLayout() {
   }));
 }
 export function rebuildRobots() {
-  const layout = chooseSpawnLayout();
+  const replicaStarts=ctx.multiplayer?.replica?ctx.multiplayer.starts.map(decodeFrame):null;
+  const layout = replicaStarts??chooseSpawnLayout();
   for (const group of [ctx.conesG, ctx.flashlightsG, ctx.groundG, ctx.actorsG, ctx.lightHoles, ctx.lightGradients, ctx.trailsG]) group.replaceChildren();
   ctx.robots.length = 0;
   if(ctx.mode==='multiplayer'){
@@ -174,7 +176,7 @@ export function rebuildRobots() {
     const bodies=fighters.map(fighter=>fighter.boss?bossAnatomy(fighter.boss):
       fighter.profileId==='tower'?towerPatientAnatomy(fighter):null);
     const standard=standardNeutralBody();
-    const starts=planNeutralRigSpawns(layout,fighters.map((fighter,id)=>({
+    const starts=replicaStarts??planNeutralRigSpawns(layout,fighters.map((fighter,id)=>({
       body:bodies[id]??standard,scaleMultiplier:fighter.boss?BOSS_CONFIG.scale:1,
     })));
     if(!starts)throw Error('Не удалось разместить всех пациентов без пересечений арены');

@@ -3,16 +3,19 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {JSDOM} from 'jsdom';
 import {initializeGame} from '../src/game/initialize.js';
-import {step} from '../src/game/loop.js';
+import {frame, step} from '../src/game/loop.js';
 import {patientCombatStats} from '../src/game/patients.js';
 import {advanceStartup} from '../src/game/session.js';
 import {ctx} from '../src/game/state.js';
 import {createLanRoster} from '../src/lan/characters.js';
+import {validBattleSnapshot, validBattleView, validRemains} from '../src/lan/battle-protocol.js';
+import {installLanGuestArena} from '../src/lan/guest-arena.js';
+import {paint} from '../src/render/frame.js';
 import {installLanHostArena} from '../src/lan/host-arena.js';
 import {newTower} from '../src/tower/model.js';
 import {showResults} from '../src/ui/results.js';
 
-function launch(t, {members, ai = [], local, tower, arenaId = 'ward'}) {
+function launch(t, {members, ai = [], local, tower, arenaId = 'ward', network}) {
   const dom = new JSDOM(readFileSync(new URL('../index.html', import.meta.url), 'utf8'), {
     url: 'http://127.0.0.1:8080/', pretendToBeVisual: true,
   });
@@ -25,13 +28,14 @@ function launch(t, {members, ai = [], local, tower, arenaId = 'ward'}) {
   const results = [];
   let returned = false;
   const multiplayer = {fighters: createLanRoster({members, ai}, local, tower),
-    onFinish: result => results.push(result), onReturn: () => { returned = true; }};
+    onFinish: result => results.push(result), onReturn: () => { returned = true; }, ...network};
   initializeGame({multiplayer, arenaId});
   t.after(() => { ctx.root.__disposeTag(); win.close(); });
-  installLanHostArena(multiplayer).start();
+  const host = installLanHostArena(multiplayer);
+  host.start();
   advanceStartup(10);
   assert.equal(ctx.startup.phase, 'running');
-  return {results, win, returned: () => returned};
+  return {results, win, host, returned: () => returned};
 }
 
 const fighter = (id, profile) => ({id, role: 'player', name: id, profile});
@@ -96,4 +100,53 @@ test('LAN host can spectate a full arena of ten AI fighters', t => {
   step(1 / 60);
   assert.ok(ctx.intents.every(intent => !intent.manual));
   assert.equal(ctx.combat.finished, false);
+});
+
+test('LAN replica renders the host rig and detached segments without simulation', t => {
+  const snapshots = [], wreckage = [], inputs = [];
+  const members = [fighter('хозяин', 'boss-arms'), fighter('гость', 'fast')];
+  const {host, win} = launch(t, {
+    members, local: 'хозяин', arenaId: 'columns', network: {
+      onSnapshot: data => { snapshots.push(structuredClone(data)); return true; },
+      onRemains: data => { wreckage.push(data); return true; },
+    },
+  });
+  assert.equal(validBattleView(host.view, 2), true);
+  host.input({memberId: 'гость', x: 0, y: 1});
+  step(1 / 60);
+  assert.ok(ctx.intents[1].speed > 0);
+  host.resetInput('гость');
+  step(1 / 60);
+  assert.equal(ctx.intents[1].speed, 0);
+  const segment = 'arm-1-lower';
+  ctx.robots[1].damage(segment, 0, 100);
+  paint();
+  ctx.multiplayer.publishFrame(performance.now(), true);
+  const snapshot = snapshots.at(-1);
+  assert.equal(validBattleSnapshot(snapshot, 2), true);
+  assert.equal(validRemains(wreckage[0].parts, 2), true);
+  assert.equal(snapshot.impacts[0].segment, segment);
+
+  const replica = {fighters: createLanRoster({members, ai: []}, 'гость'), replica: true,
+    starts: host.view.starts, onInput: data => { inputs.push(data); return true; }, onReturn() {}};
+  initializeGame({multiplayer: replica, arenaId: 'columns'});
+  const guest = installLanGuestArena(replica);
+  guest.start();
+  for (const robot of ctx.robots) robot.tick = () => assert.fail('The replica must never tick a robot');
+  guest.remains(wreckage[0]);
+  guest.remains(wreckage[0]);
+  guest.snapshot(snapshot);
+  step(1 / 60);
+  assert.equal(ctx.game.time, 0);
+  frame(performance.now() + 120);
+  assert.equal(ctx.game.time, snapshot.time);
+  assert.ok(ctx.robots[1].missingSegments.includes(segment));
+  assert.equal(ctx.robots[0].x, snapshot.robots[0].root[0]);
+  assert.equal(ctx.robots[0].actor.getAttribute('data-boss-phase'), '1');
+  assert.equal(ctx.detachedG.children.length, 1);
+
+  win.document.dispatchEvent(new win.KeyboardEvent('keydown', {code: 'KeyD'}));
+  replica.sendInputFrame(performance.now() + 150);
+  win.dispatchEvent(new win.Event('blur'));
+  assert.deepEqual(inputs, [{x: 1, y: 0, seq: 0}, {x: 0, y: 0, seq: 1}]);
 });

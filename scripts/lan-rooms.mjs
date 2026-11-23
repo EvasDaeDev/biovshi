@@ -1,4 +1,5 @@
 import {randomBytes, randomUUID} from 'node:crypto';
+import {validBattleSnapshot, validBattleView, validImpact, validMovement, validRemains} from '../src/lan/battle-protocol.js';
 import {lanAiName, validLanProfile} from '../src/lan/characters.js';
 import {
   LAN_MAX_FIGHTERS, LAN_RECONNECT_MS, LAN_ROOM_CODE, isLanMessage, lanMessage,
@@ -51,7 +52,7 @@ function summary(room) {
 
 function state(room) {
   return {...summary(room), hostId: room.hostId, ai: room.ai, canStart: canStart(room),
-    matchId: room.matchId, result: room.result,
+    matchId: room.matchId, result: room.result, view: room.view ?? null,
     members: [...room.members.values()].map(({id, name, role, profile, profileSummary, ready, socket}) =>
       ({id, name, role, profile, profileSummary, ready, connected: Boolean(socket)}))};
 }
@@ -63,13 +64,25 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
   const catalog = Object.values(arenas).map(({id, name, capacity}) =>
     ({id, name, capacity: Math.min(capacity, LAN_MAX_FIGHTERS)}));
 
-  function send(socket, type, payload, roomId) {
+  function send(socket, type, payload, roomId, encoded) {
     if (socket?.readyState !== 1) return;
     if (socket.bufferedAmount > 256 * 1024) {
       socket.terminate();
       return;
     }
-    socket.send(JSON.stringify(lanMessage(type, payload, roomId)));
+    socket.send(encoded ?? JSON.stringify(lanMessage(type, payload, roomId)));
+  }
+
+  function relay(room, type, payload) {
+    const encoded = JSON.stringify(lanMessage(type, payload, room.id));
+    for (const member of room.members.values()) {
+      if (member.id !== room.hostId) send(member.socket, type, payload, room.id, encoded);
+    }
+  }
+
+  function clearInput(room, member) {
+    if (member.id === room.hostId || !room.inputSeq?.delete(member.id)) return;
+    send(room.members.get(room.hostId)?.socket, 'input.reset', {matchId: room.matchId, memberId: member.id}, room.id);
   }
 
   const list = () => ({rooms: [...rooms.values()].map(summary)});
@@ -95,7 +108,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
     room.phase = waiting;
     room.matchId = null;
     room.result = null;
-    room.matchFighters = null;
+    room.matchFighters = room.view = room.snapshot = room.remains = room.inputSeq = null;
     resetReady(room);
   }
 
@@ -104,6 +117,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
   }
 
   function removeMember(room, member, reason) {
+    clearInput(room, member);
     clearTimeout(member.timer);
     sessions.delete(member.token);
     room.members.delete(member.id);
@@ -182,6 +196,10 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
     clients.get(socket).member = member;
     send(socket, 'room.entered', {memberId: member.id, resumeToken: member.token}, room.id);
     publishRoom(room);
+    if (member.id !== room.hostId) {
+      if (room.remains) send(socket, 'state.remains', room.remains, room.id);
+      if (room.snapshot) send(socket, 'state.snapshot', {...room.snapshot, impacts: []}, room.id);
+    }
   }
 
   function configure(room, payload) {
@@ -249,6 +267,33 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
       }
       return publishRoom(room);
     }
+    if (type === 'input' || type === 'state.snapshot' || type === 'state.remains') {
+      if (payload.matchId !== room.matchId || !room.view) return;
+      if (type === 'input') {
+        requireRoom(!host && room.view.players.some(player => player.id === member.id),
+          'no_control', 'Нет управления бойцом.');
+        if (room.phase !== running || !validMovement(payload) ||
+            payload.seq <= (room.inputSeq.get(member.id) ?? -1)) return;
+        room.inputSeq.set(member.id, payload.seq);
+        const {matchId, seq, x, y} = payload;
+        send(room.members.get(room.hostId)?.socket, 'input', {matchId, memberId: member.id, seq, x, y}, room.id);
+      } else {
+        requireRoom(host, 'host_only', 'Только хозяин отправляет состояние боя.');
+        if (room.phase !== running && room.phase !== results) return;
+        const count = room.matchFighters.length;
+        if (type === 'state.snapshot') {
+          if (!validBattleSnapshot(payload, count) || payload.seq <= (room.snapshot?.seq ?? -1) ||
+              !Array.isArray(payload.impacts) || payload.impacts.length > 64 ||
+              !payload.impacts.every(event => validImpact(event, count))) return;
+          room.snapshot = payload;
+        } else {
+          if (!validRemains(payload.parts, count) || payload.parts.length <= (room.remains?.parts.length ?? 0)) return;
+          room.remains = payload;
+        }
+        relay(room, type, payload);
+      }
+      return;
+    }
     if (type === 'room.return') {
       if (room.phase === running || room.phase === results)
         requireRoom(payload.matchId === room.matchId, 'match_mismatch', 'Этот бой уже завершён.');
@@ -259,6 +304,14 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
       requireRoom(room.matchId && payload.matchId === room.matchId, 'match_mismatch', 'Этот бой уже завершён.');
       if (type === 'match.host-ready') {
         requireRoom(room.phase === preparing, 'invalid_phase', 'Комната уже вышла из подготовки.');
+        requireRoom(validBattleView(payload.view, room.matchFighters.length),
+          'invalid_view', 'Некорректная конфигурация арены.');
+        const players = [...room.members.values()].filter(item => item.role === 'player')
+          .map(({id, name, role, profile}) => ({id, name, role, profile}));
+        const hasTower = players.some(player => player.profile === 'tower');
+        requireRoom(hasTower === Boolean(payload.view.tower),
+          'invalid_view', 'Данные пациента из Башни не совпадают с составом.');
+        room.view = {starts: payload.view.starts, tower: payload.view.tower, players, ai: room.ai};
         room.phase = running;
       } else {
         requireRoom(room.phase === running, 'invalid_phase', 'Бой ещё не начался или уже завершён.');
@@ -300,6 +353,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         }
         room.phase = preparing;
         room.matchId = randomUUID();
+        room.inputSeq = new Map();
         room.matchFighters = [
           ...[...room.members.values()].filter(member => member.role === 'player').map(member => member.name),
           ...room.ai.map(lanAiName),
@@ -322,7 +376,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
           client.windowStart = now;
           client.messages = 0;
         }
-        if (++client.messages > 30) {
+        if (++client.messages > 50) {
           socket.close(1008, 'Too many messages');
           return;
         }
@@ -345,6 +399,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         const {member} = client;
         if (!member) return;
         const room = rooms.get(member.roomId);
+        clearInput(room, member);
         member.socket = null;
         member.resumeUntil = Date.now() + reconnectMs;
         if (member.role === 'player') member.ready = false;

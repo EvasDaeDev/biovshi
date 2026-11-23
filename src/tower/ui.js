@@ -135,7 +135,8 @@ function rotateMenuDescription() {
 
 export function openMenu(){
   if(ctx.mode==='multiplayer'){
-    if(!ctx.combat.finished&&!confirm('Завершить сетевой бой и вернуться в лобби?'))return false;
+    const prompt=ctx.multiplayer.replica?'Выйти из сетевого матча?':'Завершить сетевой бой и вернуться в лобби?';
+    if(!ctx.combat.finished&&!confirm(prompt))return false;
     ctx.multiplayer.onReturn();
     return true;
   }

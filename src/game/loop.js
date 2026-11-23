@@ -18,13 +18,12 @@ function fighterControl(robot){
   return 'ai';
 }
 function manualIntent(robot){
-  const intent=fighterControl(robot)==='local'?controlledIntent(robot):{
-    manual:true,mode:'ожидает команды',speed:0,goal:{x:robot.x,y:robot.y},lookPoint:null,brake:true,
-  };
+  const intent=fighterControl(robot)==='local'?controlledIntent(robot):
+    controlledIntent(robot,ctx.multiplayer.movement?.(robot.id)??null);
   return robot.body?.intent?robot.body.intent(robot,intent):intent;
 }
 export function step(dt) {
-  if(ctx.appInactive||ctx.tutorial?.active)return;
+  if(ctx.multiplayer?.replica||ctx.appInactive||ctx.tutorial?.active)return;
   if (ctx.startup.phase !== 'running' || ctx.orientationBlocked || ctx.settingsOpen) return;
   if (ctx.combat.finished) {
     // Отдельный таймер не нужен: продолжаем время анимации, не меняя итоговую длительность боя.
@@ -123,7 +122,17 @@ export function frame(now) {
   let painted = false;
   const resultsOpen=ctx.combat.finished&&!ctx.resultsPanel.hidden;
   ctx.cameraDebt = (ctx.cameraDebt || 0) + elapsed;
-  if (ctx.startup.phase !== 'running') {
+  if (ctx.multiplayer?.replica) {
+    ctx.multiplayer.sendInputFrame?.(now);
+    if (!document.hidden && !ctx.orientationBlocked && !ctx.settingsOpen && now - ctx.paintAt >= 1000 / 30 - .1) {
+      painted = ctx.multiplayer.paintReplica?.(now) ?? false;
+      if (painted) timed('animation',paint);
+      ctx.paintAt = now;
+    } else if(document.hidden||ctx.orientationBlocked||ctx.settingsOpen){
+      ctx.clearTowerInput?.();
+    }
+    ctx.debt = 0;
+  } else if (ctx.startup.phase !== 'running') {
     if (!ctx.appInactive && !document.hidden && !ctx.orientationBlocked && !ctx.settingsOpen && ctx.startup.phase === 'spawning') { advanceStartup(elapsed); painted = true; }
     ctx.debt = 0;
     ctx.paintAt = now;
@@ -158,6 +167,7 @@ export function frame(now) {
     timed('webgl',()=>ctx.arenaRenderer?.render());
     ctx.cameraDebt = 0;
   } else if (ctx.paused || ctx.settingsOpen || ctx.orientationBlocked || ctx.appInactive || document.hidden || resultsOpen) ctx.cameraDebt = 0;
+  ctx.multiplayer?.publishFrame?.(now,painted);
   ctx.streamerMascot?.sync(elapsed,now);
   ctx.audio?.sync();
   recordFrame(now, painted);

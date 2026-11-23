@@ -45,6 +45,7 @@ export function bossAction(robot){
  if(!robot.mobile)return robot.knockoutCause==='blood-loss'?'Уничтожен · потеря крови':'Уничтожен';
  const deadline=ctx.combat.unarmedDeadline[robot.id];
  if(deadline!==null)return `Теряет кровь · ${Math.ceil(Math.max(0,deadline-ctx.game.time))} с`;
+ if(ctx.multiplayer?.replica)return robot.state;
  const state=robot.body.behavior?.state;
  if(state)return `${state.phase===2?'ФАЗА II · ':''}${state.status||'Готов к бою'}`;
  return null;

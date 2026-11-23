@@ -119,7 +119,7 @@ test('LAN synchronizes rooms, slot limits, roles and the host-only start', async
   assert.equal((await late.next('error')).payload.code, 'room_unavailable');
   guest.send('match.host-ready', {matchId}, roomId);
   assert.equal((await guest.next('error')).payload.code, 'host_only');
-  host.send('match.host-ready', {matchId}, roomId);
+  host.send('match.host-ready', {matchId, view: {starts: Array(3).fill([350, 350, 0]), tower: null}}, roomId);
   await viewer.next('room.state', message => message.payload.phase === 'running');
   guest.send('match.finish', {matchId, winner: 1, elapsedSec: 5, reason: 'combat'}, roomId);
   assert.equal((await guest.next('error')).payload.code, 'host_only');
@@ -173,4 +173,56 @@ test('LAN restores the same guest session before expiry and releases an expired 
   await host.next('room.state', message => message.payload.canStart);
   host.send('match.start', {}, roomId);
   await host.next('room.state', message => message.payload.phase === 'preparing');
+});
+
+test('LAN relays only the bound guest input and host snapshots, including a reconnect keyframe', async t => {
+  const origin = await setup(t);
+  const [host, guest, viewer] = await Promise.all([connect(origin), connect(origin), connect(origin)]);
+  const {roomId} = await create(host);
+  guest.send('room.join', {playerName: 'Игрок', role: 'player'}, roomId);
+  const {payload: {memberId, resumeToken}} = await guest.next('room.entered');
+  viewer.send('room.join', {playerName: 'Наблюдатель', role: 'spectator'}, roomId);
+  await viewer.next('room.entered');
+  guest.send('room.ready', {ready: true}, roomId);
+  await host.next('room.state', message => message.payload.canStart && message.payload.members.length === 3);
+  host.send('match.start', {}, roomId);
+  const {payload: {matchId}} = await host.next('room.state', message => message.payload.phase === 'preparing');
+  const view = {starts: [[300, 350, 0], [400, 350, 3.14]], tower: null};
+  host.send('match.host-ready', {matchId, view}, roomId);
+  await viewer.next('room.state', message => message.payload.view?.players.length === 2);
+
+  viewer.send('input', {matchId, seq: 1, x: 1, y: 0}, roomId);
+  assert.equal((await viewer.next('error')).payload.code, 'no_control');
+  guest.send('input', {matchId, seq: 2, x: 1, y: 0, memberId: 'spoofed'}, roomId);
+  const input = await host.next('input');
+  assert.deepEqual(input.payload, {matchId, memberId, seq: 2, x: 1, y: 0});
+  guest.send('input', {matchId, seq: 1, x: 0, y: 1}, roomId);
+  guest.send('input', {matchId, seq: 3, x: 2, y: 1}, roomId);
+  guest.send('input', {matchId, seq: 4, x: 0, y: 0}, roomId);
+  assert.equal((await host.next('input')).payload.seq, 4);
+
+  const robot = {
+    root: [300, 350, 0], frames: Array(8).fill([300, 350, 0]), tail: [], limbs: [],
+    appearance: [0, 0, 0, 1, 1, 1, 0, 0, 0], cue: [], bossPhase: null, health: [6, 4], crit: [],
+    trauma: 0, cause: null, visible: true, unconscious: false, action: 'патруль',
+  };
+  const snapshot = {matchId, seq: 7, time: 2, elapsed: 2, started: true, finished: false,
+    winner: null, robots: [robot, robot], impacts: []};
+  guest.send('state.snapshot', snapshot, roomId);
+  assert.equal((await guest.next('error')).payload.code, 'host_only');
+  const remains = {matchId, parts: [{id: 0, cause: 'head', motion: [1, 0, 0, 0], pieces: [{bone: [3, 4, 5], skin: null}]}]};
+  host.send('state.remains', remains, roomId);
+  host.send('state.snapshot', snapshot, roomId);
+  assert.deepEqual((await viewer.next('state.remains')).payload, remains);
+  assert.deepEqual((await viewer.next('state.snapshot')).payload, snapshot);
+
+  guest.socket.terminate();
+  assert.equal((await host.next('input.reset')).payload.memberId, memberId);
+  const resumed = await connect(origin);
+  resumed.send('session.resume', {token: resumeToken}, roomId);
+  assert.equal((await resumed.next('room.entered')).payload.memberId, memberId);
+  assert.deepEqual((await resumed.next('state.remains')).payload, remains);
+  assert.deepEqual((await resumed.next('state.snapshot')).payload, snapshot);
+  resumed.send('input', {matchId, seq: 0, x: 0, y: 1}, roomId);
+  assert.equal((await host.next('input')).payload.seq, 0);
 });

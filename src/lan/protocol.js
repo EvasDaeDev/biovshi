@@ -1,4 +1,4 @@
-export const LAN_VERSION = 1;
+export const LAN_VERSION = 2;
 export const LAN_RECONNECT_MS = 10_000;
 export const LAN_MAX_FIGHTERS = 10;
 export const LAN_WS_PATH = '/lan/ws';

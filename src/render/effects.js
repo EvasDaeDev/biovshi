@@ -159,6 +159,7 @@ export function paintOil() {
 export function paintDetachedAnatomy() {
   // Remains on the arena for the whole round. World-space snapshot; no collisions.
   for (const part of ctx.combat.detached) {
+    if(ctx.multiplayer?.replica&&ctx.game.time<part.inertia.started)continue;
     if(!part.node){
       const group = part.node = el('g', {
         'data-owner': String(part.id),

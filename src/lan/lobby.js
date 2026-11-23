@@ -63,8 +63,10 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
   let rooms = [], arenas = [], origin = location.origin, connected = false, room = null, memberId = null;
   let session = readSession();
   let activeMatch = null;
-  let hostWork = Promise.resolve();
+  let pendingSnapshot, pendingRemains;
+  let matchWork = Promise.resolve();
   let matchError = '';
+  let lobbyActive = false;
 
   const client = createLanClient(onMessage);
   const arenaName = id => arenas.find(arena => arena.id === id)?.name ?? id;
@@ -77,43 +79,63 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
     } catch { /* Reconnection still works while this tab stays open. */ }
   }
 
-  function reconcileHost() {
-    hostWork = hostWork.then(async () => {
-      const desired = connected && room?.hostId === memberId ? room.matchId : null;
-      if (activeMatch && activeMatch.id !== desired) {
+  function reconcileMatch() {
+    matchWork = matchWork.then(async () => {
+      const belongs = Boolean(room?.matchId && (connected || activeMatch?.replica));
+      if (activeMatch && (!belongs || activeMatch.id !== room.matchId)) {
         activeMatch = null;
-        if (!dialog.open) dialog.showModal();
+        if (lobbyActive && !dialog.open) dialog.showModal();
         await leaveMatch();
       }
-      if (!room || !connected || room.hostId !== memberId) return;
-      if (room.phase === 'preparing' && !activeMatch) {
-        const matchId = room.matchId;
-        const roomId = room.id;
-        const current = () => connected && room?.matchId === matchId && room.hostId === memberId;
-        const transmit = (type, payload = {}) => {
-          if (current()) client.send(type, {...payload, matchId}, roomId);
-        };
-        const match = {id: matchId, runtime: null, started: false};
+      if (!room || !connected) return;
+      const host = room.hostId === memberId;
+      const preparingHost = host && room.phase === 'preparing';
+      const runningGuest = !host && room.phase === 'running' && room.view;
+      if (!activeMatch && (preparingHost || runningGuest)) {
+        const {matchId, id: roomId} = room;
+        const current = () => connected && room?.matchId === matchId;
+        const transmit = (type, payload = {}) => current() && client.send(type, {...payload, matchId}, roomId);
+        const match = {id: matchId, replica: !host, runtime: null, started: false};
         activeMatch = match;
         try {
-          match.runtime = await prepareMatch(room, memberId, {
+          match.runtime = await prepareMatch(room, memberId, host ? {
             onFinish: result => transmit('match.finish', result),
+            onSnapshot: snapshot => transmit('state.snapshot', snapshot),
+            onRemains: remains => transmit('state.remains', remains),
             onReturn: () => transmit('room.return'),
-          });
-          transmit('match.host-ready');
+          } : {
+            onInput: input => transmit('input', input),
+            onReturn: () => transmit('room.leave'),
+          }, {replica: match.replica});
+          if (host) transmit('match.host-ready', {view: match.runtime.view});
+          else {
+            if (pendingSnapshot?.matchId === matchId) match.runtime.snapshot(pendingSnapshot);
+            if (pendingRemains?.matchId === matchId) match.runtime.remains(pendingRemains);
+          }
         } catch (error) {
           console.error('LAN arena:', error);
           matchError = /Не удалось разместить|Башни недоступен/.test(error.message)
             ? error.message : 'Не удалось подготовить арену.';
           status.textContent = matchError;
-          transmit('room.return');
+          if (host) transmit('room.return');
         }
       }
-      if (room?.phase === 'running' && activeMatch?.id === room.matchId &&
-          activeMatch.runtime && !activeMatch.started) {
-        activeMatch.started = true;
-        dialog.close();
-        activeMatch.runtime.start();
+      if (!connected || !room || activeMatch?.id !== room.matchId || !activeMatch.runtime) return;
+      if (room.phase === 'running') {
+        if (!activeMatch.started) {
+          activeMatch.started = true;
+          activeMatch.runtime.start();
+        } else if (activeMatch.replica) activeMatch.runtime.resume();
+        if (dialog.open) dialog.close();
+      }
+      if (room.phase === 'results' && activeMatch.replica && !activeMatch.results) {
+        const resultMatch = activeMatch;
+        resultMatch.results = true;
+        activeMatch.runtime.finish();
+        // Let the buffered final impact play before covering the arena.
+        setTimeout(() => {
+          if (activeMatch === resultMatch && room?.phase === 'results' && !dialog.open) dialog.showModal();
+        }, 350);
       }
     }).catch(error => {
       console.error('LAN scene transition:', error);
@@ -278,7 +300,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
 
     const children = [title, configuration, invitation];
     if (room.phase === 'preparing') children.push(node('p', 'Хозяин загружает арену.'));
-    if (room.phase === 'running') children.push(node('p', 'Бой идёт на устройстве хозяина. Здесь появится итог.'));
+    if (room.phase === 'running') children.push(node('p', 'Подключаемся к арене…'));
     if (room.phase === 'results') {
       const result = room.result;
       children.push(node('h4', result.reason === 'manual' ? 'Хозяин завершил бой' :
@@ -336,16 +358,36 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
         storeSession({roomId, token: payload.resumeToken});
         return;
       case 'room.state':
+        if (room?.matchId !== payload.matchId) {
+          pendingSnapshot = pendingRemains = undefined;
+          matchError = payload.phase === 'waiting' ? matchError : '';
+        }
         room = payload;
-        status.textContent = room.phase === 'waiting' ? matchError : '';
-        reconcileHost();
+        status.textContent = matchError;
+        reconcileMatch();
         break;
+      case 'state.snapshot':
+        if (roomId !== room?.id || payload.matchId !== room.matchId) return;
+        pendingSnapshot = payload;
+        activeMatch?.runtime?.snapshot?.(payload);
+        return;
+      case 'state.remains':
+        if (roomId !== room?.id || payload.matchId !== room.matchId) return;
+        pendingRemains = payload;
+        activeMatch?.runtime?.remains?.(payload);
+        return;
+      case 'input':
+      case 'input.reset':
+        if (roomId !== room?.id || payload.matchId !== activeMatch?.id) return;
+        if (type === 'input') activeMatch.runtime?.input(payload);
+        else activeMatch.runtime?.resetInput(payload.memberId);
+        return;
       case 'room.left':
         room = null;
         memberId = null;
         status.textContent = payload.reason;
         matchError = '';
-        reconcileHost();
+        reconcileMatch();
         storeSession(null);
         client.send('rooms.list');
         break;
@@ -355,14 +397,15 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
           room = null;
           memberId = null;
           storeSession(null);
-          reconcileHost();
+          reconcileMatch();
           client.send('rooms.list');
         }
         break;
       case 'disconnected':
         connected = false;
         activeMatch?.runtime?.pause();
-        reconcileHost();
+        if (activeMatch?.replica && !dialog.open) dialog.showModal();
+        reconcileMatch();
         status.textContent = 'Связь с локальным сервером потеряна. Пробуем подключиться снова…';
         break;
     }
@@ -371,6 +414,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
 
   function open() {
     if (dialog.open) return;
+    lobbyActive = true;
     status.textContent = 'Подключаемся к локальному серверу…';
     dialog.showModal();
     client.open();
@@ -385,10 +429,12 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
   };
   refresh.onclick = () => client.send('rooms.list');
   function closeLobby() {
+    lobbyActive = false;
     connected = false;
     room = null;
     memberId = null;
     client.close();
+    reconcileMatch();
     dialog.close();
   }
   back.onclick = closeLobby;
