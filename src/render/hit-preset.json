@@ -1,0 +1,16 @@
+{
+  "hitParticles": 8,
+  "severParticles": 14,
+  "hitLifeSec": 0.38,
+  "hitFlashSec": 0.09,
+  "hitSpread": 1.6,
+  "hitSpeed": 1,
+  "hitGravity": 180,
+  "hitLift": 35,
+  "hitParticleSize": 1,
+  "hitFlashSize": 1,
+  "hitFlashColor": "#d9b47b",
+  "hitFlashCore": "#fff3cf",
+  "hitSparkColor": "#dfb782",
+  "hitSprayColors": ["#b51519", "#7b090d", "#de3031"]
+}

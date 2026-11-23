@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bio_editor · Локации</title>
+  <link rel="stylesheet" href="../Editors/location-editor.css">
+  <link rel="stylesheet" href="./editor.css">
+  <script type="module" src="../Editors/location-editor.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div><a class="brand" href="./">bio_editor</a><h1>Редактор локаций</h1></div>
+    <div class="actions">
+      <button id="new-map" type="button">Новая</button>
+      <button id="import" type="button">Импорт JSON</button>
+      <input id="file" type="file" accept=".json,application/json" hidden>
+      <button class="primary" id="export" type="button">Экспорт JSON</button>
+    </div>
+  </header>
+  <nav class="editor-navigation" aria-label="Разделы bio_editor">
+    <a href="./" aria-current="page">Локации</a>
+    <a href="./patients.html">Пациенты</a>
+    <a href="./effects.html">Боевые эффекты</a>
+  </nav>
+  <main>
+    <section class="workbench" aria-label="Чертёж локации">
+      <div class="toolbar">
+        <div class="tools" role="group" aria-label="Инструменты">
+          <button data-tool="select" aria-pressed="true" type="button">Выбор</button>
+          <button data-tool="wall" aria-pressed="false" type="button">Стена</button>
+          <button data-tool="obstacle" aria-pressed="false" type="button">Прямоугольник</button>
+          <button data-tool="circle" aria-pressed="false" type="button">Круг</button>
+          <button data-tool="polygon" aria-pressed="false" type="button">Контур</button>
+          <button id="close-polygon" type="button" hidden>Замкнуть</button>
+        </div>
+        <div class="mirrors" role="group" aria-label="Симметрия относительно центра">
+          <label><input id="mirror-x" type="checkbox"> Симметрия X</label>
+          <label><input id="mirror-y" type="checkbox"> Симметрия Y</label>
+        </div>
+      </div>
+      <div class="viewport">
+        <svg id="blueprint" xmlns="http://www.w3.org/2000/svg" role="img" tabindex="0" aria-label="План арены в сантиметрах">
+          <defs>
+            <pattern id="small-grid" width="10" height="10" patternUnits="userSpaceOnUse">
+              <path d="M 10 0 H 0 V 10" class="small-grid"/>
+            </pattern>
+            <pattern id="large-grid" width="50" height="50" patternUnits="userSpaceOnUse">
+              <rect width="50" height="50" fill="url(#small-grid)"/>
+              <path d="M 50 0 H 0 V 50" class="large-grid"/>
+            </pattern>
+          </defs>
+          <g id="drawing"></g>
+        </svg>
+      </div>
+      <footer class="coordinates">
+        <span id="tool-help"></span>
+        <output id="cursor">X — · Y —</output>
+      </footer>
+    </section>
+    <aside>
+      <section class="panel">
+        <h2>Локация</h2>
+        <label>Открыть из списка игры
+          <select id="catalog"><option value="">Выберите локацию</option></select>
+        </label>
+        <label>Название<input id="name" maxlength="80"></label>
+        <label>Имя файла<input id="location-id" maxlength="40" spellcheck="false" title="Строчная латиница, цифры, дефис и подчёркивание"></label>
+        <div class="fields">
+          <label>Ширина, см<input id="width" type="number" min="300" max="1600" step="1"></label>
+          <label>Высота, см<input id="height" type="number" min="300" max="1600" step="1"></label>
+          <label>Пациентов<input id="capacity" type="number" min="2" max="10" step="1"></label>
+          <label>Срез углов, см<input id="cut" type="number" min="0" step="any"></label>
+          <label>Шаг привязки, см
+            <select id="snap"><option>1</option><option>5</option><option selected>10</option><option>25</option><option>50</option></select>
+          </label>
+        </div>
+        <p id="contour-note" hidden>В файле задан внешний контур. При изменении ширины или высоты он масштабируется вместе с планом.</p>
+      </section>
+      <section class="panel">
+        <h2>Объекты <span id="object-count"></span></h2>
+        <label>Толщина новой стены, см<input id="thickness" type="number" min="5" max="160" value="30"></label>
+        <div class="actions">
+          <button id="undo" type="button">Отменить</button>
+          <button id="delete" type="button">Удалить выбранное</button>
+        </div>
+        <div class="actions" role="group" aria-label="Пивот выбранного объекта">
+          <button id="edit-pivot" type="button" aria-pressed="false">Сместить пивот</button>
+          <button id="reset-pivot" type="button">Пивот в центр</button>
+        </div>
+        <div class="actions" role="group" aria-label="Поворот с шагом 5 градусов">
+          <button id="rotate-left" type="button" aria-label="Повернуть против часовой стрелки на 5 градусов">↶ 5°</button>
+          <button id="rotate-right" type="button" aria-label="Повернуть по часовой стрелке на 5 градусов">↷ 5°</button>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Старты Башни <span id="spawn-count"></span></h2>
+        <div class="actions" role="group" aria-label="Точки старта">
+          <button data-tool="spawn-player" aria-pressed="false" type="button">Игрок</button>
+          <button data-tool="spawn-opponent" aria-pressed="false" type="button">Противник</button>
+        </div>
+        <button id="auto-spawns" type="button">Сбросить старты и патруль</button>
+      </section>
+      <section class="panel">
+        <h2>Проверка масштаба</h2>
+        <div class="actions">
+          <button data-tool="mannequin" aria-pressed="false" type="button">Болванка пациента</button>
+          <button id="clear-mannequin" type="button">Убрать</button>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Ширина проходов</h2>
+        <label>Минимум, см<input id="passage" type="number" min="20" step="1"></label>
+        <button id="check" type="button">Проверить план</button>
+        <p id="status" role="status" aria-live="polite"></p>
+        <ol id="gaps"></ol>
+      </section>
+    </aside>
+  </main>
+</body>
+</html>

@@ -1,3 +1,5 @@
+import hitPreset from "./render/hit-preset.json" with {type:"json"};
+
 export
 // ================= ОСНОВНЫЕ НАСТРОЙКИ =================
 // Расстояния — сантиметры, время — секунды, углы — градусы.
@@ -258,10 +260,7 @@ const CONFIG = {
     victoryGlowRangeCm: 30, // Мягкий золотой ореол от силуэта победителя.
     hitEffects: true,
     hitPoolLimit: 8,
-    hitParticles: 8,
-    severParticles: 14,
-    hitLifeSec: 0.38,
-    hitFlashSec: 0.09,
+    ...hitPreset,
     waveSec: 0.35,
     // Длительность короткого кольца касания.
     particleCount: 32,

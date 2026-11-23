@@ -4,8 +4,8 @@ import fs from 'node:fs/promises';
 import {JSDOM} from 'jsdom';
 
 test('location editor draws, moves, deletes and round-trips a symmetrical plan',async t=>{
- const html=await fs.readFile(new URL('../Editors/location-editor.html',import.meta.url),'utf8');
- const dom=new JSDOM(html,{url:'https://example.test/biovshi/test/Editors/location-editor.html'});
+ const html=await fs.readFile(new URL('../bio_editor/index.html',import.meta.url),'utf8');
+ const dom=new JSDOM(html,{url:'https://example.test/biovshi/test/bio_editor/'});
  t.after(()=>dom.window.close());
  const {document}=dom.window;
  const $=id=>document.getElementById(id);

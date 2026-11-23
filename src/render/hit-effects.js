@@ -3,18 +3,34 @@ import { ctx } from '../game/state.js';
 import { attr, el } from './svg.js';
 import { renderProfile } from './performance.js';
 
-const STAR='M-1-9H1V-4H3V-7H5V-5H7V-3H4V-1H9V1H4V3H7V5H5V7H3V4H1V9H-1V4H-3V7H-5V5H-7V3H-4V1H-9V-1H-4V-3H-7V-5H-5V-7H-3V-4H-1Z';
+export const HIT_FLASH_PATH='M-1-9H1V-4H3V-7H5V-5H7V-3H4V-1H9V1H4V3H7V5H5V7H3V4H1V9H-1V4H-3V7H-5V5H-7V3H-4V1H-9V-1H-4V-3H-7V-5H-5V-7H-3V-4H-1Z';
 const hash=n=>{const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.floor(x);};
 
-export function hitParticle(seed,index,direction,severed) {
-  const n=seed+index*131,angle=direction+(hash(n)-.5)*1.6;
-  const speed=(80+hash(n+1)*70)*(severed?1.2:1);
+export function hitParticle(seed,index,direction,severed,options=CONFIG.effects) {
+  const n=seed+index*131,angle=direction+(hash(n)-.5)*options.hitSpread;
+  const speed=(80+hash(n+1)*70)*(severed?1.2:1)*options.hitSpeed;
   return {
-    vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-35,
-    width:2+Math.floor(hash(n+2)*3),height:1+Math.floor(hash(n+3)*3),
-    life:CONFIG.effects.hitLifeSec*(severed?1.35:1)*(.7+.3*hash(n+4)),
-    colour:index===0?'#dfb782':['#b51519','#7b090d','#de3031'][Math.floor(hash(n+5)*3)],
+    vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-options.hitLift,
+    width:(2+Math.floor(hash(n+2)*3))*options.hitParticleSize,
+    height:(1+Math.floor(hash(n+3)*3))*options.hitParticleSize,
+    life:options.hitLifeSec*(severed?1.35:1)*(.7+.3*hash(n+4)),
+    colour:index===0?options.hitSparkColor:options.hitSprayColors[Math.floor(hash(n+5)*3)],
   };
+}
+
+export function hitParticleFrame(p,age,options=CONFIG.effects){
+  if(!p||age>=p.life)return null;
+  const q=age/p.life,size=1-.35*q;
+  return {
+    x:Math.round(p.vx*age),y:Math.round(p.vy*age+options.hitGravity*age*age),
+    width:Math.max(1,Math.round(p.width*size)),height:Math.max(1,Math.round(p.height*size)),
+    opacity:Math.min(1,(1-q)*4),
+  };
+}
+
+export function hitFlashFrame(age,severed,options=CONFIG.effects){
+  const life=options.hitFlashSec*(severed?1.3:1);
+  return age<life?{opacity:1-age/life,size:options.hitFlashSize*(severed?1.35:1)*(.9+.3*age/life)}:null;
 }
 
 export function initializeHitEffects() {
@@ -31,8 +47,8 @@ function allocatePool() {
   for(let i=0;i<CONFIG.effects.hitPoolLimit;i++) {
     const node=el('g',{display:'none','data-hit-slot':i},state.group);
     const flash=el('g',{},node);
-    el('path',{d:STAR,fill:'#d9b47b'},flash);
-    el('rect',{x:-2,y:-2,width:4,height:4,fill:'#fff3cf'},flash);
+    el('path',{d:HIT_FLASH_PATH,fill:CONFIG.effects.hitFlashColor},flash);
+    el('rect',{x:-2,y:-2,width:4,height:4,fill:CONFIG.effects.hitFlashCore},flash);
     const particles=Array.from({length:Math.max(CONFIG.effects.hitParticles,CONFIG.effects.severParticles)},()=>
       el('rect',{display:'none'},node));
     node.appendChild(flash);
@@ -64,24 +80,20 @@ function paintSlot(slot,time) {
   if(!effect)return;
   const age=time-effect.born;
   if(age<0||age>=effect.life){attr(slot.node,'display','none');slot.effect=null;return;}
-  const flashLife=CONFIG.effects.hitFlashSec*(effect.severed?1.3:1);
-  const flash=age<flashLife;
+  const flash=hitFlashFrame(age,effect.severed);
   attr(slot.flash,'display',flash?'':'none');
   if(flash) {
-    attr(slot.flash,'opacity',(1-age/flashLife).toFixed(3));
-    attr(slot.flash,'transform','scale('+((effect.severed?1.35:1)*(.9+.3*age/flashLife)).toFixed(3)+')');
+    attr(slot.flash,'opacity',flash.opacity.toFixed(3));
+    attr(slot.flash,'transform','scale('+flash.size.toFixed(3)+')');
   }
   slot.particles.forEach((node,i)=>{
-    const p=effect.particles[i],visible=p&&age<p.life;
-    attr(node,'display',visible?'':'none');
-    if(!visible)return;
-    const q=age/p.life,size=1-.35*q;
-    attr(node,'x',Math.round(p.vx*age));
-    attr(node,'y',Math.round(p.vy*age+180*age*age));
-    attr(node,'width',Math.max(1,Math.round(p.width*size)));
-    attr(node,'height',Math.max(1,Math.round(p.height*size)));
+    const p=effect.particles[i],frame=hitParticleFrame(p,age);
+    attr(node,'display',frame?'':'none');
+    if(!frame)return;
+    const {x,y,width,height,opacity}=frame;
+    attr(node,'x',x);attr(node,'y',y);attr(node,'width',width);attr(node,'height',height);
     attr(node,'fill',p.colour);
-    attr(node,'opacity',Math.min(1,(1-q)*4).toFixed(3));
+    attr(node,'opacity',opacity.toFixed(3));
   });
 }
 

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bio_editor · Боевые эффекты</title>
+  <link rel="stylesheet" href="../Editors/location-editor.css">
+  <link rel="stylesheet" href="./editor.css">
+  <script type="module" src="./effects.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div><a class="brand" href="./">bio_editor</a><h1>Редактор боевых эффектов</h1></div>
+    <div class="actions">
+      <button id="reset" type="button">Сбросить</button>
+      <input id="preset-file" type="file" accept=".json,application/json" hidden>
+      <button id="import" type="button">Импорт JSON</button>
+      <button id="export" class="primary" type="button">Экспорт JSON</button>
+    </div>
+  </header>
+  <nav class="editor-navigation" aria-label="Разделы bio_editor">
+    <a href="./">Локации</a><a href="./patients.html">Пациенты</a><a href="./effects.html" aria-current="page">Боевые эффекты</a>
+  </nav>
+  <main>
+    <section class="workbench" aria-label="Предпросмотр эффекта">
+      <div class="toolbar">
+        <div class="tools">
+          <button id="hit" type="button">Попадание</button>
+          <button id="sever" type="button">Отрыв сегмента</button>
+        </div>
+        <label class="mirrors"><input id="repeat" type="checkbox">Повторять</label>
+      </div>
+      <div class="editor-stage">
+        <svg id="effect-stage" viewBox="-170 -95 340 190" role="img" aria-label="Предпросмотр боевых частиц">
+          <defs><pattern id="effect-grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 H 0 V 10" class="small-grid"/></pattern></defs>
+          <rect x="-170" y="-95" width="340" height="190" fill="url(#effect-grid)"/>
+          <circle r="5" fill="none" stroke="#61706b" stroke-width=".6"/>
+          <g id="particles" shape-rendering="crispEdges"></g>
+        </svg>
+      </div>
+      <div class="coordinates"><label>Направление, ° <input id="direction" type="number" min="-180" max="180" value="0"></label>
+        <output id="effect-time">0,00 с</output></div>
+    </section>
+    <aside>
+      <section class="panel">
+        <h2>Частицы и вспышка</h2>
+        <div id="effect-fields" class="fields"></div>
+      </section>
+      <section class="panel">
+        <h2>Цвета</h2>
+        <div id="effect-colors" class="fields"></div>
+      </section>
+      <p id="status" class="editor-status" role="status"></p>
+    </aside>
+  </main>
+</body>
+</html>

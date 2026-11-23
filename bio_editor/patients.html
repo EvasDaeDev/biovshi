@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>bio_editor · Пациенты</title>
+  <link rel="stylesheet" href="../Editors/location-editor.css">
+  <link rel="stylesheet" href="./editor.css">
+  <script type="module" src="./patients.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div><a class="brand" href="./">bio_editor</a><h1>Редактор пациентов</h1></div>
+    <div class="actions">
+      <button id="new-patient" type="button">Новый пациент</button>
+      <input id="project-file" type="file" accept=".json,application/json" hidden>
+      <button id="import" type="button">Импорт JSON</button>
+      <button id="export" class="primary" type="button">Экспорт JSON</button>
+    </div>
+  </header>
+  <nav class="editor-navigation" aria-label="Разделы bio_editor">
+    <a href="./">Локации</a><a href="./patients.html" aria-current="page">Пациенты</a><a href="./effects.html">Боевые эффекты</a>
+  </nav>
+  <main>
+    <section class="workbench" aria-label="Скелет пациента">
+      <div class="toolbar">
+        <label><input id="bones" type="checkbox" checked> Показать кости</label>
+        <button id="preview-open" class="primary" type="button">Предпросмотр атласа на костях</button>
+      </div>
+      <div class="editor-stage"><svg id="patient-stage" role="img" aria-label="Нейтральная поза пациента"></svg></div>
+      <footer class="coordinates"><output id="bone-count"></output><output id="atlas-name"></output></footer>
+    </section>
+    <aside>
+      <section class="panel">
+        <h2>Пациент</h2>
+        <label>Имя<input id="patient-name" type="text" maxlength="80"></label>
+        <label>ID<input id="patient-id" type="text" maxlength="40" spellcheck="false" pattern="[a-z0-9][a-z0-9_-]{0,39}"></label>
+        <div class="fields">
+          <label>Сегментов корпуса<input id="spine" type="number" min="2" max="12" step="1"></label>
+          <label>Масштаб тела<input id="scale" type="number" min=".5" max="2.5" step=".05"></label>
+          <label>Вынос головы<input id="head-offset" type="number" min="8" max="100" step="1"></label>
+          <label>Масштаб головы<input id="head-size" type="number" min=".5" max="3" step=".05"></label>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Конечности</h2>
+        <label>Выбранная конечность<select id="limb"></select></label>
+        <div class="fields">
+          <label>Тип<select id="limb-kind"><option value="arm">Рука</option><option value="leg">Нога</option></select></label>
+          <label>Сторона<select id="side"><option value="-1">Левая</option><option value="1">Правая</option></select></label>
+          <label>Крепление<select id="anchor"></select></label>
+          <label>Длина, ×<input id="length" type="number" min=".5" max="2.5" step=".05"></label>
+          <label>Толщина, ×<input id="mass" type="number" min=".5" max="2.5" step=".05"></label>
+        </div>
+        <div class="actions">
+          <button id="add-limb" type="button">Добавить конечность</button>
+          <button id="delete-limb" type="button">Удалить</button>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Атлас</h2>
+        <label>Источник<select id="atlas-select"></select></label>
+        <label>Новый атлас 4 × 4<input id="atlas-file" type="file" accept="image/png,image/webp,image/jpeg"></label>
+        <button id="export-atlas" type="button">Скачать атлас PNG</button>
+      </section>
+      <p id="status" class="editor-status" role="status"></p>
+    </aside>
+  </main>
+  <dialog id="editor-preview" aria-labelledby="preview-title">
+    <div class="toolbar">
+      <h2 id="preview-title">Атлас на костях</h2>
+      <form method="dialog"><button type="submit">Закрыть</button></form>
+    </div>
+    <div class="atlas-workspace">
+      <div class="editor-stage"><svg id="atlas-stage" role="img" aria-label="Текстуры пациента на костях"></svg></div>
+      <section class="panel">
+        <label>Кость<select id="bone"></select></label>
+        <label><input id="preview-bones" type="checkbox" checked> Показать кости</label>
+        <div class="atlas-grid" id="atlas-grid" role="group" aria-label="Ячейки атласа"></div>
+        <div class="fields">
+          <label>Якорь A, px<input id="part-from" type="number" min="0" max="64"></label>
+          <label>Якорь B, px<input id="part-to" type="number" min="0" max="64"></label>
+          <label>Ширина спрайта, ×<input id="part-width" type="number" min=".25" max="3" step=".01"></label>
+        </div>
+        <p id="preview-status" class="editor-status" role="status"></p>
+      </section>
+    </div>
+  </dialog>
+</body>
+</html>

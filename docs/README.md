@@ -2,7 +2,7 @@
 
 [Основная игра](https://evasdaedev.github.io/biovshi/) ·
 [Тестовая игра](https://evasdaedev.github.io/biovshi/test/) ·
-[Редактор локаций](https://evasdaedev.github.io/biovshi/test/Editors/location-editor.html)
+[bio_editor](https://evasdaedev.github.io/biovshi/bio_editor/)
 
 Документация описывает `test/combat-hit-sync`. Состав основной веб-сборки
 определяет ветка `main`. Сведения о канале, интервале боссов и точном коммите
