@@ -1,4 +1,5 @@
 import {encodeFrame, encodeNumber, encodePoint} from '../lan/battle-protocol.js';
+import {ctx} from '../game/state.js';
 import {robotSetVisible} from './scenes.js';
 
 const point = ([x, y]) => ({x, y});
@@ -33,6 +34,9 @@ export function applyRobotReplica(robot, view) {
 
   const [chest, pelvis, headFrame, ...spine] = view.frames;
   const [offsetX, offsetY, turn, scale, opacity, lift, headX, headY, headMotion] = view.appearance;
+  if (robot.trauma !== view.trauma || robot.bledOut !== view.unconscious ||
+      robot.knockoutCause !== view.cause || robot.replicaPose?.bossPhase !== view.bossPhase)
+    ctx.telemetryDirty = true;
   Object.assign(robot, decodeFrame(view.root), {
     chest: decodeFrame(chest), pelvis: decodeFrame(pelvis), headFrame: decodeFrame(headFrame),
     spine: spine.map(decodeFrame), tail: view.tail.map(point), headMotion,
@@ -45,14 +49,27 @@ export function applyRobotReplica(robot, view) {
     },
   });
   robot.currentIntent.mode = view.action;
-  robot.broken.clear();
-  for (const [index, key] of robot.segments.entries()) {
-    const hp = view.health[index];
-    robot.hp.set(key, Math.max(0, hp));
-    if (hp < 0) robot.broken.add(key);
+  if (robot.replicaHealth !== view.health) {
+    robot.replicaHealth = view.health;
+    for (const [index, key] of robot.segments.entries()) {
+      const hp = Math.max(0, view.health[index]);
+      const broken = view.health[index] < 0;
+      if (robot.hp.get(key) !== hp) {
+        robot.hp.set(key, hp);
+        ctx.telemetryDirty = true;
+      }
+      if (robot.broken.has(key) !== broken) {
+        if (broken) robot.broken.add(key);
+        else robot.broken.delete(key);
+        ctx.telemetryDirty = true;
+      }
+    }
   }
-  robot.segmentCritTints = new Map(view.crit
-    .filter(([index]) => Number.isInteger(index) && robot.segments[index])
-    .map(([index, time]) => [robot.segments[index], time]));
+  if (robot.replicaCrit !== view.crit) {
+    robot.replicaCrit = view.crit;
+    robot.segmentCritTints = new Map(view.crit
+      .filter(([index]) => Number.isInteger(index) && robot.segments[index])
+      .map(([index, time]) => [robot.segments[index], time]));
+  }
   if (view.visible !== robot.visible) robotSetVisible(robot, view.visible);
 }

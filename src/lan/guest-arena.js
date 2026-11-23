@@ -70,7 +70,6 @@ export function installLanGuestArena(match) {
     ctx.round.elapsedSec = snapshot.elapsed;
     ctx.combat.finished = snapshot.finished;
     ctx.combat.winner = snapshot.winner;
-    ctx.telemetryDirty = true;
     floor.paint(snapshot.time);
     for (const [id, view] of snapshot.robots.entries()) ctx.robots[id].applyReplica(view);
     while (impacts.length && impacts[0].time <= snapshot.time) {

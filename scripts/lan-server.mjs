@@ -31,7 +31,8 @@ function localAddresses() {
   }
 }
 
-export async function startLanServer({host = '127.0.0.1', port = 8080, dist = DIST, reconnectMs, countdownMs, loadingMs, hostHeartbeatMs} = {}) {
+export async function startLanServer({host = '127.0.0.1', port = 8080, dist = DIST, reconnectMs,
+  countdownMs, loadingMs, hostHeartbeatMs, compression = true} = {}) {
   if (!isIPv4(host) || host === '0.0.0.0' || !Number.isInteger(port) || port < 0 || port > 65535)
     throw Error('Укажите IPv4 выбранного сетевого интерфейса и корректный порт.');
 
@@ -59,7 +60,13 @@ export async function startLanServer({host = '127.0.0.1', port = 8080, dist = DI
     },
   });
 
-  const ws = new WebSocketServer({noServer: true, maxPayload: LAN_FRAME_BYTES, perMessageDeflate: false});
+  const ws = new WebSocketServer({
+    noServer: true, maxPayload: LAN_FRAME_BYTES,
+    perMessageDeflate: compression && {
+      serverNoContextTakeover: true, clientNoContextTakeover: true,
+      threshold: 1024, concurrencyLimit: 4, zlibDeflateOptions: {level: 3},
+    },
+  });
   let rooms, origin, authorities;
   const server = createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');

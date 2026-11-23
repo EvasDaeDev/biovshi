@@ -24,8 +24,8 @@ async function setup(t, options) {
   return server.origin;
 }
 
-async function connect(origin, version = build) {
-  const socket = new WebSocket(origin.replace('http:', 'ws:') + '/lan/ws', {origin});
+async function connect(origin, version = build, perMessageDeflate = true) {
+  const socket = new WebSocket(origin.replace('http:', 'ws:') + '/lan/ws', {origin, perMessageDeflate});
   const pending = [];
   let wake;
   socket.on('message', data => {
@@ -184,7 +184,7 @@ test('LAN restores the same guest session before expiry and releases an expired 
 
 function battleSnapshot(matchId, seq) {
   const robot = {
-    root: [300, 350, 0], frames: Array(8).fill([300, 350, 0]), tail: [], limbs: [],
+    root: [300, 350, 0], frames: Array(12).fill([300, 350, 0]), tail: Array(16).fill([301, 350]), limbs: [],
     appearance: [0, 0, 0, 1, 1, 1, 0, 0, 0], cue: [], bossPhase: null, health: [6, 4], crit: [],
     trauma: 0, cause: null, visible: true, unconscious: false, action: 'патруль',
   };
@@ -194,7 +194,7 @@ function battleSnapshot(matchId, seq) {
 
 test('LAN relays only the bound guest input and host snapshots, including a reconnect keyframe', async t => {
   const origin = await setup(t);
-  const [host, guest, viewer] = await Promise.all([connect(origin), connect(origin), connect(origin)]);
+  const [host, guest, viewer] = await Promise.all([connect(origin), connect(origin, build, false), connect(origin)]);
   const {roomId} = await create(host);
   guest.send('room.join', {playerName: 'Игрок', role: 'player'}, roomId);
   const {payload: {memberId, resumeToken}} = await guest.next('room.entered');
@@ -222,6 +222,9 @@ test('LAN relays only the bound guest input and host snapshots, including a reco
   assert.equal((await host.next('input')).payload.seq, 4);
 
   const snapshot = battleSnapshot(matchId, 7);
+  assert.ok(Buffer.byteLength(JSON.stringify(snapshot)) > 1024);
+  assert.equal(guest.socket.extensions, '');
+  assert.equal(viewer.socket.extensions, 'permessage-deflate');
   guest.send('state.snapshot', snapshot, roomId);
   assert.equal((await guest.next('error')).payload.code, 'host_only');
   const remains = {matchId, parts: [{id: 0, cause: 'head', motion: [1, 0, 0, 0], pieces: [{bone: [3, 4, 5], skin: null}]}]};
@@ -229,6 +232,7 @@ test('LAN relays only the bound guest input and host snapshots, including a reco
   host.send('state.snapshot', snapshot, roomId);
   assert.deepEqual((await viewer.next('state.remains')).payload, remains);
   assert.deepEqual((await viewer.next('state.snapshot')).payload, snapshot);
+  assert.deepEqual((await guest.next('state.snapshot')).payload, snapshot);
 
   const floor = {matchId, seq: 2, time: 2,
     add: [[0, 1, 300, 350, 4, 1, 1, 3, 50], [1, 1, 301, 350, 4, 1, 0, 2, 40]],

@@ -78,7 +78,8 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
       socket.terminate();
       return;
     }
-    socket.send(encoded ?? JSON.stringify(lanMessage(type, payload, roomId)));
+    const compress = type === 'state.snapshot' || type === 'state.floor' || type === 'state.remains';
+    socket.send(encoded ?? JSON.stringify(lanMessage(type, payload, roomId)), {compress});
   }
 
   function relay(room, type, payload) {

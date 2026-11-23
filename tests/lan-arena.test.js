@@ -161,6 +161,17 @@ test('LAN replica renders the host rig and detached segments without simulation'
   assert.equal(ctx.combat.oilDrops.filter(drop => drop.fluid === 'coolant').length, 0);
   assert.equal(ctx.robots[1].trail.length, 0);
 
+  ctx.telemetryDirty = false;
+  replica.paintReplica(performance.now() + 180);
+  assert.equal(ctx.telemetryDirty, false);
+  const next = structuredClone(snapshot);
+  next.seq++;
+  next.time += 1 / 15;
+  next.robots[1].trauma++;
+  guest.snapshot(next);
+  replica.paintReplica(performance.now() + 300);
+  assert.equal(ctx.telemetryDirty, true);
+
   win.document.dispatchEvent(new win.KeyboardEvent('keydown', {code: 'KeyD'}));
   replica.sendInputFrame(performance.now() + 150);
   win.dispatchEvent(new win.Event('blur'));

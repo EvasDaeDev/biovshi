@@ -1,7 +1,8 @@
-// Measure application payloads over real loopback sockets while the arena runs
+// Measure JSON payloads and WebSocket traffic over loopback while the arena runs
 // in a headless DOM. GPU rendering and Wi-Fi latency are outside this benchmark.
 import {once} from 'node:events';
 import {readFile} from 'node:fs/promises';
+import {connect as connectTcp} from 'node:net';
 import {setImmediate as yieldIo, setTimeout as delay} from 'node:timers/promises';
 import {parseArgs} from 'node:util';
 import {JSDOM} from 'jsdom';
@@ -16,7 +17,11 @@ import {installLanHostArena} from '../src/lan/host-arena.js';
 import {lanMessage} from '../src/lan/protocol.js';
 import {paint} from '../src/render/frame.js';
 
-const {values} = parseArgs({options: {seconds: {type: 'string', default: '8'}, viewers: {type: 'string', default: '4'}}});
+const {values} = parseArgs({options: {
+  seconds: {type: 'string', default: '8'},
+  viewers: {type: 'string', default: '4'},
+  'no-compression': {type: 'boolean'},
+}});
 const seconds = Number(values.seconds), viewerCount = Number(values.viewers);
 if (!Number.isInteger(seconds) || seconds < 1 || seconds > 60 ||
     !Number.isInteger(viewerCount) || viewerCount < 1 || viewerCount > 16)
@@ -25,7 +30,8 @@ if (!Number.isInteger(seconds) || seconds < 1 || seconds > 60 ||
 const root = new URL('../', import.meta.url);
 const html = await readFile(new URL('index.html', root), 'utf8');
 const build = JSON.parse(await readFile(new URL('dist/build-info.json', root), 'utf8')).sourceCommit;
-const server = await startLanServer({port: 0, countdownMs: 1, hostHeartbeatMs: 120_000});
+const compression = !values['no-compression'];
+const server = await startLanServer({port: 0, countdownMs: 1, hostHeartbeatMs: 120_000, compression});
 const percentile = (samples, fraction) => {
   const sorted = [...samples].sort((a, b) => a - b);
   return sorted[Math.max(0, Math.ceil(sorted.length * fraction) - 1)] ?? 0;
@@ -43,12 +49,21 @@ async function waitFor(predicate) {
 }
 
 async function connect() {
-  const socket = new WebSocket(server.origin.replace('http:', 'ws:') + '/lan/ws', {origin: server.origin});
-  const client = {socket, room: null, stats: {snapshots: [], floor: 0, total: 0}};
+  let tcp;
+  const socket = new WebSocket(server.origin.replace('http:', 'ws:') + '/lan/ws', {
+    origin: server.origin,
+    createConnection(options) {
+      tcp = connectTcp({host: options.host, port: options.port});
+      return tcp;
+    },
+  });
+  const client = {socket, room: null, stats: {packets: 0, snapshots: [], floor: 0, total: 0},
+    bytesRead: () => tcp.bytesRead};
   socket.on('message', bytes => {
     const {type, payload} = JSON.parse(bytes.toString());
     if (type === 'room.state') client.room = payload;
     if (!type.startsWith('state.')) return;
+    client.stats.packets++;
     client.stats.total += bytes.length;
     if (type === 'state.floor') client.stats.floor += bytes.length;
     if (type === 'state.snapshot') client.stats.snapshots.push(bytes.length);
@@ -85,10 +100,11 @@ async function profile(fighterCount) {
     }
     host.send('match.start', {}, roomId);
     const room = await waitFor(() => host.room.phase === 'preparing' && host.room);
-    let sent = 0;
+    let packets = 0, snapshots = 0;
     const transmit = (type, data) => {
       host.send(type, {...data, matchId: room.matchId}, roomId);
-      if (type === 'state.snapshot') sent++;
+      if (type.startsWith('state.')) packets++;
+      if (type === 'state.snapshot') snapshots++;
       return true;
     };
     const multiplayer = {fighters: createLanRoster(room, room.hostId),
@@ -104,7 +120,9 @@ async function profile(fighterCount) {
       await waitFor(() => viewer.room.phase === 'loading');
       viewer.send('match.loaded', {matchId: room.matchId}, roomId);
     }
-    await waitFor(() => host.room.phase === 'running');
+    await waitFor(() => clients.every(client => client.room.phase === 'running'));
+    const viewers = clients.slice(1);
+    const initialBytes = viewers.map(viewer => viewer.bytesRead());
     arena.start();
     advanceStartup(10);
 
@@ -126,17 +144,20 @@ async function profile(fighterCount) {
         else await yieldIo();
       }
     }
+    await waitFor(() => viewers.every(viewer => viewer.stats.packets === packets));
     const elapsed = performance.now() - wallStart;
     const cpu = process.cpuUsage(cpuBefore);
-    const viewers = clients.slice(1);
-    await waitFor(() => viewers.every(viewer => viewer.stats.snapshots.length === sent));
+    const wireBytes = viewers.map((viewer, index) => viewer.bytesRead() - initialBytes[index]);
     const stats = viewers[0].stats;
     return {
-      fighters: fighterCount, viewers: viewerCount, snapshots: sent,
+      fighters: fighterCount, viewers: viewerCount, snapshots,
       snapshotP95Bytes: percentile(stats.snapshots, .95),
       perViewerKiBps: rounded(stats.total / seconds / 1024),
       floorKiBps: rounded(stats.floor / seconds / 1024),
       totalKiBps: rounded(viewers.reduce((sum, viewer) => sum + viewer.stats.total, 0) / seconds / 1024),
+      wirePerViewerKiBps: rounded(wireBytes[0] / seconds / 1024),
+      wireTotalKiBps: rounded(wireBytes.reduce((sum, bytes) => sum + bytes, 0) / seconds / 1024),
+      compression: viewers[0].socket.extensions || 'off',
       physicsP95ms: rounded(percentile(physics, .95)), paintP95ms: rounded(percentile(render, .95)),
       wallSeconds: rounded(elapsed / 1000), processCpuMs: rounded((cpu.user + cpu.system) / 1000),
     };
