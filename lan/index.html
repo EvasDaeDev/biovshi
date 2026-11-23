@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>ЭКЦЕПРИ · Игра по локальной сети</title>
+  <link rel="stylesheet" href="../scripts/lan-panel/panel.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p class="brand">ЭКЦЕПРИ</p>
+      <h1>Игра по локальной сети</h1>
+    </header>
+
+    <p>Хозяин запускает сервер на своём компьютере. Игроки в той же сети подключаются по адресу или QR-коду из панели.</p>
+    <p><a class="panel-action" href="http://127.0.0.1:8081/lan/" target="_blank" rel="noopener">Открыть локальную панель</a></p>
+
+    <details>
+      <summary>Первый запуск на компьютере хозяина</summary>
+      <ol>
+        <li>Установите Node.js 22.12 или новее и <a href="https://github.com/EvasDaeDev/biovshi/archive/refs/heads/test/lan-multiplayer.zip">скачайте ветку LAN</a>.</li>
+        <li>Распакуйте архив и откройте терминал в папке проекта.
+          <pre><code>npm ci
+npm run lan</code></pre>
+        </li>
+        <li>Откройте панель, выберите сетевой интерфейс и нажмите «Запустить сервер». Игра соберётся автоматически.</li>
+      </ol>
+    </details>
+
+    <p><a href="../">Назад в тестовую игру</a></p>
+  </main>
+</body>
+</html>

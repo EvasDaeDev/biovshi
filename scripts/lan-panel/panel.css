@@ -63,3 +63,16 @@ pre { max-height: 14rem; overflow: auto; white-space: pre-wrap; overflow-wrap: a
   .fields { grid-template-columns: minmax(0, 1fr); }
   #connection { align-items: flex-start; flex-direction: column; }
 }
+
+.panel-action {
+  display: inline-block;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid #b47558;
+  border-radius: 4px;
+  color: #fff0da;
+  background: #793923;
+  font-weight: 740;
+}
+
+summary { cursor: pointer; }

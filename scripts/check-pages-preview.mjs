@@ -19,8 +19,26 @@ export function checkPagesPreview(directory){
  const editorPath='Editors/location-editor.html';
  const editor=fs.readFileSync(path.join(preview,editorPath),'utf8');
  assert.match(editor,/<title>Редактор локаций/);
- assert.match(editor,/<script type="module"[^>]*src=/);
- for(const [page,pageUrl] of [[html,base],[editor,new URL(editorPath,base)]]){
+ const moduleEntry=/<script type="module"[^>]*src=/;
+ const pages=[[html,base]];
+ if(moduleEntry.test(editor))pages.push([editor,new URL(editorPath,base)]);
+ else{
+  assert.match(editor,/<meta http-equiv="refresh" content="0; url=\.\.\/bio_editor\/"/);
+  for(const editorFile of ['index.html','patients.html','effects.html']){
+   const relative='bio_editor/'+editorFile;
+   const content=fs.readFileSync(path.join(preview,relative),'utf8');
+   assert.match(content,moduleEntry);
+   pages.push([content,new URL(relative,base)]);
+  }
+ }
+ if(info.lanPage){
+  assert.equal(info.lanPage,'lan/');
+  const lan=fs.readFileSync(path.join(preview,info.lanPage,'index.html'),'utf8');
+  assert.match(lan,/<title>ЭКЦЕПРИ · Игра по локальной сети/);
+  assert.match(lan,/href="http:\/\/127\.0\.0\.1:8081\/lan\/"/);
+  pages.push([lan,new URL(info.lanPage,base)]);
+ }
+ for(const [page,pageUrl] of pages){
   for(const match of page.matchAll(/<(?:link|script)\b[^>]*\b(?:href|src)="([^"]+)"/g)){
    const url=new URL(match[1],pageUrl);assert.ok(url.href.startsWith(base.href),'Test resource escapes /test/: '+url.href);
    const relative=decodeURIComponent(url.pathname.slice(base.pathname.length));assert.ok(fs.statSync(path.join(preview,relative)).isFile(),'Missing test resource: '+relative);

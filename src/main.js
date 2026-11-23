@@ -1,4 +1,4 @@
-import {SESSION_STORAGE} from './build-channel.js';
+import {SESSION_STORAGE,TEST_BUILD} from './build-channel.js';
 import {setPaused} from './ui/controls.js';
 import {arenaDefinition,loadLocations,suitableArenaId} from './game/arenas.js';
 import {installTowerUI,openMenu,towerPreparation} from './tower/ui.js';
@@ -208,6 +208,10 @@ async function boot(){
        openMenu();
      },
    }))return;
+ }else if(TEST_BUILD&&['http:','https:'].includes(location.protocol)){
+   const button=root.querySelector('#launch-lan');
+   button.hidden=false;
+   button.onclick=()=>location.assign(new URL('./lan/',document.baseURI));
  }
  showStartupIntro(root);
 }

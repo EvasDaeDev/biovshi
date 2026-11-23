@@ -36,7 +36,7 @@ export default defineConfig(({mode,command})=>{
       return html.replace('<title>ЭКЦЕПРИ (ECCEPRY) — Гладиаторские бои</title>','<title>ЭКЦЕПРИ (ECCEPRY) · ТЕСТОВАЯ СБОРКА</title>')
         .replace('ПРОТОКОЛ № 001 · ДОПУСК НА АРЕНУ','ТЕСТОВАЯ СБОРКА · БОСС КАЖДЫЙ 5-Й ЭТАЖ');
     },
-    generateBundle(){this.emitFile({type:'asset',fileName:'build-info.json',source:JSON.stringify({channel:testBuild?'test':'main',bossEvery:5,sourceCommit})+'\n'});},
+    generateBundle(){this.emitFile({type:'asset',fileName:'build-info.json',source:JSON.stringify({channel:testBuild?'test':'main',bossEvery:5,sourceCommit,...(testBuild?{lanPage:'lan/'}:{})})+'\n'});},
     async writeBundle(outputOptions,bundle){
       const root=fileURLToPath(new URL('.',import.meta.url));
       const output=path.resolve(root,outputOptions.dir??'dist');
@@ -53,6 +53,7 @@ export default defineConfig(({mode,command})=>{
     target: 'es2022', sourcemap: false, copyPublicDir: false,
     rollupOptions:{input:{
       game:fileURLToPath(new URL('./index.html',import.meta.url)),
+      ...(testBuild?{lanPage:fileURLToPath(new URL('./lan/index.html',import.meta.url))}:{}),
       locationEditor:fileURLToPath(new URL('./Editors/location-editor.html',import.meta.url)),
       bioEditor:fileURLToPath(new URL('./bio_editor/index.html',import.meta.url)),
       patients:fileURLToPath(new URL('./bio_editor/patients.html',import.meta.url)),

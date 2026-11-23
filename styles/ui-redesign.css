@@ -1207,6 +1207,16 @@
   border:1px solid #6e6b53;
   cursor:pointer;
 }
+#robot-tag-hops-v22 #launch-overlay #launch-lan:not([hidden]){
+  grid-area:6 / 2;
+  margin:0;
+  min-height:44px;
+  padding:8px 14px;
+  background:#2e3429;
+  color:#f0e2c2;
+  border:1px solid #a69061;
+  cursor:pointer;
+}
 #robot-tag-hops-v22 #launch-overlay #launch-setup.is-new-game{
   background:#613c33;
   color:#f4d5c1;
@@ -1223,7 +1233,8 @@
     gap:8px;
     padding:14px;
   }
-  #robot-tag-hops-v22 #launch-overlay .launch-paper>:not(#launch-settings-button){
+  #robot-tag-hops-v22 #launch-overlay .launch-paper>:not(#launch-settings-button),
+  #robot-tag-hops-v22 #launch-overlay #launch-lan:not([hidden]){
     grid-column:1;
     grid-row:auto;
   }
@@ -1373,6 +1384,7 @@
     #launch-overlay #launch-game,
     #launch-overlay #launch-tower,
     #launch-overlay #launch-setup,
+    #launch-overlay #launch-lan,
     #launch-overlay #launch-totalizator,
     #launch-overlay #tower-reset,
     #tower-preparation #tower-fight,
