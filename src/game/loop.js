@@ -29,8 +29,10 @@ export function step(dt) {
         && !ctx.streamerMascot?.hasRequiredAnnouncements?.()) showResults();
     return;
   }
-  ctx.round.elapsedSec += dt;
   ctx.game.time += dt;
+  // The HUD and results follow the same scaled clock as combat, without
+  // counting the post-fight celebration above.
+  ctx.round.elapsedSec = ctx.game.time;
   ctx.brainDebt += dt;
   for (const r of ctx.robots) {
     if (!r.visible || !r.mobile) {

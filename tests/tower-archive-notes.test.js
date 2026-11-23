@@ -9,7 +9,7 @@ import {buyTowerInsurance,completeTower,resetTower} from '../src/tower/model.js'
 import {settleTower,towerPreparation,towerResults} from '../src/tower/ui.js';
 import {startBossScenario} from '../scripts/boss-harness.mjs';
 
-test('a 35 percent roll draws uniformly from unseen notes and stops at 52',()=>{
+test('archive rolls draw from all unseen notes and stop at 52',()=>{
  const ids=newArchiveNotes(()=>.5);
  assert.deepEqual(ids,[27]);
  awardArchiveNote(ids,()=>.35);
@@ -23,6 +23,17 @@ test('a 35 percent roll draws uniformly from unseen notes and stops at 52',()=>{
  awardArchiveNote(ids,()=>assert.fail('a complete collection needs no roll'));
  assert.equal(validArchiveNotes([1,1]),false);
  assert.equal(validArchiveNotes([53]),false);
+});
+
+test('the final 13 missing notes have a 20 percent drop chance per player',()=>{
+ const ids=Array.from({length:38},(_,index)=>index+15);
+ const ordinaryRoll=[.34999,0];
+ assert.equal(awardArchiveNote(ids,()=>ordinaryRoll.shift()),1);
+ assert.equal(ids.length,39);
+ assert.equal(awardArchiveNote(ids,()=>.20),undefined);
+ assert.equal(ids.length,39);
+ const finalRoll=[.19999,0];
+ assert.equal(awardArchiveNote(ids,()=>finalRoll.shift()),2);
 });
 
 test('ordinary victories can award notes and each player keeps their own collection through DMS and reset',()=>{
