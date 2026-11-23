@@ -28,7 +28,7 @@ export function installTowerInput({localId=null,onRelease}={}){
   const stick=doc.getElementById('tower-stick'),knob=stick.querySelector('span');let pointer=null;
   stick.hidden=direction();
   const marker=doc.createElement('div');marker.id='tower-direction-marker';marker.hidden=true;marker.setAttribute('aria-hidden','true');ctx.stage.append(marker);
-  const enemyMarkers=lan?null:installTowerEnemyMarkers();
+  const enemyMarkers=installTowerEnemyMarkers(localId ?? 0);
   const clearDestination=()=>{ctx.towerDestination=null;marker.hidden=true;const robot=ctx.robots[localId??0];robot?.cancelNavigation();};
   ctx.clearTowerDestination=clearDestination;
   const active=()=>!ctx.appInactive&&ctx.mode===(lan?'multiplayer':'tower')&&ctx.startup.phase==='running'&&!ctx.paused&&!ctx.settingsOpen&&!ctx.orientationBlocked&&!ctx.tutorial?.active&&!ctx.combat.finished;
@@ -91,7 +91,7 @@ export function installTowerInput({localId=null,onRelease}={}){
   ctx.paintTowerMarker=()=>{
     const projection=currentProjection();
     paintMarker(projection);
-    enemyMarkers?.paint(projection);
+    enemyMarkers.paint(projection);
   };
   ctx.stage.addEventListener('click',click);
   doc.addEventListener('keydown',key);doc.addEventListener('keyup',key);win.addEventListener('blur',reset);doc.addEventListener('visibilitychange',reset);

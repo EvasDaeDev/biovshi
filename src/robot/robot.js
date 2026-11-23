@@ -10,7 +10,7 @@ import { coverOffset, hopHeight, jumpTick, lifted, planIdleHops, reboundPlan, re
 import { bodyTransform, draw, robotPaint, visiblePoint, visionAngle, visualOffset, visualRotation } from "../render/robot.js";
 import { attr, el, raiseRobotActor } from "../render/svg.js";
 import { CONFIG } from "../config.js";
-import { ctx } from "../game/state.js";
+import { arenaViewPlayerId, ctx } from "../game/state.js";
 import { limbColor } from "../utils/colors.js";
 import { ik } from "../utils/math.js";
 import { robotCanSee } from "./perception.js";
@@ -101,7 +101,7 @@ function createRobot(id, start, body = {}) {
   }, robotState.gradient);
   robotState.vision = null;
   robotState.lightBeam = null;
-  const towerLight=ctx.mode==='tower'&&robotState.id===0;
+  const towerLight=robotState.id===arenaViewPlayerId();
   if(towerLight){
     attr(robotState.gradient,'gradientUnits','userSpaceOnUse');
     attr(robotState.gradient,'cx',0);attr(robotState.gradient,'cy',0);
@@ -153,7 +153,7 @@ function createRobot(id, start, body = {}) {
   robotState.bodyG = el('g', {}, robotState.figure);
   robotState.label = el('text', {
     class: 'robot-label',
-    display:ctx.mode==='tower'?'none':'',
+    display:arenaViewPlayerId()>=0?'none':'',
     'text-anchor': 'middle'
   }, robotState.actor);
   robotState.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -400,7 +400,7 @@ function createRobot(id, start, body = {}) {
     label: robotState.label,
     lightBeam: robotState.lightBeam,
     nearLight: robotState.nearLight,
-    flashHitLight() { robotState.lightHitAt = ctx.game.time; },
+    flashHitLight(at = ctx.game.time) { robotState.lightHitAt = at; },
     gradient: robotState.gradient,
     capsules: [],
     get x() {

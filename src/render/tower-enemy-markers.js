@@ -8,7 +8,7 @@ function insideCamera(robot, bounds) {
       maxX + r >= left && minX - r <= right && maxY + r >= top && minY - r <= bottom);
 }
 
-export function installTowerEnemyMarkers() {
+export function installTowerEnemyMarkers(playerId = 0) {
   const doc = ctx.stage.ownerDocument;
   const layer = doc.createElement('div');
   layer.id = 'tower-enemy-markers';
@@ -18,10 +18,10 @@ export function installTowerEnemyMarkers() {
   const markers = [];
 
   function paint(projection) {
-    const player = ctx.robots[0];
+    const player = ctx.robots[playerId];
     const {fieldWidth: width, fieldHeight: height} = ctx;
     const {scale, x, y} = projection;
-    layer.hidden = ctx.mode !== 'tower' || ctx.startup.phase !== 'running'
+    layer.hidden = ctx.startup.phase !== 'running'
       || ctx.combat.finished || !player?.visible || !player.mobile;
     if (layer.hidden) return;
 

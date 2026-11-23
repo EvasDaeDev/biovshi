@@ -242,6 +242,7 @@ test('LAN freezes separate Tower patients for the host and guest, and restores t
   const waiting = (await host.next('room.state', ({payload}) =>
     payload.members.every(member => member.profile === 'tower'))).payload;
   assert.ok(waiting.members.every(member => !('tower' in member) && member.profileSummary.includes('очков')));
+  assert.match(waiting.members[1].equipment.join(' '), /Протез.*Пересадка руки.*Зрительный нерв.*Сервопривод/);
 
   guest.send('room.ready', {ready: true}, roomId);
   await host.next('room.state', ({payload}) => payload.canStart && payload.members[1]?.ready);

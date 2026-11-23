@@ -1,4 +1,4 @@
-import { ctx } from '../game/state.js';
+import { arenaViewPlayerId, ctx } from '../game/state.js';
 import { clamp } from '../utils/math.js';
 import { CONFIG } from '../config.js';
 import { attr } from './svg.js';
@@ -37,7 +37,8 @@ export function lightPolygon(origin,heading,angle,radius) {
 export function paintLighting(robot) {
   const age=ctx.game.time-(robot.lightHitAt??-Infinity);
   const flash=age>=0?1-clamp(age/CONFIG.light.hitFadeSec,0,1):0;
-  const hidden=ctx.mode==='tower'&&robot.id!==0;
+  const playerId=arenaViewPlayerId();
+  const hidden=playerId>=0&&robot.id!==playerId;
   const opacity=hidden?0:(robot.spawnVisual?.opacity??1)*CONFIG.light.nearbyIntensity*(1+CONFIG.light.hitBoost*flash);
   attr(robot.pool,'opacity',opacity.toFixed(3));
   attr(robot.nearLight,'opacity',opacity.toFixed(3));
@@ -46,7 +47,7 @@ export function paintLighting(robot) {
   attr(robot.pool,'transform',transform);
   attr(robot.nearLight,'transform',transform);
   if(robot.vision){
-    const enabled=ctx.mode==='tower'&&robot.hasHead();
+    const enabled=robot.id===playerId&&robot.hasHead();
     const nearby=lightPolygon(center,0,Math.PI*2,CONFIG.light.nearbyRadiusCm);
     attr(robot.pool,'d',nearby);attr(robot.nearLight,'d',nearby);
     const eye=robot.visiblePoint(robot.local(robot.headFrame,25,0));

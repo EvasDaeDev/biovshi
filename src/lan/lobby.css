@@ -63,6 +63,15 @@
   margin: .4rem 0;
 }
 
+#lan-lobby .lan-readiness {
+  display: inline-block;
+  margin-inline-start: .6em;
+  font-weight: 700;
+}
+
+#lan-lobby .lan-readiness[data-ready="true"] { color: var(--ui-positive, #9fdb94); }
+#lan-lobby .lan-readiness[data-ready="false"] { color: var(--ui-negative, #ffaaa2); }
+
 #lan-lobby .lan-fields {
   display: flex;
   flex-wrap: wrap;

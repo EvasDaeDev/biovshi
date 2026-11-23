@@ -77,6 +77,7 @@ export function installLanGuestArena(match) {
       if (snapshot.time - event.time > LAN_INPUT_TIMEOUT_MS / 1000) continue;
       const [x, y] = event.point;
       const attacker = ctx.robots[event.by];
+      if (attacker && event.by !== event.robot) attacker.flashHitLight(event.time);
       const heading = attacker ? Math.atan2(y - attacker.y, x - attacker.x) : 0;
       spawnHitEffect(x, y, heading, event.severed);
       if (event.damage === 2) showCrit(x, y);

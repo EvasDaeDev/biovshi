@@ -299,12 +299,18 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
       const labels = [member.name, member.id === room.hostId ? 'Хозяин' : roles[member.role]];
       if (member.id === room.hostId) labels.push(roles[member.role]);
       if (!member.connected) labels.push('Нет связи');
-      else if (member.id !== room.hostId && member.role === 'player') labels.push(member.ready ? 'Готов' : 'Не готов');
       item.append(node('strong', labels.join(' · ')));
+      if (member.connected && member.id !== room.hostId && member.role === 'player') {
+        const readiness = node('span', member.ready ? 'Готов' : 'Не готов');
+        readiness.className = 'lan-readiness';
+        readiness.dataset.ready = String(member.ready);
+        item.append(readiness);
+      }
       if (member.role === 'player') {
         const profile = describeLanProfile(member.profile);
         const detail = member.profileSummary ?? profile.detail;
         item.append(node('small', profile.name + ' · ' + detail));
+        if (member.equipment?.length) item.append(node('small', member.equipment.join(' / ')));
       }
       if (host && member.id !== own.id && room.phase === 'waiting')
         item.append(button('Исключить', () => send('room.kick', {memberId: member.id}),

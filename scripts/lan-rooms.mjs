@@ -1,7 +1,7 @@
 import {randomBytes, randomUUID} from 'node:crypto';
 import {readBattleStatistics, validBattleSnapshot, validBattleView, validImpact, validMovement, validRemains} from '../src/lan/battle-protocol.js';
 import {createFloorCache, validFloorPatch} from '../src/lan/floor-sync.js';
-import {copyLanTowerLoadout, describeLanTower, lanAiName, validLanProfile} from '../src/lan/characters.js';
+import {copyLanTowerLoadout, describeLanEquipment, describeLanTower, lanAiName, validLanProfile} from '../src/lan/characters.js';
 import {
   LAN_COUNTDOWN_MS, LAN_HOST_HEARTBEAT_MS, LAN_LOADING_MS, LAN_MAX_FIGHTERS, LAN_RECONNECT_MS, LAN_ROOM_CODE, isLanMessage, lanMessage,
 } from '../src/lan/protocol.js';
@@ -60,8 +60,8 @@ function state(room) {
     matchId: room.matchId, result: room.result, view: room.view ?? null, notice: room.notice ?? '',
     countdownMs: room.phase === countdown ? Math.max(0, room.startAt - Date.now()) : null,
     loaded: room.loaded?.size ?? 0, loadingTotal: room.required?.size ?? 0,
-    members: [...room.members.values()].map(({id, name, role, profile, profileSummary, ready, socket}) =>
-      ({id, name, role, profile, profileSummary, ready, connected: Boolean(socket)}))};
+    members: [...room.members.values()].map(({id, name, role, profile, profileSummary, equipment, ready, socket}) =>
+      ({id, name, role, profile, profileSummary, equipment, ready, connected: Boolean(socket)}))};
 }
 
 export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNECT_MS,
@@ -283,7 +283,8 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
     if (member.role !== payload.role || member.profile !== payload.profile ||
         JSON.stringify(member.tower) !== JSON.stringify(tower)) {
       Object.assign(member, {role: payload.role, profile: payload.profile, tower,
-        profileSummary: tower ? describeLanTower(tower) : undefined});
+        profileSummary: tower ? describeLanTower(tower) : undefined,
+        equipment: tower ? describeLanEquipment(tower) : undefined});
       resetReady(room);
     }
   }

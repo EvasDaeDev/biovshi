@@ -203,8 +203,9 @@ export function makeCapsules(robotState,animateStrikes=true,bodyOnly=false) {
   if (!robotState.mobile()) return [];
   // Keep damage capsules aligned with the current visual attacking pose.
   const activePoses = animateStrikes?pendingStrikes(robotState.id).map(p=>robotState.attackPose(p)).filter(Boolean):[];
+  const replica = robotState.replicaPose;
   const headPose = activePoses.find(p=>p.kind==='head');
-  const headShift = headPose?{x:headPose.tip.x-headPose.base.x,y:headPose.tip.y-headPose.base.y}:{x:0,y:0};
+  const headShift = replica?.headStrike ?? (headPose?{x:headPose.tip.x-headPose.base.x,y:headPose.tip.y-headPose.base.y}:{x:0,y:0});
   const headPoint = p=>({x:p.x+headShift.x,y:p.y+headShift.y});
   const out = [],
     push = (a, b, r, segment) => {
@@ -238,24 +239,25 @@ export function makeCapsules(robotState,animateStrikes=true,bodyOnly=false) {
     push(nose,nose,2.5*(robotState.body?.headSizeFactor??1),'head');
   };
   addHead(headCenter,headNose);
-  if(headPose){
+  if(headPose || replica && (headShift.x || headShift.y)){
     const physical=out.filter(isSolidBody);
     if(robotState.healthy('head'))out.splice(-2);
     addHead(headPoint(headCenter),headPoint(headNose));
     bodyCapsuleCache.set(out,physical);
   }
   if(bodyOnly)return out;
-  for (const l of [...robotState.arms, ...robotState.legs]) {
-    const a = robotState.origin(l),
-      ls = robotState.lengths(l),
+  for (const [index, l] of [...robotState.arms, ...robotState.legs].entries()) {
+    const pose = replica?.limbs[index];
+    const a = pose?.[0] ?? robotState.origin(l),
       strike=activePoses.find(p=>p.limb===l),
-      p = strike?{joint:strike.joint,end:strike.tip}:ik(a, robotState.handEnd(l), ...ls, l.kind === 'arm' ? l.side : -l.side);
+      p = pose ? {joint: pose[1], end: pose[2]} : strike ? {joint:strike.joint,end:strike.tip}
+        : ik(a, robotState.handEnd(l), ...robotState.lengths(l), l.kind === 'arm' ? l.side : -l.side);
     const prefix = `${limbKey(l)}-`;
     push(a, p.joint, (l.kind === 'arm' ? 4.8 : 6.8)*(l.massScale??1), prefix + 'upper');
     push(p.joint, p.end, (l.kind === 'arm' ? 3.8 : 4.8)*(l.massScale??1), prefix + 'lower');
     push(p.end, p.end, (l.kind === 'arm' ? 4.8 : 5.8)*(l.massScale??1), prefix + 'lower');
   }
-  if (robotState.mode === 'scratch') {
+  if (!replica && robotState.mode === 'scratch') {
     const hand = robotState.arms.find(l => l.side === 1);
     if (robotState.healthyLimb(hand)) push(hand.foot, hand.foot, 4.8, `arm-${hand.side}-lower`);
   }

@@ -38,7 +38,7 @@ export class PixiArena {
   }
   async prepareSources() {
     const textures=Object.fromEntries(Object.entries(ASSETS.textures).filter(([key])=>
-      ctx.textureAssets?.[key]?.loaded!==false&&(ctx.mode==='tower'||!isTowerTexture(key))));
+      ctx.textureAssets?.[key]?.loaded!==false&&(ctx.mode==='tower'||ctx.mode==='multiplayer'||!isTowerTexture(key))));
     const urls=[...arenaSpriteAtlasUrls(textures,assetUrl),...(ctx.liquidAtlasSources??[]),...(ctx.coolantAtlasSources??[])];
     await Promise.all([...new Set(urls.filter(Boolean))].map(async url=>{
       try{this.sources.set(url,this.texture(await loadTextureImage(url),url!==assetUrl(ASSETS.textures.flashlight)));}catch{/* Vector fallback is already prepared by the game. */}

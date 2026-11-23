@@ -1,6 +1,6 @@
 import {arenaRaster} from '../game/arena-dimensions.js';
 import { clamp } from '../utils/math.js';
-import { ctx } from "../game/state.js";
+import { arenaViewPlayerId, ctx } from "../game/state.js";
 import { attr } from "./svg.js";
 
 // Isotropic projection: rectangular viewports add space around the square
@@ -81,12 +81,13 @@ export function cameraUpdate(dt) {
     ctx.combat.finished
   ) return;
 
-  const tower=ctx.mode==='tower';
+  const playerId=arenaViewPlayerId();
+  const tower=playerId>=0;
   // A stalled render frame must not consume the entire follow transition.
   if(tower)dt=Math.min(dt,1/20);
 
   const active = ctx.robots.filter(r => r.visible && r.mobile);
-  const player=tower?ctx.robots.find(r=>r.id===0&&r.visible&&Number.isFinite(r.x)&&Number.isFinite(r.y)):null;
+  const player=tower?ctx.robots.find(r=>r.id===playerId&&r.visible&&Number.isFinite(r.x)&&Number.isFinite(r.y)):null;
   if(!active.length&&!player)return;
 
   const width=ctx.fieldWidth||ctx.fieldSide||700,height=ctx.fieldHeight||ctx.fieldSide||700,short=Math.min(width,height);

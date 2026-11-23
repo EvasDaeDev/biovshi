@@ -1,5 +1,5 @@
 import {encodeFrame, encodeNumber, encodePoint} from '../lan/battle-protocol.js';
-import {ctx} from '../game/state.js';
+import {arenaViewPlayerId, ctx} from '../game/state.js';
 import {robotSetVisible} from './scenes.js';
 
 const point = ([x, y]) => ({x, y});
@@ -72,4 +72,5 @@ export function applyRobotReplica(robot, view) {
       .map(([index, time]) => [robot.segments[index], time]));
   }
   if (view.visible !== robot.visible) robotSetVisible(robot, view.visible);
+  if (view.visible && arenaViewPlayerId() >= 0) robot.api.capsules = robot.makeCapsules(false);
 }

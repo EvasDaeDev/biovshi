@@ -2,7 +2,7 @@ import {paintBossCard,bossPortraitBones} from '../boss/card.js';
 import {patientCombatStats} from '../game/patients.js';
 import {SKILLS,skillValue,skillHint} from './patient.js';
 import { CONFIG } from '../config.js';
-import { ctx } from '../game/state.js';
+import { arenaViewPlayerId, ctx } from '../game/state.js';
 import { friendlyAction, segmentDisplayState } from './telemetry.js';
 import { PORTRAIT_BONES,portraitBonesForBody,paintPatientPortrait } from './patient-portrait.js';
 const setText = (node, value) => { if (node.textContent !== value) node.textContent = value; };
@@ -25,7 +25,7 @@ export function paintTelemetry() {
   ctx.telemetryDirty = false;
   ctx.telemetryRobots = ctx.robots[0];
   ctx.lastTelemetryAt = now;
-  const tower=ctx.mode==='tower',active=[],retired=[];
+  const playerId=arenaViewPlayerId(),active=[],retired=[];
   let player=null;
   for (const r of ctx.robots) {
     const n = r.segmentCount;
@@ -61,12 +61,12 @@ export function paintTelemetry() {
     setClass(card.card,'disabled', !r.mobile);
     const bones=r.isBoss?bossPortraitBones(r.body):r.body?.skinParts?portraitBonesForBody(r.body):PORTRAIT_BONES;
     paintPatientPortrait(card,r.id,bones.map(({key})=>({key,...segmentDisplayState(r,key)})),bones);
-    const defeated=tower&&r.id!==0&&!r.mobile;
+    const defeated=playerId>=0&&r.id!==playerId&&!r.mobile;
     setClass(card.card,'tower-card-retired',defeated);
-    if(tower){
-      if(r.id===0)player=card.card;
+    if(playerId>=0){
+      if(r.id===playerId)player=card.card;
       else (defeated?retired:active).push(card.card);
     }
   }
-  if(tower)orderTowerCards(player?[player,...active,...retired]:[...active,...retired]);
+  if(playerId>=0)orderTowerCards(player?[player,...active,...retired]:[...active,...retired]);
 }

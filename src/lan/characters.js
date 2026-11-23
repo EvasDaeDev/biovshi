@@ -1,10 +1,11 @@
 import {BOSS_CONFIG, BOSS_VARIANTS} from '../boss/config.js';
 import {BASE_STATS, normalizeProsthetics, statMultiplier} from '../garage/model.js';
 import {normalizeTowerGraftProsthetics} from '../tower/anatomy.js';
-import {TOWER_MUTATION_LIMIT, towerMutationSnapshot, validTowerInventory, validTowerMutations} from '../tower/mutations.js';
+import {TOWER_MUTATIONS, TOWER_MUTATION_LIMIT, towerMutationSnapshot, validTowerInventory, validTowerMutations} from '../tower/mutations.js';
 import {TOWER_ENEMY_PROFILES, towerEnemyProfile, towerProfileEffect, validTowerProfile} from '../tower/profiles.js';
 import {validTowerSegmentInventory} from '../tower/segments.js';
-import {TOWER_SURGERY_MAX, TOWER_SURGERY_MIN_LEVEL, validTowerSurgeries} from '../tower/surgery.js';
+import {TOWER_SURGERY_MAX, TOWER_SURGERY_MIN_LEVEL, TOWER_SURGERY_OPERATIONS,
+  towerSurgerySiteLabel, validTowerSurgeries} from '../tower/surgery.js';
 
 const bosses = new Map(BOSS_VARIANTS.map(variant => ['boss-' + variant.id, variant]));
 export const lanProfiles = [
@@ -99,6 +100,16 @@ export function describeLanTower(copy) {
   return snapshot.base.join('/') + ' очков · ' + speed + '% скорость · ' + critical + '% крит · ' +
     maneuver + '% поворот · ' + copy.prosthetics.length + ' протезов · ' +
     (copy.surgeries?.length ?? 0) + ' операций';
+}
+
+export function describeLanEquipment(copy) {
+  const describeSite = site => site === 'head' ? 'Голова' : towerSurgerySiteLabel(site);
+  return [
+    ...copy.prosthetics.map(site => 'Протез · ' + describeSite(site)),
+    ...copy.surgeries.map(({procedure, site}) => TOWER_SURGERY_OPERATIONS[procedure].name + ' · ' + describeSite(site)),
+    ...copy.mutations.map(type => 'Мутация · ' + TOWER_MUTATIONS[type].name),
+    ...copy.segmentInventory.map(({type, site}) => TOWER_MUTATIONS[type].name + ' · ' + describeSite(site)),
+  ];
 }
 
 export function createLanRoster(room, localMemberId) {

@@ -3,7 +3,7 @@ import {pendingStrikes} from '../systems/strikes.js';
 import {fighterLabel} from '../game/patients.js';
 import { clamp, smooth } from '../utils/math.js';
 import { jumpHeight } from '../robot/scenes.js';
-import { ctx } from "../game/state.js";
+import { arenaViewPlayerId, ctx } from "../game/state.js";
 import { CONFIG } from "../config.js";
 import { ik, path } from "../utils/math.js";
 import { createOilDrop } from './effects.js';
@@ -210,7 +210,7 @@ export function robotPaint(robotState) {
   attr(robotState.label, 'x', robotState.spine[2].x);
   attr(robotState.label, 'y', robotState.spine[2].y - 18);
   attr(robotState.label, 'opacity', '1');
-  attr(robotState.label, 'display', ctx.mode==='tower'?'none':'');
+  attr(robotState.label, 'display', arenaViewPlayerId()>=0?'none':'');
 }
 
 function recordRobotTrails(robotState,spawn){
