@@ -60,9 +60,10 @@ test('Settings opens above every game sheet, keeps its focus and returns to the 
   open();await Promise.resolve();
   assert.equal(ctx.settingsOpen,true);assert.equal(sheet.hidden,false);
   assert.equal(document.activeElement.id,'arena-settings-close');
-  assert.ok(sheet.inert||sheet.closest('.tag7hop-layout').inert);
+  assert.equal(sheet.inert,true);
   close();await Promise.resolve();
   assert.equal(sheet.hidden,false);assert.equal(ctx.settingsOpen,false);
+  assert.equal(sheet.inert,false);
   assert.equal(Boolean(settings.inert),false);assert.equal(ctx.button.inert,true);
   ctx.root.__disposeTag();dom.window.close();
  }

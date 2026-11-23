@@ -70,7 +70,7 @@ export function initializeSettings() {
     opener=event.currentTarget;
     wasPaused=ctx.paused;
     ctx.settingsOpen=true;setPaused(true);panel.hidden=false;for(const trigger of buttons)trigger.setAttribute('aria-expanded','true');
-    background=[root.querySelector('.atmosphere-controls'),root.querySelector('.tag7hop-layout'),root.querySelector('#bet-overlay'),root.querySelector('#launch-overlay'),root.querySelector('#tower-preparation')]
+    background=[...root.querySelectorAll('.atmosphere-controls,.tag7hop-layout,#bet-overlay,#launch-overlay,#tower-preparation,#gladiator-results')]
       .map(node=>[node,Boolean(node.inert)]);
     for(const [node] of background)node.inert=true;
     closeButton.focus();
