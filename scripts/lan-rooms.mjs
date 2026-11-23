@@ -1,5 +1,6 @@
 import {randomBytes, randomUUID} from 'node:crypto';
 import {validBattleSnapshot, validBattleView, validImpact, validMovement, validRemains} from '../src/lan/battle-protocol.js';
+import {createFloorCache, validFloorPatch} from '../src/lan/floor-sync.js';
 import {lanAiName, validLanProfile} from '../src/lan/characters.js';
 import {
   LAN_COUNTDOWN_MS, LAN_HOST_HEARTBEAT_MS, LAN_LOADING_MS, LAN_MAX_FIGHTERS, LAN_RECONNECT_MS, LAN_ROOM_CODE, isLanMessage, lanMessage,
@@ -119,7 +120,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
     room.phase = waiting;
     room.matchId = null;
     room.result = null;
-    room.matchFighters = room.view = room.snapshot = room.remains = room.inputSeq = null;
+    room.matchFighters = room.view = room.snapshot = room.remains = room.floor = room.inputSeq = null;
     resetReady(room);
   }
 
@@ -246,6 +247,8 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
     publishRoom(room);
     if (member.id !== room.hostId) {
       if (room.remains) send(socket, 'state.remains', room.remains, room.id);
+      if (room.floor) for (const patch of room.floor.keyframes())
+        send(socket, 'state.floor', {...patch, matchId: room.matchId}, room.id);
       if (room.snapshot) send(socket, 'state.snapshot', {...room.snapshot, impacts: []}, room.id);
     }
   }
@@ -340,7 +343,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
       }
       return;
     }
-    if (type === 'input' || type === 'state.snapshot' || type === 'state.remains') {
+    if (['input', 'state.snapshot', 'state.remains', 'state.floor'].includes(type)) {
       if (payload.matchId !== room.matchId || !room.view) return;
       if (type === 'input') {
         requireRoom(!host && room.view.players.some(player => player.id === member.id),
@@ -358,6 +361,12 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
           if (!validSnapshot(room, payload)) return;
           room.snapshot = payload;
           if (room.phase === running) monitorHost(room);
+        } else if (type === 'state.floor') {
+          const {seq, time, add, remove, trails} = payload;
+          const patch = {seq, time, add, remove, trails};
+          if (validFloorPatch(patch, count) && room.floor.apply(patch))
+            relay(room, type, {...patch, matchId: room.matchId});
+          return;
         } else {
           if (!validRemains(payload.parts, count) || payload.parts.length <= (room.remains?.parts.length ?? 0)) return;
           room.remains = payload;
@@ -436,6 +445,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         }, loadingMs);
         room.matchId = randomUUID();
         room.inputSeq = new Map();
+        room.floor = createFloorCache();
         room.matchFighters = [
           ...[...room.members.values()].filter(member => member.role === 'player').map(member => member.name),
           ...room.ai.map(lanAiName),

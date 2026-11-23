@@ -2,6 +2,7 @@ import {ASSETS, assetUrl} from '../assets/manifest.js';
 import {transformMatrix} from '../render/pixi-math.js';
 import {ctx} from '../game/state.js';
 import {onGameEvent} from '../game/event-bus.js';
+import {createFloorPublisher} from './floor-sync.js';
 import {LAN_INPUT_TIMEOUT_MS, LAN_SNAPSHOT_MS, encodeFrame, encodeNumber, encodePoint} from './battle-protocol.js';
 
 function captureRemainsPiece({geometry, skin}, assetKeys) {
@@ -21,6 +22,7 @@ export function installLanHostSync(match) {
   const inputs = new Map();
   let seq = 0, impactSeq = 0, sentRemains = 0, nextSnapshot = 0, finalSent = false;
   const impacts = [];
+  const publishFloor = createFloorPublisher();
 
   const unsubscribe = onGameEvent(event => {
     if (!event.point || !['hit', 'segment-broken'].includes(event.type)) return;
@@ -57,6 +59,7 @@ export function installLanHostSync(match) {
       }));
       if (match.onRemains({parts})) sentRemains = parts.length;
     }
+    publishFloor(now, ctx.game.time, ctx.combat.oilDrops, ctx.robots, match.onFloor, final);
     if (match.onSnapshot(snapshot(impacts))) {
       seq++;
       impacts.length = 0;

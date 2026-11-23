@@ -5,6 +5,7 @@ import {installTowerInput} from '../tower/input.js';
 import {showCrit} from '../render/crit.js';
 import {spawnHitEffect} from '../render/hit-effects.js';
 import {LAN_INPUT_MS, LAN_INPUT_TIMEOUT_MS} from './battle-protocol.js';
+import {createFloorReplica} from './floor-replica.js';
 import {createSnapshotBuffer} from './snapshot-buffer.js';
 
 function restoreRemainsPiece({bone, skin}) {
@@ -33,6 +34,7 @@ export function installLanGuestArena(match) {
   ctx.resetButton.onclick = match.onReturn;
 
   const buffer = createSnapshotBuffer();
+  const floor = createFloorReplica();
   let connected = false, started = false;
   let lastX = 0, lastY = 0, nextInput = 0, inputSeq = 0, impactSeq = -1;
   const impacts = [];
@@ -69,6 +71,7 @@ export function installLanGuestArena(match) {
     ctx.combat.finished = snapshot.finished;
     ctx.combat.winner = snapshot.winner;
     ctx.telemetryDirty = true;
+    floor.paint(snapshot.time);
     for (const [id, view] of snapshot.robots.entries()) ctx.robots[id].applyReplica(view);
     while (impacts.length && impacts[0].time <= snapshot.time) {
       const event = impacts.shift();
@@ -115,6 +118,7 @@ export function installLanGuestArena(match) {
         impacts.push(event);
       }
     },
+    floor: floor.receive,
     remains({parts}) {
       for (const {id, cause, motion, pieces} of parts.slice(ctx.combat.detached.length)) {
         const [started, duration, dx, dy] = motion;

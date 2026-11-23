@@ -6,6 +6,7 @@ import test from 'node:test';
 import WebSocket from 'ws';
 import {startLanServer} from '../scripts/lan-server.mjs';
 import {lanMessage} from '../src/lan/protocol.js';
+import {createFloorCache, LAN_FLOOR_BATCH, queueFloorPatch} from '../src/lan/floor-sync.js';
 
 const build = 'test-build';
 async function setup(t, options) {
@@ -229,12 +230,27 @@ test('LAN relays only the bound guest input and host snapshots, including a reco
   assert.deepEqual((await viewer.next('state.remains')).payload, remains);
   assert.deepEqual((await viewer.next('state.snapshot')).payload, snapshot);
 
+  const floor = {matchId, seq: 2, time: 2,
+    add: [[0, 1, 300, 350, 4, 1, 1, 3, 50], [1, 1, 301, 350, 4, 1, 0, 2, 40]],
+    remove: [], trails: [[1, [[300, 350, 1]]]]};
+  guest.send('state.floor', floor, roomId);
+  assert.equal((await guest.next('error')).payload.code, 'host_only');
+  host.send('state.floor', floor, roomId);
+  assert.deepEqual((await viewer.next('state.floor')).payload, floor);
+  host.send('state.floor', {...floor, seq: 1, add: [], remove: [1]}, roomId);
+  host.send('state.floor', {...floor, seq: 3, add: [], remove: [0]}, roomId);
+  await viewer.next('state.floor', message => message.payload.seq === 3);
+
   guest.socket.terminate();
   assert.equal((await host.next('input.reset')).payload.memberId, memberId);
   const resumed = await connect(origin);
   resumed.send('session.resume', {token: resumeToken}, roomId);
   assert.equal((await resumed.next('room.entered')).payload.memberId, memberId);
   assert.deepEqual((await resumed.next('state.remains')).payload, remains);
+  const floorKeyframe = (await resumed.next('state.floor')).payload;
+  assert.equal(floorKeyframe.reset, true);
+  assert.deepEqual(floorKeyframe.add, [floor.add[1]]);
+  assert.deepEqual(floorKeyframe.trails, floor.trails);
   assert.deepEqual((await resumed.next('state.snapshot')).payload, snapshot);
   resumed.send('input', {matchId, seq: 0, x: 0, y: 1}, roomId);
   assert.equal((await host.next('input')).payload.seq, 0);
@@ -253,6 +269,29 @@ test('LAN cancels preparation when an invited viewer never loads the arena', asy
   const waiting = await viewer.next('room.state', message => message.payload.phase === 'waiting' && message.payload.notice);
   assert.match(waiting.payload.notice, /Истекло время загрузки/);
   assert.equal(waiting.payload.matchId, null);
+});
+
+test('a full floor reconnect is chunked and a backgrounded client can combine past changes', () => {
+  const cache = createFloorCache();
+  const drop = id => [id, 0, 350, 350, 4, 1, 0, 3, 50];
+  assert.ok(cache.apply({seq: 0, time: 1, add: Array.from({length: LAN_FLOOR_BATCH}, (_, id) => drop(id)),
+    remove: [], trails: []}));
+  assert.ok(cache.apply({seq: 1, time: 1, add: [drop(LAN_FLOOR_BATCH)], remove: [], trails: []}));
+  const pending = [...cache.keyframes()];
+  assert.deepEqual(pending.map(patch => patch.add.length), [LAN_FLOOR_BATCH, 1]);
+  assert.equal(pending[0].reset, true);
+  for (let time = 2; time < 200; time++) {
+    const id = LAN_FLOOR_BATCH + time - 1;
+    queueFloorPatch(pending, {time, add: [drop(id)], remove: [id - 1], trails: [[0, [[350, 350, time]]]]});
+  }
+  assert.equal(pending.length, 24);
+  const ids = new Set();
+  for (const patch of pending) {
+    if (patch.reset) ids.clear();
+    for (const id of patch.remove) ids.delete(id);
+    for (const [id] of patch.add) ids.add(id);
+  }
+  assert.deepEqual([...ids], [...Array.from({length: LAN_FLOOR_BATCH}, (_, id) => id), LAN_FLOOR_BATCH + 198]);
 });
 
 test('LAN suspends a disconnected host, requires a new keyframe to resume, and aborts after the grace period', async t => {

@@ -1,4 +1,4 @@
-export const LAN_VERSION = 3;
+export const LAN_VERSION = 4;
 export const LAN_COUNTDOWN_MS = 3_000;
 export const LAN_LOADING_MS = 30_000;
 export const LAN_HOST_HEARTBEAT_MS = 2_500;

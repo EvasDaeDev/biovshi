@@ -10,6 +10,8 @@ import {ctx} from '../src/game/state.js';
 import {createLanRoster} from '../src/lan/characters.js';
 import {validBattleSnapshot, validBattleView, validRemains} from '../src/lan/battle-protocol.js';
 import {installLanGuestArena} from '../src/lan/guest-arena.js';
+import {createOilDrop} from '../src/render/effects.js';
+import {validFloorPatch} from '../src/lan/floor-sync.js';
 import {paint} from '../src/render/frame.js';
 import {installLanHostArena} from '../src/lan/host-arena.js';
 import {newTower} from '../src/tower/model.js';
@@ -103,12 +105,13 @@ test('LAN host can spectate a full arena of ten AI fighters', t => {
 });
 
 test('LAN replica renders the host rig and detached segments without simulation', t => {
-  const snapshots = [], wreckage = [], inputs = [];
+  const snapshots = [], wreckage = [], floors = [], inputs = [];
   const members = [fighter('хозяин', 'boss-arms'), fighter('гость', 'fast')];
   const {host, win} = launch(t, {
     members, local: 'хозяин', arenaId: 'columns', network: {
       onSnapshot: data => { snapshots.push(structuredClone(data)); return true; },
       onRemains: data => { wreckage.push(data); return true; },
+      onFloor: data => { floors.push(data); return true; },
     },
   });
   assert.equal(validBattleView(host.view, 2), true);
@@ -120,12 +123,16 @@ test('LAN replica renders the host rig and detached segments without simulation'
   assert.equal(ctx.intents[1].speed, 0);
   const segment = 'arm-1-lower';
   ctx.robots[1].damage(segment, 0, 100);
+  createOilDrop(1, 367, 391, 3.5, 'coolant', {variant: {index: 4, angle: 29}});
+  ctx.robots[1].trail.push({x: 367, y: 391, time: ctx.game.time});
   paint();
   ctx.multiplayer.publishFrame(performance.now(), true);
   const snapshot = snapshots.at(-1);
   assert.equal(validBattleSnapshot(snapshot, 2), true);
   assert.equal(validRemains(wreckage[0].parts, 2), true);
   assert.equal(snapshot.impacts[0].segment, segment);
+  assert.equal(validFloorPatch(floors[0], 2), true);
+  assert.equal(floors[0].add[0][6], 1);
 
   const replica = {fighters: createLanRoster({members, ai: []}, 'гость'), replica: true,
     starts: host.view.starts, onInput: data => { inputs.push(data); return true; }, onReturn() {}};
@@ -135,6 +142,7 @@ test('LAN replica renders the host rig and detached segments without simulation'
   for (const robot of ctx.robots) robot.tick = () => assert.fail('The replica must never tick a robot');
   guest.remains(wreckage[0]);
   guest.remains(wreckage[0]);
+  guest.floor(floors[0]);
   guest.snapshot(snapshot);
   step(1 / 60);
   assert.equal(ctx.game.time, 0);
@@ -144,6 +152,14 @@ test('LAN replica renders the host rig and detached segments without simulation'
   assert.equal(ctx.robots[0].x, snapshot.robots[0].root[0]);
   assert.equal(ctx.robots[0].actor.getAttribute('data-boss-phase'), '1');
   assert.equal(ctx.detachedG.children.length, 1);
+  assert.deepEqual(ctx.combat.oilDrops[0].variant, {index: 4, angle: 29});
+  assert.equal(ctx.combat.oilDrops[0].fluid, 'coolant');
+  assert.ok(ctx.robots[1].trail.some(point => point.x === 367 && point.y === 391));
+  assert.ok([...ctx.robots[1].trailNodes].some(node => Number(node.getAttribute('opacity')) > 0));
+  guest.floor({time: snapshot.time, trails: [[1, []]], add: [], remove: [floors[0].add[0][0]]});
+  frame(performance.now() + 170);
+  assert.equal(ctx.combat.oilDrops.filter(drop => drop.fluid === 'coolant').length, 0);
+  assert.equal(ctx.robots[1].trail.length, 0);
 
   win.document.dispatchEvent(new win.KeyboardEvent('keydown', {code: 'KeyD'}));
   replica.sendInputFrame(performance.now() + 150);

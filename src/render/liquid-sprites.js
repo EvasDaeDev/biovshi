@@ -13,12 +13,12 @@ export function liquidVariant(seed,index,owner) {
   };
 }
 
-export function createLiquidSprite(owner,x,y,radius,fluid='blood') {
+export function createLiquidSprite(owner,x,y,radius,fluid='blood',variant=null) {
   const sources=fluid==='coolant'?ctx.coolantAtlasSources:ctx.liquidAtlasSources;
   const url=sources?.[0]??assetUrl(ASSETS.textures.liquids);
   // If blue atlases cannot be prepared, use the blue vector fallback, never red.
   if(!url||ctx.textureAssets?.liquids?.loaded===false||fluid==='coolant'&&!sources?.length)return null;
-  const variant=liquidVariant(ctx.seed,ctx.combat.oilDrops.length,owner);
+  variant??=liquidVariant(ctx.seed,ctx.combat.oilDrops.length,owner);
   const col=variant.index%CONFIG.oil.spriteColumns,row=Math.floor(variant.index/CONFIG.oil.spriteColumns);
   const node=el('g',{
     'data-liquid-sprite':variant.index,

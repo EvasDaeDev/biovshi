@@ -1,4 +1,5 @@
 import {describeLanProfile, describeLanTower, lanAiName, lanProfiles} from './characters.js';
+import {queueFloorPatch} from './floor-sync.js';
 import {createLanClient} from './client.js';
 import {LAN_RECONNECT_MS, LAN_ROOM_CODE} from './protocol.js';
 import './lobby.css';
@@ -65,6 +66,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
   let session = readSession();
   let activeMatch = null;
   let pendingSnapshot, pendingRemains;
+  const pendingFloor = [];
   let matchWork = Promise.resolve();
   let matchError = '';
   let lobbyActive = false, countdownTimer, resumeTimer, resumeUntil;
@@ -109,6 +111,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
             onHeartbeat: () => transmit('match.heartbeat'),
             onSnapshot: snapshot => transmit('state.snapshot', snapshot),
             onRemains: remains => transmit('state.remains', remains),
+            onFloor: floor => transmit('state.floor', floor),
             onReturn: () => transmit('room.return'),
           } : {
             onInput: input => transmit('input', input),
@@ -118,6 +121,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
           else {
             if (pendingSnapshot?.matchId === matchId) match.runtime.snapshot(pendingSnapshot);
             if (pendingRemains?.matchId === matchId) match.runtime.remains(pendingRemains);
+            for (const patch of pendingFloor.splice(0)) match.runtime.floor(patch);
             transmit('match.loaded');
           }
         } catch (error) {
@@ -408,6 +412,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
       case 'room.state':
         if (room?.matchId !== payload.matchId) {
           pendingSnapshot = pendingRemains = undefined;
+          pendingFloor.length = 0;
           matchError = payload.phase === 'waiting' ? matchError : '';
         }
         room = payload;
@@ -424,6 +429,11 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
         if (roomId !== room?.id || payload.matchId !== room.matchId) return;
         pendingRemains = payload;
         activeMatch?.runtime?.remains?.(payload);
+        return;
+      case 'state.floor':
+        if (roomId !== room?.id || payload.matchId !== room.matchId) return;
+        if (activeMatch?.runtime?.floor) activeMatch.runtime.floor(payload);
+        else queueFloorPatch(pendingFloor, payload);
         return;
       case 'match.heartbeat':
         if (roomId === room?.id && payload.matchId === activeMatch?.id) activeMatch.runtime?.heartbeat?.();

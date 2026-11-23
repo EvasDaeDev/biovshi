@@ -18,7 +18,8 @@
     "experiment:trauma": "node scripts/experiment-trauma.mjs",
     "build:lan": "npm run build -- --mode test",
     "lan": "node scripts/lan-launcher.mjs",
-    "lan:serve": "node scripts/lan-server.mjs"
+    "lan:serve": "node scripts/lan-server.mjs",
+    "profile:lan": "node scripts/profile-lan.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

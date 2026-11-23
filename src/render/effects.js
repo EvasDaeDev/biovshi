@@ -8,7 +8,7 @@ import { path } from "../utils/math.js";
 import { oilColor } from "../utils/colors.js";
 import { random } from "../utils/random.js";
 import { drawDetachedSkin } from './robot-skin.js';
-import { createLiquidSprite, paintLiquidSprite } from './liquid-sprites.js';
+import { createLiquidSprite, liquidVariant, paintLiquidSprite } from './liquid-sprites.js';
 
 export
 // Эффекты Geometry Wars используют отдельные частицы и не влияют на ИИ.
@@ -99,8 +99,10 @@ export function updatePulses() {
 // Неудачная атака не должна немедленно возобновляться от того же касания лап.
 
 // Выполняется после движения: охотник доводит прыжок к актуальному положению жертвы.
-export function createOilDrop(robotId, x, y, baseRadius, fluid='blood') {
-  const sprite=createLiquidSprite(robotId,x,y,baseRadius,fluid);
+export function createOilDrop(robotId, x, y, baseRadius, fluid='blood', {
+  born=ctx.game.time, variant=liquidVariant(ctx.seed,ctx.combat.oilDrops.length,robotId),
+}={}) {
+  const sprite=createLiquidSprite(robotId,x,y,baseRadius,fluid,variant);
   const node = sprite?.node??el('circle', {
     cx: x,
     cy: y,
@@ -108,19 +110,22 @@ export function createOilDrop(robotId, x, y, baseRadius, fluid='blood') {
     fill: oilColor(robotId,.9,0,fluid),
     opacity: .92
   }, ctx.oilG);
-  ctx.combat.oilDrops.push({
+  const drop={
     node,
     sprite,
     robot: robotId,
     fluid,
-    born: ctx.game.time,
+    born,
+    variant,
     x,
     y,
     baseRadius,
     maxRadius: baseRadius * CONFIG.oil.growFactor,
     baseOpacity: .92
-  });
+  };
+  ctx.combat.oilDrops.push(drop);
   enforceOilLimits();
+  return drop;
 }
 // Emission belongs to the fixed simulation clock: it consumes combat RNG.
 export function updateOilLeaks() {

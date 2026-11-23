@@ -203,7 +203,8 @@ export function robotPaint(robotState) {
   attr(robotState.actor, 'class', 'robot');
   robotState.draw(0);
   robotState.body?.paint?.(robotState);
-  if(!replica)paintRobotTrails(robotState,spawn);
+  if(!replica)recordRobotTrails(robotState,spawn);
+  paintRobotTrails(robotState);
   const name = robotState.body?.arenaLabel??fighterLabel(robotState.id);
   if (robotState.label.textContent !== name) robotState.label.textContent = name;
   attr(robotState.label, 'x', robotState.spine[2].x);
@@ -212,7 +213,7 @@ export function robotPaint(robotState) {
   attr(robotState.label, 'display', ctx.mode==='tower'?'none':'');
 }
 
-function paintRobotTrails(robotState,spawn){
+function recordRobotTrails(robotState,spawn){
   if(robotState.corpsePuddlePending&&inertiaOffset(robotState.corpseInertia).settled) {
     const center=robotState.visiblePoint(robotState.api.center);
     createOilDrop(robotState.id,center.x,center.y,CONFIG.oil.settledPuddleRadiusCm);
@@ -241,10 +242,13 @@ function paintRobotTrails(robotState,spawn){
       } : previous?.point
     });
   }
+}
+
+function paintRobotTrails(robotState) {
   for (let i = 0; i < CONFIG.trails.limit; i++) {
     const sample = robotState.trail[i],
       age = sample ? ctx.game.time - sample.time : Infinity;
-    const opacity = sample ? clamp(CONFIG.trails.opacity,0,1) * Math.max(0, 1 - age / CONFIG.trails.fadeSec) : 0;
+    const opacity = sample ? clamp(CONFIG.trails.opacity,0,1) * clamp(1 - age / CONFIG.trails.fadeSec, 0, 1) : 0;
     attr(robotState.trailNodes[i], 'opacity', opacity.toFixed(3));
     attr(robotState.trailNodes[i], 'fill', 'var(--night-trail)');
     if (sample) dot(robotState.trailNodes[i], sample);
