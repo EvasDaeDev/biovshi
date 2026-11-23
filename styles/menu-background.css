@@ -19,7 +19,7 @@ html > body {isolation:isolate}
   position:absolute;
   inset:0;
   background:linear-gradient(175deg,rgb(0 0 0 / 58%),rgb(0 0 0 / 43%) 52%,rgb(0 0 0 / 50%));
-  animation:menu-shade 10s ease-in-out infinite;
+  animation:menu-shade 20s ease-in-out infinite;
   animation-play-state:var(--menu-shade-motion,paused);
 }
 
@@ -30,9 +30,8 @@ body:not(:has(> #texture-loading)):has(> #robot-tag-hops-v22[data-intro-dismisse
   --menu-shade-motion:running;
 }
 @keyframes menu-shade {
-  0%,38%,100% {opacity:1}
-  42%,72% {opacity:.94}
-  47%,81% {opacity:.99}
+  0%,38%,47%,68%,77%,100% {opacity:1}
+  42%,72% {opacity:.85}
 }
 
 /* Reveal the shared image around the original panels. Keep the arena mounted
