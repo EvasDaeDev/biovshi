@@ -302,6 +302,30 @@ test('Telegram joystick cancels native touch panning while pointer input and oth
  }finally{f.dom.window.close();}
 });
 
+test('native pinch is blocked in battle while settings and pointer input keep their gestures',()=>{
+ const f=setup();try{
+  f.fight();
+  const gesture=(type,target=ctx.stage)=>{
+   const event=new f.win.Event(type,{bubbles:true,cancelable:true});
+   target.dispatchEvent(event);
+   return event.defaultPrevented;
+  };
+  assert.equal(gesture('gesturestart'),true);
+  assert.equal(gesture('gesturechange'),true);
+  assert.equal(gesture('pointerdown'),false);
+  assert.equal(gesture('touchmove'),false);
+  ctx.settingsOpen=true;
+  assert.equal(gesture('gesturestart',f.doc.querySelector('.settings-panel')),false);
+  ctx.settingsOpen=false;
+  ctx.resultsPanel.hidden=false;
+  assert.equal(gesture('gesturestart'),false);
+  ctx.resultsPanel.hidden=true;
+  const stage=ctx.stage;
+  ctx.root.__disposeTag();
+  assert.equal(gesture('gesturechange',stage),false);
+ }finally{f.dom.window.close();}
+});
+
 test('Telegram native swipes stay disabled after fullscreen and reactivation',()=>{
  const f=setup();try{
   const count=()=>f.mock.calls.filter(call=>call==='disableVerticalSwipes').length;
