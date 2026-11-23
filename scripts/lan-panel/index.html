@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>ЭКЦЕПРИ · Запуск LAN</title>
+  <link rel="stylesheet" href="/lan/panel.css">
+  <script type="module" src="/lan/panel.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="brand">ЭКЦЕПРИ</p>
+      <h1>Локальный сервер</h1>
+    </header>
+
+    <form id="settings">
+      <div class="fields">
+        <label>Сетевой интерфейс<select id="network" required disabled></select></label>
+        <label>Порт игры<input id="port" type="number" min="1" max="65535" value="8080" required disabled></label>
+      </div>
+      <p id="network-hint">Выберите Wi-Fi или Ethernet, к которому подключены игроки.</p>
+      <button id="start" type="submit" disabled>Запустить сервер</button>
+    </form>
+
+    <section id="server" aria-label="Состояние сервера">
+      <p id="status" role="status">Подключаемся к панели запуска…</p>
+      <p id="error" role="alert" hidden></p>
+      <details id="diagnostics" hidden>
+        <summary>Журнал сборки</summary>
+        <pre id="log"></pre>
+      </details>
+
+      <div id="connection" hidden>
+        <img id="qr" width="144" height="144" alt="QR-код адреса игры">
+        <div>
+          <p>Адрес игры для участников</p>
+          <a id="game-url" target="_blank" rel="noopener"></a>
+        </div>
+      </div>
+      <button id="stop" type="button" hidden>Остановить сервер</button>
+    </section>
+  </main>
+</body>
+</html>

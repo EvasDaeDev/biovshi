@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.lan-dist/
 .DS_Store
 .texture-test-*/
 
