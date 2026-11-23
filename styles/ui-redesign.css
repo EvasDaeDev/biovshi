@@ -459,7 +459,7 @@
 }
 
 
-/* Stable global landscape navigation: identical screen coordinates everywhere. */
+/* Global controls for menu screens. In battle Settings joins the toolbar. */
 #robot-tag-hops-v22 #game-navigation{
   position:fixed;
   top:var(--telegram-layout-top,0px);
@@ -473,6 +473,10 @@
 #robot-tag-hops-v22 #game-navigation>button{
   position:absolute;
   top:12px;
+}
+#robot-tag-hops-v22 .game-nav-back-control,
+#robot-tag-hops-v22 #game-navigation>button,
+#robot-tag-hops-v22 .atmosphere-controls>#game-nav-settings{
   display:grid;place-items:center;
   box-sizing:border-box;
   min-height:44px;
@@ -522,11 +526,13 @@
 #robot-tag-hops-v22 #tower-upgrade-window .tower-upgrade-heading-actions .tower-upgrade-settings{
   padding:3px;
 }
+#robot-tag-hops-v22 #game-nav-settings:focus-visible,
 #robot-tag-hops-v22 #game-navigation>button:focus-visible,
 #robot-tag-hops-v22 .game-nav-back-control:focus-visible{
   outline:2px solid var(--ui-selected);
   outline-offset:2px;
 }
+#robot-tag-hops-v22 #game-nav-settings:hover,
 #robot-tag-hops-v22 #game-navigation>button:hover,
 #robot-tag-hops-v22 .game-nav-back-control:hover{
   background:#3d4734;
@@ -2107,6 +2113,26 @@ html #robot-tag-hops-v22.fit-sheets #game-nav-back{
 html #robot-tag-hops-v22.fit-sheets #game-nav-settings{
   right:calc(var(--sheet-control-gutter) / var(--interface-scale,1));
   width:calc(44px / var(--interface-scale,1));
+}
+html body #robot-tag-hops-v22 .atmosphere-controls>#tag7hop-status{
+  position:static;
+  transform:none;
+  flex:1 1 auto;
+  min-width:0;
+  max-width:none;
+}
+#robot-tag-hops-v22 .atmosphere-controls>#game-nav-settings{
+  flex:none;
+  order:3;
+  height:44px;
+}
+html #robot-tag-hops-v22.fit-sheets .atmosphere-controls>#game-nav-settings{
+  width:calc(44px / var(--interface-scale,1));
+  height:calc(44px / var(--interface-scale,1));
+  padding:calc(3px / var(--interface-scale,1));
+}
+html #robot-tag-hops-v22.fit-sheets .atmosphere-controls:has(>#game-nav-settings){
+  padding-block:4px;
 }
 html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-back{
   top:calc(var(--sheet-top) + var(--sheet-control-gutter));

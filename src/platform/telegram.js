@@ -38,8 +38,8 @@ export function initializeTelegram(onLayoutChange){
   let backAvailable=false;
   const subscriptions=[];
   const launched=()=>Boolean(app||doc.documentElement.classList.contains('telegram-launch'));
-  // WKWebView can report zero Telegram insets while opening or rotating. Read
-  // env() outside the scaled game; never add the same system inset twice.
+  // Read device insets outside the scaled game in both Safari and WKWebView.
+  // Telegram may also report the same device insets through its SDK.
   const safeProbe=doc.createElement('div');
   safeProbe.style.cssText='position:fixed;visibility:hidden;pointer-events:none;width:0;height:0;box-sizing:content-box;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
   safeProbe.setAttribute('aria-hidden','true');doc.body.append(safeProbe);
@@ -148,13 +148,13 @@ export function initializeTelegram(onLayoutChange){
       return app?.viewportStableHeight>0?{...size,height:Math.min(size.height,app.viewportStableHeight)}:size;
     },
     viewport(size){
-      if(!launched())return size;
       const area=edges();
       return {...size,width:Math.max(1,size.width-area.left-area.right),height:Math.max(1,size.height-area.top-area.bottom),...area};
     },
     contentViewport(view){
-      if(!launched())return view;
-      const area=edges(),right=Math.min(view.x+view.width,win.innerWidth-area.right);
+      const area=edges();
+      if(!launched()&&Object.values(area).every(value=>value===0))return view;
+      const right=Math.min(view.x+view.width,win.innerWidth-area.right);
       const visibleHeight=fullscreenConfirmed===true?win.innerHeight:app?.viewportHeight>0?Math.min(win.innerHeight,app.viewportHeight):app?.viewportStableHeight>0?Math.min(win.innerHeight,app.viewportStableHeight):win.innerHeight;
       const bottom=Math.min(view.y+view.height,visibleHeight-area.bottom);
       const x=Math.max(view.x,area.left),y=Math.max(view.y,area.top);
@@ -181,6 +181,6 @@ export function initializeTelegram(onLayoutChange){
     if(ctx.platform===api)ctx.platform=null;
     ctx.appInactive=false;dispose();
   };
-  activity();connect();if(!app&&launched())layout();
+  activity();connect();if(!app)layout();
   return api;
 }

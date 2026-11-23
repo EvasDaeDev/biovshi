@@ -494,7 +494,7 @@ html body #robot-tag-hops-v22 #tag7hop-status {position:absolute;left:50%;transf
 #robot-tag-hops-v22 .settings-button,
 #robot-tag-hops-v22 .arena-expand-button {box-sizing:border-box;width:42px;height:42px}
 #robot-tag-hops-v22 .arena-expand-button {position:absolute;right:12px;bottom:12px;z-index:3;padding:8px;display:grid;place-items:center;border:1px solid #284763;border-radius:50%;background:#102039;color:#daf6ff;touch-action:manipulation;cursor:pointer}
-#robot-tag-hops-v22.arena-expanded {position:fixed;inset:0;z-index:100;width:auto;height:var(--game-height,100dvh);box-sizing:border-box;padding:12px;margin:0;overflow:auto;background:#02050d}
+#robot-tag-hops-v22.arena-expanded {position:fixed;inset:var(--telegram-layout-top,0px) var(--telegram-layout-right,0px) auto var(--telegram-layout-left,0px);z-index:100;width:auto;height:var(--game-height,100dvh);box-sizing:border-box;padding:12px;margin:0;overflow:auto;background:#02050d}
 #robot-tag-hops-v22.arena-expanded .tag7hop-layout {display:block}
 #robot-tag-hops-v22.arena-expanded .tag7hop-sidebar-wrap,
 #robot-tag-hops-v22.arena-expanded #bet-hud {display:none !important}

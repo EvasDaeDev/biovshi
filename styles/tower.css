@@ -9,7 +9,7 @@
 #robot-tag-hops-v22 #tower-reset{background:transparent;color:#393b30;padding:5px;font-size:11px}
 #robot-tag-hops-v22 #launch-totalizator{margin-top:12px}
 #robot-tag-hops-v22 #tower-controls[hidden]{display:none}
-#robot-tag-hops-v22 #tower-stick{position:fixed;bottom:18px;left:18px;width:112px;height:112px;border:2px solid #93896c;border-radius:50%;background:#24271dbb;z-index:16;touch-action:none;display:flex;align-items:center;justify-content:center;user-select:none}
+#robot-tag-hops-v22 #tower-stick{position:fixed;bottom:calc(18px + var(--telegram-inset-bottom,env(safe-area-inset-bottom,0px)));left:calc(18px + var(--telegram-inset-left,env(safe-area-inset-left,0px)));width:112px;height:112px;border:2px solid #93896c;border-radius:50%;background:#24271dbb;z-index:16;touch-action:none;display:flex;align-items:center;justify-content:center;user-select:none}
 #robot-tag-hops-v22 #tower-stick span{width:48px;height:48px;border-radius:50%;background:#aca17a;border:2px solid #d2c398;pointer-events:none}
 #robot-tag-hops-v22 #tower-preparation .bet-panel{width:min(100%,580px)}
 #robot-tag-hops-v22 #tower-stats{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}

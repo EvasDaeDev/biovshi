@@ -269,6 +269,33 @@ test('global fixed navigation stays above betting and below open Settings',()=>{
  assert.match(css,/#robot-tag-hops-v22 #tower-upgrade-window \.tower-upgrade-heading-actions \.tower-upgrade-settings\s*\{\s*position:fixed;\s*top:calc\(var\(--telegram-layout-top,0px\) \+ 12px\);\s*right:calc\(var\(--telegram-layout-right,0px\) \+ 12px\);/);
 });
 
+test('battle Settings occupies the toolbar and returns to navigation on results and menus',async()=>{
+ const dom=setup();installTowerUI();initializeModalFocus();
+ const launch=document.getElementById('launch-overlay');
+ const settings=document.getElementById('game-nav-settings');
+ const toolbar=document.querySelector('.atmosphere-controls');
+ const nav=document.getElementById('game-navigation');
+ initializeGameNavigation();
+ assert.equal(settings.parentElement,nav);
+ launch.hidden=true;
+ await Promise.resolve();
+ assert.equal(settings.parentElement,toolbar);
+ settings.click();
+ await Promise.resolve();
+ assert.equal(ctx.settingsOpen,true);
+ assert.equal(settings.parentElement,toolbar);
+ close();
+ await Promise.resolve();
+ assert.equal(document.activeElement,settings);
+ ctx.resultsPanel.hidden=false;
+ await Promise.resolve();
+ assert.equal(settings.parentElement,nav);
+ launch.hidden=false;
+ await Promise.resolve();
+ assert.equal(settings.parentElement,nav);
+ ctx.root.__disposeTag();dom.window.close();
+});
+
 test('betting screen keeps Back and Settings at fixed global corners, Back returns to menu',async()=>{
  const dom=setup();installTowerUI();initializeModalFocus();
  const navigation=initializeGameNavigation();

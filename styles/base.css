@@ -171,7 +171,10 @@ html > body {
 }
 
 :root:not([data-app-block-surface], [data-visualize-standalone]) > body {
-  padding: 12px;
+  padding: calc(12px + env(safe-area-inset-top, 0px))
+    calc(12px + env(safe-area-inset-right, 0px))
+    calc(12px + env(safe-area-inset-bottom, 0px))
+    calc(12px + env(safe-area-inset-left, 0px));
 }
 
 .cursor-interaction {

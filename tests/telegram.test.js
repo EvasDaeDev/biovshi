@@ -136,6 +136,31 @@ test('inactive launch and spawning freeze until activation',()=>{
  }finally{f.close();}
 });
 
+test('a browser uses device safe areas for the arena and sheets after rotation',()=>{
+ const f=setup({sdk:false});
+ try{
+  const computed=f.win.getComputedStyle.bind(f.win);
+  const insets={top:0,right:47,bottom:21,left:47};
+  f.win.getComputedStyle=element=>{
+   if(element.parentElement===f.doc.body&&element.style.visibility==='hidden'&&element.style.width==='0px'){
+    return {getPropertyValue:property=>insets[property.replace('padding-','')]+'px'};
+   }
+   return computed(element);
+  };
+  f.win.dispatchEvent(new f.win.Event('resize'));
+  assert.equal(ctx.platform.isTelegram,false);
+  assert.deepEqual(ctx.layoutViewport,{width:750,height:369,...insets});
+  assert.deepEqual(contentViewport(f.win),{x:47,y:0,width:750,height:369});
+  assert.ok(Math.abs(parseFloat(ctx.root.style.getPropertyValue('--telegram-layout-left'))*ctx.layoutScale-47)<.01);
+  ctx.setArenaExpanded(true);
+  f.win.innerWidth=390;f.win.innerHeight=844;
+  Object.assign(insets,{top:47,right:0,bottom:34,left:0});
+  f.orientation.dispatchEvent(new f.win.Event('change'));
+  assert.deepEqual(ctx.layoutViewport,{width:390,height:763,...insets});
+  assert.deepEqual(contentViewport(f.win),{x:0,y:47,width:390,height:763});
+ }finally{f.close();}
+});
+
 test('safe area and stable height resize both arena layouts; keyboard keeps the game scale',()=>{
  const f=setup();try{
   assert.equal(ctx.platform.isTelegram,true);assert.equal(ctx.layoutViewport.width,809);assert.equal(ctx.layoutViewport.height,343);

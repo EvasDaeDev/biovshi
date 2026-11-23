@@ -9,6 +9,8 @@ export function initializeGameNavigation(){
  const root=ctx.root,doc=root.ownerDocument;
  const back=root.querySelector('#game-nav-back');
  const nav=root.querySelector('#game-navigation');
+ const settings=root.querySelector('#game-nav-settings');
+ const toolbar=root.querySelector('.atmosphere-controls');
  const launch=root.querySelector('#launch-overlay');
  const tower=root.querySelector('#tower-preparation');
  const betting=root.querySelector('#bet-overlay');
@@ -48,6 +50,8 @@ export function initializeGameNavigation(){
    target==='betting'?'Назад к ставкам':
    target==='garage'?'Назад в процедурную':'Назад к созданию игры');
   nav.dataset.screen=screen;
+  const settingsHost=screen==='arena'?toolbar:nav;
+  if(settings.parentElement!==settingsHost)settingsHost.append(settings);
   syncNativeBack();
  };
  const protectedDialog='.paper-dialog[open],#game-action-confirm[open],#tower-module-replacement[open],#tower-upgrade-window[open],.betting-input-dialog[open],#tower-cycle-notice[open]';
@@ -120,6 +124,7 @@ export function initializeGameNavigation(){
   observer.disconnect();doc.removeEventListener('keydown',key);
   root.removeEventListener('telegram-game-back',telegramBack);
   ctx.platform?.setBackAvailable?.(false);
+  if(settings.parentElement!==nav)nav.append(settings);
   back.onclick=null;dispose();
  };
  return {update};
