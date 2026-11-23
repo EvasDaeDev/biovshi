@@ -9,9 +9,24 @@ permissions:
 
 jobs:
   request:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: LAN preview
     steps:
-      # The Pages workflow receives workflow_run on main, so the protected
-      # github-pages environment does not need to admit experimental branches.
-      - name: Request combined stable and test publication
-        run: echo 'Publish main at / and test/combat-hit-sync at /test/'
+      - uses: actions/checkout@v4
+        with:
+          path: LAN preview
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: LAN preview/package-lock.json
+      - run: npm ci
+      - name: Build the Windows LAN server's game bundle
+        run: |
+          $output = Join-Path $PWD '.lan-dist/8081'
+          npm run build:lan -- --outDir "$output" --emptyOutDir
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path (Join-Path $output 'index.html'))) { throw 'LAN build is missing index.html' }
