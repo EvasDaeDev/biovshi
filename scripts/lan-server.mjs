@@ -10,7 +10,7 @@ import {parseArgs} from 'node:util';
 import QRCode from 'qrcode';
 import {WebSocketServer} from 'ws';
 import {loadLocations} from '../src/game/arenas.js';
-import {LAN_WS_PATH} from '../src/lan/protocol.js';
+import {LAN_SERVER_PULSE_MS, LAN_WS_PATH} from '../src/lan/protocol.js';
 import {createLanRooms} from './lan-rooms.mjs';
 
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
@@ -148,9 +148,10 @@ export async function startLanServer({host = '127.0.0.1', port = 8080, dist = DI
       else {
         connection.alive = false;
         connection.ping();
+        rooms.pulse(connection);
       }
     }
-  }, 3000);
+  }, LAN_SERVER_PULSE_MS);
   return {
     origin,
     async close() {

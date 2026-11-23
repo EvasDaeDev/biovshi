@@ -95,6 +95,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
   const roomName = find('room-name');
   const arenaSelect = find('arena');
   const refresh = find('refresh');
+  const retry = find('retry');
   const back = find('back');
   const code = new URL(location.href).searchParams.get('room')?.toUpperCase() ?? '';
   const invite = LAN_ROOM_CODE.test(code) ? code : '';
@@ -105,7 +106,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
   const pendingFloor = [];
   let matchWork = Promise.resolve();
   let matchError = '';
-  let lobbyActive = false, countdownTimer, resumeTimer, resumeUntil;
+  let lobbyActive = false, connectionFailed = false, countdownTimer, resumeTimer, resumeUntil;
 
   const client = createLanClient(onMessage);
   const arenaName = id => arenas.find(arena => arena.id === id)?.name ?? id;
@@ -164,7 +165,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
           console.error('LAN arena:', error);
           matchError = /Не удалось разместить|Башни недоступен/.test(error.message)
             ? error.message : 'Не удалось подготовить арену.';
-          status.textContent = matchError;
+          if (current()) status.textContent = matchError;
           transmit('match.load-failed');
         }
       }
@@ -385,9 +386,10 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
 
   function render() {
     const focus = document.activeElement?.dataset.lanFocus;
-    browser.hidden = Boolean(room);
+    browser.hidden = Boolean(room) || connectionFailed;
     details.hidden = !room;
     back.hidden = connected && Boolean(room);
+    retry.hidden = !connectionFailed;
     refresh.disabled = !connected;
     create.querySelector('button').disabled = !connected || !arenas.length;
     if (room) renderRoom();
@@ -414,6 +416,9 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
   function abandonResume() {
     room = null;
     memberId = null;
+    pendingSnapshot = pendingRemains = undefined;
+    pendingFloor.length = 0;
+    matchError = '';
     storeSession(null);
     reconcileMatch();
     client.send('rooms.list');
@@ -423,6 +428,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
     switch (type) {
       case 'hello': {
         connected = true;
+        connectionFailed = false;
         status.textContent = '';
         origin = payload.origin;
         arenas = payload.arenas;
@@ -511,6 +517,19 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
         reconcileMatch();
         status.textContent = 'Связь с локальным сервером потеряна. Пробуем подключиться снова…';
         break;
+      case 'connection.failed':
+        updateCountdown(null);
+        clearTimeout(resumeTimer);
+        connected = false;
+        connectionFailed = true;
+        rooms = [];
+        abandonResume();
+        status.textContent = payload?.message ??
+          'Локальный сервер недоступен. Проверьте, запущен ли он и подключены ли вы к той же сети.';
+        if (!dialog.open) dialog.showModal();
+        render();
+        retry.focus();
+        return;
     }
     render();
   }
@@ -518,11 +537,19 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
   function open() {
     if (dialog.open) return;
     lobbyActive = true;
-    status.textContent = 'Подключаемся к локальному серверу…';
     dialog.showModal();
+    connect();
+  }
+  function connect() {
+    connectionFailed = false;
+    status.textContent = 'Подключаемся к локальному серверу…';
     client.open();
     render();
   }
+  retry.onclick = () => {
+    connect();
+    status.focus();
+  };
   launch.hidden = false;
   launch.onclick = open;
   create.onsubmit = event => {

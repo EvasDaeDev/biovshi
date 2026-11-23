@@ -465,6 +465,9 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
 
   return {
     hasRoom: id => LAN_ROOM_CODE.test(id) && rooms.has(id),
+    pulse(socket) {
+      if (clients.get(socket)?.hello) send(socket, 'server.pulse');
+    },
     attach(socket) {
       const client = {hello: false, member: null, messages: 0, windowStart: Date.now()};
       clients.set(socket, client);

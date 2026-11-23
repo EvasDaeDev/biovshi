@@ -98,7 +98,7 @@
   </div>
   <dialog id="lan-lobby" class="paper-dialog" aria-labelledby="lan-title">
     <h2 id="lan-title">Локальная сеть</h2>
-    <p id="lan-status" role="status"></p>
+    <p id="lan-status" role="status" tabindex="-1"></p>
     <section id="lan-browser" aria-label="Список и создание комнат">
       <label><span>Ваше имя</span><input id="lan-player-name" maxlength="24" value="Пациент" required></label>
       <div class="lan-row">
@@ -118,7 +118,10 @@
       </details>
     </section>
     <section id="lan-room" aria-label="Комната" hidden></section>
-    <footer class="paper-dialog-actions"><button id="lan-back" type="button">Главное меню</button></footer>
+    <footer class="paper-dialog-actions">
+      <button id="lan-retry" class="paper-dialog-primary" type="button" hidden>Подключиться снова</button>
+      <button id="lan-back" type="button">Главное меню</button>
+    </footer>
   </dialog>
   <dialog id="startup-intro" class="paper-dialog" aria-modal="true" aria-labelledby="startup-intro-title">
     <h2 id="startup-intro-title" tabindex="-1" autofocus>ЭКЦЕПРИ</h2>
