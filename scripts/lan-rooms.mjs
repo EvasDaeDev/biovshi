@@ -1,5 +1,5 @@
 import {randomBytes, randomUUID} from 'node:crypto';
-import {validBattleSnapshot, validBattleView, validImpact, validMovement, validRemains} from '../src/lan/battle-protocol.js';
+import {readBattleStatistics, validBattleSnapshot, validBattleView, validImpact, validMovement, validRemains} from '../src/lan/battle-protocol.js';
 import {createFloorCache, validFloorPatch} from '../src/lan/floor-sync.js';
 import {copyLanTowerLoadout, describeLanTower, lanAiName, validLanProfile} from '../src/lan/characters.js';
 import {
@@ -400,14 +400,16 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
       } else {
         requireRoom(room.phase === running, 'invalid_phase', 'Бой ещё не начался или уже завершён.');
         const {winner, elapsedSec, reason} = payload;
+        const statistics = readBattleStatistics(payload.statistics, room.matchFighters.length);
         const allowedWinner = winner === null || (Number.isInteger(winner) && winner >= 0 &&
           winner < room.matchFighters.length);
-        requireRoom(allowedWinner && Number.isFinite(elapsedSec) && elapsedSec >= 0 &&
+        requireRoom(statistics && allowedWinner && Number.isFinite(elapsedSec) && elapsedSec >= 0 &&
           (reason === 'combat' || reason === 'manual') && (reason !== 'manual' || winner === null),
           'invalid_result', 'Некорректный результат боя.');
         clearTimeout(room.healthTimer);
         room.phase = results;
-        room.result = {winnerName: winner === null ? null : room.matchFighters[winner], elapsedSec, reason};
+        room.result = {winner, winnerName: winner === null ? null : room.matchFighters[winner],
+          elapsedSec, reason, statistics};
       }
       return publishRoom(room);
     }

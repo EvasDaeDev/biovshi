@@ -62,7 +62,12 @@ test('LAN solo scenario keeps running and ends manually without writing economy 
   assert.equal(ctx.intents[0].speed, 0);
   assert.equal(ctx.combat.finished, false);
   ctx.resetButton.click();
-  assert.deepEqual(results, [{winner: null, elapsedSec: 2 / 60, reason: 'manual'}]);
+  const [{statistics, ...result}] = results;
+  assert.deepEqual(result, {winner: null, elapsedSec: 2 / 60, reason: 'manual'});
+  assert.deepEqual(statistics, {strikes: 0, hits: 0, fighters: [{
+    segments: ctx.robots[0].segmentTotal, total: ctx.robots[0].segmentTotal,
+    hits: 0, taken: 0, hasHead: true, mobile: true,
+  }]});
   assert.match(ctx.resultsTitle.textContent, /БОЙ ЗАВЕРШЁН ХОЗЯИНОМ/);
   assert.equal(ctx.resultsPanel.hidden, false);
   ctx.resultsAgain.click();
@@ -90,9 +95,13 @@ test('LAN handles mixed rigs, a manually controlled boss in slot 1, and automati
   assert.equal(Boolean(ctx.intents[2].manual), false);
   for (const id of [0, 2]) ctx.robots[id].damage('head', 1, 100);
   step(1 / 60);
-  assert.deepEqual(results, [{winner: 1, elapsedSec: 2 / 60, reason: 'combat'}]);
+  const [{statistics, ...result}] = results;
+  assert.deepEqual(result, {winner: 1, elapsedSec: 2 / 60, reason: 'combat'});
+  assert.deepEqual(statistics.fighters.map(fighter => fighter.hasHead), [false, true, false]);
+  ctx.combat.fighterHits[1] = 999;
   showResults();
   assert.match(ctx.resultsTitle.textContent, /ПОБЕДИТЕЛЬ — хозяин/);
+  assert.equal(ctx.resultsRows.querySelector('.is-winner').cells[2].textContent, String(statistics.fighters[1].hits));
   assert.equal(localStorage.getItem(ctx.BET_STORAGE), null);
 });
 

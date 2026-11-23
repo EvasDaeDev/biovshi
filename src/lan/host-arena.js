@@ -5,7 +5,7 @@ import {ctx} from '../game/state.js';
 import {installTowerInput} from '../tower/input.js';
 import {resetFrameClock} from '../game/clock.js';
 import {LAN_HEARTBEAT_SEND_MS, LAN_HOST_HEARTBEAT_MS} from './protocol.js';
-import {showResults} from '../ui/results.js';
+import {captureBattleStatistics, showResults} from '../ui/results.js';
 
 export function installLanHostArena(match) {
   const root = ctx.root;
@@ -17,13 +17,18 @@ export function installLanHostArena(match) {
   controls.hidden = true;
   ctx.resetButton.hidden = false;
   ctx.resetButton.textContent = 'Завершить бой';
+  match.finish = reason => {
+    match.result = {winner: ctx.combat.winner, elapsedSec: ctx.round.elapsedSec, reason,
+      statistics: captureBattleStatistics()};
+    match.onFinish(match.result);
+  };
   ctx.resetButton.onclick = () => {
     if (ctx.combat.finished || ctx.startup.phase !== 'running') return;
     match.endedManually = true;
     ctx.combat.finished = true;
     ctx.combat.finishedAt = ctx.game.time;
     ctx.combat.pending.fill(null);
-    match.onFinish({winner: null, elapsedSec: ctx.round.elapsedSec, reason: 'manual'});
+    match.finish('manual');
     note('combat-end', {winner: null, outcome: 'manual', loser: null});
     showResults();
   };

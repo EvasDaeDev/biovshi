@@ -69,3 +69,17 @@ function validRemainsSkin(skin) {
 export function validBattleView(view, count) {
   return view && vectors(view.starts, 3, LAN_MAX_FIGHTERS) && view.starts.length === count;
 }
+
+export function readBattleStatistics(statistics, count) {
+  if (!statistics) return null;
+  const {strikes, hits, fighters} = statistics;
+  if (!validSequence(strikes) || !validSequence(hits) ||
+      !Array.isArray(fighters) || fighters.length !== count) return null;
+  if (!fighters.every(fighter => fighter &&
+    validSequence(fighter.total) && fighter.total > 0 && fighter.total <= 64 &&
+    validSequence(fighter.segments) && fighter.segments <= fighter.total &&
+    validSequence(fighter.hits) && validSequence(fighter.taken) &&
+    typeof fighter.hasHead === 'boolean' && typeof fighter.mobile === 'boolean')) return null;
+  return {strikes, hits, fighters: fighters.map(({segments, total, hits, taken, hasHead, mobile}) =>
+    ({segments, total, hits, taken, hasHead, mobile}))};
+}

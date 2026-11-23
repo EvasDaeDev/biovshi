@@ -454,7 +454,7 @@ export function combatAttacks() {
     ctx.combat.finishedAt = ctx.game.time;
     ctx.combat.pending.fill(null); // Замахи больше не рисуются после финального удара.
     if(mobile.length===1&&ctx.combat.winner!==null)mobile[0].celebrateVictory();
-    if(ctx.mode==='multiplayer')ctx.multiplayer.onFinish({winner:ctx.combat.winner,elapsedSec:ctx.round.elapsedSec,reason:'combat'});
+    if(ctx.mode==='multiplayer')ctx.multiplayer.finish('combat');
     else if(ctx.mode==='tower')settleTower(ctx.combat.winner);
     else bettingSettle(ctx.combat.winner);
     // A tower attempt ends in defeat when its player drops, even if AI remain.

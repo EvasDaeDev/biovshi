@@ -110,7 +110,7 @@ test('LAN synchronizes rooms, slot limits, roles and the host-only start', async
   assert.equal((await late.next('error')).payload.code, 'slots_full');
 
   viewer.send('room.join', {playerName: 'Зритель', role: 'spectator'}, roomId);
-  await viewer.next('room.entered');
+  const {payload: {resumeToken: viewerToken}} = await viewer.next('room.entered');
   viewer.send('room.ready', {ready: true}, roomId);
   assert.equal((await viewer.next('error')).payload.code, 'invalid_ready');
   guest.send('room.ready', {ready: true}, roomId);
@@ -133,9 +133,30 @@ test('LAN synchronizes rooms, slot limits, roles and the host-only start', async
   assert.equal((await guest.next('error')).payload.code, 'host_only');
   host.send('match.finish', {matchId: 'obsolete', winner: 2, elapsedSec: 5, reason: 'combat'}, roomId);
   assert.equal((await host.next('error')).payload.code, 'match_mismatch');
-  host.send('match.finish', {matchId, winner: 2, elapsedSec: 5.25, reason: 'combat'}, roomId);
+  const surviving = {segments: 12, total: 13, hits: 2, taken: 1, hasHead: true, mobile: true};
+  const statistics = {strikes: 10, hits: 6, fighters: [
+    {...surviving, segments: 6, hasHead: false, mobile: false},
+    {...surviving, taken: 4, mobile: false},
+    surviving,
+  ]};
+  const finish = {matchId, winner: 2, elapsedSec: 5.25, reason: 'combat'};
+  host.send('match.finish', {...finish, statistics: {...statistics,
+    fighters: [surviving, surviving, {...surviving, segments: 99}]}}, roomId);
+  assert.equal((await host.next('error')).payload.code, 'invalid_result');
+  host.send('match.finish', {...finish, statistics: {...statistics,
+    fighters: statistics.fighters.map(fighter => ({...fighter, name: 'Подставное имя'}))}}, roomId);
   const result = await viewer.next('room.state', message => message.payload.phase === 'results');
-  assert.deepEqual(result.payload.result, {winnerName: 'ИИ 1 · Быстрый', elapsedSec: 5.25, reason: 'combat'});
+  assert.deepEqual(result.payload.result, {winner: 2, winnerName: 'ИИ 1 · Быстрый',
+    elapsedSec: 5.25, reason: 'combat', statistics});
+  assert.deepEqual((await guest.next('room.state', message => message.payload.phase === 'results')).payload.result,
+    result.payload.result);
+  viewer.socket.close();
+  await host.next('room.state', ({payload}) =>
+    payload.phase === 'results' && payload.members.some(member => member.role === 'spectator' && !member.connected));
+  const resumedViewer = await connect(origin);
+  resumedViewer.send('session.resume', {token: viewerToken}, roomId);
+  await resumedViewer.next('room.entered');
+  assert.deepEqual((await resumedViewer.next('room.state')).payload.result, result.payload.result);
   host.send('room.return', {matchId}, roomId);
   await guest.next('room.state', message => message.payload.phase === 'waiting' && !message.payload.canStart &&
     message.payload.members.length === 3);
@@ -143,7 +164,7 @@ test('LAN synchronizes rooms, slot limits, roles and the host-only start', async
   host.send('room.kick', {memberId: guestId}, roomId);
   assert.match((await guest.next('room.left')).payload.reason, /исключил/);
   host.send('room.close', {}, roomId);
-  await viewer.next('room.left');
+  await resumedViewer.next('room.left');
   await late.next('rooms.snapshot', message => message.payload.rooms.length === 0);
 });
 

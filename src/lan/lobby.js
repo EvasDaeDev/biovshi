@@ -2,6 +2,7 @@ import {describeLanProfile, lanTowerCopy, lanAiName, lanProfiles} from './charac
 import {queueFloorPatch} from './floor-sync.js';
 import {createLanClient} from './client.js';
 import {LAN_RECONNECT_MS, LAN_ROOM_CODE} from './protocol.js';
+import {formatRoundTime, renderBattleStatistics} from '../ui/results.js';
 import './lobby.css';
 
 const phases = {waiting: 'Ожидание', preparing: 'Подготовка', loading: 'Загрузка', countdown: 'Отсчёт',
@@ -36,6 +37,41 @@ function options(entries, selected, disabled, key) {
   for (const [value, text] of entries) select.add(new Option(text, value, false, value === selected));
   select.disabled = disabled;
   return select;
+}
+
+function renderResult({result, view}) {
+  const section = node('section');
+  section.className = 'lan-results';
+  section.append(node('h4', result.reason === 'aborted' ? 'Бой прерван. Связь с хозяином потеряна.' :
+    result.reason === 'manual' ? 'Хозяин завершил бой' :
+    result.winnerName === null ? 'Ничья' : 'Победитель · ' + result.winnerName),
+    node('p', 'Длительность боя · ' + formatRoundTime(result.elapsedSec)));
+  if (!result.statistics) {
+    section.append(node('p', 'Итоговая статистика недоступна.'));
+    return section;
+  }
+
+  const names = [...view.players.map(player => player.name), ...view.ai.map(lanAiName)];
+  const totals = node('div');
+  totals.className = 'gladiator-results-totals';
+  const wrap = node('div');
+  wrap.className = 'gladiator-results-table-wrap';
+  const table = node('table');
+  table.className = 'gladiator-results-table';
+  table.setAttribute('aria-label', 'Статистика пациентов');
+  const header = table.createTHead().insertRow();
+  for (const label of ['Пациент', 'Сегменты', 'Попадания', 'Получено', 'Итог']) {
+    const cell = node('th', label);
+    cell.scope = 'col';
+    header.append(cell);
+  }
+  renderBattleStatistics({statistics: result.statistics, winner: result.winner,
+    totalsNode: totals, rowsNode: table.createTBody(),
+    paintName: (cell, id) => { cell.textContent = names[id]; },
+  });
+  wrap.append(table);
+  section.append(totals, wrap);
+  return section;
 }
 
 function readSession() {
@@ -328,13 +364,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
     if (room.phase === 'loading') children.push(node('p', 'Загрузили арену ' + room.loaded + ' из ' + room.loadingTotal));
     if (room.phase === 'suspended') children.push(node('p', 'Бой приостановлен. Ждём хозяина.'));
     if (room.phase === 'running') children.push(node('p', 'Подключаемся к арене…'));
-    if (room.phase === 'results') {
-      const result = room.result;
-      children.push(node('h4', result.reason === 'aborted' ? 'Бой прерван. Связь с хозяином потеряна.' :
-        result.reason === 'manual' ? 'Хозяин завершил бой' :
-        result.winnerName === null ? 'Ничья' : 'Победитель · ' + result.winnerName),
-        node('p', 'Длительность · ' + result.elapsedSec.toFixed(1) + ' с'));
-    }
+    if (room.phase === 'results') children.push(renderResult(room));
     if (room.phase === 'waiting') {
       if (host) {
         children.push(renderSettings(locked, humans));

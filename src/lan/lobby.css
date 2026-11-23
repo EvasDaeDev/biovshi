@@ -84,3 +84,16 @@
 #lan-lobby #lan-status:empty {
   display: none;
 }
+
+#lan-lobby .lan-results .gladiator-results-table :is(th, td) {
+  border-color: #6a654b;
+  color: inherit;
+}
+
+#lan-lobby .lan-results .gladiator-results-table tr.is-winner td {
+  color: #fff2b4;
+}
+
+#lan-lobby .lan-results .gladiator-results-table td:first-child {
+  overflow-wrap: anywhere;
+}

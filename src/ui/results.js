@@ -43,12 +43,24 @@ export function showResults() {
     p.payout>0?[{id,from:p.balance-p.payout,to:p.balance}]:[])??[],ctx.root,'#gladiator-results');
   ctx.resultsAgain.focus?.();
 }
-// Both modes expose the same completed battle totals and per-patient rows.
-export function renderBattleStatistics(){
-  const winner=ctx.combat.winner;
-  const removed = ctx.robots.reduce((sum, r) => sum + r.segmentTotal - r.segmentCount, 0);
-  const totals = [['ЗАМАХОВ', ctx.combat.strikes], ['ПОПАДАНИЙ', ctx.combat.hits], ['ОТОРВАНО ЗВЕНЬЕВ', removed]];
-  ctx.resultsTotals.replaceChildren();
+export function captureBattleStatistics() {
+  const {strikes, hits, fighterHits, fighterTaken} = ctx.combat;
+  return {strikes, hits, fighters: ctx.robots.map(robot => ({
+    segments: robot.segmentCount, total: robot.segmentTotal, hits: fighterHits[robot.id],
+    taken: fighterTaken[robot.id], hasHead: robot.hasHead, mobile: robot.mobile,
+  }))};
+}
+
+export function renderBattleStatistics({
+  statistics = ctx.multiplayer?.result?.statistics ?? captureBattleStatistics(),
+  winner = ctx.combat.winner,
+  totalsNode = ctx.resultsTotals,
+  rowsNode = ctx.resultsRows,
+  paintName = (cell, id) => { cell.innerHTML = patientName(id, {short: true}); },
+} = {}) {
+  const removed = statistics.fighters.reduce((sum, fighter) => sum + fighter.total - fighter.segments, 0);
+  const totals = [['ЗАМАХОВ', statistics.strikes], ['ПОПАДАНИЙ', statistics.hits], ['ОТОРВАНО ЗВЕНЬЕВ', removed]];
+  totalsNode.replaceChildren();
   for (const [label, value] of totals) {
     const tile = document.createElement('div');
     tile.className = 'gladiator-result-total';
@@ -57,19 +69,23 @@ export function renderBattleStatistics(){
     const small = document.createElement('small');
     small.textContent = label;
     tile.append(strong, small);
-    ctx.resultsTotals.appendChild(tile);
+    totalsNode.appendChild(tile);
   }
-  ctx.resultsRows.replaceChildren();
-  for (const r of ctx.robots) {
+  rowsNode.replaceChildren();
+  for (const [id, fighter] of statistics.fighters.entries()) {
     const row = document.createElement('tr');
-    if (r.id === winner) row.className = 'is-winner';
-    const cells = [String.fromCharCode(65 + r.id), `${r.segmentCount}/${r.segmentTotal}`, String(ctx.combat.fighterHits[r.id]), String(ctx.combat.fighterTaken[r.id]), resultPatientStatus(r, r.id === winner)];
-    for (const [index,value] of cells.entries()) {
+    const won = id === winner;
+    if (won) row.className = 'is-winner';
+    const name = document.createElement('td');
+    paintName(name, id);
+    row.appendChild(name);
+    const cells = [`${fighter.segments}/${fighter.total}`, fighter.hits, fighter.taken, resultPatientStatus(fighter, won)];
+    for (const value of cells) {
       const td = document.createElement('td');
-      if(index===0)td.innerHTML=patientName(r.id,{short:true});else td.textContent = value;
+      td.textContent = String(value);
       row.appendChild(td);
     }
-    ctx.resultsRows.appendChild(row);
+    rowsNode.appendChild(row);
   }
 }
 export function formatRoundTime(seconds) {
