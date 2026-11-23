@@ -1,6 +1,6 @@
 import {loadControlMode,setControlMode} from '../tower/control-mode.js';
 import {uiIcon} from './icons.js';
-import {ctx} from '../game/state.js';
+import {arenaViewPlayerId,ctx} from '../game/state.js';
 import {setPaused} from './controls.js';
 import {openMenu} from '../tower/ui.js';
 
@@ -16,8 +16,8 @@ export function initializeSettings() {
   for(const trigger of buttons)trigger.innerHTML=uiIcon('settings');
   const controlMode=root.querySelector('#tower-control-mode');
   ctx.towerControlMode=loadControlMode(winStorage(doc));
-  controlMode.value=ctx.towerControlMode;controlMode.disabled=ctx.mode!=='tower';
-  controlMode.onchange=()=>{if(ctx.mode==='tower')setControlMode(controlMode.value);};
+  controlMode.value=ctx.towerControlMode;controlMode.disabled=arenaViewPlayerId()<0;
+  controlMode.onchange=()=>{if(!controlMode.disabled)setControlMode(controlMode.value);};
   const closeButton=panel.querySelector('#arena-settings-close');
   const tutorialButton=panel.querySelector('#tutorial-start');
   const menuButton=panel.querySelector('#settings-main-menu');

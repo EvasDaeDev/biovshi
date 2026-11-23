@@ -36,18 +36,22 @@ export function installLanGuestArena(match) {
   const buffer = createSnapshotBuffer();
   const floor = createFloorReplica();
   let connected = false, started = false;
-  let lastX = 0, lastY = 0, nextInput = 0, inputSeq = 0, impactSeq = -1;
+  let lastX = 0, lastY = 0, lastGoal = false, nextInput = 0, inputSeq = 0, impactSeq = -1;
   const impacts = [];
 
   function sendInput(now, release = false) {
     if (localId < 0) return;
     const {x, y} = release ? {x: 0, y: 0} : ctx.towerInput;
-    if (!x && !y && !lastX && !lastY) return;
-    if (!release && now < nextInput && (x || y)) return;
+    const destination = ctx.towerDestination;
+    const goal = !release && !destination?.arrived ? destination?.requested : null;
+    if (!goal && !x && !y && !lastGoal && !lastX && !lastY) return;
+    if (!release && now < nextInput && (goal || x || y)) return;
     const length = Math.max(1, Math.hypot(x, y));
-    if (match.onInput({x: x / length, y: y / length, seq: inputSeq})) {
+    const movement = goal ? {goal} : {x: x / length, y: y / length};
+    if (match.onInput({...movement, seq: inputSeq})) {
       lastX = x;
       lastY = y;
+      lastGoal = Boolean(goal);
       nextInput = now + LAN_INPUT_MS;
       inputSeq++;
     }
@@ -59,8 +63,12 @@ export function installLanGuestArena(match) {
 
   match.sendInputFrame = now => {
     if (!started) return;
-    if (connected && !ctx.combat.finished && !ctx.settingsOpen && !ctx.orientationBlocked && !document.hidden) sendInput(now);
-    else sendInput(now, true);
+    if (connected && !ctx.combat.finished && !ctx.paused && !ctx.appInactive &&
+        !ctx.settingsOpen && !ctx.orientationBlocked && !document.hidden) sendInput(now);
+    else {
+      if (ctx.towerDestination) ctx.clearTowerDestination?.();
+      sendInput(now, true);
+    }
   };
   match.paintReplica = now => {
     if (!started) return false;
@@ -72,6 +80,18 @@ export function installLanGuestArena(match) {
     ctx.combat.winner = snapshot.winner;
     floor.paint(snapshot.time);
     for (const [id, view] of snapshot.robots.entries()) ctx.robots[id].applyReplica(view);
+    const destination = ctx.towerDestination;
+    const local = snapshot.robots[localId];
+    if (destination && local) {
+      const [requestX, requestY, x, y] = local.destination ?? [];
+      const sameRequest = requestX === destination.requested[0] && requestY === destination.requested[1];
+      if (!ctx.robots[localId].mobile || (sameRequest && x === undefined)) ctx.clearTowerDestination();
+      else if (sameRequest) {
+        destination.x = x;
+        destination.y = y;
+        destination.arrived ||= Math.hypot(local.root[0] - x, local.root[1] - y) <= 8;
+      }
+    }
     while (impacts.length && impacts[0].time <= snapshot.time) {
       const event = impacts.shift();
       if (snapshot.time - event.time > LAN_INPUT_TIMEOUT_MS / 1000) continue;
@@ -105,6 +125,7 @@ export function installLanGuestArena(match) {
       buffer.clear();
       impacts.length = 0;
       lastX = lastY = 0;
+      lastGoal = false;
     },
     resume() {
       connected = true;

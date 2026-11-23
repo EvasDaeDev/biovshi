@@ -358,8 +358,9 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         if (room.phase !== running || !validMovement(payload) ||
             payload.seq <= (room.inputSeq.get(member.id) ?? -1)) return;
         room.inputSeq.set(member.id, payload.seq);
-        const {matchId, seq, x, y} = payload;
-        send(room.members.get(room.hostId)?.socket, 'input', {matchId, memberId: member.id, seq, x, y}, room.id);
+        const {matchId, seq, x, y, goal} = payload;
+        const movement = goal === undefined ? {x, y} : {goal};
+        send(room.members.get(room.hostId)?.socket, 'input', {matchId, memberId: member.id, seq, ...movement}, room.id);
       } else {
         requireRoom(host, 'host_only', 'Только хозяин отправляет состояние боя.');
         if (room.phase !== running && room.phase !== results) return;

@@ -2,6 +2,7 @@ import {ASSETS, assetUrl} from '../assets/manifest.js';
 import {transformMatrix} from '../render/pixi-math.js';
 import {ctx} from '../game/state.js';
 import {onGameEvent} from '../game/event-bus.js';
+import {resolveDestination} from '../tower/input.js';
 import {createFloorPublisher} from './floor-sync.js';
 import {LAN_INPUT_TIMEOUT_MS, LAN_SNAPSHOT_MS, encodeFrame, encodeNumber, encodePoint} from './battle-protocol.js';
 
@@ -36,15 +37,30 @@ export function installLanHostSync(match) {
   const dispose = ctx.root.__disposeTag;
   ctx.root.__disposeTag = () => { unsubscribe(); dispose(); };
 
+  function clearMovement(id) {
+    if (inputs.get(id)?.requested) ctx.robots[id]?.cancelNavigation();
+    inputs.delete(id);
+  }
+
   match.movement = id => {
     const input = inputs.get(id);
-    return input && performance.now() - input.received < LAN_INPUT_TIMEOUT_MS ? input : null;
+    if (input && performance.now() - input.received < LAN_INPUT_TIMEOUT_MS) return input;
+    clearMovement(id);
+    return null;
   };
 
+  const robotView = robot => {
+    const view = robot.captureReplica();
+    const input = inputs.get(robot.id);
+    if (input?.requested) {
+      view.destination = input.goal ? [...input.requested, ...encodePoint(input.goal)] : input.requested;
+    }
+    return view;
+  };
   const snapshot = events => ({
     seq, time: encodeNumber(ctx.game.time), elapsed: encodeNumber(ctx.round.elapsedSec),
     started: ctx.startup.phase === 'running', finished: ctx.combat.finished, winner: ctx.combat.winner,
-    robots: ctx.robots.map(robot => robot.captureReplica()), impacts: events,
+    robots: ctx.robots.map(robotView), impacts: events,
   });
 
   match.publishFrame = (now, painted) => {
@@ -71,17 +87,28 @@ export function installLanHostSync(match) {
   const starts = ctx.robots.map(encodeFrame);
   return {
     view: {starts},
-    resetInputs() { inputs.clear(); },
+    resetInputs() { for (const id of inputs.keys()) clearMovement(id); },
     sendResume() {
       if (match.onResume(snapshot([]))) {
         seq++;
         impacts.length = 0;
       }
     },
-    input({memberId, x, y}) {
+    input({memberId, x, y, goal}) {
       const id = byMember.get(memberId);
-      if (id !== undefined) inputs.set(id, {x, y, received: performance.now()});
+      if (id === undefined) return;
+      const received = performance.now();
+      const previous = inputs.get(id);
+      if (goal && previous?.requested?.[0] === goal[0] && previous.requested[1] === goal[1] &&
+          received - previous.received < LAN_INPUT_TIMEOUT_MS) {
+        previous.received = received;
+        return;
+      }
+      clearMovement(id);
+      inputs.set(id, goal
+        ? {requested: goal, goal: resolveDestination(ctx.robots[id], {x: goal[0], y: goal[1]}), received}
+        : {x, y, received});
     },
-    resetInput(memberId) { inputs.delete(byMember.get(memberId)); },
+    resetInput(memberId) { clearMovement(byMember.get(memberId)); },
   };
 }

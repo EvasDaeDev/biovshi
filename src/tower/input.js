@@ -5,11 +5,12 @@ import {planPath} from '../systems/navigation.js';
 import {coreClearCircle} from '../systems/collision.js';
 import {ctx} from '../game/state.js';
 import {CONFIG} from '../config.js';
+import {encodePoint} from '../lan/battle-protocol.js';
 // Extra clearance lets the rig turn at path corners without clipping its limbs.
 const navigationPadding=()=>70*ctx.scale;
-export function controlledIntent(robot,input=ctx.towerInput){
-  if(ctx.mode!=='multiplayer'&&ctx.towerControlMode==='direction'){
-    const goal=ctx.towerDestination;
+export function controlledIntent(robot,input=ctx.towerControlMode==='direction'?{goal:ctx.towerDestination}:ctx.towerInput){
+  if(input&&'goal' in input){
+    const goal=input.goal;
     const moving=Boolean(goal&&Math.hypot(goal.x-robot.x,goal.y-robot.y)>8);
     if(goal&&!moving)goal.arrived=true;
     return {manual:true,navigate:true,navigationPadding:navigationPadding(),mode:moving?'идёт к точке':'удерживает позицию',
@@ -20,9 +21,18 @@ export function controlledIntent(robot,input=ctx.towerInput){
     goal:moving?{x:robot.x+x/length*80,y:robot.y+y/length*80}:{x:robot.x,y:robot.y},
     lookPoint:null,brake:!moving};
 }
+
+export function resolveDestination(robot, point) {
+  if (!robot?.visible || !robot.mobile || !coreClearCircle(point, 24 * ctx.scale)) return null;
+  const goal = planPath(robot, point, navigationPadding()).at(-1);
+  if (!goal || Math.hypot(goal.x - robot.x, goal.y - robot.y) < 4 &&
+      Math.hypot(point.x - robot.x, point.y - robot.y) > 8) return null;
+  return {x: goal.x, y: goal.y, arrived: false};
+}
+
 export function installTowerInput({localId=null,onRelease}={}){
   const lan=localId!==null;
-  const direction=()=>!lan&&ctx.towerControlMode==='direction';
+  const direction=()=>ctx.towerControlMode==='direction';
   const keys=new Set(),doc=ctx.root.ownerDocument,win=doc.defaultView;
   ctx.towerInput={x:0,y:0};ctx.towerDestination=null;
   const stick=doc.getElementById('tower-stick'),knob=stick.querySelector('span');let pointer=null;
@@ -35,6 +45,7 @@ export function installTowerInput({localId=null,onRelease}={}){
   const reset=()=>{
     const captured=pointer;pointer=null;keys.clear();ctx.towerInput={x:0,y:0};knob.style.transform='translate(0px,0px)';
     if(captured!==null&&stick.hasPointerCapture?.(captured))stick.releasePointerCapture(captured);
+    if(lan&&ctx.towerDestination)clearDestination();
     onRelease?.();
   };
   const update=()=>{ctx.towerInput={x:Number(keys.has('ArrowRight')||keys.has('KeyD'))-Number(keys.has('ArrowLeft')||keys.has('KeyA')),y:Number(keys.has('ArrowDown')||keys.has('KeyS'))-Number(keys.has('ArrowUp')||keys.has('KeyW'))};};
@@ -71,11 +82,12 @@ export function installTowerInput({localId=null,onRelease}={}){
       clearDestination();return;
     }
     const robot=ctx.robots[localId??0];
-    if(!coreClearCircle(point,24*ctx.scale))return;
-    const route=planPath(robot,point,navigationPadding());
-    const goal=route.at(-1);
-    if(!goal||Math.hypot(goal.x-robot.x,goal.y-robot.y)<4&&Math.hypot(point.x-robot.x,point.y-robot.y)>8)return;
-    clearDestination();ctx.towerDestination={x:goal.x,y:goal.y,arrived:false};
+    const goal=ctx.multiplayer?.replica
+      ? robot.visible && robot.mobile && coreClearCircle(point,24*ctx.scale) &&
+        {...point, requested:encodePoint(point), arrived:false}
+      : resolveDestination(robot,point);
+    if(!goal)return;
+    clearDestination();ctx.towerDestination=goal;
     paintMarker();
   };
   const paintMarker=(projection)=>{

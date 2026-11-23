@@ -312,6 +312,10 @@ test('LAN relays only the bound guest input and host snapshots, including a reco
   guest.send('input', {matchId, seq: 3, x: 2, y: 1}, roomId);
   guest.send('input', {matchId, seq: 4, x: 0, y: 0}, roomId);
   assert.equal((await host.next('input')).payload.seq, 4);
+  guest.send('input', {matchId, seq: 5, goal: [null, 90]}, roomId);
+  guest.send('input', {matchId, seq: 6, goal: [400, 350], x: 1, y: 0}, roomId);
+  guest.send('input', {matchId, seq: 7, goal: [400, 350], memberId: 'spoofed'}, roomId);
+  assert.deepEqual((await host.next('input')).payload, {matchId, memberId, seq: 7, goal: [400, 350]});
 
   const snapshot = battleSnapshot(matchId, 7);
   assert.ok(Buffer.byteLength(JSON.stringify(snapshot)) > 1024);

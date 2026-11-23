@@ -12,8 +12,10 @@ const vector = (value, size) => Array.isArray(value) && value.length === size &&
 const vectors = (value, size, limit) => Array.isArray(value) && value.length <= limit &&
   value.every(item => vector(item, size));
 
-export function validMovement({x, y, seq}) {
-  return Number.isFinite(x) && Number.isFinite(y) && Math.hypot(x, y) <= 1.001 && validSequence(seq);
+export function validMovement({x, y, goal, seq}) {
+  return validSequence(seq) && (goal === undefined
+    ? Number.isFinite(x) && Number.isFinite(y) && Math.hypot(x, y) <= 1.001
+    : x === undefined && y === undefined && vector(goal, 2));
 }
 
 export const encodeNumber = value => Math.round(value * 1000) / 1000;
@@ -24,6 +26,7 @@ function validRobot(robot) {
   return robot && vector(robot.root, 3) && vectors(robot.frames, 3, 20) && robot.frames.length >= 8 &&
     vectors(robot.tail, 2, 24) && vectors(robot.limbs, 6, 12) &&
     vectors(robot.cue, 2, 14) && (robot.bossPhase === null || [1, 2].includes(robot.bossPhase)) &&
+    (robot.destination === undefined || vector(robot.destination, 2) || vector(robot.destination, 4)) &&
     vector(robot.appearance, 9) && Array.isArray(robot.health) && robot.health.length <= 64 &&
     robot.health.every(bounded) && vectors(robot.crit, 2, 64) &&
     typeof robot.action === 'string' && robot.action.length < 80 &&

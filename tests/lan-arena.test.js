@@ -17,6 +17,14 @@ import {cameraReset, cameraUpdate} from '../src/render/camera.js';
 import {installLanHostArena} from '../src/lan/host-arena.js';
 import {newTower} from '../src/tower/model.js';
 import {showResults} from '../src/ui/results.js';
+import {createRobot} from '../src/robot/robot.js';
+
+function clickPoint(win, x, y) {
+  ctx.fieldWidth = ctx.fieldHeight = 700;
+  ctx.svg.setAttribute('viewBox', '0 0 700 700');
+  ctx.svg.getBoundingClientRect = () => ({left: 100, top: 50, width: 350, height: 350});
+  ctx.svg.dispatchEvent(new win.MouseEvent('click', {bubbles: true, clientX: 100 + x / 2, clientY: 50 + y / 2}));
+}
 
 function launch(t, {members, ai = [], local, arenaId = 'ward', network}) {
   const dom = new JSDOM(readFileSync(new URL('../index.html', import.meta.url), 'utf8'), {
@@ -124,6 +132,36 @@ test('LAN host can spectate a full arena of ten AI fighters', t => {
   step(1 / 60);
   assert.ok(ctx.intents.every(intent => !intent.manual));
   assert.equal(ctx.combat.finished, false);
+  assert.equal(ctx.root.querySelector('#tower-control-mode').disabled, true);
+});
+
+test('LAN host routes a remote fighter around obstacles and cancels invalid or released goals', t => {
+  const {host} = launch(t, {members: [fighter('гость', 'basic')], local: 'наблюдатель', arenaId: 'annulus',
+    network: {onSnapshot: () => true, onFloor: () => true, onRemains: () => true}});
+  const robot = createRobot(0, {x: 170, y: 350, angle: 0});
+  ctx.robots = [robot];
+  robot.setVisible(true);
+  host.input({memberId: 'гость', goal: [350, 350]});
+  step(1 / 60);
+  assert.equal(ctx.intents[0].speed, 0);
+  host.input({memberId: 'гость', goal: [10, 10]});
+  step(1 / 60);
+  assert.equal(ctx.intents[0].speed, 0);
+  let largestDeviation = 0;
+  for (let tick = 0; tick < 2400; tick++) {
+    if (tick % 3 === 0) host.input({memberId: 'гость', goal: [530, 350]});
+    step(1 / 60);
+    largestDeviation = Math.max(largestDeviation, Math.abs(robot.y - 350));
+    if (ctx.multiplayer.movement(0)?.goal?.arrived) break;
+  }
+  assert.ok(largestDeviation > 100);
+  assert.ok(Math.hypot(robot.x - 530, robot.y - 350) <= 8);
+  host.input({memberId: 'гость', goal: [550, 460]});
+  step(1 / 60);
+  assert.ok(ctx.intents[0].navigate && ctx.intents[0].speed > 0);
+  host.resetInput('гость');
+  step(1 / 60);
+  assert.equal(ctx.intents[0].speed, 0);
 });
 
 test('LAN replica renders the host rig and detached segments without simulation', t => {
@@ -207,4 +245,23 @@ test('LAN replica renders the host rig and detached segments without simulation'
   replica.sendInputFrame(performance.now() + 150);
   win.dispatchEvent(new win.Event('blur'));
   assert.deepEqual(inputs, [{x: 1, y: 0, seq: 0}, {x: 0, y: 0, seq: 1}]);
+  const controlMode = ctx.root.querySelector('#tower-control-mode');
+  assert.equal(controlMode.disabled, false);
+  controlMode.value = 'direction';
+  controlMode.dispatchEvent(new win.Event('change'));
+  assert.equal(ctx.root.querySelector('#tower-stick').hidden, true);
+  clickPoint(win, 450, 450);
+  assert.equal(ctx.root.querySelector('#tower-direction-marker').hidden, false);
+  replica.sendInputFrame(performance.now() + 500);
+  assert.deepEqual(inputs.at(-1), {goal: [450, 450], seq: 2});
+  const acknowledged = structuredClone(next);
+  acknowledged.seq++;
+  acknowledged.robots[1].destination = [450, 450, 460, 460];
+  guest.snapshot(acknowledged);
+  replica.paintReplica(performance.now() + 700);
+  assert.deepEqual([ctx.towerDestination.x, ctx.towerDestination.y], [460, 460]);
+  clickPoint(win, 460, 460);
+  assert.equal(ctx.towerDestination, null);
+  replica.sendInputFrame(performance.now() + 750);
+  assert.deepEqual(inputs.at(-1), {x: 0, y: 0, seq: 3});
 });
