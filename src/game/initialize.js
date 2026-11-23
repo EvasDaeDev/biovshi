@@ -1,7 +1,7 @@
 import {initializeTelegram} from '../platform/telegram.js';
 import {SESSION_STORAGE} from '../build-channel.js';
 import {initializeKeyboardViewport} from '../ui/keyboard-viewport.js';
-import {initializeBattleGestures} from '../ui/battle-gestures.js';
+import {initializeGameGestures} from '../ui/game-gestures.js';
 import {initializeStreamerMascot} from '../ui/streamer-mascot.js';
 import {towerEnemyCount} from '../tower/model.js';
 import {selectedTowerFloor} from '../tower/floors.js';
@@ -453,7 +453,7 @@ export function initializeGame({textures=null,arenaId='ward',session=null,entry=
   resetFrameClock();
   ctx.paintAt = -Infinity;
   initializeOrientation();
-  initializeBattleGestures();
+  initializeGameGestures();
   initializeTelegram(fitField);
   ctx.frameId = requestAnimationFrame(frame);
   // Local pari-mutuel ledger. All values are whole virtual chips.

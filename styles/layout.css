@@ -2,8 +2,5 @@ html, body, html>body { background:#02050d !important; background-color:#02050d 
 html body{width:100%;max-width:none;margin:0;padding:12px;box-sizing:border-box;min-height:100vh;min-height:var(--game-height,100dvh);display:flex;align-items:flex-start;justify-content:center;background:#02050d !important;color:#d4e7f0 !important}
 #robot-tag-hops-v22{width:100%;max-width:none;flex:1 1 auto;margin-inline:auto}
 button{touch-action:manipulation}
-html, body {overscroll-behavior-y:none}
-/* Keep the card columns scrollable while preventing page zoom in battle. */
-body:has(> #robot-tag-hops-v22:not([inert]) > #game-navigation[data-screen="arena"]):not(:has(#arena-settings:not([hidden]))) {
- touch-action:pan-y;
-}
+/* Allow ordinary scrolling in the game and its panels without page gestures. */
+html, body {overscroll-behavior-y:none;touch-action:pan-x pan-y}

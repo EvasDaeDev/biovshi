@@ -302,24 +302,32 @@ test('Telegram joystick cancels native touch panning while pointer input and oth
  }finally{f.dom.window.close();}
 });
 
-test('native pinch is blocked in battle while settings and pointer input keep their gestures',()=>{
- const f=setup();try{
+test('page gestures are blocked in battle and menus without swallowing taps or panel scrolling',()=>{
+ const f=setup({sdk:false});try{
   f.fight();
-  const gesture=(type,target=ctx.stage)=>{
+  const gesture=(type,target=ctx.stage,touches)=>{
    const event=new f.win.Event(type,{bubbles:true,cancelable:true});
+   if(touches)Object.defineProperty(event,'touches',{value:touches});
    target.dispatchEvent(event);
    return event.defaultPrevented;
   };
+  const finger=(clientY,identifier=1)=>({clientX:25,clientY,identifier});
   assert.equal(gesture('gesturestart'),true);
   assert.equal(gesture('gesturechange'),true);
   assert.equal(gesture('pointerdown'),false);
-  assert.equal(gesture('touchmove'),false);
-  ctx.settingsOpen=true;
-  assert.equal(gesture('gesturestart',f.doc.querySelector('.settings-panel')),false);
-  ctx.settingsOpen=false;
-  ctx.resultsPanel.hidden=false;
-  assert.equal(gesture('gesturestart'),false);
-  ctx.resultsPanel.hidden=true;
+  assert.equal(gesture('touchstart',ctx.stage,[finger(10)]),false);
+  assert.equal(gesture('touchmove',ctx.stage,[finger(25)]),true);
+  assert.equal(gesture('touchmove',ctx.stage,[finger(25),finger(45,2)]),true);
+  ctx.startup.phase='menu';
+  const panel=f.doc.querySelector('.settings-panel');
+  panel.style.overflowY='auto';
+  panel.scrollTop=12;
+  assert.equal(gesture('gesturestart',panel),true);
+  assert.equal(gesture('touchstart',panel,[finger(10)]),false);
+  assert.equal(gesture('touchmove',panel,[finger(22)]),false);
+  panel.scrollTop=0;
+  assert.equal(gesture('touchmove',panel,[finger(15)]),false);
+  assert.equal(gesture('touchmove',panel,[finger(25)]),true);
   const stage=ctx.stage;
   ctx.root.__disposeTag();
   assert.equal(gesture('gesturechange',stage),false);
