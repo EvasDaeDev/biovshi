@@ -113,3 +113,26 @@ test('build and bind errors leave the launcher available for a retry', async t =
   assert.equal((await command('start', settings)).status, 202);
   assert.equal((await waitFor(status, 'running')).gameUrl, 'http://192.168.0.20:8083');
 });
+
+test('one-click startup chooses a physical LAN interface and retries a busy default game port', async t => {
+  const ports = [];
+  let builds = 0;
+  const {status} = await launch(t, {
+    autoStart: true,
+    getInterfaces: () => [
+      {name: 'Public interface', address: '209.10.20.30'},
+      {name: 'vEthernet (Default Switch)', address: '172.23.0.1'},
+      {name: 'Wi-Fi', address: '192.168.1.25'},
+    ],
+    async runBuild() { builds++; },
+    async startGame({host, port}) {
+      assert.equal(host, '192.168.1.25');
+      ports.push(port);
+      if (port === 8080) throw Object.assign(Error('In use'), {code: 'EADDRINUSE'});
+      return {origin: 'http://192.168.1.25:49000', async close() {}};
+    },
+  });
+  assert.equal((await waitFor(status, 'running')).gameUrl, 'http://192.168.1.25:49000');
+  assert.equal(builds, 1);
+  assert.deepEqual(ports, [8080, 0]);
+});

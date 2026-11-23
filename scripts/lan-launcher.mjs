@@ -1,4 +1,4 @@
-import {execFile} from 'node:child_process';
+import {execFile, spawn} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
 import {createServer} from 'node:http';
 import {networkInterfaces} from 'node:os';
@@ -26,6 +26,22 @@ function listInterfaces() {
   } catch {
     return [];
   }
+}
+
+function automaticHost(interfaces) {
+  const local = interfaces.filter(({address}) => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/.test(address));
+  // Windows can enumerate VPN/virtual adapters before the physical Wi-Fi or Ethernet.
+  const physical = local.find(({name}) => /wi-fi|wlan|ethernet|беспровод|локальной сети/i.test(name) &&
+    !/virtual|vethernet|vpn|tap|wintun/i.test(name));
+  return (physical ?? local[0])?.address ?? LOOPBACK;
+}
+
+function openWindowsBrowser(url) {
+  const processHandle = spawn(process.env.ComSpec || 'cmd.exe', ['/d', '/c', 'start', url], {
+    stdio: 'ignore', detached: true, windowsHide: true,
+  });
+  processHandle.on('error', error => console.error('Не удалось открыть браузер:', error.message));
+  processHandle.unref();
 }
 
 async function buildGame(dist, signal) {
@@ -63,7 +79,7 @@ function respond(res, status, payload) {
 }
 
 export async function startLanLauncher({
-  port = 8081, dist, runBuild = buildGame,
+  port = 8081, dist, autoStart = false, runBuild = buildGame,
   getInterfaces = listInterfaces, startGame = startLanServer,
 } = {}) {
   const assets = new Map(await Promise.all([...PANEL].map(async ([route, [file, type]]) =>
@@ -79,7 +95,7 @@ export async function startLanLauncher({
   let state = {phase: 'idle', gameUrl: null, error: null, log: null};
   const status = () => ({...state, interfaces: interfaces()});
 
-  function start(settings) {
+  function start(settings, allowAlternatePort = false) {
     state = {phase: 'building', gameUrl: null, error: null, log: null};
     const buildDir = dist ?? path.join(DEFAULT_DIST, new URL(origin).port || '80');
     job = (async () => {
@@ -87,7 +103,12 @@ export async function startLanLauncher({
         await runBuild(buildDir, lifetime.signal);
         if (lifetime.signal.aborted) return;
         state.phase = 'starting';
-        game = await startGame({...settings, dist: buildDir});
+        try {
+          game = await startGame({...settings, dist: buildDir});
+        } catch (error) {
+          if (!allowAlternatePort || error.code !== 'EADDRINUSE' || lifetime.signal.aborted) throw error;
+          game = await startGame({...settings, port: 0, dist: buildDir});
+        }
         state = {phase: 'running', gameUrl: game.origin, error: null, log: null};
       } catch (error) {
         if (lifetime.signal.aborted) return;
@@ -172,6 +193,10 @@ export async function startLanLauncher({
       resolve();
     });
   });
+  if (autoStart) {
+    const host = automaticHost(interfaces());
+    start({host, port: host === LOOPBACK && port === 8080 ? 0 : 8080}, true);
+  }
   return {
     origin,
     close() {
@@ -189,9 +214,13 @@ export async function startLanLauncher({
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    const {values} = parseArgs({options: {port: {type: 'string'}}});
-    const panel = await startLanLauncher({port: Number(values.port ?? 8081)});
-    console.log('Панель запуска LAN: ' + panel.origin + '/lan/');
+    const {values} = parseArgs({options: {
+      port: {type: 'string'}, start: {type: 'boolean'}, open: {type: 'boolean'},
+    }});
+    const panel = await startLanLauncher({port: Number(values.port ?? 8081), autoStart: values.start});
+    const panelUrl = panel.origin + '/lan/';
+    console.log('Панель запуска LAN: ' + panelUrl);
+    if (values.open && process.platform === 'win32') openWindowsBrowser(panelUrl);
     const close = () => panel.close().catch(error => {
       console.error(error.message);
       process.exitCode = 1;
