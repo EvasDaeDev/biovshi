@@ -18,7 +18,7 @@ async function setup(t, options) {
     ...['active', 'ward', 'ring', 'annulus', 'sluice', 'zigzag', 'columns', 'maze', 'throat'].map(id =>
       copyFile(new URL('../public/locations/' + id + '.json', import.meta.url), path.join(dist, 'locations', id + '.json'))),
   ]);
-  const server = await startLanServer({dist, port: 0, ...options});
+  const server = await startLanServer({dist, port: 0, countdownMs: 50, ...options});
   t.after(() => server.close());
   return server.origin;
 }
@@ -120,6 +120,12 @@ test('LAN synchronizes rooms, slot limits, roles and the host-only start', async
   guest.send('match.host-ready', {matchId}, roomId);
   assert.equal((await guest.next('error')).payload.code, 'host_only');
   host.send('match.host-ready', {matchId, view: {starts: Array(3).fill([350, 350, 0]), tower: null}}, roomId);
+  await guest.next('room.state', message => message.payload.phase === 'loading');
+  guest.send('match.loaded', {matchId}, roomId);
+  const loaded = await host.next('room.state', message => message.payload.phase === 'loading' && message.payload.loaded === 2);
+  assert.equal(loaded.payload.loadingTotal, 3);
+  viewer.send('match.loaded', {matchId}, roomId);
+  await viewer.next('room.state', message => message.payload.phase === 'countdown');
   await viewer.next('room.state', message => message.payload.phase === 'running');
   guest.send('match.finish', {matchId, winner: 1, elapsedSec: 5, reason: 'combat'}, roomId);
   assert.equal((await guest.next('error')).payload.code, 'host_only');
@@ -175,6 +181,16 @@ test('LAN restores the same guest session before expiry and releases an expired 
   await host.next('room.state', message => message.payload.phase === 'preparing');
 });
 
+function battleSnapshot(matchId, seq) {
+  const robot = {
+    root: [300, 350, 0], frames: Array(8).fill([300, 350, 0]), tail: [], limbs: [],
+    appearance: [0, 0, 0, 1, 1, 1, 0, 0, 0], cue: [], bossPhase: null, health: [6, 4], crit: [],
+    trauma: 0, cause: null, visible: true, unconscious: false, action: 'патруль',
+  };
+  return {matchId, seq, time: 2, elapsed: 2, started: true, finished: false,
+    winner: null, robots: [robot, robot], impacts: []};
+}
+
 test('LAN relays only the bound guest input and host snapshots, including a reconnect keyframe', async t => {
   const origin = await setup(t);
   const [host, guest, viewer] = await Promise.all([connect(origin), connect(origin), connect(origin)]);
@@ -190,6 +206,9 @@ test('LAN relays only the bound guest input and host snapshots, including a reco
   const view = {starts: [[300, 350, 0], [400, 350, 3.14]], tower: null};
   host.send('match.host-ready', {matchId, view}, roomId);
   await viewer.next('room.state', message => message.payload.view?.players.length === 2);
+  guest.send('match.loaded', {matchId}, roomId);
+  viewer.send('match.loaded', {matchId}, roomId);
+  await viewer.next('room.state', message => message.payload.phase === 'running');
 
   viewer.send('input', {matchId, seq: 1, x: 1, y: 0}, roomId);
   assert.equal((await viewer.next('error')).payload.code, 'no_control');
@@ -201,13 +220,7 @@ test('LAN relays only the bound guest input and host snapshots, including a reco
   guest.send('input', {matchId, seq: 4, x: 0, y: 0}, roomId);
   assert.equal((await host.next('input')).payload.seq, 4);
 
-  const robot = {
-    root: [300, 350, 0], frames: Array(8).fill([300, 350, 0]), tail: [], limbs: [],
-    appearance: [0, 0, 0, 1, 1, 1, 0, 0, 0], cue: [], bossPhase: null, health: [6, 4], crit: [],
-    trauma: 0, cause: null, visible: true, unconscious: false, action: 'патруль',
-  };
-  const snapshot = {matchId, seq: 7, time: 2, elapsed: 2, started: true, finished: false,
-    winner: null, robots: [robot, robot], impacts: []};
+  const snapshot = battleSnapshot(matchId, 7);
   guest.send('state.snapshot', snapshot, roomId);
   assert.equal((await guest.next('error')).payload.code, 'host_only');
   const remains = {matchId, parts: [{id: 0, cause: 'head', motion: [1, 0, 0, 0], pieces: [{bone: [3, 4, 5], skin: null}]}]};
@@ -225,4 +238,62 @@ test('LAN relays only the bound guest input and host snapshots, including a reco
   assert.deepEqual((await resumed.next('state.snapshot')).payload, snapshot);
   resumed.send('input', {matchId, seq: 0, x: 0, y: 1}, roomId);
   assert.equal((await host.next('input')).payload.seq, 0);
+});
+
+test('LAN cancels preparation when an invited viewer never loads the arena', async t => {
+  const origin = await setup(t, {loadingMs: 500});
+  const [host, viewer] = await Promise.all([connect(origin), connect(origin)]);
+  const {roomId} = await create(host);
+  viewer.send('room.join', {playerName: 'Зритель', role: 'spectator'}, roomId);
+  await viewer.next('room.entered');
+  host.send('match.start', {}, roomId);
+  const {payload: {matchId}} = await viewer.next('room.state', message => message.payload.phase === 'preparing');
+  host.send('match.host-ready', {matchId, view: {starts: [[350, 350, 0]], tower: null}}, roomId);
+  await viewer.next('room.state', message => message.payload.phase === 'loading');
+  const waiting = await viewer.next('room.state', message => message.payload.phase === 'waiting' && message.payload.notice);
+  assert.match(waiting.payload.notice, /Истекло время загрузки/);
+  assert.equal(waiting.payload.matchId, null);
+});
+
+test('LAN suspends a disconnected host, requires a new keyframe to resume, and aborts after the grace period', async t => {
+  const origin = await setup(t, {reconnectMs: 1200, hostHeartbeatMs: 500});
+  const [host, guest] = await Promise.all([connect(origin), connect(origin)]);
+  const {roomId, payload: {resumeToken}} = await create(host);
+  guest.send('room.join', {playerName: 'Игрок', role: 'player'}, roomId);
+  await guest.next('room.entered');
+  guest.send('room.ready', {ready: true}, roomId);
+  await host.next('room.state', message => message.payload.canStart && message.payload.members.length === 2);
+  host.send('match.start', {}, roomId);
+  const {payload: {matchId}} = await guest.next('room.state', message => message.payload.phase === 'preparing');
+  host.send('match.host-ready', {matchId, view: {starts: [[300, 350, 0], [400, 350, 3.14]], tower: null}}, roomId);
+  await guest.next('room.state', message => message.payload.phase === 'loading');
+  guest.send('match.loaded', {matchId}, roomId);
+  await guest.next('room.state', message => message.payload.phase === 'running');
+  const snapshot = battleSnapshot(matchId, 7);
+  host.send('state.snapshot', snapshot, roomId);
+  await guest.next('state.snapshot');
+  host.socket.terminate();
+  await guest.next('room.state', message => message.payload.phase === 'suspended');
+
+  guest.send('match.resume', {matchId, snapshot: battleSnapshot(matchId, 8)}, roomId);
+  assert.equal((await guest.next('error')).payload.code, 'host_only');
+  const resumed = await connect(origin);
+  resumed.send('session.resume', {token: resumeToken}, roomId);
+  await resumed.next('room.entered');
+  await resumed.next('room.state', message => message.payload.phase === 'suspended');
+  resumed.send('match.resume', {matchId, snapshot}, roomId);
+  resumed.send('match.resume', {matchId, snapshot: battleSnapshot(matchId, 8)}, roomId);
+  assert.equal((await guest.next('state.snapshot')).payload.keyframe, true);
+  await guest.next('room.state', message => message.payload.phase === 'running');
+  resumed.send('match.heartbeat', {matchId}, roomId);
+  assert.equal((await resumed.next('match.heartbeat')).payload.matchId, matchId);
+
+  // The socket still answers WebSocket pings. Only the authoritative browser
+  // heartbeat can keep the simulation running.
+  await guest.next('room.state', message => message.payload.phase === 'suspended');
+  const aborted = await guest.next('room.state', message => message.payload.phase === 'results');
+  assert.deepEqual(aborted.payload.result, {winnerName: null, elapsedSec: 2, reason: 'aborted'});
+  resumed.send('room.return', {matchId}, roomId);
+  const lobby = await guest.next('room.state', message => message.payload.phase === 'waiting' && message.payload.matchId === null);
+  assert.equal(lobby.payload.canStart, false);
 });

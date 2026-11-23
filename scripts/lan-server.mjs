@@ -31,7 +31,7 @@ function localAddresses() {
   }
 }
 
-export async function startLanServer({host = '127.0.0.1', port = 8080, dist = DIST, reconnectMs} = {}) {
+export async function startLanServer({host = '127.0.0.1', port = 8080, dist = DIST, reconnectMs, countdownMs, loadingMs, hostHeartbeatMs} = {}) {
   if (!isIPv4(host) || host === '0.0.0.0' || !Number.isInteger(port) || port < 0 || port > 65535)
     throw Error('Укажите IPv4 выбранного сетевого интерфейса и корректный порт.');
 
@@ -130,7 +130,7 @@ export async function startLanServer({host = '127.0.0.1', port = 8080, dist = DI
         for (const authority of [...authorities]) authorities.add(authority.slice(0, -3));
       }
       origin = new URL('http://' + host + ':' + boundPort).origin;
-      rooms = createLanRooms({arenas, build: buildInfo.sourceCommit, origin, reconnectMs});
+      rooms = createLanRooms({arenas, build: buildInfo.sourceCommit, origin, reconnectMs, countdownMs, loadingMs, hostHeartbeatMs});
       server.off('error', reject);
       resolve();
     });

@@ -108,6 +108,7 @@ export function installLanGuestArena(match) {
       controls.hidden = localId < 0 || ctx.combat.finished;
     },
     snapshot(snapshot) {
+      if (snapshot.keyframe) { buffer.clear(); impacts.length = 0; }
       if (!buffer.push(snapshot, performance.now())) return;
       for (const event of snapshot.impacts) if (event.seq > impactSeq) {
         impactSeq = event.seq;

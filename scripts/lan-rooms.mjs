@@ -2,7 +2,7 @@ import {randomBytes, randomUUID} from 'node:crypto';
 import {validBattleSnapshot, validBattleView, validImpact, validMovement, validRemains} from '../src/lan/battle-protocol.js';
 import {lanAiName, validLanProfile} from '../src/lan/characters.js';
 import {
-  LAN_MAX_FIGHTERS, LAN_RECONNECT_MS, LAN_ROOM_CODE, isLanMessage, lanMessage,
+  LAN_COUNTDOWN_MS, LAN_HOST_HEARTBEAT_MS, LAN_LOADING_MS, LAN_MAX_FIGHTERS, LAN_RECONNECT_MS, LAN_ROOM_CODE, isLanMessage, lanMessage,
 } from '../src/lan/protocol.js';
 
 const MAX_ROOMS = 32;
@@ -10,8 +10,12 @@ const MAX_MEMBERS = 64;
 const ROLES = new Set(['player', 'spectator']);
 const waiting = 'waiting';
 const preparing = 'preparing';
+const loading = 'loading';
+const countdown = 'countdown';
+const suspended = 'suspended';
 const running = 'running';
 const results = 'results';
+const preparingPhases = new Set([preparing, loading, countdown]);
 
 class RoomError extends Error {
   constructor(code, message) {
@@ -52,12 +56,15 @@ function summary(room) {
 
 function state(room) {
   return {...summary(room), hostId: room.hostId, ai: room.ai, canStart: canStart(room),
-    matchId: room.matchId, result: room.result, view: room.view ?? null,
+    matchId: room.matchId, result: room.result, view: room.view ?? null, notice: room.notice ?? '',
+    countdownMs: room.phase === countdown ? Math.max(0, room.startAt - Date.now()) : null,
+    loaded: room.loaded?.size ?? 0, loadingTotal: room.required?.size ?? 0,
     members: [...room.members.values()].map(({id, name, role, profile, profileSummary, ready, socket}) =>
       ({id, name, role, profile, profileSummary, ready, connected: Boolean(socket)}))};
 }
 
-export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNECT_MS}) {
+export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNECT_MS,
+  countdownMs = LAN_COUNTDOWN_MS, loadingMs = LAN_LOADING_MS, hostHeartbeatMs = LAN_HOST_HEARTBEAT_MS}) {
   const rooms = new Map();
   const sessions = new Map();
   const clients = new Map();
@@ -103,8 +110,12 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
     for (const member of room.members.values()) member.ready = false;
   }
 
-  function returnToLobby(room) {
+  function returnToLobby(room, notice = '') {
     if (room.phase === waiting) return;
+    clearTimeout(room.phaseTimer);
+    clearTimeout(room.healthTimer);
+    room.required = room.loaded = null;
+    room.notice = notice;
     room.phase = waiting;
     room.matchId = null;
     room.result = null;
@@ -112,8 +123,43 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
     resetReady(room);
   }
 
-  function cancelPreparation(room) {
-    if (room.phase === preparing) returnToLobby(room);
+  function cancelPreparation(room, reason) {
+    if (preparingPhases.has(room.phase)) returnToLobby(room, reason);
+  }
+
+  function monitorHost(room) {
+    clearTimeout(room.healthTimer);
+    room.healthTimer = setTimeout(() => suspendMatch(room), hostHeartbeatMs);
+  }
+
+  function beginCountdown(room) {
+    if (room.phase !== loading || room.loaded.size !== room.required.size) return;
+    clearTimeout(room.phaseTimer);
+    room.phase = countdown;
+    room.startAt = Date.now() + countdownMs;
+    room.phaseTimer = setTimeout(() => {
+      room.phase = running;
+      monitorHost(room);
+      publishRoom(room);
+    }, countdownMs);
+  }
+
+  function suspendMatch(room) {
+    if (room.phase !== running) return;
+    clearTimeout(room.healthTimer);
+    room.phase = suspended;
+    room.phaseTimer = setTimeout(() => {
+      room.result = {winnerName: null, elapsedSec: room.snapshot?.elapsed ?? 0, reason: 'aborted'};
+      room.phase = results;
+      publishRoom(room);
+    }, reconnectMs);
+    publishRoom(room);
+  }
+
+  function validSnapshot(room, snapshot) {
+    return snapshot && validBattleSnapshot(snapshot, room.matchFighters.length) &&
+      snapshot.seq > (room.snapshot?.seq ?? -1) && Array.isArray(snapshot.impacts) &&
+      snapshot.impacts.length <= 64 && snapshot.impacts.every(event => validImpact(event, room.matchFighters.length));
   }
 
   function removeMember(room, member, reason) {
@@ -130,18 +176,19 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
 
   function closeRoom(room, reason) {
     rooms.delete(room.id);
+    clearTimeout(room.phaseTimer);
+    clearTimeout(room.healthTimer);
     for (const member of room.members.values()) removeMember(room, member, reason);
     publishList();
   }
 
   function expire(room, member) {
     if (member.id === room.hostId) {
-      closeRoom(room, 'Хозяин отключился. Комната закрыта.');
+      closeRoom(room, 'Связь с хозяином потеряна. Бой прерван.');
       return;
     }
     removeMember(room, member, '');
     if (member.role === 'player') {
-      cancelPreparation(room);
       resetReady(room);
     }
     publishRoom(room);
@@ -188,8 +235,9 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
   function resume(socket, id, payload) {
     const member = typeof payload.token === 'string' ? sessions.get(payload.token) : null;
     const room = rooms.get(id);
-    requireRoom(room && member?.roomId === id && !member.socket && Date.now() < member.resumeUntil,
-      'resume_failed', 'Срок восстановления истёк или сессия уже активна.');
+    requireRoom(room && member?.roomId === id, 'resume_failed', 'Сессия больше недоступна.');
+    requireRoom(!member.socket, 'resume_busy', 'Ждём закрытия прежнего соединения…');
+    requireRoom(Date.now() < member.resumeUntil, 'resume_failed', 'Срок восстановления истёк.');
     clearTimeout(member.timer);
     member.socket = socket;
     member.resumeUntil = null;
@@ -254,18 +302,43 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
     requireRoom(member && roomId === member.roomId, 'room_required', 'Откройте свою комнату.');
     const room = rooms.get(member.roomId);
     const host = member.id === room.hostId;
-    if (['room.close', 'room.configure', 'room.kick', 'match.start', 'match.host-ready', 'match.finish', 'room.return'].includes(type)) {
+    if (['room.close', 'room.configure', 'room.kick', 'match.start', 'match.host-ready', 'match.finish',
+      'match.heartbeat', 'match.pause', 'match.resume', 'room.return'].includes(type)) {
       requireRoom(host, 'host_only', 'Это действие доступно только хозяину.');
     }
     if (type === 'room.close' || (type === 'room.leave' && host))
       return closeRoom(room, 'Хозяин закрыл комнату.');
     if (type === 'room.leave') {
       removeMember(room, member, '');
-      if (member.role === 'player') {
-        cancelPreparation(room);
-        resetReady(room);
-      }
+      if (room.required?.has(member.id))
+        cancelPreparation(room, 'Участник вышел во время подготовки. Запустите бой заново.');
+      if (member.role === 'player') resetReady(room);
       return publishRoom(room);
+    }
+    if (['match.loaded', 'match.load-failed', 'match.heartbeat', 'match.pause', 'match.resume'].includes(type)) {
+      if (!room.matchId || payload.matchId !== room.matchId) return;
+      if (type === 'match.loaded' && room.phase === loading && room.required.has(member.id)) {
+        if (room.loaded.has(member.id)) return;
+        room.loaded.add(member.id);
+        beginCountdown(room);
+        publishRoom(room);
+      } else if (type === 'match.load-failed' && preparingPhases.has(room.phase) && room.required.has(member.id)) {
+        cancelPreparation(room, 'Один из участников не смог загрузить арену.');
+        publishRoom(room);
+      } else if (type === 'match.heartbeat' && room.phase === running) {
+        monitorHost(room);
+        send(socket, 'match.heartbeat', {matchId: room.matchId}, room.id);
+      } else if (type === 'match.pause') {
+        suspendMatch(room);
+      } else if (type === 'match.resume' && room.phase === suspended && validSnapshot(room, payload.snapshot)) {
+        clearTimeout(room.phaseTimer);
+        room.snapshot = {...payload.snapshot, matchId: room.matchId, impacts: []};
+        relay(room, 'state.snapshot', {...room.snapshot, keyframe: true});
+        room.phase = running;
+        monitorHost(room);
+        publishRoom(room);
+      }
+      return;
     }
     if (type === 'input' || type === 'state.snapshot' || type === 'state.remains') {
       if (payload.matchId !== room.matchId || !room.view) return;
@@ -282,10 +355,9 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         if (room.phase !== running && room.phase !== results) return;
         const count = room.matchFighters.length;
         if (type === 'state.snapshot') {
-          if (!validBattleSnapshot(payload, count) || payload.seq <= (room.snapshot?.seq ?? -1) ||
-              !Array.isArray(payload.impacts) || payload.impacts.length > 64 ||
-              !payload.impacts.every(event => validImpact(event, count))) return;
+          if (!validSnapshot(room, payload)) return;
           room.snapshot = payload;
+          if (room.phase === running) monitorHost(room);
         } else {
           if (!validRemains(payload.parts, count) || payload.parts.length <= (room.remains?.parts.length ?? 0)) return;
           room.remains = payload;
@@ -295,7 +367,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
       return;
     }
     if (type === 'room.return') {
-      if (room.phase === running || room.phase === results)
+      if (room.matchId)
         requireRoom(payload.matchId === room.matchId, 'match_mismatch', 'Этот бой уже завершён.');
       returnToLobby(room);
       return publishRoom(room);
@@ -312,7 +384,9 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         requireRoom(hasTower === Boolean(payload.view.tower),
           'invalid_view', 'Данные пациента из Башни не совпадают с составом.');
         room.view = {starts: payload.view.starts, tower: payload.view.tower, players, ai: room.ai};
-        room.phase = running;
+        room.phase = loading;
+        room.loaded.add(room.hostId);
+        beginCountdown(room);
       } else {
         requireRoom(room.phase === running, 'invalid_phase', 'Бой ещё не начался или уже завершён.');
         const {winner, elapsedSec, reason} = payload;
@@ -321,6 +395,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         requireRoom(allowedWinner && Number.isFinite(elapsedSec) && elapsedSec >= 0 &&
           (reason === 'combat' || reason === 'manual') && (reason !== 'manual' || winner === null),
           'invalid_result', 'Некорректный результат боя.');
+        clearTimeout(room.healthTimer);
         room.phase = results;
         room.result = {winnerName: winner === null ? null : room.matchFighters[winner], elapsedSec, reason};
       }
@@ -352,6 +427,13 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
           if (guest.role === 'player' && !guest.socket) removeMember(room, guest, '');
         }
         room.phase = preparing;
+        room.notice = '';
+        room.required = new Set([...room.members.values()].filter(item => item.socket).map(item => item.id));
+        room.loaded = new Set();
+        room.phaseTimer = setTimeout(() => {
+          cancelPreparation(room, 'Истекло время загрузки арены.');
+          publishRoom(room);
+        }, loadingMs);
         room.matchId = randomUUID();
         room.inputSeq = new Map();
         room.matchFighters = [
@@ -403,8 +485,9 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         member.socket = null;
         member.resumeUntil = Date.now() + reconnectMs;
         if (member.role === 'player') member.ready = false;
-        if (member.id === room.hostId && room.phase === running) returnToLobby(room);
-        if (member.id === room.hostId || member.role === 'player') cancelPreparation(room);
+        if (member.id === room.hostId) suspendMatch(room);
+        if (room.required?.has(member.id))
+          cancelPreparation(room, 'Участник отключился во время подготовки. Запустите бой заново.');
         member.timer = setTimeout(() => expire(room, member), reconnectMs);
         publishRoom(room);
       });

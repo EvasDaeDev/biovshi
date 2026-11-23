@@ -23,7 +23,7 @@ function manualIntent(robot){
   return robot.body?.intent?robot.body.intent(robot,intent):intent;
 }
 export function step(dt) {
-  if(ctx.multiplayer?.replica||ctx.appInactive||ctx.tutorial?.active)return;
+  if(ctx.multiplayer?.replica||ctx.multiplayer?.suspended||ctx.appInactive||ctx.tutorial?.active)return;
   if (ctx.startup.phase !== 'running' || ctx.orientationBlocked || ctx.settingsOpen) return;
   if (ctx.combat.finished) {
     // Отдельный таймер не нужен: продолжаем время анимации, не меняя итоговую длительность боя.
@@ -119,6 +119,7 @@ export function frame(now) {
   if(!ctx.appInactive)ctx.tutorial?.sync();
   const elapsed = ctx.last === null ? 0 : Math.max(0, (now - ctx.last) / 1000);
   ctx.last = now;
+  ctx.multiplayer?.updateHostAvailability?.(now,elapsed);
   let painted = false;
   const resultsOpen=ctx.combat.finished&&!ctx.resultsPanel.hidden;
   ctx.cameraDebt = (ctx.cameraDebt || 0) + elapsed;
@@ -132,6 +133,8 @@ export function frame(now) {
       ctx.clearTowerInput?.();
     }
     ctx.debt = 0;
+  } else if (ctx.multiplayer?.suspended) {
+    ctx.debt = ctx.cameraDebt = 0;
   } else if (ctx.startup.phase !== 'running') {
     if (!ctx.appInactive && !document.hidden && !ctx.orientationBlocked && !ctx.settingsOpen && ctx.startup.phase === 'spawning') { advanceStartup(elapsed); painted = true; }
     ctx.debt = 0;

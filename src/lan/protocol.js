@@ -1,4 +1,8 @@
-export const LAN_VERSION = 2;
+export const LAN_VERSION = 3;
+export const LAN_COUNTDOWN_MS = 3_000;
+export const LAN_LOADING_MS = 30_000;
+export const LAN_HOST_HEARTBEAT_MS = 2_500;
+export const LAN_HEARTBEAT_SEND_MS = 500;
 export const LAN_RECONNECT_MS = 10_000;
 export const LAN_MAX_FIGHTERS = 10;
 export const LAN_WS_PATH = '/lan/ws';

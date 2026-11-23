@@ -39,7 +39,14 @@ export function installLanHostSync(match) {
     return input && performance.now() - input.received < LAN_INPUT_TIMEOUT_MS ? input : null;
   };
 
+  const snapshot = events => ({
+    seq, time: encodeNumber(ctx.game.time), elapsed: encodeNumber(ctx.round.elapsedSec),
+    started: ctx.startup.phase === 'running', finished: ctx.combat.finished, winner: ctx.combat.winner,
+    robots: ctx.robots.map(robot => robot.captureReplica()), impacts: events,
+  });
+
   match.publishFrame = (now, painted) => {
+    if (match.suspended) return;
     const final = ctx.combat.finished && !finalSent;
     if ((!painted || now < nextSnapshot) && !final) return;
     if (ctx.combat.detached.length !== sentRemains) {
@@ -50,11 +57,7 @@ export function installLanHostSync(match) {
       }));
       if (match.onRemains({parts})) sentRemains = parts.length;
     }
-    if (match.onSnapshot({
-      seq, time: encodeNumber(ctx.game.time), elapsed: encodeNumber(ctx.round.elapsedSec),
-      started: ctx.startup.phase === 'running', finished: ctx.combat.finished, winner: ctx.combat.winner,
-      robots: ctx.robots.map(robot => robot.captureReplica()), impacts,
-    })) {
+    if (match.onSnapshot(snapshot(impacts))) {
       seq++;
       impacts.length = 0;
       nextSnapshot = now + LAN_SNAPSHOT_MS - 1;
@@ -72,6 +75,13 @@ export function installLanHostSync(match) {
 
   return {
     view: {starts, tower},
+    resetInputs() { inputs.clear(); },
+    sendResume() {
+      if (match.onResume(snapshot([]))) {
+        seq++;
+        impacts.length = 0;
+      }
+    },
     input({memberId, x, y}) {
       const id = byMember.get(memberId);
       if (id !== undefined) inputs.set(id, {x, y, received: performance.now()});
