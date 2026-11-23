@@ -41,9 +41,10 @@ export function awardArchiveNote(ids,random=Math.random){
  const remaining=ARCHIVE_NOTE_COUNT-ids.length;
  if(remaining<=0)return;
  const chance=remaining<=FINAL_ARCHIVE_NOTES?FINAL_ARCHIVE_NOTE_DROP_CHANCE:ARCHIVE_NOTE_DROP_CHANCE;
- if(random()>=chance)return;
- const available=ARCHIVE_NOTES.filter(note=>!ids.includes(note.id));
- const id=available[Math.floor(random()*available.length)].id;
- ids.push(id);
- return id;
+ if(random()<chance){
+  const available=ARCHIVE_NOTES.filter(note=>!ids.includes(note.id));
+  const id=available[Math.floor(random()*available.length)].id;
+  ids.push(id);
+  return id;
+ }
 }
