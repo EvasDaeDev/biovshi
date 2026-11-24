@@ -5,6 +5,7 @@ export const LAN_SNAPSHOT_MS = 1000 / 15;
 export const LAN_INPUT_MS = 50;
 export const LAN_INPUT_TIMEOUT_MS = 350;
 export const LAN_INTERPOLATION_MS = 100;
+export const LAN_BATTLE_EVENT_BATCH = 64;
 
 export const validSequence = value => Number.isSafeInteger(value) && value >= 0;
 const bounded = value => Number.isFinite(value) && Math.abs(value) <= 10_000_000;
@@ -44,12 +45,40 @@ export function validBattleSnapshot(snapshot, count) {
     snapshot.robots.every(validRobot);
 }
 
-export function validImpact(event, count) {
-  return event && validSequence(event.seq) && Number.isInteger(event.robot) && event.robot >= 0 && event.robot < count &&
-    (event.by === null || Number.isInteger(event.by) && event.by >= 0 && event.by < count) &&
-    vector(event.point, 2) && bounded(event.time) &&
-    typeof event.segment === 'string' && event.segment.length < 40 &&
-    typeof event.severed === 'boolean' && Number.isFinite(event.damage);
+export function validBattleEvent(event, count) {
+  if (!event || !validSequence(event.seq) || !bounded(event.time) || event.time < 0) return false;
+  const fighter = id => Number.isInteger(id) && id >= 0 && id < count;
+  const part = key => typeof key === 'string' && key.length > 0 && key.length < 40;
+  switch (event.type) {
+    case 'hit':
+    case 'segment-broken':
+      return fighter(event.robot) && (event.by === null || fighter(event.by)) &&
+        vector(event.point, 2) && part(event.segment) && bounded(event.damage) && event.damage >= 0;
+    case 'combat-windup':
+    case 'combat-miss':
+    case 'combat-strike':
+      return fighter(event.from) && fighter(event.to) && part(event.source) &&
+        (event.type !== 'combat-strike' || part(event.segment));
+    case 'pounce-launch':
+      return fighter(event.robot) && bounded(event.heading);
+    case 'boss-charge':
+      return fighter(event.robot) && vector(event.goal, 2);
+    case 'boss-phase':
+      return fighter(event.robot) && event.phase === 2;
+    case 'robot-immobilized':
+      return fighter(event.robot) && ['погиб', 'потерял сознание', 'потерял конечности'].includes(event.reason) &&
+        (event.knockoutCause === null || ['blood-loss', 'trauma', 'limb-loss'].includes(event.knockoutCause));
+    case 'combat-end':
+      return event.winner === null ? ['draw', 'manual'].includes(event.outcome) :
+        fighter(event.winner) && event.outcome === 'victory';
+    default:
+      return false;
+  }
+}
+
+export function validBattleEvents(events, count, after) {
+  return Array.isArray(events) && events.length <= LAN_BATTLE_EVENT_BATCH &&
+    events.every((event, i) => validBattleEvent(event, count) && event.seq > (i ? events[i - 1].seq : after));
 }
 
 export function validRemains(parts, count) {

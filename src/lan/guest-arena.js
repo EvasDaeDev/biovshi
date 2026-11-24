@@ -4,7 +4,7 @@ import {emitGameEvent} from '../game/event-bus.js';
 import {installTowerInput} from '../tower/input.js';
 import {showCrit} from '../render/crit.js';
 import {spawnHitEffect} from '../render/hit-effects.js';
-import {LAN_INPUT_MS, LAN_INPUT_TIMEOUT_MS} from './battle-protocol.js';
+import {LAN_INPUT_MS} from './battle-protocol.js';
 import {createFloorReplica} from './floor-replica.js';
 import {createSnapshotBuffer} from './snapshot-buffer.js';
 
@@ -36,14 +36,13 @@ export function installLanGuestArena(match) {
   const buffer = createSnapshotBuffer();
   const floor = createFloorReplica();
   let connected = false, started = false;
-  let lastX = 0, lastY = 0, lastGoal = false, nextInput = 0, inputSeq = 0, impactSeq = -1;
-  const impacts = [];
-  function enqueueImpacts(events) {
-    for (const event of events) if (event.seq > impactSeq) {
-      impactSeq = event.seq;
-      impacts.push(event);
+  let lastX = 0, lastY = 0, lastGoal = false, nextInput = 0, inputSeq = 0, eventSeq = -1;
+  const events = [];
+  function enqueueEvents(batch) {
+    for (const event of batch) if (event.seq > eventSeq) {
+      eventSeq = event.seq;
+      events.push(event);
     }
-    if (impacts.length > 64) impacts.splice(0, impacts.length - 64);
   }
 
   function sendInput(now, release = false) {
@@ -83,7 +82,6 @@ export function installLanGuestArena(match) {
     if (!snapshot) return false;
     ctx.game.time = snapshot.time;
     ctx.round.elapsedSec = snapshot.elapsed;
-    ctx.combat.finished = snapshot.finished;
     ctx.combat.winner = snapshot.winner;
     floor.paint(snapshot.time);
     for (const [id, view] of snapshot.robots.entries()) ctx.robots[id].applyReplica(view);
@@ -100,17 +98,10 @@ export function installLanGuestArena(match) {
         destination.arrived ||= Math.hypot(observedX - x, observedY - y) <= 8;
       }
     }
-    while (impacts.length && impacts[0].time <= snapshot.time) {
-      const event = impacts.shift();
-      if (snapshot.time - event.time > LAN_INPUT_TIMEOUT_MS / 1000) continue;
-      const [x, y] = event.point;
-      const attacker = ctx.robots[event.by];
-      if (attacker && event.by !== event.robot) attacker.flashHitLight(event.time);
-      const heading = attacker ? Math.atan2(y - attacker.y, x - attacker.x) : 0;
-      spawnHitEffect(x, y, heading, event.severed);
-      if (event.damage === 2) showCrit(x, y);
-      emitGameEvent(event.severed ? 'segment-broken' : 'hit', {...event, point: {x, y}});
+    while (events.length && events[0].time <= snapshot.time) {
+      playBattleEvent(events.shift());
     }
+    ctx.combat.finished = snapshot.finished;
     return true;
   };
 
@@ -131,7 +122,7 @@ export function installLanGuestArena(match) {
       connected = false;
       controls.hidden = true;
       buffer.clear();
-      impacts.length = 0;
+      events.length = 0;
       lastX = lastY = 0;
       lastGoal = false;
     },
@@ -140,11 +131,11 @@ export function installLanGuestArena(match) {
       controls.hidden = localId < 0 || ctx.combat.finished;
     },
     snapshot(snapshot) {
-      if (snapshot.keyframe) { buffer.clear(); impacts.length = 0; }
+      if (snapshot.keyframe) { buffer.clear(); events.length = 0; }
       if (!buffer.push(snapshot, performance.now())) return;
-      enqueueImpacts(snapshot.impacts);
+      enqueueEvents(snapshot.events);
     },
-    impact: enqueueImpacts,
+    events: enqueueEvents,
     floor: floor.receive,
     remains({parts}) {
       for (const {id, cause, motion, pieces} of parts.slice(ctx.combat.detached.length)) {
@@ -155,4 +146,20 @@ export function installLanGuestArena(match) {
       }
     },
   };
+}
+
+function playBattleEvent({type, ...event}) {
+  if (type === 'hit' || type === 'segment-broken') {
+    const [x, y] = event.point;
+    const attacker = ctx.robots[event.by];
+    if (attacker && event.by !== event.robot) attacker.flashHitLight(event.time);
+    const heading = attacker ? Math.atan2(y - attacker.y, x - attacker.x) : 0;
+    spawnHitEffect(x, y, heading, type === 'segment-broken');
+    if (event.damage === 2) showCrit(x, y);
+    event.point = {x, y};
+  } else if (type === 'boss-charge') {
+    const [x, y] = event.goal;
+    event.goal = {x, y};
+  }
+  emitGameEvent(type, event);
 }

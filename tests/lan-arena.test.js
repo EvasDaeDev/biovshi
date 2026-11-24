@@ -8,7 +8,7 @@ import {patientCombatStats} from '../src/game/patients.js';
 import {advanceStartup} from '../src/game/session.js';
 import {ctx} from '../src/game/state.js';
 import {createLanRoster, lanTowerCopy} from '../src/lan/characters.js';
-import {validBattleSnapshot, validBattleView, validRemains} from '../src/lan/battle-protocol.js';
+import {validBattleEvent, validBattleSnapshot, validBattleView, validRemains} from '../src/lan/battle-protocol.js';
 import {installLanGuestArena} from '../src/lan/guest-arena.js';
 import {createOilDrop} from '../src/render/effects.js';
 import {validFloorPatch} from '../src/lan/floor-sync.js';
@@ -18,6 +18,7 @@ import {installLanHostArena} from '../src/lan/host-arena.js';
 import {newTower} from '../src/tower/model.js';
 import {showResults} from '../src/ui/results.js';
 import {onGameEvent} from '../src/game/event-bus.js';
+import {note} from '../src/game/events.js';
 import {createRobot} from '../src/robot/robot.js';
 
 function clickPoint(win, x, y) {
@@ -169,9 +170,9 @@ test('LAN host publishes hits independently and preserves them for snapshots und
   const deliveries = [], snapshots = [];
   let writable = true;
   launch(t, {members: [fighter('хозяин', 'basic')], local: 'хозяин', network: {
-    onImpact: ({impacts}) => {
+    onBattleEvents: ({events}) => {
       if (!writable) return false;
-      deliveries.push(...structuredClone(impacts));
+      deliveries.push(...structuredClone(events));
       return true;
     },
     onSnapshot: data => { snapshots.push(structuredClone(data)); return true; },
@@ -187,7 +188,56 @@ test('LAN host publishes hits independently and preserves them for snapshots und
   await Promise.resolve();
   paint();
   ctx.multiplayer.publishFrame(performance.now(), true);
-  assert.deepEqual(snapshots[0].impacts.map(event => event.seq), [deliveries[0].seq + 1]);
+  assert.deepEqual(snapshots[0].events.map(event => event.seq), [deliveries[0].seq + 1]);
+});
+
+test('LAN replays attacks, death and victory once against the buffered host pose', async t => {
+  const packets = [], snapshots = [];
+  const members = [fighter('хозяин', 'basic'), fighter('гость', 'basic')];
+  const {host} = launch(t, {members, local: 'хозяин', network: {
+    onBattleEvents: ({events}) => { packets.push(...events); return true; },
+    onSnapshot: data => { snapshots.push(data); return true; },
+    onFloor: () => true, onRemains: () => true,
+  }});
+  const now = performance.now();
+  ctx.multiplayer.publishFrame(now, true);
+  ctx.game.time += 0.2;
+  const attack = {from: 0, to: 1, source: 'arm-1-lower'};
+  note('combat-windup', attack);
+  note('combat-miss', attack);
+  note('pounce-launch', {robot: 0, heading: 0});
+  ctx.robots[1].damage('head', 0, 100);
+  step(1 / 60);
+  await Promise.resolve();
+  const types = ['combat-windup', 'combat-miss', 'pounce-launch', 'robot-immobilized', 'segment-broken', 'combat-end'];
+  assert.deepEqual(packets.map(event => event.type), types);
+  assert.ok(packets.every(event => validBattleEvent(event, members.length)));
+  assert.equal(snapshots.length, 1);
+  ctx.multiplayer.publishFrame(now + 200, true);
+  assert.equal(snapshots[1].winner, 0);
+  assert.equal(snapshots[1].finished, true);
+
+  const replica = {fighters: createLanRoster({members, ai: []}, 'гость'), replica: true,
+    starts: host.view.starts, onInput() {}, onReturn() {}};
+  initializeGame({multiplayer: replica});
+  const guest = installLanGuestArena(replica);
+  guest.start();
+  const replayed = [];
+  t.after(onGameEvent(event => {
+    if (types.includes(event.type)) replayed.push({type: event.type, mobile: ctx.robots[1].mobile});
+  }));
+  const arrival = performance.now();
+  guest.snapshot(snapshots[0]);
+  guest.events(packets);
+  replica.paintReplica(arrival + 400);
+  assert.deepEqual(replayed, []);
+  guest.snapshot(snapshots[1]);
+  guest.events(packets);
+  replica.paintReplica(arrival + 500);
+  replica.paintReplica(arrival + 600);
+  assert.deepEqual(replayed.map(event => event.type), types);
+  assert.equal(replayed.find(event => event.type === 'robot-immobilized').mobile, false);
+  assert.equal(ctx.combat.winner, 0);
 });
 
 test('LAN replica renders the host rig and detached segments without simulation', t => {
@@ -216,7 +266,7 @@ test('LAN replica renders the host rig and detached segments without simulation'
   const snapshot = snapshots.at(-1);
   assert.equal(validBattleSnapshot(snapshot, 2), true);
   assert.equal(validRemains(wreckage[0].parts, 2), true);
-  assert.equal(snapshot.impacts[0].segment, segment);
+  assert.equal(snapshot.events[0].segment, segment);
   assert.equal(validFloorPatch(floors[0], 2), true);
   assert.equal(floors[0].add[0][6], 1);
 
@@ -234,7 +284,7 @@ test('LAN replica renders the host rig and detached segments without simulation'
     if (event.type === 'segment-broken') effects.push(event);
   });
   t.after(unsubscribe);
-  guest.impact(snapshot.impacts);
+  guest.events(snapshot.events);
   guest.snapshot(snapshot);
   step(1 / 60);
   assert.equal(ctx.game.time, 0);

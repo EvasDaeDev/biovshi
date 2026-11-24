@@ -4,7 +4,8 @@ import {ctx} from '../game/state.js';
 import {onGameEvent} from '../game/event-bus.js';
 import {resolveDestination} from '../tower/input.js';
 import {createFloorPublisher} from './floor-sync.js';
-import {LAN_INPUT_TIMEOUT_MS, LAN_SNAPSHOT_MS, encodeFrame, encodeNumber, encodePoint} from './battle-protocol.js';
+import {LAN_BATTLE_EVENT_BATCH, LAN_INPUT_TIMEOUT_MS, LAN_SNAPSHOT_MS,
+  encodeFrame, encodeNumber, encodePoint} from './battle-protocol.js';
 
 function captureRemainsPiece({geometry, skin}, assetKeys) {
   const bone = geometry.kind === 'head' ? [geometry.x, geometry.y, geometry.r].map(encodeNumber) :
@@ -21,29 +22,33 @@ export function installLanHostSync(match) {
   const byMember = new Map(match.fighters.flatMap(({control, memberId}, id) =>
     control === 'remote' ? [[memberId, id]] : []));
   const inputs = new Map();
-  let seq = 0, impactSeq = 0, sentRemains = 0, nextSnapshot = 0, finalSent = false, impactScheduled = false;
-  const impacts = [];
+  let seq = 0, eventSeq = 0, sentRemains = 0, nextSnapshot = 0, finalSent = false, eventScheduled = false;
+  const events = [];
   const publishFloor = createFloorPublisher();
 
+  function flushEvents() {
+    if (match.suspended || !match.onBattleEvents) return;
+    while (events.length) {
+      const batch = events.slice(0, LAN_BATTLE_EVENT_BATCH);
+      if (!match.onBattleEvents({events: batch})) break;
+      events.splice(0, batch.length);
+    }
+  }
+
   const unsubscribe = onGameEvent(event => {
-    if (!event.point || !['hit', 'segment-broken'].includes(event.type)) return;
-    impacts.push({
-      seq: impactSeq++, robot: event.robot, by: ctx.robots[event.by]?.id ?? null,
-      segment: event.segment, time: encodeNumber(event.time), point: encodePoint(event.point),
-      damage: event.damage, severed: event.type === 'segment-broken',
-    });
-    if (impacts.length > 64) impacts.shift();
-    if (match.onImpact && !impactScheduled) {
-      impactScheduled = true;
-      // Group hits from the same simulation callback without waiting for a pose snapshot.
+    const data = captureBattleEvent(event);
+    if (!data) return;
+    events.push({seq: eventSeq++, type: event.type, time: encodeNumber(event.time), ...data});
+    if (match.onBattleEvents && !eventScheduled) {
+      eventScheduled = true;
       queueMicrotask(() => {
-        impactScheduled = false;
-        if (!match.suspended && impacts.length && match.onImpact({impacts})) impacts.length = 0;
+        eventScheduled = false;
+        flushEvents();
       });
     }
   });
   const dispose = ctx.root.__disposeTag;
-  ctx.root.__disposeTag = () => { unsubscribe(); dispose(); };
+  ctx.root.__disposeTag = () => { unsubscribe(); events.length = 0; dispose(); };
 
   function clearMovement(id) {
     if (inputs.get(id)?.requested) ctx.robots[id]?.cancelNavigation();
@@ -68,13 +73,14 @@ export function installLanHostSync(match) {
   const snapshot = events => ({
     seq, time: encodeNumber(ctx.game.time), elapsed: encodeNumber(ctx.round.elapsedSec),
     started: ctx.startup.phase === 'running', finished: ctx.combat.finished, winner: ctx.combat.winner,
-    robots: ctx.robots.map(robotView), impacts: events,
+    robots: ctx.robots.map(robotView), events,
   });
 
   match.publishFrame = (now, painted) => {
     if (match.suspended) return;
     const final = ctx.combat.finished && !finalSent;
     if ((!painted || now < nextSnapshot) && !final) return;
+    flushEvents();
     if (ctx.combat.detached.length !== sentRemains) {
       const parts = ctx.combat.detached.map(({id, cause, inertia, pieces}) => ({
         id, cause,
@@ -84,11 +90,12 @@ export function installLanHostSync(match) {
       if (match.onRemains({parts})) sentRemains = parts.length;
     }
     publishFloor(now, ctx.game.time, ctx.combat.oilDrops, ctx.robots, match.onFloor, final);
-    if (match.onSnapshot(snapshot(impactScheduled ? [] : impacts))) {
+    const batch = events.slice(0, LAN_BATTLE_EVENT_BATCH);
+    if (match.onSnapshot(snapshot(batch))) {
       seq++;
-      if (!impactScheduled) impacts.length = 0;
+      events.splice(0, batch.length);
       nextSnapshot = now + LAN_SNAPSHOT_MS - 1;
-      finalSent = ctx.combat.finished;
+      finalSent = ctx.combat.finished && !events.length;
     }
   };
 
@@ -99,7 +106,7 @@ export function installLanHostSync(match) {
     sendResume() {
       if (match.onResume(snapshot([]))) {
         seq++;
-        impacts.length = 0;
+        events.length = 0;
       }
     },
     input({memberId, x, y, goal}) {
@@ -119,4 +126,31 @@ export function installLanHostSync(match) {
     },
     resetInput(memberId) { clearMovement(byMember.get(memberId)); },
   };
+}
+
+function captureBattleEvent({type, robot, by, from, to, source, segment, point, damage,
+  heading, goal, phase, reason, knockoutCause, winner, outcome}) {
+  switch (type) {
+    case 'hit':
+    case 'segment-broken':
+      if (!point) return null;
+      return {robot, by: ctx.robots[by]?.id ?? null, segment, point: encodePoint(point), damage};
+    case 'combat-windup':
+    case 'combat-miss':
+      return {from, to, source};
+    case 'combat-strike':
+      return {from, to, source, segment};
+    case 'pounce-launch':
+      return {robot, heading: encodeNumber(heading)};
+    case 'boss-charge':
+      return {robot, goal: encodePoint(goal)};
+    case 'boss-phase':
+      return {robot, phase};
+    case 'robot-immobilized':
+      return {robot, reason, knockoutCause: knockoutCause ?? null};
+    case 'combat-end':
+      return {winner, outcome};
+    default:
+      return null;
+  }
 }

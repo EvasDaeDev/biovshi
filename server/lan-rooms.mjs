@@ -1,5 +1,6 @@
 import {randomBytes, randomUUID} from 'node:crypto';
-import {readBattleStatistics, validBattleSnapshot, validBattleView, validImpact, validMovement, validRemains} from '../src/lan/battle-protocol.js';
+import {readBattleStatistics, validBattleSnapshot, validBattleView, validBattleEvents,
+  validMovement, validRemains} from '../src/lan/battle-protocol.js';
 import {createFloorCache, validFloorPatch} from '../src/lan/floor-sync.js';
 import {copyLanTowerLoadout, describeLanEquipment, describeLanTower, lanAiName, validLanProfile} from '../src/lan/characters.js';
 import {
@@ -163,8 +164,8 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
 
   function validSnapshot(room, snapshot) {
     return snapshot && validBattleSnapshot(snapshot, room.matchFighters.length) &&
-      snapshot.seq > (room.snapshot?.seq ?? -1) && Array.isArray(snapshot.impacts) &&
-      snapshot.impacts.length <= 64 && snapshot.impacts.every(event => validImpact(event, room.matchFighters.length));
+      snapshot.seq > (room.snapshot?.seq ?? -1) &&
+      validBattleEvents(snapshot.events, room.matchFighters.length, room.eventSeq);
   }
 
   function removeMember(room, member, reason) {
@@ -253,7 +254,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
       if (room.remains) send(socket, 'state.remains', room.remains, room.id);
       if (room.floor) for (const patch of room.floor.keyframes())
         send(socket, 'state.floor', {...patch, matchId: room.matchId}, room.id);
-      if (room.snapshot) send(socket, 'state.snapshot', {...room.snapshot, impacts: []}, room.id);
+      if (room.snapshot) send(socket, 'state.snapshot', {...room.snapshot, events: []}, room.id);
     }
   }
 
@@ -342,7 +343,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         suspendMatch(room);
       } else if (type === 'match.resume' && room.phase === suspended && validSnapshot(room, payload.snapshot)) {
         clearTimeout(room.phaseTimer);
-        room.snapshot = {...payload.snapshot, matchId: room.matchId, impacts: []};
+        room.snapshot = {...payload.snapshot, matchId: room.matchId, events: []};
         relay(room, 'state.snapshot', {...room.snapshot, keyframe: true});
         room.phase = running;
         monitorHost(room);
@@ -366,16 +367,15 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         if (room.phase !== running && room.phase !== results) return;
         const count = room.matchFighters.length;
         if (type === 'game.event') {
-          const {matchId, impacts} = payload;
-          if (!Array.isArray(impacts) || !impacts.length || impacts.length > 64 ||
-              !impacts.every((event, i) => validImpact(event, count) &&
-                event.seq > (i ? impacts[i - 1].seq : room.impactSeq))) return;
-          room.impactSeq = impacts.at(-1).seq;
-          relay(room, type, {matchId, impacts});
+          const {matchId, events} = payload;
+          if (!validBattleEvents(events, count, room.eventSeq) || !events.length) return;
+          room.eventSeq = events.at(-1).seq;
+          relay(room, type, {matchId, events});
           return;
         } else if (type === 'state.snapshot') {
           if (!validSnapshot(room, payload)) return;
           room.snapshot = payload;
+          if (payload.events.length) room.eventSeq = payload.events.at(-1).seq;
           if (room.phase === running) monitorHost(room);
         } else if (type === 'state.floor') {
           const {seq, time, add, remove, trails} = payload;
@@ -458,7 +458,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         }, loadingMs);
         room.matchId = randomUUID();
         room.inputSeq = new Map();
-        room.impactSeq = -1;
+        room.eventSeq = -1;
         room.floor = createFloorCache();
         room.matchPlayers = [...room.members.values()].filter(member => member.role === 'player')
           .map(({id, name, role, profile, tower}) => ({id, name, role, profile, tower}));

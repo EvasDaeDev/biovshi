@@ -109,7 +109,7 @@ async function profile(fighterCount) {
     };
     const multiplayer = {fighters: createLanRoster(room, room.hostId),
       onSnapshot: data => transmit('state.snapshot', data),
-      onImpact: data => transmit('game.event', data),
+      onBattleEvents: data => transmit('game.event', data),
       onRemains: data => transmit('state.remains', data),
       onFloor: data => transmit('state.floor', data),
       onReturn() {}, onFinish() {}};
@@ -130,8 +130,16 @@ async function profile(fighterCount) {
     // Use the match's fixed step and normal 30 FPS paint cadence.
     const physics = [], render = [];
     const cpuBefore = process.cpuUsage();
+    const memoryBefore = process.memoryUsage();
+    let peakRss = memoryBefore.rss, peakHeap = memoryBefore.heapUsed;
+    function sampleMemory() {
+      const {rss, heapUsed} = process.memoryUsage();
+      peakRss = Math.max(peakRss, rss);
+      peakHeap = Math.max(peakHeap, heapUsed);
+    }
     const wallStart = performance.now();
     for (let tick = 0; tick < seconds * 60; tick++) {
+      if (tick > 0 && tick % 60 === 0) sampleMemory();
       const start = performance.now();
       step(1 / 60);
       physics.push(performance.now() - start);
@@ -146,6 +154,7 @@ async function profile(fighterCount) {
       }
     }
     await waitFor(() => viewers.every(viewer => viewer.stats.packets === packets));
+    sampleMemory();
     const elapsed = performance.now() - wallStart;
     const cpu = process.cpuUsage(cpuBefore);
     const wireBytes = viewers.map((viewer, index) => viewer.bytesRead() - initialBytes[index]);
@@ -161,6 +170,7 @@ async function profile(fighterCount) {
       compression: viewers[0].socket.extensions || 'off',
       physicsP95ms: rounded(percentile(physics, .95)), paintP95ms: rounded(percentile(render, .95)),
       wallSeconds: rounded(elapsed / 1000), processCpuMs: rounded((cpu.user + cpu.system) / 1000),
+      peakRssMiB: rounded(peakRss / 1024 ** 2), peakHeapMiB: rounded(peakHeap / 1024 ** 2),
     };
   } finally {
     for (const client of clients) await new Promise(resolve => {
