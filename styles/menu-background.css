@@ -73,3 +73,23 @@ body:not(:has(> #texture-loading)):has(> #robot-tag-hops-v22[data-intro-dismisse
   #menu-background {transition:none!important}
   #menu-background::after {animation:none!important}
 }
+
+#resource-status {
+  position:fixed;
+  z-index:1960;
+  top:calc(max(env(safe-area-inset-top,0px),var(--telegram-inset-top,0px)) + 4px);
+  left:50%;
+  transform:translateX(-50%);
+  width:max-content;
+  max-width:75vw;
+  padding:3px 8px;
+  border:1px solid #817153;
+  border-radius:3px;
+  background:#22271fef;
+  color:#f0e2c2;
+  font:12px/1.35 var(--game-font-body,monospace);
+  text-align:center;
+  pointer-events:none;
+}
+#resource-status[hidden],
+body:has(> #texture-loading,> #battle-transition) > #resource-status {display:none}

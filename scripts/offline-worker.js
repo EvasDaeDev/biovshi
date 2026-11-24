@@ -34,7 +34,7 @@ async function installOfflineGame(){
   let done=0,failure;
   function report(){
     for(const client of clients)if(client.url.startsWith(scope))
-      client.postMessage({type:'biovshi-offline-progress',scope,done,total:files.size});
+      client.postMessage({type:'biovshi-offline-progress',scope,done,total:files.size,failed:Boolean(failure)});
   }
   report();
   await Promise.all(Array.from({length:6},async()=>{
@@ -48,6 +48,7 @@ async function installOfflineGame(){
     }
   }));
   if(failure){
+    report();
     await caches.delete(cacheName);
     throw failure;
   }
@@ -96,7 +97,14 @@ self.addEventListener('fetch',event=>{
       const pin=await caches.match(clientKey(event.clientId),{cacheName:clientCacheName});
       if(pin)version=await pin.text();
     }
-    const cached=await (await caches.open(version)).match(navigation?entry:url.href);
-    return cached??fetch(request);
+    const cache=await caches.open(version);
+    const key=navigation?entry:url.href;
+    const cached=await cache.match(key);
+    if(cached)return cached;
+    const hash=version===cacheName&&files.get(key);
+    if(!hash)return fetch(request);
+    const response=await fetchAsset(key,hash);
+    try{await cache.put(key,response.clone());}catch{/* The response is usable even if storage is full. */}
+    return response;
   })());
 });

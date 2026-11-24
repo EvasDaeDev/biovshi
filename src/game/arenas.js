@@ -1,3 +1,4 @@
+import {trackResource} from '../assets/resource-status.js';
 import {CONFIG} from '../config.js';
 import ward from '../../public/locations/ward.json' with {type:'json'};
 import ring from '../../public/locations/ring.json' with {type:'json'};
@@ -36,22 +37,24 @@ export let ARENAS=Object.freeze(Object.assign(Object.create(null),defaults));
 
 export async function loadLocations(base,{fetcher=fetch,warn=console.warn}={}){
  if(new URL(base).protocol==='file:')return ARENAS;
- const read=async file=>{
+ const read=(file,validate)=>trackResource(String(new URL(file,base)),async()=>{
   const response=await fetcher(new URL(file,base),{cache:'no-store',signal:AbortSignal.timeout(5000)});
   if(!response.ok)throw Error(file+' · HTTP '+response.status);
-  return response.json();
- };
+  return validate(await response.json());
+ });
  const active=Object.create(null);
  try{
-  const manifest=await read('active.json');
-  if(manifest?.version!==1||!Array.isArray(manifest.active)||manifest.active.length>128)
-   throw Error('Некорректный список активных локаций.');
+  const manifest=await read('active.json',data=>{
+   if(data?.version!==1||!Array.isArray(data.active)||data.active.length>128)
+    throw Error('Некорректный список активных локаций.');
+   return data;
+  });
   const ids=[...new Set(manifest.active)].filter(id=>{
    if(validLocationId(id))return true;
    warn('Пропущен недопустимый идентификатор локации.',id);
    return false;
   });
-  const entries=await Promise.allSettled(ids.map(async id=>buildArena(await read(id+'.json'),id)));
+  const entries=await Promise.allSettled(ids.map(async id=>read(id+'.json',data=>buildArena(data,id))));
   for(const [i,result] of entries.entries()){
    if(result.status==='fulfilled')active[ids[i]]=result.value;
    else warn('Локация '+ids[i]+' пропущена.',result.reason);

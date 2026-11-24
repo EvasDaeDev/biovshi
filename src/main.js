@@ -22,13 +22,15 @@ import {initializeDiagnostics} from './render/diagnostics.js';
 import {preloadTextures} from './assets/preload.js';
 import {ASSETS,assetUrl,sceneTextureKeys} from './assets/manifest.js';
 import {prepareOfflineGame} from './assets/offline.js';
+import {trackResource} from './assets/resource-status.js';
+import {installResourceStatus} from './ui/resource-status.js';
 import {createLoadingScreen} from './ui/loading-screen.js';
 import {createBattleTransition} from './ui/battle-transition.js';
 import {showStartupIntro} from './ui/startup-intro.js';
 import {installMetalMaterials} from './ui/metal-material.js';
 import {bettingLoad,bettingSave} from './betting/storage.js';
 import {startSpawnSequence} from './game/session.js';
-let cancelled=false,initialLoading=null;
+let cancelled=false,initialLoading=null,disposeResourceStatus;
 // Only a full page load requires the explicit sound/simulation gesture.
 let launchAccepted=false;
 const musicOffsets=new Map();
@@ -63,33 +65,37 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,
  initializeModalFocus();
  initializeGameNavigation();
  initializeTutorial();
- launchButton.onclick=()=>ctx.startDemo(!launchAccepted&&ctx.startup.phase==='demo'
+ launchButton.onclick=()=>ctx.startDemo(!launchAccepted&&!sceneTexturesMissing()&&ctx.startup.phase==='demo'
   &&(!ctx.betting||ctx.betting.phase==='running'));
  installProfiles(ctx.root,refreshMenu);
  loading?.update('Арена готова!',{done:6,total:6});
  ctx.platform?.ready();
 }
+const sceneTexturesMissing=()=>Object.values(ctx.textureAssets??{}).some(texture=>!texture.loaded);
+async function measureStartup(stage,work){
+ const performance=document.defaultView.performance;
+ const start=performance.now();
+ try{return await work();}
+ finally{try{performance.measure?.('biovshi:'+stage,{start,end:performance.now()});}catch{/* Older browsers can omit these timings. */}}
+}
 async function boot(){
  const root=document.getElementById('robot-tag-hops-v22');
  const loading=createLoadingScreen({staged:true});initialLoading=loading;
  root.inert=true;
- const preparingOffline=typeof __OFFLINE_BUILD__!=='undefined'&&__OFFLINE_BUILD__;
- if(preparingOffline)try{
-   loading.update('Проверяем автономную копию игры…');
-   await prepareOfflineGame(document.defaultView,{onProgress:(done,total)=>
-     loading.update('Скачиваем игру для работы без интернета…',{done,total,phase:'textures'})});
- }catch(error){
-   console.error('Offline game installation:',error);
-   loading.fail('Не удалось скачать всю игру. Проверьте подключение и обновите страницу.');
-   return;
+ disposeResourceStatus=installResourceStatus(document);
+ // Install the complete offline copy on the first visit without waiting for
+ // unrelated music, art and later Tower assets before opening the menu.
+ if(typeof __OFFLINE_BUILD__!=='undefined'&&__OFFLINE_BUILD__){
+   measureStartup('offline-copy',()=>trackResource('offline-copy',()=>
+     prepareOfflineGame(document.defaultView))).catch(error=>console.warn('Offline game installation:',error));
  }
  const menuBackground=document.querySelector('#menu-background img');
  menuBackground.src=assetUrl(ASSETS.textures.uiMenuBackground);
  const [textures]=await Promise.all([
-  preloadTextures({keys:sceneTextureKeys(),onProgress:(done,total)=>
-   loading.update('Загружаем текстуры пациентов и арены…',{done,total,phase:'textures'})}),
-  loadLocations(new URL('./locations/',document.baseURI)),
-  installMetalMaterials(document),
+  measureStartup('scene-textures',()=>preloadTextures({keys:sceneTextureKeys(),onProgress:(done,total)=>
+   loading.update('Загружаем текстуры пациентов и арены…',{done,total,phase:'textures'})})),
+  measureStartup('locations',()=>loadLocations(new URL('./locations/',document.baseURI))),
+  measureStartup('menu-materials',()=>installMetalMaterials(document)),
   menuBackground.decode?.().catch(()=>{}),
  ]);
  if(cancelled){loading.close();return;}
@@ -116,7 +122,7 @@ async function boot(){
    }finally{cover.close();root.inert=false;}
  };
  ctx.switchArena=async(arenaId,progress)=>{
-   if(arenaId===ctx.arenaId)return;
+   if(arenaId===ctx.arenaId&&!sceneTexturesMissing())return;
    const session=ctx.betting,expanded=ctx.arenaExpanded;
    session.arenaId=arenaId;bettingSave();
    await prepareScene({session,entry:'betting',arenaId},progress);
@@ -186,7 +192,7 @@ async function boot(){
      root.querySelector('.launch-subtitle').textContent='Не удалось подготовить арену. Повтори попытку.';
    }
  };
- await prepare({textures,session,arenaId:session?.arenaId??'ward',loading});
+ await measureStartup('first-arena',()=>prepare({textures,session,arenaId:session?.arenaId??'ward',loading}));
  if(cancelled||ctx.disposed){loading.close();return;}
  root.inert=false;loading.close();
  showStartupIntro(root);
@@ -195,4 +201,4 @@ boot().catch(error=>{
  console.error('Game startup:',error);
  if(initialLoading)initialLoading.fail('Не удалось подготовить арену. Обновите страницу.');
 });
-if(import.meta.hot)import.meta.hot.dispose(()=>{cancelled=true;ctx.root?.__disposeTag?.();});
+if(import.meta.hot)import.meta.hot.dispose(()=>{cancelled=true;disposeResourceStatus?.();ctx.root?.__disposeTag?.();});

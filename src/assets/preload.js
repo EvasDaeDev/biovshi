@@ -1,5 +1,7 @@
 import { ASSETS, assetUrl } from './manifest.js';
 
+import {trackResource} from './resource-status.js';
+
 const images = new Map();
 function requestImage(url,timeoutMs){
   return new Promise((resolve,reject)=>{
@@ -24,8 +26,12 @@ function requestImage(url,timeoutMs){
 
 export function loadTextureImage(url,{timeoutMs=15000,retry=false}={}){
   if(!images.has(url)){
-    const first=requestImage(url,timeoutMs);
-    const pending=retry&&!/^(data:|blob:)/i.test(url)?first.catch(()=>requestImage(url,timeoutMs)):first;
+    const external=!/^(data:|blob:)/i.test(url);
+    const load=()=>{
+      const first=requestImage(url,timeoutMs);
+      return retry&&external?first.catch(()=>requestImage(url,timeoutMs)):first;
+    };
+    const pending=external?trackResource(url,load):load();
     images.set(url,pending);
     pending.catch(()=>{if(images.get(url)===pending)images.delete(url);});
   }

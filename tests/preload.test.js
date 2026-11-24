@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {resourceStatus} from '../src/assets/resource-status.js';
 import {ASSETS} from '../src/assets/manifest.js';
 import {loadTextureImage,preloadTextures} from '../src/assets/preload.js';
 
@@ -40,12 +41,15 @@ test('transient failures retry once, reuse successful images and allow a later s
     const options={timeoutMs:10,retry:true};
     const pending=loadTextureImage('retry-texture.png',options);
     assert.equal(loadTextureImage('retry-texture.png',options),pending);
+    assert.equal(resourceStatus().pending,1);
     const recovered=await pending;
     assert.equal(await loadTextureImage('retry-texture.png'),recovered);
     assert.equal(attempts.get('retry-texture.png'),2);
     await assert.rejects(loadTextureImage('later-texture.png',options));
+    assert.deepEqual(resourceStatus(),{pending:0,missing:['later-texture.png']});
     assert.ok(await loadTextureImage('later-texture.png',options));
     assert.equal(attempts.get('later-texture.png'),3);
+    assert.deepEqual(resourceStatus(),{pending:0,missing:[]});
     await assert.rejects(loadTextureImage('stalled-texture.png',options),/timed out/);
     assert.equal(attempts.get('stalled-texture.png'),2);
   }finally{globalThis.Image=original;}

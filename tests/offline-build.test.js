@@ -98,6 +98,19 @@ test('an installed web build serves the entire verified release without a networ
  assert.equal(w.request('assets/source.psd'),undefined);
 });
 
+test('a requested file evicted from the current cache is verified and stored again',async()=>{
+ const worker=await workerFixture();
+ await worker.lifecycle('install');
+ await worker.lifecycle('activate');
+ const [name]=await worker.caches.keys();
+ const cache=await worker.caches.open(name);
+ const url=new URL('assets/atlas.png',scope).href;
+ await cache.delete({url});
+ assert.equal(await (await worker.request('assets/atlas.png')).text(),assets['assets/atlas.png']);
+ worker.disconnect();
+ assert.equal(await (await worker.request('assets/atlas.png')).text(),assets['assets/atlas.png']);
+});
+
 test('regular reloads use the new release while already open tabs keep their own verified assets',async()=>{
  const stores=new Map();
  const previous=await workerFixture({stores});

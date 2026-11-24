@@ -1,3 +1,4 @@
+import {trackResource} from '../assets/resource-status.js';
 import {storageKey} from '../build-channel.js';
 import {patientSkin} from '../game/patients.js';
 import { ASSETS, assetUrl } from '../assets/manifest.js';
@@ -94,7 +95,7 @@ export function loadAudioSettings(storage=globalThis.localStorage){
 export function playbackRate(id,variation=0){return 2**((([-1.5,-.5,.5,1.5][id]??0)+variation)/12);}
 function fetchSound(file){
   const url=assetUrl(file);
-  if(!rawFiles.has(url))rawFiles.set(url,fetch(url).then(response=>{
+  if(!rawFiles.has(url))rawFiles.set(url,fetch(url,{signal:AbortSignal.timeout(15000)}).then(response=>{
     if(!response.ok)throw Error('Audio HTTP '+response.status);
     return response.arrayBuffer();
   }).catch(error=>{rawFiles.delete(url);throw error;}));
@@ -103,7 +104,7 @@ function fetchSound(file){
 async function decodeSound(context,file){
   let cache=decodedFiles.get(context);
   if(!cache){cache=new Map();decodedFiles.set(context,cache);}
-  if(!cache.has(file))cache.set(file,fetchSound(file).then(data=>context.decodeAudioData(data.slice(0))).catch(error=>{cache.delete(file);throw error;}));
+  if(!cache.has(file))cache.set(file,trackResource(file,()=>fetchSound(file).then(data=>context.decodeAudioData(data.slice(0)))).catch(error=>{cache.delete(file);throw error;}));
   return cache.get(file);
 }
 

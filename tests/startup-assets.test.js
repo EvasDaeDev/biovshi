@@ -38,7 +38,18 @@ test('real startup waits for the texture check, reuses images for tinting and cr
     await new Promise(resolve=>{releaseLocations=resolve;});
     return {ok:true,json:async()=>({version:1,active:['start-arena']})};
   };
+  // The complete offline copy can still be installing when the verified
+  // foreground assets are ready to open the game.
+  const worker=new dom.window.EventTarget();
+  worker.state='installing';
+  const serviceWorker=new dom.window.EventTarget();
+  serviceWorker.getRegistration=async()=>undefined;
+  serviceWorker.register=async()=>({installing:worker});
+  Object.defineProperty(dom.window.navigator,'serviceWorker',{value:serviceWorker});
+  Object.defineProperty(dom.window,'isSecureContext',{value:true});
+  globalThis.__OFFLINE_BUILD__=true;
   await import('../src/main.js');
+  delete globalThis.__OFFLINE_BUILD__;
   const root=document.getElementById('robot-tag-hops-v22');
   assert.equal(root.inert,true,'controls stay inactive while textures are pending');
   const intro=root.querySelector('#startup-intro');
@@ -55,6 +66,14 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   for(let i=0;i<100&&document.getElementById('texture-loading');i++)await new Promise(resolve=>setImmediate(resolve));
   assert.equal(document.getElementById('texture-loading'),null);
   assert.equal(root.inert,false);
+  const banner=document.getElementById('resource-status');
+  await new Promise(resolve=>setTimeout(resolve,200));
+  assert.equal(banner.hidden,false);
+  assert.match(banner.textContent,/идёт загрузка ресурсов/);
+  worker.state='activated';
+  worker.dispatchEvent(new Event('statechange'));
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(banner.hidden,true);
   assert.equal(ctx.arenaId,'start-arena');
   assert.equal(root.querySelector('#tag7hop-arena-border').getAttribute('aria-label'),'Тестовая локация');
   assert.equal(ctx.startup.phase,'demo','simulation remains gated on initial load');

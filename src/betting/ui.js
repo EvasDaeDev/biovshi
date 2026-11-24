@@ -203,10 +203,8 @@ export function bettingOpen() {
     const balancesBefore=ctx.betting.players.map(p=>p.balance);
     const prepareFight=async progress=>{
       const arenaId=ctx.selectedArenaId??ctx.arenaId??'ward';
-      if(arenaId!==ctx.arenaId){
-        if(!ctx.switchArena)throw Error('Подготовка арены недоступна.');
-        await ctx.switchArena(arenaId,progress);
-      }
+      if(ctx.switchArena)await ctx.switchArena(arenaId,progress);
+      else if(arenaId!==ctx.arenaId)throw Error('Подготовка арены недоступна.');
       betCommit(ctx.betting,draft);ctx.betDraft=null;
       bettingSave({animateBalances:false});
       bettingHud();

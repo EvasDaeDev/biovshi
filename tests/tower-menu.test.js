@@ -7,7 +7,7 @@ import {JSDOM} from 'jsdom';
 // work unavailable in JSDOM. Combat, storage, menu, disposal and handlers are real.
 const hooks=registerHooks({load(url,context,next){
  const stubs={
-  '/src/assets/preload.js':`import {ASSETS} from './manifest.js';export const preloadTextures=async()=>Object.fromEntries(Object.keys(ASSETS.textures).map(k=>[k,{loaded:false}]));export const loadTextureImage=async()=>{throw Error('No test image decoder')};export const releaseTextureImage=()=>{};`,
+  '/src/assets/preload.js':`import {ASSETS} from './manifest.js';export const preloadTextures=async()=>Object.fromEntries(Object.keys(ASSETS.textures).map(k=>[k,{loaded:true}]));export const loadTextureImage=async()=>{throw Error('No test image decoder')};export const releaseTextureImage=()=>{};`,
   '/src/render/textures.js':'export const applyTextures=async()=>{};',
   '/src/render/floor-history.js':'export const initializeFloor=async()=>{};export const cleanFloor=async()=>{};let pendingBake;export const holdFloorBake=promise=>{pendingBake=promise;};export const bakeRoundFloor=()=>pendingBake;',
   '/src/render/pixi-scene.js':'export const initializePixiArena=async()=>{};'
