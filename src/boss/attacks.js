@@ -33,24 +33,31 @@ export function sweepPathClear(robot,p){
  return true;
 }
 // Probe only the active arc; no damage during winding up or returning to support.
-export function sweepContact(robot,victim,p,fromAge,toAge){
+export function sweepContacts(robot,victims,p,fromAge,toAge){
  const t=p.timing,lo=Math.max(t.windupSec,fromAge),hi=Math.min(t.windupSec+t.thrustSec,toAge);
- if(hi<lo||toAge<t.windupSec||fromAge>t.windupSec+t.thrustSec)return null;
+ if(hi<lo)return [];
  const steps=Math.max(1,Math.ceil((hi-lo)/t.thrustSec*48));
+ const contacts=new Map();
  let previous=null;
  for(let i=0;i<=steps;i++){
   const pose=poseAt(robot,p,lo+(hi-lo)*i/steps);
   if(!poseClear(robot,pose))return null;
   const start=pose.complete?pose.joint:pose.shoulder;
-  for(const capsule of victim.capsules){
-   if(!capsule.segment||!victim.isDamageable(capsule.segment))continue;
-   const contact=segmentDistance(start,pose.tip,capsule.a,capsule.b)<=capsule.r+2.2;
-   const sweptTip=previous&&segmentDistance(previous,pose.tip,capsule.a,capsule.b)<=capsule.r+2.2;
-   if(contact||sweptTip)return capsule.segment;
+  for(const victim of victims){
+   for(const capsule of victim.capsules){
+    const segment=capsule.segment;
+    if(!segment||!victim.isDamageable(segment))continue;
+    const key=victim.id+':'+segment;
+    if(contacts.has(key)||p.sweepHits?.has(key))continue;
+    const radius=capsule.r+2.2;
+    const contact=segmentDistance(start,pose.tip,capsule.a,capsule.b)<=radius;
+    const sweptTip=previous&&segmentDistance(previous,pose.tip,capsule.a,capsule.b)<=radius;
+    if(contact||sweptTip)contacts.set(key,{key,victim,segment});
+   }
   }
   previous=pose.tip;
  }
- return null;
+ return [...contacts.values()];
 }
 // Trace the WHOLE current rig. The regular locomotion solver still validates
 // every actual step and stops the boss if another fighter enters its route.

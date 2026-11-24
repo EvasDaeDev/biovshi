@@ -9,7 +9,7 @@ import {sightClear} from '../systems/collision.js';
 import {strikeCandidates,movingStrikeContact,compareStrikeCandidates,prioritizeAdditionalArm,isAdditionalAttackArm,queueCombatHit} from '../systems/combat.js';
 import {pendingStrikes,setPendingStrikes} from '../systems/strikes.js';
 import {BOSS_CONFIG} from './config.js';
-import {sweepPathClear,sweepContact,chargePlan,bossDamage,poseClear,poseAt} from './attacks.js';
+import {sweepPathClear,sweepContacts,chargePlan,bossDamage,poseClear,poseAt} from './attacks.js';
 import {bossOpponentMemory,observeBossOpponent,recordBossTacticalStrike,bossPositionIntent,bossNeedsShortRange,isBossStump} from './positioning.js';
 const root=key=>key.replace(/-(upper|lower)$/,'');
 const duration=t=>t.windupSec+t.thrustSec+t.recoverSec;
@@ -46,21 +46,27 @@ function wideCandidate(robot,target,timing,exclude){
  }
  for(const source of candidates){
   const p={source:source.key,aim:{...target.center},direction:robot.angle,style:'sweep',timing,started:ctx.game.time};
-  if(sweepPathClear(robot,p)&&sweepContact(robot,target,p,timing.windupSec,timing.windupSec+timing.thrustSec))return {victim:target,source,p};
+  if(sweepPathClear(robot,p)&&sweepContacts(robot,[target],p,timing.windupSec,timing.windupSec+timing.thrustSec)?.length)return {victim:target,source,p};
  }
  return null;
 }
-function applyHit(robot,victim,p,segment){
- p.resolved=true;const damage=bossDamage(random(),patientCombatStats(robot.id,robot).effective[1]);
- const source=robot.attackSources.find(s=>s.key===p.source);
+function applyHit(robot,victim,p,source,segment){
+ // All contacts from one swing share its damage roll.
+ const damage=p.damage??=bossDamage(random(),patientCombatStats(robot.id,robot).effective[1]);
  // Boss jabs and sweeps share the same physical-tick damage commit as ordinary
  // strikes. Their hit decisions are made before any same-tick incapacitation.
  queueCombatHit(robot,victim,segment,damage,applied=>{
-  if(!applied){note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});return;}
+  if(!applied){
+   if(!p.sweepHits)note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});
+   return;
+  }
   if(victim.mobile)victim.reactToHit(robot,segment);
   ctx.combat.hits++;ctx.combat.fighterHits[robot.id]++;ctx.combat.fighterTaken[victim.id]++;ctx.combat.lastHitTime=ctx.game.time;
   ctx.agentAI[robot.id].lastHitAt=ctx.game.time;ctx.agentAI[victim.id].lastHitAt=ctx.game.time;
-  recordBossTacticalStrike(bossOpponentMemory(robot.body.behavior.state,victim.id),source,true,ctx.game.time);
+  if(!p.sweepLanded?.has(victim.id)){
+   p.sweepLanded?.add(victim.id);
+   recordBossTacticalStrike(bossOpponentMemory(robot.body.behavior.state,victim.id),source,true,ctx.game.time);
+  }
   note('combat-strike',{from:robot.id,to:victim.id,source:p.source,segment,bossStyle:p.style??'jab'});
  });
 }
@@ -182,24 +188,33 @@ export function createBossBehavior(){
   const now=ctx.game.time;
   const remaining=strikes.filter(p=>{
    const victim=ctx.robots[p.victim],source=robot.attackSources.find(s=>s.key===p.source);
-   const invalid=!source||!victim?.mobile||!victim.visible
-    ||p.style==='sweep'&&!poseClear(robot,poseAt(robot,p,now-p.started));
-   if(invalid){
+   const sweep=p.style==='sweep',committed=sweep&&now>=p.at;
+   const cancel=()=>{
     if(!p.rearKick){state.followup=null;ctx.combat.nextStrike[robot.id]=now+.4;}
     return false;
-   }
-   if(!p.resolved&&now>=p.started+p.timing.windupSec){
-    let segment;
-    if(p.style==='sweep'){
+   };
+   if(!source||(!committed&&(!victim?.mobile||!victim.visible))
+    ||sweep&&!poseClear(robot,poseAt(robot,p,now-p.started)))return cancel();
+   if(!p.resolved&&now>=p.at){
+    if(sweep){
+     const opponents=activeOpponents(robot.id).filter(target=>sightClear(robot.center,target.center));
      const age=now-p.started;
-     segment=sweepContact(robot,victim,p,p.lastAge??0,age);p.lastAge=age;
-     if(segment&&!sightClear(robot.center,victim.center))segment=null;
-    }else segment=movingStrikeContact(robot,victim,p);
-    if(segment)applyHit(robot,victim,p,segment);
-    else if(now>=p.impactAt){
+     const contacts=sweepContacts(robot,opponents,p,p.lastAge??0,age);p.lastAge=age;
+     if(!contacts)return cancel();
+     for(const contact of contacts){
+      p.sweepHits.add(contact.key);
+      applyHit(robot,contact.victim,p,source,contact.segment);
+     }
+    }else{
+     const segment=movingStrikeContact(robot,victim,p);
+     if(segment){p.resolved=true;applyHit(robot,victim,p,source,segment);}
+    }
+    if(!p.resolved&&now>=p.impactAt){
      p.resolved=true;
-     recordBossTacticalStrike(bossOpponentMemory(state,victim.id),source,false,now);
-     note('combat-miss',{from:robot.id,to:victim.id,source:p.source,bossStyle:p.style});
+     if(!p.sweepHits?.size){
+      recordBossTacticalStrike(bossOpponentMemory(state,p.victim),source,false,now);
+      note('combat-miss',{from:robot.id,to:p.victim,source:p.source,bossStyle:p.style});
+     }
     }
    }
    if(now<p.endsAt)return true;
@@ -215,6 +230,7 @@ export function createBossBehavior(){
   const target=candidate.victim,source=candidate.source;
   const p={victim:target.id,segment:candidate.segment,source:source.key,aim:{...(candidate.aim??target.center)},direction:robot.angle,style,comboIndex,timing,
    started:ctx.game.time,impactAt:ctx.game.time+timing.windupSec+timing.thrustSec,endsAt:ctx.game.time+duration(timing),at:ctx.game.time+timing.windupSec,resolved:false};
+  if(style==='sweep'){p.sweepHits=new Set();p.sweepLanded=new Set();}
   if(rearKick){
    const [primary]=pendingStrikes(robot.id);
    primary.rearKickStarted=true;

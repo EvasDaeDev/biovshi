@@ -12,5 +12,6 @@ export function setPendingStrikes(id,strikes){
  ctx.combat.pending[id]=first??null;
 }
 export function cancelStrikesAgainst(victim){
- ctx.combat.pending.forEach((_,id)=>setPendingStrikes(id,pendingStrikes(id).filter(p=>p.victim!==victim)));
+ // A sweep already in motion can cross other opponents after the aimed target falls.
+ ctx.combat.pending.forEach((_,id)=>setPendingStrikes(id,pendingStrikes(id).filter(p=>p.victim!==victim||p.style==='sweep'&&ctx.game.time>=p.at)));
 }

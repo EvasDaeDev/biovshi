@@ -5,10 +5,10 @@ import {ctx} from '../src/game/state.js';
 import {createRobot} from '../src/robot/robot.js';
 import {createBoss} from '../src/boss/boss.js';
 import {BOSS_CONFIG} from '../src/boss/config.js';
-import {bossDamage,chargePlan,sweepContact,sweepPathClear} from '../src/boss/attacks.js';
+import {bossDamage,chargePlan,poseAt,sweepContacts,sweepPathClear} from '../src/boss/attacks.js';
 import {updateBossPhase} from '../src/boss/behavior.js';
 import {strikeCandidates} from '../src/systems/combat.js';
-import {pendingStrikes} from '../src/systems/strikes.js';
+import {cancelStrikesAgainst,pendingStrikes} from '../src/systems/strikes.js';
 import {onGameEvent} from '../src/game/event-bus.js';
 import {obstacleVertices} from '../src/game/arena.js';
 import {staticContacts,isLimb} from '../src/systems/surface-contact.js';
@@ -136,23 +136,54 @@ test('severing the attacking limb cancels the swing and queued combo instead of 
  }finally{f.close();}
 });
 
-test('wide strike has real arc contact, no windup/return damage and only one hit per attack',()=>{
+test('wide strike has real arc contact, no windup/return damage and hits each contacted segment only once',()=>{
  const f=duel(),attempts=[];f.player.damage=(...args)=>{attempts.push(args);return false;};
  try{
   const p=prepareWide(f),t=p.timing;
-  assert.equal(sweepContact(f.boss,f.player,p,0,t.windupSec-.001),null);
-  assert.ok(sweepContact(f.boss,f.player,p,t.windupSec,t.windupSec+t.thrustSec));
-  assert.equal(sweepContact(f.boss,f.player,p,t.windupSec+t.thrustSec+.001,p.endsAt),null);
+  assert.deepEqual(sweepContacts(f.boss,[f.player],p,0,t.windupSec-.001),[]);
+  const segments=sweepContacts(f.boss,[f.player],p,t.windupSec,t.windupSec+t.thrustSec).map(hit=>hit.segment);
+  assert.ok(segments.length>1);
+  assert.deepEqual(sweepContacts(f.boss,[f.player],p,t.windupSec+t.thrustSec+.001,p.endsAt),[]);
   for(let n=0;n<=Math.ceil(p.endsAt*60)+1;n++)advanceTo(f,n/60);
-  assert.equal(attempts.length,1);assert.equal(attempts[0][1],1);assert.ok([1,2].includes(attempts[0][2]));
+  assert.deepEqual(attempts.map(([segment])=>segment).sort(),segments.sort());
+  assert.ok(attempts.every(([,attacker,damage])=>attacker===1&&damage===attempts[0][2]&&[1,2].includes(damage)));
+ }finally{f.close();}
+});
+
+test('a committed sweep can continue into another opponent after its first target is knocked out',()=>{
+ const f=duel();try{
+  const p=prepareWide(f),{windupSec,thrustSec}=p.timing;
+  const second=createRobot(2,{x:f.player.x,y:f.player.y+24,angle:Math.PI});
+  ctx.robots.push(second);
+  const placeCapsule=(victim,fraction,segment)=>{
+   const tip=poseAt(f.boss,p,windupSec+thrustSec*fraction).tip;
+   Object.defineProperty(victim,'capsules',{value:[{segment,a:tip,b:tip,r:2}]});
+  };
+  placeCapsule(f.player,0,'head');
+  placeCapsule(second,.9,'arm-1-lower');
+  const contacts=[];
+  f.player.damage=segment=>{
+   contacts.push([0,segment]);
+   Object.defineProperty(f.player,'mobile',{value:false});
+   cancelStrikesAgainst(0);
+   return true;
+  };
+  second.damage=segment=>{contacts.push([2,segment]);return true;};
+  advanceTo(f,p.at);
+  assert.deepEqual(contacts,[[0,'head']]);
+  assert.equal(pendingStrikes(1)[0],p);
+  advanceTo(f,p.impactAt);
+  assert.deepEqual(contacts,[[0,'head'],[2,'arm-1-lower']]);
  }finally{f.close();}
 });
 
 test('wide strike cannot cross an obstacle, and a player who leaves its arc is missed',()=>{
  const f=duel();try{
-  const p=prepareWide(f);obstacle();assert.equal(sweepPathClear(f.boss,p),false);assert.equal(sweepContact(f.boss,f.player,p,.7,1.08),null);
+  const p=prepareWide(f),{windupSec,thrustSec}=p.timing;obstacle();
+  assert.equal(sweepPathClear(f.boss,p),false);
+  assert.equal(sweepContacts(f.boss,[f.player],p,windupSec,windupSec+thrustSec),null);
   ctx.obstacles=[];const far=createRobot(0,{x:470,y:430,angle:Math.PI});ctx.robots[0]=far;
-  assert.equal(sweepContact(f.boss,far,p,.7,1.08),null);
+  assert.deepEqual(sweepContacts(f.boss,[far],p,windupSec,windupSec+thrustSec),[]);
  }finally{f.close();}
 });
 
