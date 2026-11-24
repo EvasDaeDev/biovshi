@@ -15,7 +15,7 @@ export function initializeModalFocus(){
  // the game root. Treat its content as part of the active Tower sheet.
  const activeTowerUpgrade=()=>root.querySelector('#tower-upgrade-window[open]:not([hidden])');
  const activeReplacement=()=>root.querySelector('#tower-module-replacement[open]');
- const activeTopDialog=()=>root.querySelector('.paper-dialog[open], #game-action-confirm[open], #tower-cycle-notice[open]');
+ const activeTopDialog=()=>root.querySelector('#game-action-confirm[open]')??root.querySelector('.paper-dialog[open], #tower-cycle-notice[open]');
  function sync(){
   if(ctx.tutorial?.active)return;
   const next=sheets.find(sheet=>!sheet.hidden)??null;

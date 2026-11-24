@@ -1,10 +1,11 @@
 import {SESSION_STORAGE} from './build-channel.js';
 import {setPaused} from './ui/controls.js';
 import {arenaDefinition,loadLocations,suitableArenaId} from './game/arenas.js';
-import {installTowerUI,openMenu,towerPreparation} from './tower/ui.js';
+import {installTowerUI,openMenu,refreshMenu,towerPreparation} from './tower/ui.js';
 import {towerEnemyCount,towerFor} from './tower/model.js';
 import {ensureTowerFloorPlan,selectedTowerFloor} from './tower/floors.js';
-import {bettingSetup,bettingCancel} from './betting/ui.js';
+import {bettingCancel} from './betting/ui.js';
+import {installProfiles} from './ui/profiles.js';
 import {initializeFloor} from './render/floor-history.js';
 import {initializeModalFocus} from './ui/modal-focus.js';
 import {initializeGameNavigation} from './ui/game-navigation.js';
@@ -62,14 +63,14 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,
  initializeTutorial();
  launchButton.onclick=()=>{
    // The preloaded demo is reusable only while the opening menu still owns it.
-   if(launchAccepted||ctx.startup.phase!=='demo')return ctx.startDemo();
+   if(launchAccepted||ctx.startup.phase!=='demo'||ctx.betting&&ctx.betting.phase!=='running')return ctx.startDemo();
    // AudioContext.resume() must happen synchronously in this user gesture.
    audio.unlock();
    launchAccepted=true;
    gate.hidden=true;
    startSpawnSequence();
  };
- ctx.root.querySelector('#launch-setup').onclick=()=>{audio.unlock();launchAccepted=true;ctx.startSetup();};
+ installProfiles(ctx.root,refreshMenu);
  if(launchAccepted&&ctx.startup.phase==='demo')startSpawnSequence();
  if(enterFight)startSpawnSequence();
  loading?.update('Арена готова!',{done:6,total:6});
@@ -171,7 +172,6 @@ async function boot(){
    return ctx.towerTransition;
  };
  ctx.startTotalizator=()=>{bettingCancel();return transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId});};
- ctx.startSetup=async()=>{bettingCancel();await transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting?.arenaId??'ward'});setPaused(true);ctx.afterSetup='menu';bettingSetup();};
  ctx.startDemo=()=>transition({session:ctx.betting,entry:'auto',arenaId:ctx.betting?.arenaId??'ward'});
  await prepare({textures,session,arenaId:session?.arenaId??'ward',loading});
  if(cancelled||ctx.disposed){loading.close();return;}

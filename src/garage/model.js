@@ -1,3 +1,4 @@
+import {COIN_SCALE} from '../betting/coins.js';
 export const BASE_STATS = [3,3,3];
 export const HATS = [1,2,3,4];
 export function earnedStats(wins=0) {
@@ -67,7 +68,7 @@ function interpolateEffect(points,values){
 }
 export function statMultiplier(points){return points<=4?1+(points-3)*.2:1.2+interpolateEffect(points,[0,.15,.30,.40,.50,.60]);}
 export function critChance(points){return points<=4?Math.max(0,(points-2)*.15):interpolateEffect(points,[.30,.38,.45,.50,.55,.60]);}
-export function nextPrice(slot){return slot?slot.price+Math.ceil(slot.price/10):10;}
+export function nextPrice(slot){return slot?slot.price+Math.ceil(slot.price/(10*COIN_SCALE))*COIN_SCALE:10*COIN_SCALE;}
 export function buyHat(session,patient,player,hat,price){
   if(session.phase!=='betting')throw Error('Покупки доступны до ставок.');
   normalizePatronage(session);
@@ -87,7 +88,7 @@ export function resolvePatron(patient){
 }
 export function normalizePatronage(session){
   for(const patient of session.garage??[]){
-    if(!patient.investments){patient.investments={};if(patient.head)patient.investments[patient.head.player]=patient.head.price;}
+    if(!patient.investments){patient.investments={};if(patient.head?.player!=null)patient.investments[patient.head.player]=patient.head.price;}
     patient.patron=resolvePatron(patient);
   }
 }

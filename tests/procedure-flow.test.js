@@ -24,64 +24,64 @@ function setup(options={}){
 function close(dom){ctx.root.__disposeTag();dom.window.close();}
 test('patron keeps cumulative investment through losses, retains ties and alone controls tuning',()=>{
  const s=betNewSession(['A','B'],1000);
- setPatientStats(s,0,1,[4,3,2]);buyHat(s,0,0,1,10);assert.equal(resolvePatron(s.garage[0]),0);
+ setPatientStats(s,0,1,[4,3,2]);buyHat(s,0,0,1,100);assert.equal(resolvePatron(s.garage[0]),0);
  assert.throws(()=>setPatientStats(s,0,1,[2,4,3]),/покровитель/);
- s.garage[0].head=null;buyHat(s,0,1,2,10);assert.equal(resolvePatron(s.garage[0]),0,'tie retains the existing patron');
- s.garage[0].head=null;buyHat(s,0,1,3,10);assert.equal(resolvePatron(s.garage[0]),1);
+ s.garage[0].head=null;buyHat(s,0,1,2,100);assert.equal(resolvePatron(s.garage[0]),0,'tie retains the existing patron');
+ s.garage[0].head=null;buyHat(s,0,1,3,100);assert.equal(resolvePatron(s.garage[0]),1);
  setPatientStats(s,0,1,[2,4,3]);assert.deepEqual(s.garage[0].stats,[2,4,3]);
- s.garage[0].head=null;assert.deepEqual(s.garage[0].investments,{0:10,1:20});
+ s.garage[0].head=null;assert.deepEqual(s.garage[0].investments,{0:100,1:200});
 });
 test('procedure locks controls by editor and patron popup lists every player and contribution',()=>{
- const s=betNewSession(['Первый','Второй'],100);buyHat(s,0,1,1,10);const dom=setup({session:s});ctx.procedureEditor=0;garageOpen();
- let section=document.querySelector('[data-patient="0"]');assert.equal(section.querySelector('[data-stat]').disabled,true);section.querySelector('.patron-name').click();assert.equal(section.querySelector('.patron-popup').hidden,false);assert.match(section.querySelector('.patron-popup').textContent,/Первый: 0.*Второй: 10/);
+ const s=betNewSession(['Первый','Второй'],100);buyHat(s,0,1,1,100);const dom=setup({session:s});ctx.procedureEditor=0;garageOpen();
+ let section=document.querySelector('[data-patient="0"]');assert.equal(section.querySelector('[data-stat]').disabled,true);section.querySelector('.patron-name').click();assert.equal(section.querySelector('.patron-popup').hidden,false);assert.match(section.querySelector('.patron-popup').textContent,/Первый: 0.*Второй: 100/);
  const editor=document.querySelector('#procedure-editor');editor.value='1';editor.dispatchEvent(new Event('change'));section=document.querySelector('[data-patient="0"]');assert.equal(section.querySelector('[data-stat]').disabled,false);
- const select=section.querySelector('[data-stat="1"]');select.value='4';select.dispatchEvent(new Event('change'));assert.equal(s.garage[0].stats[1],4);bettingSave();const loaded=bettingLoad();assert.equal(loaded.garage[0].patron,1);assert.equal(loaded.garage[0].investments[1],10);close(dom);
+ const select=section.querySelector('[data-stat="1"]');select.value='4';select.dispatchEvent(new Event('change'));assert.equal(s.garage[0].stats[1],4);bettingSave();const loaded=bettingLoad();assert.equal(loaded.garage[0].patron,1);assert.equal(loaded.garage[0].investments[1],100);close(dom);
 });
 test('one active player owns every purchase, switching preserves card drafts and updates balance, permissions and focus',()=>{
- const s=betNewSession(['Первый','Второй'],100),dom=setup({session:s});ctx.procedureEditor=0;garageOpen();
+ const s=betNewSession(['Первый','Второй'],1000),dom=setup({session:s});ctx.procedureEditor=0;garageOpen();
  try{
   assert.equal(document.querySelector('[data-buyer]'),null);
   const cards=()=>[...document.querySelectorAll('[data-patient]')];
   for(const [i,card] of cards().entries()){
-   card.querySelector('[data-price]').value=String(20+i);
+   card.querySelector('[data-price]').value=String(200+10*i);
    card.querySelector(`[data-hat="${i+1}"]`).click();
   }
   const picker=document.querySelector('#procedure-editor');picker.focus();picker.value='1';picker.dispatchEvent(new Event('change'));
   assert.equal(document.activeElement.id,'procedure-editor');
   for(const [i,card] of cards().entries()){
-   assert.equal(card.querySelector('[data-price]').value,String(20+i));
+   assert.equal(card.querySelector('[data-price]').value,String(200+10*i));
    assert.equal(card.querySelector(`[data-hat="${i+1}"]`).getAttribute('aria-pressed'),'true');
    assert.ok(card.querySelector('[data-buy]').textContent.includes(s.players[1].name));
    assert.equal(card.querySelector('[data-stat]').disabled,false);
   }
   cards()[2].querySelector('[data-buy]').click();
-  assert.deepEqual(s.players.map(p=>p.balance),[100,78]);assert.equal(s.garage[2].head.player,1);
-  assert.equal(s.garage[2].investments[1],22);assert.equal(resolvePatron(s.garage[2]),1);
-  assert.equal(document.querySelector('#procedure-balance [data-player-balance]').dataset.balanceTarget,'78');
+  assert.deepEqual(s.players.map(p=>p.balance),[1000,780]);assert.equal(s.garage[2].head.player,1);
+  assert.equal(s.garage[2].investments[1],220);assert.equal(resolvePatron(s.garage[2]),1);
+  assert.equal(document.querySelector('#procedure-balance [data-player-balance]').dataset.balanceTarget,'780');
   assert.ok(document.querySelector('#procedure-balance .currency-counter').classList.contains('is-debit'),'purchase starts the shared red counter');
   assert.ok(document.querySelector('[data-patient="2"] [data-error]').textContent.includes('Теперь вы'));
   const other=document.querySelector('#procedure-editor');other.value='0';other.dispatchEvent(new Event('change'));
   assert.equal(document.querySelector('[data-patient="2"] [data-stat]').disabled,true);
   assert.equal(document.querySelector('[data-patient="0"] [data-stat]').disabled,false);
-  assert.match(document.querySelector('#procedure-balance').textContent,/100/);
+  assert.match(document.querySelector('#procedure-balance').textContent,/1\s000/);
   assert.equal(document.querySelector('[data-patient="2"] [data-error]').textContent,'','old player messages cannot address the new player');
-  assert.equal(bettingLoad().players[1].balance,78);
+  assert.equal(bettingLoad().players[1].balance,780);
  }finally{close(dom);}
 });
 test('a non-patron may buy equipment but unlocks skills only after overtaking cumulative investment',()=>{
- const s=betNewSession(['Покровитель','Покупатель'],200);buyHat(s,0,0,1,40);
+ const s=betNewSession(['Покровитель','Покупатель'],2000);buyHat(s,0,0,1,400);
  s.garage[0].head=null;
  const dom=setup({session:s});ctx.procedureEditor=1;garageOpen();
  try{
   const card=()=>document.querySelector('[data-patient="0"]');
   const purchase=price=>{card().querySelector('[data-price]').value=String(price);card().querySelector('[data-hat="2"]').click();assert.equal(card().querySelector('[data-buy]').disabled,false);card().querySelector('[data-buy]').click();};
   assert.equal(card().querySelector('[data-stat]').disabled,true);assert.ok(card().querySelector('.garage-lock-note'));
-  purchase(20);assert.equal(resolvePatron(s.garage[0]),0);assert.equal(card().querySelector('[data-stat]').disabled,true);
-  assert.deepEqual(s.players.map(p=>p.balance),[160,180]);
-  purchase(22);assert.equal(resolvePatron(s.garage[0]),1);
+  purchase(200);assert.equal(resolvePatron(s.garage[0]),0);assert.equal(card().querySelector('[data-stat]').disabled,true);
+  assert.deepEqual(s.players.map(p=>p.balance),[1600,1800]);
+  purchase(220);assert.equal(resolvePatron(s.garage[0]),1);
   assert.equal(card().querySelector('[data-stat]').disabled,false);assert.equal(card().querySelector('.garage-lock-note'),null);
   const stat=card().querySelector('[data-stat="1"]');stat.value='4';stat.dispatchEvent(new Event('change'));
-  assert.equal(s.garage[0].stats[1],4);assert.deepEqual(s.players.map(p=>p.balance),[160,158]);
+  assert.equal(s.garage[0].stats[1],4);assert.deepEqual(s.players.map(p=>p.balance),[1600,1580]);
   assert.equal(bettingLoad().garage[0].patron,1);
  }finally{close(dom);}
 });
@@ -172,7 +172,7 @@ test('cancelled combat restores patient builds, hats, patronage and balances, in
   const s=betNewSession(['A','B'],1000);
   const {earnedStats}=await import('../src/garage/model.js');
   s.garage[0].wins=6;s.garage[0].stats=earnedStats(6);
-  buyHat(s,0,1,3,50);
+  buyHat(s,0,1,3,500);
   const before=structuredClone(s);
   const dom=setup({session:s,entry:'betting'});
   try{

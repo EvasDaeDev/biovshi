@@ -100,7 +100,7 @@ test('mutations survive insured defeat and do not survive an uninsured reset',()
  const s=betNewSession(['ДМС'],1000);
  const t=beatFirstBoss(s),chosen=t.mutationDraft.options[0];
  assert.ok(chooseTowerMutation(t,chosen));
- assert.equal(buyTowerInsurance(s,0),50);
+ assert.equal(buyTowerInsurance(s,0),300);
  assert.deepEqual(t.insurance.checkpoint.mutations,[]);
  assert.equal(t.insurance.checkpoint.mutationInventory[0].type,chosen);
  const restored=completeTower(s,0,false);

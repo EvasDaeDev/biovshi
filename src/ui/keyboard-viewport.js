@@ -33,7 +33,7 @@ export function initializeKeyboardViewport(onLayoutChange){
   node.classList.remove('keyboard-input-panel');node.scrollTop=scrollTop;
  }
  function fitEditor(field){
-  const panel=active&&field?.closest('.betting-input-dialog,.bet-panel,.settings-panel,.launch-paper');
+  const panel=active&&field?.closest('.betting-input-dialog,.bet-panel,.settings-panel,.launch-paper,#player-profiles');
   if(panel!==panelState?.node)restorePanel();
   if(!panel)return;
   if(!panelState){

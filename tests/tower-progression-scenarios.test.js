@@ -2,17 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {simulateTowerProgression,progressionMatrix,progressionMarkdown,
  PROGRESSION_POLICIES,PROGRESSION_PRICE_MODELS} from '../scripts/simulate-tower-progression.mjs';
+import {COIN_SCALE} from '../src/betting/coins.js';
+import {STARTING_CAPITAL} from '../src/betting/ledger.js';
 import {towerMutationInstallPrice} from '../src/tower/mutations.js';
 const base={seed:12,policy:PROGRESSION_POLICIES[1],model:PROGRESSION_PRICE_MODELS[1],rarityStep:.12,maxFights:80};
 test('default price scenario equals current game installation formula',()=>{
  for(let n=0;n<6;n++)assert.equal(
-  Math.ceil(PROGRESSION_PRICE_MODELS[1].first*PROGRESSION_PRICE_MODELS[1].growth**n),
+  Math.ceil(PROGRESSION_PRICE_MODELS[1].first*PROGRESSION_PRICE_MODELS[1].growth**n)*COIN_SCALE,
   towerMutationInstallPrice({modInstallations:n}));
 });
 test('repeatable scenarios audit the ledger and preserve six-slot limit',()=>{
  const first=simulateTowerProgression(base);
  assert.deepEqual(first,simulateTowerProgression(base));
- assert.equal(first.bank+first.spent,100+first.earned);
+ assert.equal(first.bank+first.spent,STARTING_CAPITAL+first.earned);
  assert.ok(first.bank>=0&&first.installed<=6&&first.fights<=80);
  assert.ok(first.returns+first.resets<=first.losses);
 });
@@ -28,7 +30,7 @@ test('uninterrupted climb retains equipment through cycles A, B and C',()=>{
  assert.equal(x.completed,true);
  assert.deepEqual(x.cycleEntry.map(e=>e.to),[31,61,91,121]);
  assert.ok(x.cycleEntry.every((e,i)=>e.installed<=6&&(!i||e.installed>=x.cycleEntry[i-1].installed)));
- assert.equal(x.bank+x.spent,100+x.earned);
+ assert.equal(x.bank+x.spent,STARTING_CAPITAL+x.earned);
 });
 test('report distinguishes assumptions from combat evidence',()=>{
  const x=progressionMatrix({seeds:3,maxFights:70});

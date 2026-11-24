@@ -3,7 +3,7 @@ import {artifactDropChance,ARTIFACT_COMPLETION_REWARD,ARTIFACT_PIECE_COUNT} from
 import {bossName} from '../boss/names.js';
 import {setPaused} from '../ui/controls.js';
 import {hasBoss,isBossFloor} from '../boss/config.js';
-import {bossFloorReward} from '../boss/encounter.js';
+import {insuranceCost,INSURANCE_START_PRICE} from './insurance.js';
 import {selectedTowerFloor} from './floors.js';
 import {TOWER_RELATION_NAMES} from './relations.js';
 import {towerMutationSnapshot,towerAttackInterval,TOWER_MUTATIONS,TOWER_MUTATION_IDS,TOWER_MUTATION_FAMILIES,TOWER_MUTATION_SYNERGIES,towerMutationSynergies,towerMutationEffectText,chooseTowerMutation,
@@ -80,7 +80,8 @@ export function refreshMenu(){
   ctx.menuPlayer=s?.players[s.towerPlayerId]?.id??s?.players[0]?.id??0;
   select.replaceChildren();
   for(const p of s?.players??[]){const option=document.createElement('option');option.value=p.id;option.textContent=p.name;option.selected=p.id===ctx.menuPlayer;select.append(option);}
-  select.disabled=!s;
+  select.hidden=!s;
+  ctx.root.querySelector('#menu-player-create').hidden=Boolean(s);
   const t=s?towerFor(s,ctx.menuPlayer):null;
   const menuPreview=ctx.root.querySelector('#menu-patient-preview');
   renderMenuPatient(menuPreview,t);
@@ -91,7 +92,6 @@ export function refreshMenu(){
   ctx.root.querySelector('#tower-reset').disabled=!s;
   ctx.root.querySelector('#launch-totalizator').hidden=!s;
   const newGame=ctx.root.querySelector('#launch-setup');
-  newGame.textContent=s?'НОВАЯ ИГРА':'СОЗДАТЬ ИГРУ';
   newGame.classList.toggle('is-new-game',Boolean(s));
 }
 const menuDescriptions = [
@@ -362,7 +362,7 @@ export function towerPreparation(){
               lastMutationReceipt='Часть снята и возвращена на склад';
             }else{
               equipTowerSegment(ctx.betting,ctx.towerPlayer,t,chosen.representativeId);
-              lastMutationReceipt='Часть установлена · −75 монет';
+              lastMutationReceipt='Часть установлена · −'+TOWER_SEGMENT_INSTALL_PRICE+' монет';
             }
             selectedOwned=null;syncSegments();
           }catch(error){upgradeMessage(error.message);}
@@ -701,7 +701,7 @@ export function towerPreparation(){
     dialog.className='tower-cycle-dialog';
     const index=towerCycleInfo(t.level).index;
     const heading=document.createElement('h2');heading.textContent='ЛЕЧЕНИЕ НЕ УВЕНЧАЛОСЬ ВЫПИСКОЙ';
-    const summary=document.createElement('p');summary.textContent='30 этажей пройдены. База навыков снова 3/3/3, выбранный перенос очка сохраняется. Экипировка, склад и операции переходят с тобой. ДМС аннулирована, следующий полис снова стоит 50 монет.';
+    const summary=document.createElement('p');summary.textContent='30 этажей пройдены. База навыков снова 3/3/3, выбранный перенос очка сохраняется. Экипировка, склад и операции переходят с тобой. ДМС аннулирована, следующий полис снова стоит '+INSURANCE_START_PRICE+' монет.';
     const next=document.createElement('p');next.textContent='НОВОЕ НАЗНАЧЕНИЕ: '+towerCycleTitle(index)+' · '+towerFloorLabel(t.level);
     const reward=document.createElement('p');
     const rank=TOWER_RARITIES[towerMutationRarity(t.level)];
@@ -719,10 +719,11 @@ export function towerPreparation(){
   const insuranceStatus=ctx.root.querySelector('#tower-insurance-status');
   const renderInsurance=()=>{
     const c=t.insurance.checkpoint,renewal=Boolean(c&&t.level>c.level);
+    const price=insuranceCost(t.insurance);
     insuranceButton.classList.toggle('is-active',Boolean(c));
-    insuranceButton.innerHTML=renewal?`ПРОДЛИТЬ ДМС · ${formatChips(t.insurance.price)}`:c?`ДМС · ЭТАЖ ${c.level}`:`ДМС · ${formatChips(t.insurance.price)}`;
-    insuranceButton.disabled=Boolean(c&&!renewal)||ctx.betting.players[ctx.towerPlayer].balance<t.insurance.price;
-    insuranceButton.title=renewal?`ПРОДЛЕНИЕ ВРУЧНУЮ: перенести ДМС с этажа ${c.level} на этаж ${t.level} за ${t.insurance.price} монет. Новый полис заменяет прежнюю точку. Следующий тариф +3%.`:c?`Полис уже оплачен. Вернёт на этаж ${c.level}; автоматически не продлевается.`:'Одноразовая страховка. После покупки следующий тариф +10%; продление действующего полиса +3%.';
+    insuranceButton.innerHTML=renewal?`ПРОДЛИТЬ ДМС · ${formatChips(price)}`:c?`ДМС · ЭТАЖ ${c.level}`:`ДМС · ${formatChips(price)}`;
+    insuranceButton.disabled=Boolean(c&&!renewal)||ctx.betting.players[ctx.towerPlayer].balance<price;
+    insuranceButton.title=renewal?`ПРОДЛЕНИЕ ВРУЧНУЮ: перенести ДМС с этажа ${c.level} на этаж ${t.level} за ${price} монет. Новый полис заменяет прежнюю точку. Базовый тариф вырастет на 10%.`:c?`Полис уже оплачен. Вернёт на этаж ${c.level}; автоматически не продлевается.`:'Одноразовая страховка. Покупка сохраняет тариф. Продление стоит 20% базового тарифа и повышает его на 10%.';
     // The paid checkpoint is already displayed on the DMS button itself.
     insuranceStatus.hidden=true;
     insuranceStatus.textContent='';
@@ -731,15 +732,15 @@ export function towerPreparation(){
   insuranceButton.onclick=()=>{
     if(ctx.startup.phase!=='tower-ready'||ctx.settingsOpen||insuranceButton.disabled)return;
     const checkpoint=t.insurance.checkpoint,renewal=Boolean(checkpoint);
-    const price=t.insurance.price;
+    const price=insuranceCost(t.insurance);
     confirmGameAction({
       root:ctx.root,
       title:renewal?'ПРОДЛЕНИЕ ДМС':'ОФОРМЛЕНИЕ ДМС',
       details:[
         renewal?'Перенос страховки с этажа '+towerFloorLabel(checkpoint.level)+' на этаж '+towerFloorLabel(t.level)+'.':
           'Страховка текущего этажа '+towerFloorLabel(t.level)+' и навыков пациента.',
-        renewal?'Прежняя точка возврата будет заменена. Следующий тариф +3%.':
-          'После использования полис прекращает действие. Следующий тариф +10%.'
+        renewal?'Прежняя точка возврата будет заменена. Базовый тариф вырастет на 10%.':
+          'После использования полис прекращает действие. Покупка сохраняет базовый тариф.'
       ],
       cost:price,
       confirmLabel:renewal?'ПРОДЛИТЬ ДМС':'ОФОРМИТЬ ДМС',
@@ -891,9 +892,14 @@ export function installTowerUI({enterFight=false}={}){
   const menu=ctx.root.querySelector('#launch-overlay');
   ctx.root.querySelector('#menu-player').onchange=e=>{ctx.betting.towerPlayerId=Number(e.target.value);bettingSave();refreshMenu();};
   ctx.root.querySelector('#tower-reset').onclick=()=>{if(confirm('Сбросить башню выбранного игрока? Следы боёв на аренах будут очищены. Действующая ДМС будет аннулирована без возврата монет. Банк, личный рекорд, артефакты и записки сохранятся. Тариф следующей ДМС не изменится.')){resetTower(ctx.betting,ctx.menuPlayer);bettingSave();refreshMenu();}};
+  const openSetup=()=>{
+    ctx.audio?.unlock();
+    menu.hidden=true;ctx.afterSetup='menu';bettingSetup();
+  };
+  ctx.root.querySelector('#menu-player-create').onclick=openSetup;
   ctx.root.querySelector('#launch-tower').onclick=()=>{
     ctx.audio?.unlock();
-    if(!ctx.betting){menu.hidden=true;ctx.afterSetup='menu';bettingSetup();return;}
+    if(!ctx.betting){openSetup();return;}
     ctx.startTower(ctx.menuPlayer);
   };
   ctx.root.querySelector('#launch-totalizator').onclick=async()=>{ctx.audio?.unlock();await ctx.startTotalizator();};

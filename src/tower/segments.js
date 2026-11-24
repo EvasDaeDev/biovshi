@@ -1,3 +1,4 @@
+import {COIN_SCALE,canIssueCoins} from '../betting/coins.js';
 // Segment-based Tower mutation inventory (new economy, independent of old whole-kit UI).
 // Each object is one owned item. Equipped parts are at risk on uninsured death.
 import {TOWER_MUTATION_IDS,TOWER_MUTATIONS,rollTowerBossRarity} from './mutations.js';
@@ -7,8 +8,8 @@ import {bossRepeatDropChance} from './artifacts.js';
 
 export const TOWER_SECOND_SEGMENT_CHANCE=.35;
 export const towerSegmentDropChance=previousWins=>Math.max(.45,bossRepeatDropChance(previousWins));
-export const TOWER_SEGMENT_INSTALL_PRICE=75;
-export const TOWER_SEGMENT_SELL_BASE=50;
+export const TOWER_SEGMENT_INSTALL_PRICE=75*COIN_SCALE;
+export const TOWER_SEGMENT_SELL_BASE=50*COIN_SCALE;
 export const towerSegmentSellPrice=rarity=>Math.round(TOWER_SEGMENT_SELL_BASE*(1+.12*rarity));
 const standardSites=Object.freeze(['head',...Array.from({length:4},(_,i)=>'spine-'+i),
  ...[-1,1].flatMap(side=>['arm','leg'].flatMap(kind=>['upper','lower'].map(part=>kind+'-'+side+'-'+part)))]);
@@ -87,7 +88,7 @@ export const canInstallTowerSegment=(run,item)=>Boolean(run.preparing&&item&&
  !run.equippedSegments.includes(item.id)&&towerSegmentSites(item.type,run).includes(item.site));
 export const canCreditTowerSegmentSale=(session,player,price)=>{
  const buyer=session.players?.[player];
- return Boolean(buyer&&buyer.balance+price<=16000000&&(session.towerEarned??0)+price<=16000000);
+ return Boolean(buyer&&canIssueCoins(session,price));
 };
 export function equipTowerSegment(session,player,run,id){
  normalizeTowerSegmentInventory(run);

@@ -1,10 +1,11 @@
 import {initializePlayerArchive} from '../tower/archive-notes.js';
 import {newGarage} from '../garage/model.js';
+import {COIN_SCALE,ECONOMY_VERSION,canIssueCoins} from './coins.js';
 import {arenaDefinition} from '../game/arenas.js';
 export const BET_WIN_PERCENT = 85;
 export const JACKPOT_INTERVAL = 5;
 export const JACKPOT_PERCENT = 25;
-export const STARTING_CAPITAL = 200;
+export const STARTING_CAPITAL = 200 * COIN_SCALE;
 export function jackpotStatus(s) {
   return `Розыгрыш 25% джекпота через ${JACKPOT_INTERVAL - (s.jackpotRounds ?? 0)} боёв с выигравшими и проигравшими ставками; не менее 75% остаётся в резерве.`;
 }
@@ -14,6 +15,7 @@ export function betOdds(stakes, winningTotal) {
 export function betNewSession(names, capital = STARTING_CAPITAL) {
   return {
     version: 1,
+    economyVersion: ECONOMY_VERSION,
     garage: newGarage(),
     shopSpent: 0,
     insuranceSpent: 0,
@@ -35,7 +37,9 @@ export function betNewSession(names, capital = STARTING_CAPITAL) {
     players: names.map((name, id) => initializePlayerArchive({
       id,
       name,
-      balance: capital
+      balance: capital,
+      towerBattles: 0,
+      towerKnockouts: 0
     })),
     bets: [],
     history: [],
@@ -60,15 +64,20 @@ export function betCommit(s, bets) {
   s.phase = 'running';
   s.lastResult = null;
 }
-// Joining adds exactly one original starting capital to the issued chips.
+export function profileName(name){
+  const clean=typeof name==='string'?name.trim():'';
+  if(!clean||clean.length>32)throw Error('Введите имя от 1 до 32 символов.');
+  return clean;
+}
+
+// Joining adds exactly one original starting capital to the issued coins.
 export function betAddPlayer(s,name){
   if(s.phase!=='betting')throw Error('Добавлять игроков можно только до начала боя.');
   if(s.players.length>=16)throw Error('За одним столом может быть не больше 16 игроков.');
-  const clean=typeof name==='string'?name.trim():'';
-  if(!clean||clean.length>32)throw Error('Введите имя от 1 до 32 символов.');
-  const issued=(s.players.length+1)*s.capital+(s.topUps??0)+(s.towerEarned??0);
-  if(!Number.isSafeInteger(issued)||issued>16000000)throw Error('Общий выпуск фишек не может превышать 16 000 000.');
-  const player=initializePlayerArchive({id:s.players.length,name:clean,balance:s.capital});
+  const clean=profileName(name);
+  if(!canIssueCoins(s,s.capital))throw Error('Достигнут лимит выпуска монет.');
+  const player=initializePlayerArchive({id:s.players.length,name:clean,balance:s.capital,
+    floorKey:String(s.players.length+(s.retiredProfiles??0)),towerBattles:0,towerKnockouts:0});
   s.players.push(player);
   return player;
 }

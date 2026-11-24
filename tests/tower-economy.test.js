@@ -44,7 +44,7 @@ test('a zero bank allows later skill transfers, but blocks paid rerolls',()=>{
 });
 
 test('G: reroll prices use base formula, with next-floor reset',()=>{
- assert.deepEqual(Array.from({length:6},(_,i)=>towerRerollPrice(i)),[10,10,10,10,10,10]);
+ assert.deepEqual(Array.from({length:6},(_,i)=>towerRerollPrice(i)),[100,100,100,100,100,100]);
  assert.equal(towerRerollPrice(60),Infinity);
  const {session,run}=setup(1000);
  const old=run.floorPlan.options.map(o=>structuredClone(o));
@@ -62,11 +62,11 @@ test('G: reroll prices use base formula, with next-floor reset',()=>{
   }
   assert.ok(validTower(run));
  }
- assert.deepEqual(prices,[10,10,10,10,10]);
- assert.equal(session.towerEconomySpent,50);
+ assert.deepEqual(prices,[100,100,100,100,100]);
+ assert.equal(session.towerEconomySpent,500);
  assert.equal(total(session),1000);
  completeTower(session,0,true);
- assert.equal(run.arenaRerolls,0);assert.equal(towerRerollPrice(run.arenaRerolls),10);
+ assert.equal(run.arenaRerolls,0);assert.equal(towerRerollPrice(run.arenaRerolls),100);
  assert.ok(validTower(run));
 });
 
@@ -96,7 +96,7 @@ test('G: insurance checkpoint retains reroll count, chosen arena and confirmed s
  const {session,run}=setup();
  applyTowerStatChange(run,[4,2,3]);
  purchaseTowerArenaReroll(session,0,run,()=>.3);
- assert.equal(purchaseInsurance(session,0,run),50);
+ assert.equal(purchaseInsurance(session,0,run),300);
  assert.equal(run.insurance.checkpoint.arenaRerolls,1);
  assert.deepEqual(run.insurance.checkpoint.floorPlan,run.floorPlan);
  assert.deepEqual(run.insurance.checkpoint.stats,[4,2,3]);
@@ -106,7 +106,7 @@ test('G: insurance checkpoint retains reroll count, chosen arena and confirmed s
  assert.equal(restored.arenaRerolls,1);
  assert.deepEqual(restored.stats,[4,2,3]);
  assert.deepEqual(restored.floorPlan,run.floorPlan);
- assert.equal(session.players[0].balance,940);
+ assert.equal(session.players[0].balance,600);
  assert.equal(total(session),1000);
  assert.ok(validTower(restored));
 });

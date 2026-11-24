@@ -11,10 +11,10 @@ function floorScope(){
   const sessionId=ctx.betting?.floorId,arenaId=ctx.arenaId??'ward';
   const {width,height}=ctx.arenaDefinition??{};
   const arena=width!==height?arenaId+'@'+width+'x'+height:arenaId;
-  if(ctx.mode==='tower'&&ctx.towerRun&&sessionId)return {
-    key:`tower:${sessionId}:${ctx.towerPlayer}:${arena}`,
-    generation:ctx.towerRun.floorHistoryGeneration??0
-  };
+  if(ctx.mode==='tower'&&ctx.towerRun&&sessionId){
+    const playerKey=ctx.betting.players[ctx.towerPlayer]?.floorKey??ctx.towerPlayer;
+    return {key:`tower:${sessionId}:${playerKey}:${arena}`,generation:ctx.towerRun.floorHistoryGeneration??0};
+  }
   return {key:`${sessionId??'demo'}:${arena}`,sessionId,arena};
 }
 function remember({key,generation},source){

@@ -21,7 +21,7 @@ function setup({threshold=18,headMultiplier=1.5,enabled=true,tower=false}={}){
  for(const key of ['document','localStorage','Event'])globalThis[key]=dom.window[key];
  globalThis.matchMedia=()=>({matches:false});globalThis.ResizeObserver=class{observe(){}disconnect(){}};globalThis.requestAnimationFrame=()=>1;globalThis.cancelAnimationFrame=()=>{};
  const s=betNewSession(['First','Second'],1000);
- s.garage[0].wins=6;s.garage[0].stats=earnedStats(6);buyHat(s,0,1,2,50);
+ s.garage[0].wins=6;s.garage[0].stats=earnedStats(6);buyHat(s,0,1,2,500);
  ctx.arenaRenderer=null;ctx.towerPlayer=0;
  if(tower)s.towers[0]=newTower(0);
  initializeGame({session:s,entry:'betting',...(tower?{tower:structuredClone(s.towers[0])}:{})});
@@ -114,8 +114,8 @@ test('cancellation, reload and the next round restore a fresh trauma counter and
 test('tower trauma knockout rewards the last attacker once and advances a won floor',()=>{
  const env=setup({threshold:2,tower:true});try{
   const victim=ctx.robots[1],balance=env.s.players[0].balance;
-  hit(victim,'arm-1-lower',2,0);assert.equal(victim.unconscious,true);assert.equal(env.s.players[0].balance,balance+10);
-  assert.equal(hit(victim,'head',100,0),false);assert.equal(env.s.players[0].balance,balance+10);
+  hit(victim,'arm-1-lower',2,0);assert.equal(victim.unconscious,true);assert.equal(env.s.players[0].balance,balance+100);
+  assert.equal(hit(victim,'head',100,0),false);assert.equal(env.s.players[0].balance,balance+100);
   step(1/60);assert.equal(ctx.combat.finished,true);assert.equal(ctx.combat.winner,0);assert.equal(env.s.towers[0].level,2);
   assert.equal(ctx.robots[0].trauma,0);assert.equal(env.s.garage[0].wins,6);
  }finally{env.close();}
@@ -135,7 +135,7 @@ test('a completed knockout fight settles bets once and preserves the knocked-out
   hit(ctx.robots[2],'head',100);hit(ctx.robots[3],'head',100);step(1/60);
   assert.equal(ctx.combat.finished,true);assert.equal(ctx.combat.winner,1);assert.equal(env.s.phase,'settled');
   assert.deepEqual(env.s.garage[0],build);assert.equal(env.s.garage[1].wins,1);
-  assert.deepEqual(env.s.players.map(p=>p.balance),[980,967]);assert.equal(env.s.jackpot,3);
+  assert.deepEqual(env.s.players.map(p=>p.balance),[980,517]);assert.equal(env.s.jackpot,3);
   const receipt=structuredClone(env.s.lastResult);step(1/60);assert.deepEqual(env.s.lastResult,receipt);
   bettingSave();assert.ok(bettingLoad());
  }finally{env.close();}

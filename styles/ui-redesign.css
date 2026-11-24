@@ -2306,3 +2306,89 @@ html #robot-tag-hops-v22.fit-sheets #tower-upgrade-window .tower-upgrade-heading
     grid-template-columns:repeat(2,minmax(0,1fr));
   }
 }
+
+#robot-tag-hops-v22 #menu-player-create{
+  min-width:0;
+  min-height:36px;
+  padding:5px 10px;
+  border:1px solid #847655;
+  background:#2e3429;
+  color:#f0e2c2;
+  font:700 14px/1.15 var(--game-font-label);
+  cursor:pointer;
+}
+#robot-tag-hops-v22 #player-profiles-title{
+  margin:0 0 16px;
+  text-align:center;
+}
+#robot-tag-hops-v22 #player-profiles :is(.profile-cards,.profile-card-body){
+  display:grid;
+  gap:10px;
+}
+#robot-tag-hops-v22 #player-profiles .profile-card{
+  border:1px solid #817153;
+  border-radius:5px;
+  background:#2e3429;
+}
+#robot-tag-hops-v22 #player-profiles summary{
+  padding:10px 14px;
+  font:700 18px/1.3 var(--game-font-label);
+  overflow-wrap:anywhere;
+  cursor:pointer;
+}
+#robot-tag-hops-v22 #player-profiles .profile-card-body{
+  padding:12px 14px;
+  border-top:1px solid #817153;
+}
+#robot-tag-hops-v22 #player-profiles .profile-stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(135px,1fr));
+  gap:8px 14px;
+  margin:0;
+}
+#robot-tag-hops-v22 #player-profiles .profile-stats dt{
+  color:#ddc79b;
+  font-size:13px;
+}
+#robot-tag-hops-v22 #player-profiles .profile-stats dd{margin:0;font-weight:700}
+#robot-tag-hops-v22 #player-profiles :is(.profile-add,.profile-edit){
+  display:flex;
+  flex-wrap:wrap;
+  align-items:end;
+  gap:8px;
+}
+#robot-tag-hops-v22 #player-profiles .profile-add{margin-top:16px}
+#robot-tag-hops-v22 #player-profiles .profile-add[hidden]{display:none}
+#robot-tag-hops-v22 #player-profiles label{
+  display:grid;
+  flex:1 1 160px;
+  gap:4px;
+  min-width:0;
+}
+#robot-tag-hops-v22 #player-profiles input{
+  min-width:0;
+  width:100%;
+  min-height:44px;
+  padding:6px 8px;
+  border:1px solid #a69061;
+  background:#181e17;
+  color:inherit;
+  font:inherit;
+}
+#robot-tag-hops-v22 #player-profiles form button{
+  min-height:44px;
+  padding:6px 12px;
+  border:1px solid #a69061;
+  border-radius:5px;
+  background:#3d4734;
+  color:#f0e2c2;
+  font:700 14px/1.2 var(--game-font-label);
+  cursor:pointer;
+}
+#robot-tag-hops-v22 #player-profiles .profile-delete{
+  border-color:var(--ui-action-red-edge);
+  background:var(--ui-action-red);
+  color:var(--ui-action-red-text);
+}
+#robot-tag-hops-v22 #player-profiles .profile-status:empty{display:none}
+#robot-tag-hops-v22 #player-profiles .profile-status{margin:10px 0 0;color:#ddc79b}

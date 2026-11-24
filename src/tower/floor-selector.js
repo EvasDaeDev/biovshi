@@ -1,3 +1,4 @@
+import {towerOpponentReward} from '../boss/encounter.js';
 // The original preparation panel owns difficulty and arena choices. This
 // module only updates the saved floor plan; it never builds a combat scene.
 import {arenaDefinition,arenaDiagram} from '../game/arenas.js';
@@ -113,7 +114,7 @@ export function renderTowerFloorChoices({container,session,player,run,fallbackAr
    const difficulty=option.kind==='danger'?'ОПАСНО':option.kind==='boss'?'БОСС':'СТАНДАРТ';
    const type=option.kind==='danger'?(style?.name.toUpperCase()??'ИСПЫТАНИЕ'):
     option.kind==='boss'?'БОСС':'ОБЫЧНЫЙ';
-   const rewardPerHead=option.kind==='danger'?15:10;
+   const rewardPerHead=towerOpponentReward(false,option.kind==='danger');
    const enemyNames=[...counts].map(([id,n])=>(id==='boss'?'Босс':towerEnemyProfile(id).name)+(n>1?' ×'+n:''));
    const rows=[
     ['Сложность',difficulty],

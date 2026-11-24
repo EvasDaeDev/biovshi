@@ -1,3 +1,4 @@
+import {canIssueCoins} from '../betting/coins.js';
 import {awardArchiveNote,initializePlayerArchive} from './archive-notes.js';
 import {newInsurance,validInsurance,purchaseInsurance} from './insurance.js';
 import {towerSegmentDropChance,awardTowerSegments,normalizeTowerSegmentInventory,validTowerSegmentInventory} from './segments.js';
@@ -9,15 +10,12 @@ import {repairTowerArena,selectedTowerFloor,towerFloorCount,validTowerFloorPlan}
 import {TEST_BUILD} from '../build-channel.js';
 import {validTowerRerolls} from './economy.js';
 import {isBossFloor,hasBoss} from '../boss/config.js';
-import {ensureBossEncounter,validBossEncounter,bossFloorReward} from '../boss/encounter.js';
+import {ensureBossEncounter,validBossEncounter,bossFloorReward,TOWER_REWARD} from '../boss/encounter.js';
 import {newArtifactCollection,migrateArtifactInterval,validArtifactCollection,awardBossArtifact,artifactComplete,ARTIFACT_COUNT,ARTIFACT_COMPLETION_REWARD} from './artifacts.js';
 import {BASE_STATS,earnedStats,validStats,normalizeProsthetics} from '../garage/model.js';
 import {towerCycleInfo,towerCycleWins} from './cycles.js';
-export const TOWER_REWARD=10;
-export const towerEnemyReward=(t,victim=1)=>{
- const standard=bossFloorReward(t,victim);
- return selectedTowerFloor(t)?.kind==='danger'?standard+5:standard;
-};
+export {TOWER_REWARD};
+export const towerEnemyReward=(t,victim=1)=>bossFloorReward(t,victim,selectedTowerFloor(t)?.kind==='danger');
 export const floorEnemyCount=floor=>1+Math.floor(floor/2);
 export const towerEnemyCount=t=>t.legacyEnemyCount??towerFloorCount(t)??(hasBoss(t)?3:floorEnemyCount(t.level));
 export function newTower(patient=Math.floor(Math.random()*4),record=0,artifacts=newArtifactCollection(),insurance=newInsurance()){return {version:2,level:1,patient,stats:[...BASE_STATS],wins:0,prosthetics:[],graftProsthetics:[],donorTissues:[],mutations:[],mutationInventory:[],equippedMutations:[],nextMutationId:1,modInstallations:0,segmentInventory:[],equippedSegments:[],nextSegmentId:1,unseenSegmentIds:[],statChanges:0,surgeries:[],surgicalStock:[],nextSurgicalStockId:1,consumedDonorIds:[],arenaRerolls:0,arenaRerollLocked:false,rewarded:[],preparing:false,record,runKills:0,runCoins:0,artifacts,insurance};}
@@ -85,18 +83,18 @@ export function rewardTower(session,player,victim,by){
  const t=towerFor(session,player);
  if(by!==0||!Number.isInteger(victim)||victim<1||victim>towerEnemyCount(t)||t.preparing||t.rewarded.includes(victim))return false;
  const reward=towerEnemyReward(t,victim);
- const issued=session.players.length*session.capital+(session.topUps??0)+(session.towerEarned??0);
- if(issued+reward>16000000)return false;
+ if(!canIssueCoins(session,reward))return false;
  t.rewarded.push(victim);
  awardTowerDonors(t,victim,selectedTowerFloor(t)?.profiles?.[victim-1]??(hasBoss(t)&&victim===1?'boss':'basic'));
  session.players[player].balance+=reward;session.towerEarned=(session.towerEarned??0)+reward;
+ const owner=session.players[player];
+ owner.towerKnockouts=(owner.towerKnockouts??0)+1;
  if(t.runKills!==null)t.runKills++;if(t.runCoins!==null)t.runCoins+=reward;return true;
 }
 function creditArtifactRewards(session,player,t){
  for(let artifact=0;artifact<ARTIFACT_COUNT;artifact++){
   if(!artifactComplete(t.artifacts,artifact)||t.artifacts.rewardedArtifacts.includes(artifact))continue;
-  const issued=session.players.length*session.capital+(session.topUps??0)+(session.towerEarned??0);
-  if(issued+ARTIFACT_COMPLETION_REWARD>16000000)continue;
+  if(!canIssueCoins(session,ARTIFACT_COMPLETION_REWARD))continue;
   session.players[player].balance+=ARTIFACT_COMPLETION_REWARD;
   session.towerEarned=(session.towerEarned??0)+ARTIFACT_COMPLETION_REWARD;
   if(t.runCoins!==null)t.runCoins+=ARTIFACT_COMPLETION_REWARD;
@@ -105,6 +103,8 @@ function creditArtifactRewards(session,player,t){
 }
 export function completeTower(session,player,won,random=Math.random){
  const t=towerFor(session,player);
+ const owner=session.players[player];
+ owner.towerBattles=(owner.towerBattles??0)+1;
  if(won){const bossWon=hasBoss(t);
   // Snapshot prior wins BEFORE the artifact roll increments bossWins.
   // Both loot systems use the same per-boss cumulative replay penalty.
@@ -135,7 +135,7 @@ export function completeTower(session,player,won,random=Math.random){
    if(t.segmentRewardsEnabled)awardTowerSegments(t,t.level-1,random,towerSegmentDropChance(previousBossWins),previousBossWins);
    else grantTowerMutationDraft(t,random,previousBossWins);
   }
-  const owner=session.players[player],note=awardArchiveNote(owner.archiveNotes,random);
+  const note=awardArchiveNote(owner.archiveNotes,random);
   if(note!==undefined)owner.unreadArchiveNoteIds.push(note);
  }
  else {

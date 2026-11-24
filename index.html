@@ -82,6 +82,7 @@
       <div class="tower-menu-block">
         <div class="tower-menu-player">
           <label for="menu-player">ИГРОК</label>
+          <button id="menu-player-create" type="button" aria-haspopup="dialog" hidden>ВЫБРАТЬ ИГРОКА</button>
           <select id="menu-player" aria-label="Игрок"></select>
           <span id="menu-patient-preview" class="menu-patient-preview" aria-label="Пациент выбранного игрока"></span>
           <span id="menu-bank" aria-label="Баланс выбранного игрока"></span>
@@ -91,10 +92,22 @@
         <button id="tower-reset" type="button">СБРОС БАШНИ</button>
       </div>
       <button id="launch-totalizator" type="button" hidden>ТОТАЛИЗАТОР</button>
-      <button id="launch-setup" type="button">СОЗДАТЬ ИГРУ</button>
+      <button id="launch-setup" type="button" aria-haspopup="dialog">ПРОФИЛИ</button>
       <p class="launch-footnote">СИГНАЛ ПОДАН · ПАЦИЕНТЫ ГОТОВЫ</p>
     </div>
   </div>
+  <dialog id="player-profiles" class="paper-dialog" aria-modal="true" aria-labelledby="player-profiles-title">
+    <h2 id="player-profiles-title" tabindex="-1">ПРОФИЛИ</h2>
+    <div class="profile-cards"></div>
+    <form class="profile-add">
+      <label>Имя нового игрока<input name="name" type="text" maxlength="32" required autocomplete="off"></label>
+      <button type="submit">ДОБАВИТЬ ИГРОКА</button>
+    </form>
+    <p class="profile-status" role="status"></p>
+    <footer class="paper-dialog-actions">
+      <button type="button" class="paper-dialog-primary" data-paper-dismiss>ЗАКРЫТЬ</button>
+    </footer>
+  </dialog>
   <dialog id="startup-intro" class="paper-dialog" aria-modal="true" aria-labelledby="startup-intro-title">
     <h2 id="startup-intro-title" tabindex="-1" autofocus>ЭКЦЕПРИ</h2>
     <p class="paper-dialog-subtitle"><em>Экспериментальный центр протезирования и имплантации</em></p>
@@ -126,7 +139,7 @@
     <div id="tower-stats" class="bet-fields"></div>
     <div id="tower-prep-artifacts" hidden></div>
     <p id="tower-insurance-status" role="status" hidden></p>
-    </section></div><p id="tower-prep-error" role="status"></p><div class="bet-actions"><button id="tower-insurance" type="button" aria-live="polite">ДМС · 50</button><button id="tower-fight" class="bet-primary" type="button">НА ЭТАЖ</button></div>
+    </section></div><p id="tower-prep-error" role="status"></p><div class="bet-actions"><button id="tower-insurance" type="button" aria-live="polite">ДМС</button><button id="tower-fight" class="bet-primary" type="button">НА ЭТАЖ</button></div>
   </div></div>
   <div id="tower-controls" hidden><div id="tower-stick" role="group" aria-label="Джойстик движения"><span></span></div></div>
   <div class="viz-controls atmosphere-controls">

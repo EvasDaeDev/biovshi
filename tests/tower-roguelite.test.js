@@ -179,7 +179,7 @@ test('chosen floor and composition persist, with at most ten combatants includin
   assert.ok(chosen.profiles.length+1<=10);
   assert.ok(chosen.profiles.length+1<=TOWER_ARENA_CAPACITY[chosen.arenaId]);
   assert.ok(chosen.profiles.some(id=>id!=='basic'),'danger must include a specialist');
-  assert.equal(towerEnemyReward(run),15);
+  assert.equal(towerEnemyReward(run),150);
   assert.equal(selectTowerFloor(run,99),false);
   run.rewarded=[1];
   assert.equal(selectTowerFloor(run,0),false,'cannot change difficulty after a paid knockout');
@@ -227,7 +227,7 @@ test('DMS snapshots and validates the chosen encounter without rewriting coins o
  purchaseInsurance(s,0,t);
  assert.deepEqual(t.insurance.checkpoint.floorPlan,before);
  assert.equal(validInsurance(t.insurance,t.record),true);
- assert.equal(s.players[0].balance,450);
+ assert.equal(s.players[0].balance,200);
  selectTowerFloor(t,0);
  assert.deepEqual(t.insurance.checkpoint.floorPlan,before,'later choices cannot mutate checkpoint');
 });

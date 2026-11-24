@@ -1,3 +1,4 @@
+import {COIN_SCALE,MAX_ISSUED_COINS} from '../betting/coins.js';
 // First playable Tower build-modification set. Bonuses are expressed as
 // fractional EFFECTIVE skill points so existing movement, turning, and combat
 // curves remain authoritative. Never mutate earned/base stats or prosthetics.
@@ -96,7 +97,7 @@ export function towerAttackInterval(combat,{timing=CONFIG.combat,spine=1}={}){
 }
 // Simulation-only; does not modify active combat bonuses until balancing is approved.
 export const towerRarityMultiplier=(rarity,step=.12)=>1+Math.min(5,Math.max(0,rarity))*step;
-export const towerMutationInstallPrice=run=>Math.ceil(100*Math.pow(1.55,run?.modInstallations??0));
+export const towerMutationInstallPrice=run=>Math.ceil(100*Math.pow(1.55,run?.modInstallations??0))*COIN_SCALE;
 // Old saves used `mutations` for both ownership and equipment. These are
 // grandfathered as equipped, without retroactive installation fees.
 export function normalizeTowerMutationInventory(run){
@@ -279,7 +280,7 @@ export function equipTowerMutation(session,player,run,id,replaceId=null){
   throw Error('Все шесть слотов заняты. Сначала выбери замену или сними модуль.');
  const buyer=session.players?.[player],price=towerMutationInstallPrice(run),spent=session.mutationSpent??0;
  if(!buyer||buyer.balance<price)throw Error('Недостаточно монет для установки. Награда остаётся на складе.');
- if(!Number.isSafeInteger(spent)||spent+price>16000000||!Number.isSafeInteger(price))throw Error('Недопустимая стоимость.');
+ if(!Number.isSafeInteger(spent)||spent+price>MAX_ISSUED_COINS||!Number.isSafeInteger(price))throw Error('Недопустимая стоимость.');
  // One transaction: validate everything before changing ownership, cash or bonuses.
  if(replaceId!==null)run.equippedMutations=run.equippedMutations.filter(existing=>existing!==replaceId);
  run.equippedMutations.push(id);run.modInstallations++;

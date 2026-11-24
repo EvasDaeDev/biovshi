@@ -4,13 +4,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {TOWER_MUTATION_IDS,towerMutationInstallPrice} from '../src/tower/mutations.js';
+import {COIN_SCALE} from '../src/betting/coins.js';
+import {STARTING_CAPITAL} from '../src/betting/ledger.js';
+import {INSURANCE_START_PRICE,insuranceCost} from '../src/tower/insurance.js';
+import {towerOpponentReward} from '../src/boss/encounter.js';
+import {ARTIFACT_COMPLETION_REWARD} from '../src/tower/artifacts.js';
 import {towerRarityScenario,TOWER_RARITY_SCENARIO_STEPS} from '../src/tower/rarity-scenarios.js';
 
 export const PROGRESSION_PRICE_MODELS=Object.freeze([
- {name:'100 × 1.45^N',first:100,growth:1.45},
- {name:'100 × 1.55^N',first:100,growth:1.55},
- {name:'100 × 1.70^N',first:100,growth:1.70},
- {name:'125 × 1.45^N',first:125,growth:1.45}
+ {name:'1000 × 1.45^N',first:100,growth:1.45},
+ {name:'1000 × 1.55^N',first:100,growth:1.55},
+ {name:'1000 × 1.70^N',first:100,growth:1.70},
+ {name:'1250 × 1.45^N',first:125,growth:1.45}
 ]);
 export const PROGRESSION_POLICIES=Object.freeze([
  {name:'осторожная',win:.94,kill:.17,bossKill:.25,danger:.35,insurance:.80,reroll:.06,surgery:.32,replace:.08,skills:.08},
@@ -18,9 +23,9 @@ export const PROGRESSION_POLICIES=Object.freeze([
  {name:'агрессивная',win:.88,kill:.52,bossKill:.70,danger:.80,insurance:.32,reroll:.24,surgery:.60,replace:.16,skills:.22}
 ]);
 export const PROGRESSION_MILESTONES=Object.freeze([5,10,15,20,25,30,60,90,120]);
-const START=100,MAX_FLOOR=120;
+const START=STARTING_CAPITAL,MAX_FLOOR=120;
 const rng=seed=>{let x=(seed>>>0)||0x9e3779b9;return ()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return (x>>>0)/4294967296;};};
-const price=(model,n)=>Math.ceil(model.first*model.growth**n);
+const price=(model,n)=>Math.ceil(model.first*model.growth**n)*COIN_SCALE;
 const copy=xs=>xs.map(x=>({...x}));
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const pct=(xs,p)=>{if(!xs.length)return null;const a=[...xs].sort((x,y)=>x-y);return a[Math.floor((a.length-1)*p)];};
@@ -32,7 +37,7 @@ export function simulateTowerProgression({seed=1,policy=PROGRESSION_POLICIES[1],
  const random=rng((seed*2654435761+1013904223)>>>0),milestones={},cycleEntry=[];
  let bank=START,earned=0,spent=0,level=1,maxCleared=0,fights=0,losses=0,returns=0,resets=0;
  let stock=[],equipped=[],paidInstalls=0,nextItem=1,ownedTotal=0,operations=0;
- let policyPrice=50,checkpoint=null,insurancePurchases=0,insuranceRenewals=0;
+ let policyPrice=INSURANCE_START_PRICE,checkpoint=null,insurancePurchases=0,insuranceRenewals=0;
  let waitingFights=0,rerolls=0,skills=0,operationPurchases=0,critCapped=0,cooldownCapped=0;
  const debit=n=>{if(!Number.isSafeInteger(n)||n<0||bank<n)return false;bank-=n;spent+=n;return true;};
  const credit=n=>{bank+=n;earned+=n;};
@@ -54,22 +59,22 @@ export function simulateTowerProgression({seed=1,policy=PROGRESSION_POLICIES[1],
   }
  };
  const prepare=()=>{
-  if(level>1&&(level-1)%5===0&&random()<policy.insurance&&debit(policyPrice)){
+  if(level>1&&(level-1)%5===0&&random()<policy.insurance&&debit(insuranceCost({price:policyPrice,checkpoint}))){
    const renewal=checkpoint!==null;
    checkpoint=snap();insurancePurchases++;if(renewal)insuranceRenewals++;
-   policyPrice+=Math.ceil(policyPrice*(renewal?.03:.10));
+   if(renewal)policyPrice+=Math.ceil(policyPrice/10);
   }
   if(level>=11&&operations<cap(level)&&random()<policy.surgery){
-   const cost=[60,100,150][operations];
+   const cost=[60,100,150][operations]*COIN_SCALE;
    if(debit(cost)){operations++;operationPurchases++;}
   }else if(operations&&random()<policy.replace){
-   if(debit(Math.max(60,Math.ceil([60,100,150][Math.min(2,operations)]*.85))))operationPurchases++;
+   if(debit(Math.max(60,Math.ceil([60,100,150][Math.min(2,operations)]*.85))*COIN_SCALE))operationPurchases++;
   }
   if(random()<policy.reroll){
    const amount=random()<.22?2:1;
-   for(let i=0;i<amount;i++)if(debit(Math.ceil(50*1.2**i)))rerolls++;
+   for(let i=0;i<amount;i++)if(debit(100))rerolls++;
   }
-  if(level>5&&random()<policy.skills&&debit(50))skills++;
+  if(level>5&&random()<policy.skills)skills++;
   install();
  };
  while(fights<maxFights&&level<=MAX_FLOOR){
@@ -88,7 +93,7 @@ export function simulateTowerProgression({seed=1,policy=PROGRESSION_POLICIES[1],
   const win=random()<chance;fights++;
   for(let id=0;id<opponents;id++){
    const personal=(boss&&id===0?policy.bossKill:policy.kill)*(win?1:.5);
-   if(random()<personal)credit(boss&&id===0?100:danger?15:10);
+   if(random()<personal)credit(towerOpponentReward(boss&&id===0,danger));
   }
   if(win){
    maxCleared=Math.max(maxCleared,level);
@@ -98,13 +103,13 @@ export function simulateTowerProgression({seed=1,policy=PROGRESSION_POLICIES[1],
     stock.push({id:nextItem++,type:kinds[Math.floor(random()*kinds.length)],rarity:Math.min(5,cycle)});
     ownedTotal++;
     // Rare collection completion is only a simple proxy, not the real drop engine.
-    if(random()<.03)credit(333);
+    if(random()<.03)credit(ARTIFACT_COMPLETION_REWARD);
    }
    if(PROGRESSION_MILESTONES.includes(level)&&!milestones[level])
     milestones[level]={bank,installed:equipped.length,owned:stock.length+equipped.length,fights};
    if(local===30){
     cycleEntry.push({from:level,to:level+1,bank,installed:equipped.length,operations});
-    checkpoint=null;policyPrice=50;
+    checkpoint=null;policyPrice=INSURANCE_START_PRICE;
    }
    level++;
   }else{
@@ -170,7 +175,7 @@ export function progressionMarkdown(data){
   const cap=[r.critAtCap?'крит':'',r.cooldownAtCap?'откат':''].filter(Boolean).join(',')||'нет';
   out.push('| '+[set.name,rank,Math.round(step*100)+'%',r.direct.map(round).join('/'),r.synergy.map(round).join('/'),round(r.crit*100)+'%',round(r.cooldownMultiplier*100)+'%',cap].join(' | ')+' |');
  }
- out.push('','## Этажи при текущей гипотетической цене 100 × 1.55^N и среднем поведении','',
+ out.push('','## Этажи при текущей гипотетической цене 1000 × 1.55^N и среднем поведении','',
   '| Этаж | Доля достигших | Банк P10/мед/P90 | Получено | Установлено | Число боёв до этажа |',
   '|---:|---:|---|---|---|---|');
  const current=data.rows.find(r=>r.model===PROGRESSION_PRICE_MODELS[1].name&&r.step===.12&&r.policy==='средняя');
@@ -179,7 +184,7 @@ export function progressionMarkdown(data){
  out.push('','## Ограничения','',
   '- В модели учтены условные победы/поражения, возвраты по ДМС, платное продление, операции, замены, рероллы, монеты за личные добивания и переходы циклов A–C.',
   '- Сложность A–C и опасных этажей представлена предполагаемыми штрафами к вероятности победы. Это не настоящая работа AI.',
-  '- Бонус 333 монеты смоделирован редким независимым событием, а не настоящей системой коллекции.',
+  '- Бонус 3330 монет смоделирован редким независимым событием, а не настоящей системой коллекции.',
   '- При поражении без ДМС экипировка сбрасывается; при страховом возврате контрольная точка расходуется без возврата монет.',
   '- Рубли в отчёте не используются: все суммы — игровые монеты. Процентили на рубежах посчитаны среди дошедших, отдельно дана доля дошедших.',
   '- Следующий обязательный шаг — headless-бои с реальной физикой, командными сценариями и замерами выживаемости боссов. До них цены и редкость не утверждать.','');

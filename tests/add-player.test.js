@@ -39,7 +39,7 @@ test('joining a later round preserves existing money and history, survives reloa
   const previous=structuredClone(s);bettingOpen();
   const player=betAddPlayer(s,'  Третий  ');
   const {archiveNotes,unreadArchiveNoteIds,...details}=player;
-  assert.deepEqual(details,{id:2,name:'Третий',balance:100});
+  assert.deepEqual(details,{id:2,name:'Третий',balance:100,floorKey:'2',towerBattles:0,towerKnockouts:0});
   assert.equal(archiveNotes.length,1);
   assert.deepEqual(unreadArchiveNoteIds,archiveNotes);
   assert.ok(archiveNotes[0]>=1&&archiveNotes[0]<=52);
@@ -91,6 +91,42 @@ test('join rejects closed rounds, invalid names and chip emission overflow witho
  const s=betNewSession(['Один'],100);
  for(const name of ['',null,'x'.repeat(33)])assert.throws(()=>betAddPlayer(s,name));
  s.phase='running';assert.throws(()=>betAddPlayer(s,'Два'));s.phase='settled';assert.throws(()=>betAddPlayer(s,'Два'));
- s.phase='betting';s.topUps=15999900;const before=JSON.stringify(s);
+ s.phase='betting';s.topUps=159999900;const before=JSON.stringify(s);
  assert.throws(()=>betAddPlayer(s,'Два'));assert.equal(JSON.stringify(s),before);
+});
+
+test('removing a profile keeps the other Tower run, its floor key, and the shared ledger on reload',async()=>{
+ const {removeProfile}=await import('../src/betting/profiles.js');
+ const {towerFor,completeTower,rewardTower,buyTowerInsurance}=await import('../src/tower/model.js');
+ const {buyHat}=await import('../src/garage/model.js');
+ const dom=setup();
+ try{
+  const session=ctx.betting=betNewSession(['Первый','Второй']);
+  const second=towerFor(session,1);
+  rewardTower(session,1,1,0);
+  completeTower(session,1,true,()=>.99);
+  buyTowerInsurance(session,1);
+  buyHat(session,0,0,1,100);
+  buyHat(session,1,1,2,100);
+  session.towerPlayerId=1;
+  const balance=session.players[1].balance;
+  const archive=[...session.players[1].archiveNotes];
+  removeProfile(session,0);
+  assert.equal(session.towerPlayerId,0);
+  assert.equal(session.garage[0].head.player,null);
+  assert.equal(session.garage[1].head.player,0);
+  assert.equal(session.garage[1].patron,0);
+  assert.equal(session.towers[0],second);
+  const newcomer=betAddPlayer(session,'Третий');
+  assert.equal(newcomer.id,1);
+  assert.equal(newcomer.floorKey,'2');
+  bettingSave();const saved=bettingLoad();
+  assert.ok(saved);
+  assert.equal(saved.players[0].floorKey,'1');
+  assert.equal(saved.players[0].balance,balance);
+  assert.deepEqual(saved.players[0].archiveNotes,archive);
+  assert.equal(saved.players[0].towerBattles,1);
+  assert.equal(saved.players[0].towerKnockouts,1);
+  assert.equal(saved.towers[0].insurance.checkpoint.level,2);
+ }finally{ctx.root.__disposeTag();dom.window.close();}
 });

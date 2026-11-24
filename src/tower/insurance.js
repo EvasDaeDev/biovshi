@@ -8,9 +8,11 @@ import {validTowerSurgeries,validTowerSurgicalStock} from './surgery.js';
 import {normalizeTowerGraftProsthetics} from './anatomy.js';
 import {validTowerDonorState} from './donors.js';
 import {validTowerRerolls} from './economy.js';
-export const newInsurance=()=>({price:50,checkpoint:null});
+export const INSURANCE_START_PRICE=300;
+export const newInsurance=()=>({price:INSURANCE_START_PRICE,checkpoint:null});
+export const insuranceCost=policy=>policy.checkpoint?Math.ceil(policy.price/5):policy.price;
 export function validInsurance(policy,record){
- if(!policy||!Number.isSafeInteger(policy.price)||policy.price<50)return false;
+ if(!policy||!Number.isSafeInteger(policy.price)||policy.price<INSURANCE_START_PRICE)return false;
  const c=policy.checkpoint;if(c===null)return true;
  return c&&Number.isSafeInteger(c.level)&&c.level>=1&&c.level<=record+1&&c.wins===c.level-1
   &&Number.isInteger(c.patient)&&c.patient>=0&&c.patient<4&&validStats(c.stats,towerCycleWins(c.level))
@@ -32,8 +34,8 @@ export function purchaseInsurance(session,player,tower){
  const policy=tower.insurance,buyer=session.players[player];
  const renewal=Boolean(policy.checkpoint);
  if(renewal&&tower.level<=policy.checkpoint.level)throw Error('ДМС уже действует на этом или более высоком этаже.');
- if(!buyer||buyer.balance<policy.price)throw Error('Недостаточно монет для ДМС.');
- const price=policy.price;
+ const price=insuranceCost(policy);
+ if(!buyer||buyer.balance<price)throw Error('Недостаточно монет для ДМС.');
  policy.checkpoint={level:tower.level,wins:tower.wins,patient:tower.patient,stats:[...tower.stats],prosthetics:[...tower.prosthetics],
   mutations:[...(tower.mutations??[])],mutationInventory:structuredClone(tower.mutationInventory??[]),
   equippedMutations:[...(tower.equippedMutations??[])],nextMutationId:tower.nextMutationId??1,
@@ -50,6 +52,6 @@ export function purchaseInsurance(session,player,tower){
   ...(tower.bossEncounter?{bossEncounter:structuredClone(tower.bossEncounter)}:{}),
   ...(tower.floorPlan?{floorPlan:structuredClone(tower.floorPlan)}:{})};
  buyer.balance-=price;session.insuranceSpent=(session.insuranceSpent??0)+price;
- policy.price=price+Math.ceil(price*(renewal?3:10)/100);
+ if(renewal)policy.price+=Math.ceil(policy.price/10);
  return price;
 }

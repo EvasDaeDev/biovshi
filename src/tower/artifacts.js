@@ -1,3 +1,4 @@
+import {COIN_SCALE} from '../betting/coins.js';
 import {BOSS_FLOOR_INTERVAL,TEST_BUILD} from '../build-channel.js';
 import {isBossFloor} from '../boss/config.js';
 export const ARTIFACT_COUNT=4;
@@ -6,7 +7,7 @@ export const ARTIFACT_PIECE_COUNT=ARTIFACT_COUNT*PIECES_PER_ARTIFACT;
 export const ARTIFACT_NAMES=['Мишка','Компьютер','Грааль','Водка и огурец'];
 
 // Collection v2 is independent of the lifetime record and survives run resets.
-export const ARTIFACT_COMPLETION_REWARD=333;
+export const ARTIFACT_COMPLETION_REWARD=333*COIN_SCALE;
 export function newArtifactCollection(){return {version:2,bossEvery:BOSS_FLOOR_INTERVAL,pieces:[],bossWins:{},rewardedArtifacts:[]};}
 export function migrateArtifactInterval(collection){
  const old=collection.bossEvery??(TEST_BUILD?2:5);

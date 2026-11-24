@@ -5,7 +5,7 @@ import {towerFor,completeTower,buyTowerSurgery,buyTowerInsurance,normalizeTower,
 import {chooseTowerMutation} from '../src/tower/mutations.js';
 import {validTowerSurgicalStock,towerSurgeryReplacePrice} from '../src/tower/surgery.js';
 
-function ready(capital=1200){
+function ready(capital=12000){
  const session=betNewSession(['Пациент'],capital),run=towerFor(session,0);
  while(run.level<11){
   if(run.mutationDraft)chooseTowerMutation(run,run.mutationDraft.options[0]);
@@ -57,7 +57,7 @@ test('a reused implant retains its ID across removal and later paid installation
 test('DMS checkpoint preserves stock identity and old checkpoint is consumed once',()=>{
  const {session,run}=ready();stockDrive(session,run);
  const bank=session.players[0].balance;
- assert.equal(buyTowerInsurance(session,0),50);
+ assert.equal(buyTowerInsurance(session,0),300);
  assert.deepEqual(run.insurance.checkpoint.surgicalStock,run.surgicalStock);
  assert.equal(run.insurance.checkpoint.nextSurgicalStockId,run.nextSurgicalStockId);
  buyTowerSurgery(session,0,'drive','leg--1-upper',null,'arm-1-upper','s1');
@@ -67,7 +67,7 @@ test('DMS checkpoint preserves stock identity and old checkpoint is consumed onc
  assert.equal(recovered.nextSurgicalStockId,2);
  assert.equal(recovered.insurance.checkpoint,null);
  assert.equal(validTower(recovered),true);
- assert.equal(session.players[0].balance,bank-50-towerSurgeryReplacePrice(run),
+ assert.equal(session.players[0].balance,bank-300-towerSurgeryReplacePrice(run),
   'restoring insured equipment does not refund paid work after the checkpoint');
 });
 

@@ -38,7 +38,7 @@ test('compiled test channel creates a floor-five boss and isolates sessions, set
   localStorage.setItem('biovshi.local-totalizator.v1','untouched main save');
   localStorage.setItem('biovshi.tutorial.v1','untouched main tutorial');
   localStorage.setItem('biovshi.post-effects.v1','on');localStorage.setItem('biovshi.tower-control.v1','control');
-  f.boss.damage('head',0,100);completeTower(f.session,0,true,()=>0);bettingSave();const saved=bettingLoad();assert.equal(saved.players[0].balance,1100);assert.equal(saved.towers[0].artifacts.bossWins[5],1);assert.equal(saved.towers[0].artifacts.pieces.length,1);
+  f.boss.damage('head',0,100);completeTower(f.session,0,true,()=>0);bettingSave();const saved=bettingLoad();assert.equal(saved.players[0].balance,1750);assert.equal(saved.towers[0].artifacts.bossWins[5],1);assert.equal(saved.towers[0].artifacts.pieces.length,1);
   assert.equal(localStorage.getItem('biovshi.local-totalizator.v1'),'untouched main save');
   writeTutorial(localStorage,freshTutorial());assert.equal(TUTORIAL_STORAGE,'biovshi.test.tutorial.v1');
   assert.ok(localStorage.getItem(TUTORIAL_STORAGE));assert.equal(localStorage.getItem('biovshi.tutorial.v1'),'untouched main tutorial');

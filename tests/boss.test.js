@@ -96,16 +96,16 @@ test('long combined bosses spawn safely with several independent arena seeds',()
  }
 });
 
-test('boss ignores cumulative trauma, but head destruction still kills and pays exactly 100 once',()=>{
+test('boss ignores cumulative trauma, but head destruction still kills and pays exactly 750 once',()=>{
  const f=startBossScenario({variant:'arms'});
  try{
   const r=f.boss;
   for(const key of r.hp.keys())if(/^(arm|leg)-/.test(key))assert.equal(r.damage(key,0,3),true);
   assert.equal(r.trauma,0);assert.ok(r.mobile);assert.ok(r.hasHead);
   assert.equal(r.damage('head',0,100),true);assert.equal(r.mobile,false);assert.equal(r.unconscious,false);
-  assert.equal(f.session.players[0].balance,1100);assert.equal(f.tower.runCoins,100);assert.equal(ctx.towerFloorCoins,100);
-  assert.match(document.querySelector('#tower-reward-toast').textContent,/100/);assert.equal(rewardTower(f.session,0,1,0),false);
-  bettingSave();const loaded=bettingLoad();assert.ok(loaded);assert.equal(loaded.players[0].balance,1100);assert.equal(loaded.towerEarned,100);assert.ok(validTower(loaded.towers[0]));
+  assert.equal(f.session.players[0].balance,1750);assert.equal(f.tower.runCoins,750);assert.equal(ctx.towerFloorCoins,750);
+  assert.match(document.querySelector('#tower-reward-toast').textContent,/750/);assert.equal(rewardTower(f.session,0,1,0),false);
+  bettingSave();const loaded=bettingLoad();assert.ok(loaded);assert.equal(loaded.players[0].balance,1750);assert.equal(loaded.towerEarned,750);assert.ok(validTower(loaded.towers[0]));
  }finally{f.close();}
 });
 
@@ -122,7 +122,7 @@ test('all six movement limbs must be lost before blood-loss countdown destroys a
   for(let i=0;i<16*60&&!ctx.combat.finished;i++)step(1/60);
   assert.equal(r.mobile,false);assert.equal(r.unconscious,false);assert.equal(r.knockoutCause,'blood-loss');assert.equal(r.hasHead,true);
   assert.equal(events.filter(e=>e.robot===1).length,1);assert.equal(events.find(e=>e.robot===1).reason,'погиб');assert.equal(ctx.combat.winner,0);
-  assert.equal(f.session.players[0].balance,1100);assert.equal(f.tower.level,6);
+  assert.equal(f.session.players[0].balance,1750);assert.equal(f.tower.level,6);
  }finally{off();f.close();}
 });
 
@@ -202,7 +202,7 @@ test('boss encounter survives serialization, rerolls only on the next boss floor
  Object.assign(t,{level:10,wins:9,stats:[6,6,6],record:9});assert.equal(ensureBossEncounter(t,()=>0).variant,'long');
  const old=JSON.parse(JSON.stringify(t));delete old.bossEncounter;old.rewarded=[1,2];s.towers[0]=old;
  assert.equal(towerEnemyCount(towerFor(s,0)),6);assert.equal(old.legacyBossFloor,true);assert.equal(rewardTower(s,0,1,0),false);assert.equal(rewardTower(s,0,3,0),false,'preparing floors cannot pay');
- old.preparing=false;const before=s.players[0].balance;assert.equal(rewardTower(s,0,3,0),true);assert.equal(s.players[0].balance-before,10);
+ old.preparing=false;const before=s.players[0].balance;assert.equal(rewardTower(s,0,3,0),true);assert.equal(s.players[0].balance-before,100);
 });
 
 test('extra arms do not multiply simultaneous strikes on a single player; boss timing matches ordinary patients',()=>{
@@ -268,17 +268,17 @@ test('named boss announcement, card, arena label and combat identity survive sav
 });
 
 
-test('boss floor is a four-way free-for-all and pays 100 for boss, 10 for a patient, nothing for other killers',()=>{
+test('boss floor is a four-way free-for-all and pays 750 for boss, 100 for a patient, nothing for other killers',()=>{
  const f=startBossScenario({variant:'arms',arena:'ring'});
  try{
   assert.equal(ctx.robots.length,4);assert.equal(ctx.robots.filter(r=>r.isBoss).length,1);
   for(const robot of ctx.robots)assert.deepEqual(activeOpponents(robot.id).map(r=>r.id),[0,1,2,3].filter(id=>id!==robot.id));
   ctx.robots[1].damage('head',0,100);step(1/60);
-  assert.equal(f.session.players[0].balance,1100);assert.equal(ctx.combat.finished,false,'the two ordinary patients keep the floor running');
-  ctx.robots[2].damage('head',3,100);assert.equal(f.session.players[0].balance,1100);
+  assert.equal(f.session.players[0].balance,1750);assert.equal(ctx.combat.finished,false,'the two ordinary patients keep the floor running');
+  ctx.robots[2].damage('head',3,100);assert.equal(f.session.players[0].balance,1750);
   ctx.robots[3].damage('head',0,100);step(1/60);
-  assert.equal(f.session.players[0].balance,1110);assert.equal(ctx.combat.finished,true);assert.equal(ctx.combat.winner,0);
-  assert.equal(f.tower.artifacts.pieces.length,1);assert.equal(ctx.towerOutcome.floorCoins,110);
+  assert.equal(f.session.players[0].balance,1850);assert.equal(ctx.combat.finished,true);assert.equal(ctx.combat.winner,0);
+  assert.equal(f.tower.artifacts.pieces.length,1);assert.equal(ctx.towerOutcome.floorCoins,850);
  }finally{f.close();}
 });
 

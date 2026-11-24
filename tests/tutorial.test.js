@@ -90,6 +90,8 @@ test('insurance gets a dedicated preparation target and reads the live policy ra
  const s=setup({tower:true});
  try{
   s.doc.querySelector('#launch-overlay').hidden=true;
+  ctx.betting.players[0].balance=1000;ctx.betting.capital=1000;
+  towerPreparation();
   const step=TUTORIAL_CHAPTERS['tower-ready'].steps.find(step=>step.target==='#tower-insurance');
   assert.ok(step);assert.ok(ctx.root.querySelector(step.target));
   const before=step.text(ctx);ctx.root.querySelector('#tower-insurance').click();

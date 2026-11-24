@@ -90,10 +90,10 @@ export function initializeGameNavigation(){
   const loading=doc.querySelector('#texture-loading[aria-busy]');
   if(loading){loading.querySelector('.loading-dismiss:not([hidden])')?.click();return;}
   if(root.querySelector('#landscape-required[open],#tower-cycle-notice[open]'))return;
+  if(root.querySelector('#game-action-confirm[open]')){root.querySelector('#game-action-confirm-close,.game-action-confirm-close')?.click();return;}
   const paperDialog=root.querySelector('.paper-dialog[open]');
   if(paperDialog){paperDialog.querySelector('[data-paper-dismiss]').click();return;}
   if(root.querySelector('#game-tutorial[open]')){root.querySelector('#game-tutorial .tutorial-skip')?.click();return;}
-  if(root.querySelector('#game-action-confirm[open]')){root.querySelector('#game-action-confirm-close,.game-action-confirm-close')?.click();return;}
   if(root.querySelector('#tower-module-replacement[open]')){root.querySelector('.tower-replacement-close')?.click();return;}
   if(root.querySelector('.betting-input-dialog[open]')){root.querySelector('.betting-input-dialog [data-cancel]')?.click();return;}
   if(ctx.settingsOpen){root.querySelector('#arena-settings-close')?.click();return;}

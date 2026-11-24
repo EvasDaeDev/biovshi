@@ -43,7 +43,7 @@ test('difficulty and arena selection live in the original preparation panel and 
   assert.match(css,/#robot-tag-hops-v22 #tower-floor-preview \.tower-arena-dice \.tower-reroll-button\s*\{[\s\S]*?width:94px;[\s\S]*?height:94px;/);
   assert.match(css,/#robot-tag-hops-v22 #tower-floor-preview \.tower-arena-dice \.tower-reroll-price img\s*\{[\s\S]*?width:1em;[\s\S]*?height:1em;/);
   container.querySelector('.tower-reroll-caption').click();reroll.click();
-  assert.equal(session.players[0].balance,290,'stale button cannot double-charge');
+  assert.equal(session.players[0].balance,200,'stale button cannot double-charge');
   assert.equal(run.arenaRerolls,1);
   assert.equal(run.floorPlan.options[0].arenaId,run.floorPlan.options[1].arenaId);
   assert.notEqual(run.floorPlan.options[0].arenaId,'ward');
@@ -79,7 +79,7 @@ test('late-floor crowded fight can reroll from columns to ward without changing 
   document.querySelector('.tower-reroll-caption').click();
   assert.equal(run.floorPlan.options[0].arenaId,'ward');
   assert.deepEqual(run.floorPlan.options.map(o=>o.profiles),before);
-  assert.equal(session.players[0].balance,290);
+  assert.equal(session.players[0].balance,200);
   assert.ok(view);
  }finally{globalThis.document=oldDocument;dom.window.close();}
 });

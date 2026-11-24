@@ -112,7 +112,7 @@ test('module installation and free removal require confirmation; closing either 
   document.querySelector('.tower-mutation-install').click();
   let popup=document.querySelector('#game-action-confirm');
   assert.ok(popup);
-  assert.match(popup.querySelector('.game-action-confirm-submit').textContent,/−100/);
+  assert.match(popup.querySelector('.game-action-confirm-submit').textContent,/−1\s000/);
   assert.ok(popup.querySelector('.game-action-confirm-submit .chip-icon'));
   assert.deepEqual(t.mutations,[]);
   popup.querySelector('.game-action-confirm-close').click();
@@ -120,7 +120,7 @@ test('module installation and free removal require confirmation; closing either 
   assert.deepEqual(t.mutations,[]);
   document.querySelector('.tower-mutation-install').click();
   confirmPaidAction();
-  assert.equal(s.players[0].balance,balance-100);
+  assert.equal(s.players[0].balance,balance-1000);
   assert.equal(t.equippedMutations.length,1);
   document.querySelector('.tower-mutation-install').click();
   popup=document.querySelector('#game-action-confirm');
@@ -131,7 +131,7 @@ test('module installation and free removal require confirmation; closing either 
   document.querySelector('.tower-mutation-install').click();
   confirmPaidAction();
   assert.equal(t.equippedMutations.length,0);
-  assert.equal(s.players[0].balance,balance-100,'free removal never charges or refunds coins');
+  assert.equal(s.players[0].balance,balance-1000,'free removal never charges or refunds coins');
   assert.equal(t.mutationInventory.length,1,'removed item remains owned');
  }finally{close(dom);}
 });
@@ -178,7 +178,7 @@ function unlockSurgeryForTest(session,run){
 }
 
 test('surgeon lets the player buy one body-specific operation and saves combat impact',()=>{
- const s=betNewSession(['Хирург'],300),t=towerFor(s,0);
+ const s=betNewSession(['Хирург'],3000),t=towerFor(s,0);
  unlockSurgeryForTest(s,t);
  const dom=setup(s,t,'ward');
  try{
@@ -196,22 +196,22 @@ test('surgeon lets the player buy one body-specific operation and saves combat i
   assert.equal(purchase.disabled,false);
   const base=patientCombatStats(0,ctx.robots[0]).effective[1];
   purchase.click();confirmPaidAction();
-  assert.equal(s.players[0].balance,240);
-  assert.equal(s.surgerySpent,60);
+  assert.equal(s.players[0].balance,2400);
+  assert.equal(s.surgerySpent,600);
   assert.deepEqual(t.surgeries,[{site:'arm-1-upper',procedure:'impact'}]);
   assert.deepEqual(ctx.towerGarage[0].surgeries,t.surgeries);
   assert.ok(patientCombatStats(0,ctx.robots[0]).effective[1]>=base+.45-1e-6);
   assert.match(panel.textContent,/ХИРУРГИЯ · 1\/1/);
-  assert.equal(bettingLoad().surgerySpent,60);
+  assert.equal(bettingLoad().surgerySpent,600);
   const insured=document.querySelector('#tower-insurance');insured.click();confirmPaidAction();
   assert.deepEqual(t.insurance.checkpoint.surgeries,t.surgeries);
-  assert.equal(s.players[0].balance,190);
+  assert.equal(s.players[0].balance,2100);
   assert.ok(validTower(t));
  }finally{close(dom);}
 });
 
 test('purchases during preparation take effect on the SAME floor, including graft geometry and module atlas',()=>{
- const s=betNewSession(['Момент установки'],1000),run=towerFor(s,0);
+ const s=betNewSession(['Момент установки'],10000),run=towerFor(s,0);
  unlockSurgeryForTest(s,run);
  const chosen=run.mutationDraft.options[0];
  const dom=setup(s,run,'ward');
@@ -231,7 +231,7 @@ test('purchases during preparation take effect on the SAME floor, including graf
   assert.deepEqual(run.mutations,[],'claimed item is not active before paid installation');
   document.querySelector('.tower-mutation-install').click();confirmPaidAction();
   assert.deepEqual(run.mutations,[chosen],'paid installation activates the module');
-  assert.equal(s.mutationSpent,100);
+  assert.equal(s.mutationSpent,1000);
   assert.equal(ctx.towerRun.surgeries.length,0,'preparation started from a detached snapshot');
   document.querySelector('.tower-upgrade-close').click();
   document.querySelector('#tower-fight').click();
@@ -293,7 +293,7 @@ test('real global modal guard allows mouse and touch events inside modernization
  }finally{close(dom);}
 });
 test('global capture guard allows auto-open boss reward choice and live surgery purchase',()=>{
- const s=betNewSession(['Награда и хирургия'],300),run=towerFor(s,0);
+ const s=betNewSession(['Награда и хирургия'],3000),run=towerFor(s,0);
  unlockSurgeryForTest(s,run);
  const dom=setup(s,run,'ward');
  try{
@@ -324,7 +324,7 @@ test('global capture guard allows auto-open boss reward choice and live surgery 
 
 
 test('Tower II upgrade screen displays coin art, real equipped bonuses and one receipt',()=>{
- const s=betNewSession(['Баланс UI'],1000),t=towerFor(s,0);
+ const s=betNewSession(['Баланс UI'],10000),t=towerFor(s,0);
  for(let i=0;i<5;i++)completeTower(s,0,true,()=>.24);
  const choice=t.mutationDraft.options[0],bonuses=TOWER_MUTATIONS[choice].bonus;
  const dom=setup(s,t,'ward');
@@ -353,7 +353,7 @@ test('Tower II upgrade screen displays coin art, real equipped bonuses and one r
    'owned module previews its bonus before purchase');
   modal.querySelector('.tower-mutation-install').click();confirmPaidAction();
   assert.deepEqual(t.mutations,[choice]);
-  assert.equal(s.players[0].balance,balance-100);
+  assert.equal(s.players[0].balance,balance-1000);
   assert.equal(modal.querySelector('#tower-upgrade-feedback').textContent,'');
   assert.equal(modal.querySelectorAll('.tower-operation-receipt').length,1);
   assert.match(modal.querySelector('.tower-operation-receipt').textContent,/установлен/);
@@ -361,7 +361,7 @@ test('Tower II upgrade screen displays coin art, real equipped bonuses and one r
   const formatted=n=>(Math.round(n*100)/100).toLocaleString('ru-RU',{maximumFractionDigits:2});
   const current=[...modal.querySelectorAll('.tower-upgrade-stat .tower-stat-before')].map(e=>e.textContent);
   assert.deepEqual(current,actual.map(formatted),'modal re-reads paid, actually active bonuses');
-  assert.equal(modal.querySelector('.tower-upgrade-wallet [data-balance-target]').dataset.balanceTarget,'900');
+  assert.equal(modal.querySelector('.tower-upgrade-wallet [data-balance-target]').dataset.balanceTarget,'9000');
   assert.ok(modal.querySelector('.tower-inventory-item.is-equipped'));
  }finally{close(dom);}
 });
@@ -548,7 +548,7 @@ test('Shelter settings uses the global corner gear and restores the previous tab
 });
 
 test('modernization selects surgical body parts from horizontal patient and previews atlas before purchase',()=>{
- const s=betNewSession(['Операция'],300),t=towerFor(s,0);
+ const s=betNewSession(['Операция'],3000),t=towerFor(s,0);
  unlockSurgeryForTest(s,t);
  const dom=setup(s,t,'ward');
  try{
@@ -586,10 +586,10 @@ test('modernization selects surgical body parts from horizontal patient and prev
 });
 
 test('modified live body skin uses exact replacement PNG and falls back only for a failed segment',()=>{
- const session=betNewSession(['Протезы'],300),run=towerFor(session,0);
+ const session=betNewSession(['Протезы'],3000),run=towerFor(session,0);
  unlockSurgeryForTest(session,run);
  assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
- assert.equal(buyTowerSurgery(session,0,'impact','arm-1-upper'),60);
+ assert.equal(buyTowerSurgery(session,0,'impact','arm-1-upper'),600);
  const dom=setup(session,run,'ward');
  try{
   const player=ctx.robots[0];
@@ -731,15 +731,15 @@ test('rewards survive restart and defeat, are once per enemy per floor and isola
  const restart=towerFor(s,0),expected=newTower(restart.patient,1,restart.artifacts);
  expected.segmentRewardsEnabled=true;expected.preparing=true;
  assert.deepEqual(restart,expected,'a clean post-death run enables modern segment rewards');
- assert.equal(s.players[0].balance,130);
+ assert.equal(s.players[0].balance,400);
  assert.deepEqual(towerFor(s,1),newTower(towerFor(s,1).patient));assert.equal(s.players[1].balance,100);
- resetTower(s,0);assert.equal(s.players[0].balance,130);
+ resetTower(s,0);assert.equal(s.players[0].balance,400);
 });
 test('tower rewards remain valid in shared betting storage after spending, settlement, joining and historical topups',()=>{
  const s=betNewSession(['Первый','Второй'],100);const dom=setup(s,towerFor(s,0));
  rewardTower(s,0,1,0);s.players[0].balance+=20;s.topUps=20;betAddPlayer(s,'Третий');
  betCommit(s,[{player:0,robot:0,amount:50},{player:1,robot:1,amount:20},{player:2,robot:2,amount:0}]);betResolve(s,0);
- bettingSave();const loaded=bettingLoad();assert.ok(loaded);assert.equal(loaded.towerEarned,10);assert.deepEqual(loaded.towers,s.towers);assert.deepEqual(loaded.players,s.players);
+ bettingSave();const loaded=bettingLoad();assert.ok(loaded);assert.equal(loaded.towerEarned,100);assert.deepEqual(loaded.towers,s.towers);assert.deepEqual(loaded.players,s.players);
  close(dom);
 });
 test('all arenas spawn variable counts; tower stats and cosmetics never touch regular patients',()=>{
@@ -757,9 +757,9 @@ test('manual patient stays still with no input and responds to keyboard with aut
  assert.equal(controlledIntent(r).speed,0);for(let i=0;i<90;i++)step(1/60);assert.ok(Math.hypot(r.x-start.x,r.y-start.y)<.01);
  document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{code:'KeyD',bubbles:true}));assert.equal(ctx.towerInput.x,1);assert.ok(controlledIntent(r).speed>0);
  document.dispatchEvent(new dom.window.KeyboardEvent('keyup',{code:'KeyD',bubbles:true}));assert.equal(controlledIntent(r).speed,0);
- note('robot-immobilized',{robot:1,lastAttacker:0});note('robot-immobilized',{robot:1,lastAttacker:0});assert.equal(s.players[0].balance,110);
+ note('robot-immobilized',{robot:1,lastAttacker:0});note('robot-immobilized',{robot:1,lastAttacker:0});assert.equal(s.players[0].balance,200);
  openMenu();assert.equal(document.querySelector('#launch-overlay').hidden,false);
- assert.equal(document.querySelector('#menu-bank [data-player-balance]').dataset.balanceTarget,'110');
+ assert.equal(document.querySelector('#menu-bank [data-player-balance]').dataset.balanceTarget,'200');
  close(dom);
 });
 test('player elimination ends attempt immediately even while several AI remain and banks are preserved',()=>{
@@ -776,7 +776,7 @@ test('player elimination ends attempt immediately even while several AI remain a
 test('real final strikes pay once and victory unlocks next floor with one skill point and full recovery',()=>{
  const s=betNewSession(['Первый'],100);let dom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);ctx.paused=false;
  const original=structuredClone(s.garage);ctx.robots[0].damage('arm--1-upper',1,100);ctx.robots[1].damage('head',0,100);
- assert.equal(s.players[0].balance,110);assert.equal(s.towerEarned,10);step(1/60);
+ assert.equal(s.players[0].balance,200);assert.equal(s.towerEarned,100);step(1/60);
  assert.equal(ctx.game.events.findLast(event=>event.type==='combat-end').outcome,'victory');
  assert.equal(ctx.combat.winner,0);assert.equal(towerFor(s,0).level,2);assert.equal(towerFor(s,0).wins,1);assert.deepEqual(s.garage,original);
  const next=structuredClone(towerFor(s,0));bettingSave();assert.deepEqual(bettingLoad().towers,s.towers);close(dom);
@@ -973,14 +973,14 @@ test('arena reroll before loading preserves the same challenge without rebuildin
   button.click();button.click();
   assert.equal(ctx.robots,oldRobots,'no world rebuild during arena rerolls');
   assert.equal(builds,0,'no level load during arena rerolls');
-  assert.equal(session.players[0].balance,190);
-  assert.equal(session.towerEconomySpent,10);
+  assert.equal(session.players[0].balance,100);
+  assert.equal(session.towerEconomySpent,100);
   assert.equal(run.arenaRerolls,1);
   assert.notEqual(run.floorPlan.options[0].arenaId,'ward');
   assert.equal(run.floorPlan.options[0].arenaId,run.floorPlan.options[1].arenaId);
   assert.deepEqual(run.floorPlan.options.map(o=>o.profiles),[['basic'],['fast','strong']]);
   assert.equal(run.floorPlan.selected,1);
-  assert.equal(bettingLoad().towerEconomySpent,10);
+  assert.equal(bettingLoad().towerEconomySpent,100);
  }finally{close(dom);}
 });
 test('standing manual patient never rotates toward another patient',()=>{
@@ -1105,7 +1105,7 @@ test('floor result distinguishes a cleared floor from a reached floor and marks 
  const s=betNewSession(['Первый'],100),dom=setup(s,towerFor(s,0));document.querySelector('#tower-fight').click();advanceStartup(10);
  ctx.robots[1].damage('head',0,100);ctx.combat.finished=true;ctx.combat.winner=0;settleTower(0);showResults();
  assert.equal(ctx.resultsTitle.textContent,'ЭТАЖ 1 ПРОЙДЕН');assert.match(document.querySelector('#bet-result-summary').textContent,/НОВЫЙ ЛИЧНЫЙ РЕКОРД/);assert.equal(ctx.resultsAgain.textContent,'ДАЛЕЕ');
- assert.match(document.querySelector('#bet-result-summary').textContent,/10/);assert.equal(towerFor(s,0).record,1);assert.equal(towerFor(s,0).runCoins,10);
+ assert.match(document.querySelector('#bet-result-summary').textContent,/10/);assert.equal(towerFor(s,0).record,1);assert.equal(towerFor(s,0).runCoins,100);
  const result=document.querySelector('#gladiator-results');
  const wallet=result.querySelector('#tower-results-player');
  assert.equal(wallet.hidden,false);
@@ -1129,7 +1129,7 @@ test('floor result distinguishes a cleared floor from a reached floor and marks 
  assert.equal(document.querySelector('.tower-skill-reward'),null,'a loss grants no skill point');
  assert.equal(document.querySelector('#gladiator-results .tower-artifacts'),null,'no artifact reward on defeat');
  const floorCoins=document.querySelector('.tower-result-numbers').children[2];
- assert.equal(floorCoins.querySelector('strong').textContent.trim(),'0');assert.equal(floorCoins.querySelector('span').textContent,'МОНЕТ ЗА ЭТАЖ');assert.equal(towerFor(s,0).level,1);assert.equal(towerFor(s,0).record,1);assert.equal(s.players[0].balance,110);close(lossDom);
+ assert.equal(floorCoins.querySelector('strong').textContent.trim(),'0');assert.equal(floorCoins.querySelector('span').textContent,'МОНЕТ ЗА ЭТАЖ');assert.equal(towerFor(s,0).level,1);assert.equal(towerFor(s,0).record,1);assert.equal(s.players[0].balance,200);close(lossDom);
 });
 test('Tower victory reveals collection only when the just-completed floor awarded a fragment',()=>{
  const s=betNewSession(['Артефакт'],100),dom=setup(s,towerFor(s,0));
@@ -1214,7 +1214,7 @@ test('tower enemy letters persist generations across floors, saves and resets wi
 });
 
 test('cancel surgery and DMS confirmation without charge or state change',()=>{
- const s=betNewSession(['Отмена'],500),t=towerFor(s,0);
+ const s=betNewSession(['Отмена'],5000),t=towerFor(s,0);
  unlockSurgeryForTest(s,t);
  const dom=setup(s,t,'ward');
  try{
@@ -1226,7 +1226,7 @@ test('cancel surgery and DMS confirmation without charge or state change',()=>{
   const initial=s.players[0].balance,prior=structuredClone(t.surgeries);
   surgery.querySelector('.tower-surgery-purchase').click();
   const dialog=document.querySelector('#game-action-confirm');
-  assert.ok(dialog);assert.match(dialog.querySelector('.game-action-confirm-submit').textContent,/−60/);
+  assert.ok(dialog);assert.match(dialog.querySelector('.game-action-confirm-submit').textContent,/−600/);
   assert.ok(dialog.querySelector('.game-action-confirm-submit .chip-icon'));
   assert.equal(s.players[0].balance,initial);
   dialog.querySelector('.game-action-confirm-close').click();
@@ -1235,7 +1235,7 @@ test('cancel surgery and DMS confirmation without charge or state change',()=>{
   assert.equal(s.players[0].balance,initial);
   document.querySelector('#tower-insurance').click();
   const insurance=document.querySelector('#game-action-confirm');
-  assert.ok(insurance);assert.match(insurance.querySelector('.game-action-confirm-submit').textContent,/−50/);
+  assert.ok(insurance);assert.match(insurance.querySelector('.game-action-confirm-submit').textContent,/−300/);
   assert.ok(insurance.querySelector('.game-action-confirm-submit .chip-icon'));
   insurance.querySelector('footer button').click();
   assert.equal(Boolean(t.insurance.checkpoint),false);
@@ -1286,7 +1286,7 @@ test('Shelter and unviewed segment cards show red badges until the stack is open
 });
 
 test('Shelter keeps the inventory scroll and keyboard focus when a card is selected',()=>{
- const session=betNewSession(['Склад'],200),run=towerFor(session,0);
+ const session=betNewSession(['Склад'],2000),run=towerFor(session,0);
  run.segmentRewardsEnabled=true;run.preparing=true;
  run.segmentInventory=Array.from({length:12},(_,i)=>({id:`seg${i+1}`,type:'servo',
   site:i<6?'arm-1-upper':'arm--1-upper',rarity:i%6}));

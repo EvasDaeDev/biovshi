@@ -79,13 +79,13 @@ test('Settings menu exit confirms cancellation, refunds bets and restores patien
  let prompts=0;globalThis.confirm=()=>{prompts++;return false;};
  document.getElementById('settings-main-menu').click();
  assert.equal(prompts,1);assert.equal(ctx.settingsOpen,true);assert.equal(ctx.paused,true);
- assert.equal(ctx.startup.phase,'running');assert.equal(session.players[0].balance,180);
+ assert.equal(ctx.startup.phase,'running');assert.equal(session.players[0].balance,1980);
  assert.equal(document.getElementById('launch-overlay').hidden,true);
  globalThis.confirm=()=>{prompts++;return true;};
  document.getElementById('settings-main-menu').click();await Promise.resolve();
  assert.equal(prompts,2);assert.equal(ctx.settingsOpen,false);assert.equal(ctx.paused,true);
  assert.equal(ctx.startup.phase,'menu');assert.equal(session.phase,'betting');
- assert.deepEqual(session.players.map(p=>p.balance),[200,200]);assert.deepEqual(session.garage,before);
+ assert.deepEqual(session.players.map(p=>p.balance),[2000,2000]);assert.deepEqual(session.garage,before);
  assert.equal(document.getElementById('launch-overlay').hidden,false);
  assert.equal(document.getElementById('launch-overlay').inert,false);
  assert.equal(document.activeElement.id,'launch-tower');

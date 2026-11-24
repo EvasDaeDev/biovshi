@@ -1,3 +1,4 @@
+import {COIN_SCALE,MAX_ISSUED_COINS} from '../betting/coins.js';
 // Tower-only paid operations on concrete anatomical sites. The effect is
 // disabled if the operated segment is severed during combat, and returns
 // if patientRecovery repairs the part after a successful floor.
@@ -52,8 +53,8 @@ const siteKind=site=>typeof site==='string'&&site.startsWith('spine-')?'spine':
  typeof site==='string'&&site.startsWith('arm-')?'arm':
  typeof site==='string'&&site.startsWith('leg-')?'leg':null;
 // Interim economic pricing; modelled independently of the betting wallet.
-export const towerSurgeryPrice=run=>[60,100,150][Math.min(2,run?.surgeries?.length??0)];
-export const towerSurgeryReplacePrice=run=>Math.max(60,Math.ceil(towerSurgeryPrice(run)*.85));
+export const towerSurgeryPrice=run=>[60,100,150][Math.min(2,run?.surgeries?.length??0)]*COIN_SCALE;
+export const towerSurgeryReplacePrice=run=>Math.max(60,Math.ceil(towerSurgeryPrice(run)/COIN_SCALE*.85))*COIN_SCALE;
 // Surgical slots first open after defeating the second boss (floor 10).
 // Subsequent slots open after floors 15 and 20; never more than three.
 export const towerSurgeryCapacity=level=>Math.min(TOWER_SURGERY_MAX,
@@ -120,7 +121,7 @@ export function purchaseTowerSurgery(session,player,run,procedure,site,donorId=n
  const buyer=session.players?.[player],price=old?towerSurgeryReplacePrice(run):towerSurgeryPrice(run);
  if(!buyer||buyer.balance<price)throw Error('Недостаточно монет для операции.');
  const spent=session.surgerySpent??0;
- if(!Number.isSafeInteger(spent)||spent+price>16000000)throw Error('Недопустимая стоимость операции.');
+ if(!Number.isSafeInteger(spent)||spent+price>MAX_ISSUED_COINS)throw Error('Недопустимая стоимость операции.');
  if(old){
   run.surgeries=run.surgeries.filter(item=>item!==old);
   if(!TOWER_SURGERY_OPERATIONS[old.procedure].donor){

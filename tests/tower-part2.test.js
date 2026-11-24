@@ -35,15 +35,15 @@ test('boss reward is saved, claimed exactly once, and not installed for free',()
  assert.equal(validTower(t),true);
 });
 test('paid install/remove/reinstall and low bank checks are atomic',()=>{
- const s=session(350),t=advance(s,6),item=chooseTowerMutation(t,t.mutationDraft.options[0]);
- assert.equal(towerMutationInstallPrice(t),100);
- assert.equal(equipTowerMutation(s,0,t,item.id),100);
- assert.equal(s.players[0].balance,250);assert.deepEqual(t.mutations,[item.type]);
+ const s=session(3500),t=advance(s,6),item=chooseTowerMutation(t,t.mutationDraft.options[0]);
+ assert.equal(towerMutationInstallPrice(t),1000);
+ assert.equal(equipTowerMutation(s,0,t,item.id),1000);
+ assert.equal(s.players[0].balance,2500);assert.deepEqual(t.mutations,[item.type]);
  assert.equal(removeTowerMutation(t,item.id),true);assert.deepEqual(t.mutations,[]);
- assert.equal(towerMutationInstallPrice(t),155);
- assert.equal(equipTowerMutation(s,0,t,item.id),155);
- assert.equal(s.players[0].balance,95);
- assert.equal(towerMutationInstallPrice(t),241);
+ assert.equal(towerMutationInstallPrice(t),1550);
+ assert.equal(equipTowerMutation(s,0,t,item.id),1550);
+ assert.equal(s.players[0].balance,950);
+ assert.equal(towerMutationInstallPrice(t),2410);
  assert.equal(removeTowerMutation(t,item.id),true);
  const before=structuredClone(t);
  assert.throws(()=>equipTowerMutation(s,0,t,item.id),/Недостаточно/);
@@ -89,7 +89,7 @@ test('30 to A-01 to B-01 and AA-01 use continuous counters and local stats',()=>
  assert.equal(next.level,31);assert.equal(next.wins,30);
  assert.deepEqual(next.stats,[3,3,3]);assert.equal(next.cycleNotice,31);
  assert.equal(towerFloorLabel(next.level),'A-01');
- assert.equal(next.insurance.price,50);assert.equal(next.insurance.checkpoint,null);
+ assert.equal(next.insurance.price,300);assert.equal(next.insurance.checkpoint,null);
  assert.ok(validTower(next));
  const ownedBefore=next.mutationInventory.length;
  const item=chooseTowerMutation(next,next.mutationDraft.options[0]);
@@ -114,7 +114,7 @@ test('replacement surgery is paid once and old donor tissue never returns',()=>{
  chooseTowerMutation(t,t.mutationDraft.options[0]);
  awardTowerDonors(t,1,'strong');const donor=t.donorTissues.find(item=>item.kind==='arm');
  const first=purchaseTowerSurgery(s,0,t,'transplant_arm','arm-1-upper',donor.id);
- assert.equal(first,60);assert.equal(t.donorTissues.some(item=>item.id===donor.id),false);
+ assert.equal(first,600);assert.equal(t.donorTissues.some(item=>item.id===donor.id),false);
  assert.deepEqual(t.consumedDonorIds,[donor.id]);
  const before=s.players[0].balance;
  const second=purchaseTowerSurgery(s,0,t,'impact','arm-1-upper',null,'arm-1-upper');
@@ -198,12 +198,12 @@ test('paid module survives real balance-audited save and reload',async()=>{
  globalThis.localStorage={getItem:key=>cache.get(key)??null,setItem:(key,value)=>cache.set(key,value)};
  ctx.BET_STORAGE='tower-part2-memory';ctx.root=null;
  try{
-  const s=session(500),t=advance(s,6),item=chooseTowerMutation(t,t.mutationDraft.options[0]);
+  const s=session(5000),t=advance(s,6),item=chooseTowerMutation(t,t.mutationDraft.options[0]);
   equipTowerMutation(s,0,t,item.id);ctx.betting=s;bettingSave({animateBalances:false});
   const restored=bettingLoad();assert.ok(restored,'paid installation passes conservation ledger');
-  assert.equal(restored.mutationSpent,100);
+  assert.equal(restored.mutationSpent,1000);
   assert.deepEqual(towerFor(restored,0).mutations,[item.type]);
-  assert.equal(restored.players[0].balance,400);
+  assert.equal(restored.players[0].balance,4000);
   const forged=structuredClone(restored);forged.mutationSpent=0;
   cache.set(ctx.BET_STORAGE,JSON.stringify(forged));
   assert.equal(bettingLoad(),null,'erasing a paid installation must not mint money');
@@ -229,7 +229,7 @@ test('every module description lists bonuses from the live gameplay model',()=>{
 });
 
 test('old early-surgery runs remain valid but cannot buy more before second boss',()=>{
- const s=session(500),t=advance(s,6);
+ const s=session(5000),t=advance(s,6);
  chooseTowerMutation(t,t.mutationDraft.options[0]);
  t.surgeries=[{site:'arm-1-upper',procedure:'impact'}];
  assert.equal(validTower(t),true,'legacy paid implant remains on the patient');

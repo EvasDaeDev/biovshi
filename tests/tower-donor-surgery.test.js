@@ -6,7 +6,7 @@ import {chooseTowerMutation} from '../src/tower/mutations.js';
 import {towerAvailableDonors,validTowerDonors,donorLengthScale} from '../src/tower/donors.js';
 import {towerPatientAnatomy} from '../src/tower/anatomy.js';
 function reachSix(){
- const session=betNewSession(['Игрок'],600),run=towerFor(session,0);
+ const session=betNewSession(['Игрок'],1000),run=towerFor(session,0);
  while(run.level<6)completeTower(session,0,true,()=>.2);
  assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
  return {session,run};
@@ -31,8 +31,8 @@ test('tissue consumption, credits, real anatomy and insurance',()=>{
  }
  assert.ok(chooseTowerMutation(run,run.mutationDraft.options[0]));
  const tissue=towerAvailableDonors(run,'transplant_arm')[0],before=session.players[0].balance;
- assert.equal(buyTowerSurgery(session,0,'transplant_arm','arm-1-upper',tissue.id),60);
- assert.equal(session.players[0].balance,before-60);
+ assert.equal(buyTowerSurgery(session,0,'transplant_arm','arm-1-upper',tissue.id),600);
+ assert.equal(session.players[0].balance,before-600);
  assert.ok(!run.donorTissues.some(d=>d.id===tissue.id));
  assert.deepEqual(run.surgeries[0],{site:'arm-1-upper',procedure:'transplant_arm',donorId:tissue.id,donorProfile:tissue.profile});
  assert.equal(towerPatientAnatomy(run).limbs.length,5);

@@ -1,5 +1,6 @@
 // Stage G: two explicit, paid Tower decisions. All writes go through the
 // canonical persisted session; UI drafts never modify run or money.
+import {COIN_SCALE,MAX_ISSUED_COINS} from '../betting/coins.js';
 import {validStats} from '../garage/model.js';
 import {towerCycleWins} from './cycles.js';
 import {ARENAS,arenaCapacity} from '../game/arenas.js';
@@ -8,7 +9,7 @@ import {bossArenaIds,towerArenaMinimum,validTowerFloorPlan} from './floors.js';
 
 export const TOWER_REROLL_MAX=60;
 export const towerRerollPrice=count=>Number.isSafeInteger(count)&&count>=0&&count<TOWER_REROLL_MAX
- ?10:Infinity;
+ ?10*COIN_SCALE:Infinity;
 export const validTowerRerolls=run=>Number.isSafeInteger(run?.arenaRerolls)&&run.arenaRerolls>=0&&run.arenaRerolls<=TOWER_REROLL_MAX
  &&(run.arenaRerolls===0||run.floorPlan?.floor===run.level);
 
@@ -16,7 +17,7 @@ function charge(session,player,price){
  const buyer=session.players?.[player],spent=session.towerEconomySpent??0;
  if(!buyer||!Number.isSafeInteger(price)||price<1||buyer.balance<price)
   throw Error('Недостаточно монет для покупки.');
- if(!Number.isSafeInteger(spent)||spent<0||spent+price>16000000)
+ if(!Number.isSafeInteger(spent)||spent<0||spent+price>MAX_ISSUED_COINS)
   throw Error('Недопустимый расход монет.');
  buyer.balance-=price;session.towerEconomySpent=spent+price;
 }

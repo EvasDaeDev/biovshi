@@ -23,7 +23,7 @@ function setup(session,run){
 }
 
 test('Shelter offers paid stock reinstallation and consumes one stored implant',()=>{
- const session=betNewSession(['Хирург'],1500),run=towerFor(session,0);
+ const session=betNewSession(['Хирург'],15000),run=towerFor(session,0);
  while(run.level<11){
   if(run.mutationDraft)chooseTowerMutation(run,run.mutationDraft.options[0]);
   completeTower(session,0,true,()=>.17);
@@ -62,7 +62,7 @@ test('Shelter offers paid stock reinstallation and consumes one stored implant',
   assert.equal(session.players[0].balance,before,'no coins are charged before confirmation');
   confirmation.querySelector('.game-action-confirm-submit').click();
   assert.equal(document.querySelector('#game-action-confirm'),null);
-  assert.equal(session.players[0].balance,before-85);
+  assert.equal(session.players[0].balance,before-850);
   assert.deepEqual(run.surgeries,[{site:'leg--1-upper',procedure:'drive',stockId:'s1'}]);
   assert.deepEqual(run.surgicalStock,[{id:'s2',procedure:'impact',fromSite:'arm-1-upper'}]);
   assert.equal(ctx.towerGarage[0].surgeries[0].stockId,'s1');
