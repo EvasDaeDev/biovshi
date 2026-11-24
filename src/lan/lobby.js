@@ -2,6 +2,7 @@ import {describeLanProfile, lanTowerCopy, lanAiName, lanProfiles} from './charac
 import {queueFloorPatch} from './floor-sync.js';
 import {createLanClient} from './client.js';
 import {LAN_RECONNECT_MS, LAN_ROOM_CODE} from './protocol.js';
+import {createLanWakeLock} from './wake-lock.js';
 import {formatRoundTime, renderBattleStatistics} from '../ui/results.js';
 import './lobby.css';
 
@@ -9,6 +10,14 @@ const phases = {waiting: 'Ожидание', preparing: 'Подготовка', 
   running: 'Идёт бой', suspended: 'Ожидание хозяина', results: 'Результаты'};
 const roles = {player: 'Боец', spectator: 'Наблюдатель'};
 const SESSION_KEY = 'biovshi.lan.session.v1';
+const wakeLockStatus = {
+  active: 'Удержание экрана включено.',
+  requesting: 'Запрашиваем удержание экрана…',
+  hidden: 'Удержание экрана приостановлено до возврата во вкладку.',
+  released: 'Удержание экрана отключено системой.',
+  denied: 'Браузер отклонил запрос на удержание экрана.',
+  unavailable: 'Удержание экрана недоступно по этому адресу или в этом браузере.',
+};
 
 function node(tag, text) {
   const element = document.createElement(tag);
@@ -109,6 +118,11 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
   let lobbyActive = false, connectionFailed = false, countdownTimer, resumeTimer, resumeUntil;
 
   const client = createLanClient(onMessage);
+  const screenStatus = find('wake-lock');
+  const wakeLock = createLanWakeLock(root.ownerDocument, state => {
+    screenStatus.textContent = wakeLockStatus[state] ?? '';
+    screenStatus.hidden = !state;
+  });
   const arenaName = id => arenas.find(arena => arena.id === id)?.name ?? id;
   const send = (type, payload) => client.send(type, payload, room?.id);
   function storeSession(next) {
@@ -414,6 +428,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
   }
 
   function abandonResume() {
+    wakeLock.setEnabled(false);
     room = null;
     memberId = null;
     pendingSnapshot = pendingRemains = undefined;
@@ -459,6 +474,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
           matchError = payload.phase === 'waiting' ? matchError : '';
         }
         room = payload;
+        wakeLock.setEnabled(connected && room.hostId === memberId);
         status.textContent = matchError || payload.notice;
         updateCountdown(payload.countdownMs);
         reconcileMatch();
@@ -488,6 +504,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
         else activeMatch.runtime?.resetInput(payload.memberId);
         return;
       case 'room.left':
+        wakeLock.setEnabled(false);
         updateCountdown(null);
         room = null;
         memberId = null;
@@ -508,6 +525,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
         }
         break;
       case 'disconnected':
+        wakeLock.setEnabled(false);
         updateCountdown(null);
         clearTimeout(resumeTimer);
         connected = false;
@@ -559,6 +577,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
   };
   refresh.onclick = () => client.send('rooms.list');
   function closeLobby() {
+    wakeLock.setEnabled(false);
     updateCountdown(null);
     clearTimeout(resumeTimer);
     lobbyActive = false;
