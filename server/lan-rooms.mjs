@@ -350,7 +350,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
       }
       return;
     }
-    if (['input', 'state.snapshot', 'state.remains', 'state.floor'].includes(type)) {
+    if (['input', 'game.event', 'state.snapshot', 'state.remains', 'state.floor'].includes(type)) {
       if (payload.matchId !== room.matchId || !room.view) return;
       if (type === 'input') {
         requireRoom(!host && room.view.players.some(player => player.id === member.id),
@@ -365,7 +365,15 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         requireRoom(host, 'host_only', 'Только хозяин отправляет состояние боя.');
         if (room.phase !== running && room.phase !== results) return;
         const count = room.matchFighters.length;
-        if (type === 'state.snapshot') {
+        if (type === 'game.event') {
+          const {matchId, impacts} = payload;
+          if (!Array.isArray(impacts) || !impacts.length || impacts.length > 64 ||
+              !impacts.every((event, i) => validImpact(event, count) &&
+                event.seq > (i ? impacts[i - 1].seq : room.impactSeq))) return;
+          room.impactSeq = impacts.at(-1).seq;
+          relay(room, type, {matchId, impacts});
+          return;
+        } else if (type === 'state.snapshot') {
           if (!validSnapshot(room, payload)) return;
           room.snapshot = payload;
           if (room.phase === running) monitorHost(room);
@@ -450,6 +458,7 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
         }, loadingMs);
         room.matchId = randomUUID();
         room.inputSeq = new Map();
+        room.impactSeq = -1;
         room.floor = createFloorCache();
         room.matchPlayers = [...room.members.values()].filter(member => member.role === 'player')
           .map(({id, name, role, profile, tower}) => ({id, name, role, profile, tower}));
@@ -478,7 +487,9 @@ export function createLanRooms({arenas, build, origin, reconnectMs = LAN_RECONNE
           client.windowStart = now;
           client.messages = 0;
         }
-        if (++client.messages > 50) {
+        // The host can publish event batches between the 15 Hz snapshots.
+        const hosting = client.member && rooms.get(client.member.roomId)?.hostId === client.member.id;
+        if (++client.messages > (hosting ? 160 : 50)) {
           socket.close(1008, 'Too many messages');
           return;
         }

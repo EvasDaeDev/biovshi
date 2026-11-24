@@ -318,6 +318,17 @@ test('LAN relays only the bound guest input and host snapshots, including a reco
   assert.deepEqual((await host.next('input')).payload, {matchId, memberId, seq: 7, goal: [400, 350]});
 
   const snapshot = battleSnapshot(matchId, 7);
+  const impact = {seq: 0, robot: 0, by: 1, time: 1, point: [300, 350],
+    segment: 'arm-1-lower', damage: 1, severed: false};
+  guest.send('game.event', {matchId, impacts: [impact]}, roomId);
+  assert.equal((await guest.next('error')).payload.code, 'host_only');
+  host.send('game.event', {matchId, impacts: [{...impact, robot: 32}]}, roomId);
+  host.send('game.event', {matchId, impacts: [impact]}, roomId);
+  assert.deepEqual((await viewer.next('game.event')).payload, {matchId, impacts: [impact]});
+  host.send('game.event', {matchId, impacts: [impact]}, roomId);
+  const nextImpact = {...impact, seq: 1};
+  host.send('game.event', {matchId, impacts: [nextImpact]}, roomId);
+  assert.deepEqual((await viewer.next('game.event')).payload.impacts, [nextImpact]);
   assert.ok(Buffer.byteLength(JSON.stringify(snapshot)) > 1024);
   assert.equal(guest.socket.extensions, '');
   assert.equal(viewer.socket.extensions, 'permessage-deflate');

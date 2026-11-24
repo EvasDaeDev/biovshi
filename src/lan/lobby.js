@@ -112,7 +112,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
   let session = readSession();
   let activeMatch = null;
   let pendingSnapshot, pendingRemains;
-  const pendingFloor = [];
+  const pendingFloor = [], pendingImpacts = [];
   let matchWork = Promise.resolve();
   let matchError = '';
   let lobbyActive = false, connectionFailed = false, countdownTimer, resumeTimer, resumeUntil;
@@ -161,6 +161,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
             onResume: snapshot => transmit('match.resume', {snapshot}),
             onHeartbeat: () => transmit('match.heartbeat'),
             onSnapshot: snapshot => transmit('state.snapshot', snapshot),
+            onImpact: impact => transmit('game.event', impact),
             onRemains: remains => transmit('state.remains', remains),
             onFloor: floor => transmit('state.floor', floor),
             onReturn: () => transmit('room.return'),
@@ -171,6 +172,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
           if (host) transmit('match.host-ready', {view: match.runtime.view});
           else {
             if (pendingSnapshot?.matchId === matchId) match.runtime.snapshot(pendingSnapshot);
+            match.runtime.impact(pendingImpacts.splice(0));
             if (pendingRemains?.matchId === matchId) match.runtime.remains(pendingRemains);
             for (const patch of pendingFloor.splice(0)) match.runtime.floor(patch);
             transmit('match.loaded');
@@ -433,6 +435,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
     memberId = null;
     pendingSnapshot = pendingRemains = undefined;
     pendingFloor.length = 0;
+    pendingImpacts.length = 0;
     matchError = '';
     storeSession(null);
     reconcileMatch();
@@ -471,6 +474,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
         if (room?.matchId !== payload.matchId) {
           pendingSnapshot = pendingRemains = undefined;
           pendingFloor.length = 0;
+          pendingImpacts.length = 0;
           matchError = payload.phase === 'waiting' ? matchError : '';
         }
         room = payload;
@@ -482,7 +486,16 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
       case 'state.snapshot':
         if (roomId !== room?.id || payload.matchId !== room.matchId) return;
         pendingSnapshot = payload;
+        if (payload.keyframe) pendingImpacts.length = 0;
         activeMatch?.runtime?.snapshot?.(payload);
+        return;
+      case 'game.event':
+        if (roomId !== room?.id || payload.matchId !== room.matchId) return;
+        if (activeMatch?.runtime?.impact) activeMatch.runtime.impact(payload.impacts);
+        else {
+          pendingImpacts.push(...payload.impacts);
+          if (pendingImpacts.length > 64) pendingImpacts.splice(0, pendingImpacts.length - 64);
+        }
         return;
       case 'state.remains':
         if (roomId !== room?.id || payload.matchId !== room.matchId) return;
@@ -525,6 +538,7 @@ export function installLanLobby(root, {prepareMatch, leaveMatch, tower, unlock})
         }
         break;
       case 'disconnected':
+        pendingImpacts.length = 0;
         wakeLock.setEnabled(false);
         updateCountdown(null);
         clearTimeout(resumeTimer);

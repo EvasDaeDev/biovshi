@@ -62,7 +62,7 @@ async function connect() {
   socket.on('message', bytes => {
     const {type, payload} = JSON.parse(bytes.toString());
     if (type === 'room.state') client.room = payload;
-    if (!type.startsWith('state.')) return;
+    if (!type.startsWith('state.') && type !== 'game.event') return;
     client.stats.packets++;
     client.stats.total += bytes.length;
     if (type === 'state.floor') client.stats.floor += bytes.length;
@@ -103,12 +103,13 @@ async function profile(fighterCount) {
     let packets = 0, snapshots = 0;
     const transmit = (type, data) => {
       host.send(type, {...data, matchId: room.matchId}, roomId);
-      if (type.startsWith('state.')) packets++;
+      if (type.startsWith('state.') || type === 'game.event') packets++;
       if (type === 'state.snapshot') snapshots++;
       return true;
     };
     const multiplayer = {fighters: createLanRoster(room, room.hostId),
       onSnapshot: data => transmit('state.snapshot', data),
+      onImpact: data => transmit('game.event', data),
       onRemains: data => transmit('state.remains', data),
       onFloor: data => transmit('state.floor', data),
       onReturn() {}, onFinish() {}};

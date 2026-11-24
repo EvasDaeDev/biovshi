@@ -70,7 +70,7 @@ export function createLanClient(onEvent) {
     close,
     send(type, payload, roomId) {
       if (!ready || socket?.readyState !== WebSocket.OPEN) return false;
-      if (socket.bufferedAmount > 128 * 1024 && ['state.snapshot', 'state.floor'].includes(type)) return false;
+      if (socket.bufferedAmount > 128 * 1024 && ['state.snapshot', 'state.floor', 'game.event'].includes(type)) return false;
       socket.send(JSON.stringify(lanMessage(type, payload, roomId)));
       return true;
     },

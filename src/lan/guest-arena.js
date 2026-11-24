@@ -38,6 +38,13 @@ export function installLanGuestArena(match) {
   let connected = false, started = false;
   let lastX = 0, lastY = 0, lastGoal = false, nextInput = 0, inputSeq = 0, impactSeq = -1;
   const impacts = [];
+  function enqueueImpacts(events) {
+    for (const event of events) if (event.seq > impactSeq) {
+      impactSeq = event.seq;
+      impacts.push(event);
+    }
+    if (impacts.length > 64) impacts.splice(0, impacts.length - 64);
+  }
 
   function sendInput(now, release = false) {
     if (localId < 0) return;
@@ -89,7 +96,8 @@ export function installLanGuestArena(match) {
       else if (sameRequest) {
         destination.x = x;
         destination.y = y;
-        destination.arrived ||= Math.hypot(local.root[0] - x, local.root[1] - y) <= 8;
+        const [observedX, observedY] = local.observedRoot ?? local.root;
+        destination.arrived ||= Math.hypot(observedX - x, observedY - y) <= 8;
       }
     }
     while (impacts.length && impacts[0].time <= snapshot.time) {
@@ -134,11 +142,9 @@ export function installLanGuestArena(match) {
     snapshot(snapshot) {
       if (snapshot.keyframe) { buffer.clear(); impacts.length = 0; }
       if (!buffer.push(snapshot, performance.now())) return;
-      for (const event of snapshot.impacts) if (event.seq > impactSeq) {
-        impactSeq = event.seq;
-        impacts.push(event);
-      }
+      enqueueImpacts(snapshot.impacts);
     },
+    impact: enqueueImpacts,
     floor: floor.receive,
     remains({parts}) {
       for (const {id, cause, motion, pieces} of parts.slice(ctx.combat.detached.length)) {

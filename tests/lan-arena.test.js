@@ -17,6 +17,7 @@ import {cameraReset, cameraUpdate} from '../src/render/camera.js';
 import {installLanHostArena} from '../src/lan/host-arena.js';
 import {newTower} from '../src/tower/model.js';
 import {showResults} from '../src/ui/results.js';
+import {onGameEvent} from '../src/game/event-bus.js';
 import {createRobot} from '../src/robot/robot.js';
 
 function clickPoint(win, x, y) {
@@ -164,6 +165,31 @@ test('LAN host routes a remote fighter around obstacles and cancels invalid or r
   assert.equal(ctx.intents[0].speed, 0);
 });
 
+test('LAN host publishes hits independently and preserves them for snapshots under backpressure', async t => {
+  const deliveries = [], snapshots = [];
+  let writable = true;
+  launch(t, {members: [fighter('хозяин', 'basic')], local: 'хозяин', network: {
+    onImpact: ({impacts}) => {
+      if (!writable) return false;
+      deliveries.push(...structuredClone(impacts));
+      return true;
+    },
+    onSnapshot: data => { snapshots.push(structuredClone(data)); return true; },
+    onFloor: () => true, onRemains: () => true,
+  }});
+  const robot = ctx.robots[0];
+  robot.damage('arm-1-lower', 0, 1);
+  await Promise.resolve();
+  assert.equal(deliveries.length, 1);
+  assert.equal(snapshots.length, 0);
+  writable = false;
+  robot.damage('arm--1-lower', 0, 1);
+  await Promise.resolve();
+  paint();
+  ctx.multiplayer.publishFrame(performance.now(), true);
+  assert.deepEqual(snapshots[0].impacts.map(event => event.seq), [deliveries[0].seq + 1]);
+});
+
 test('LAN replica renders the host rig and detached segments without simulation', t => {
   const snapshots = [], wreckage = [], floors = [], inputs = [];
   const members = [fighter('хозяин', 'boss-arms'), fighter('гость', 'fast')];
@@ -203,12 +229,19 @@ test('LAN replica renders the host rig and detached segments without simulation'
   guest.remains(wreckage[0]);
   guest.remains(wreckage[0]);
   guest.floor(floors[0]);
+  const effects = [];
+  const unsubscribe = onGameEvent(event => {
+    if (event.type === 'segment-broken') effects.push(event);
+  });
+  t.after(unsubscribe);
+  guest.impact(snapshot.impacts);
   guest.snapshot(snapshot);
   step(1 / 60);
   assert.equal(ctx.game.time, 0);
   frame(performance.now() + 120);
   assert.equal(ctx.game.time, snapshot.time);
   assert.ok(ctx.robots[1].missingSegments.includes(segment));
+  assert.equal(effects.length, 1);
   assert.equal(ctx.robots[0].x, snapshot.robots[0].root[0]);
   assert.equal(ctx.robots[0].actor.getAttribute('data-boss-phase'), '1');
   assert.equal(ctx.actorsG.lastElementChild, ctx.robots[1].actor);
