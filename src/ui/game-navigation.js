@@ -89,6 +89,7 @@ export function initializeGameNavigation(){
   // Never let native Back navigate the game under a pending loading screen.
   const loading=doc.querySelector('#texture-loading[aria-busy]');
   if(loading){loading.querySelector('.loading-dismiss:not([hidden])')?.click();return;}
+  if(doc.getElementById('battle-transition'))return;
   if(root.querySelector('#landscape-required[open],#tower-cycle-notice[open]'))return;
   if(root.querySelector('#game-action-confirm[open]')){root.querySelector('#game-action-confirm-close,.game-action-confirm-close')?.click();return;}
   const paperDialog=root.querySelector('.paper-dialog[open]');

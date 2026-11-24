@@ -23,6 +23,7 @@ import {preloadTextures} from './assets/preload.js';
 import {ASSETS,assetUrl,sceneTextureKeys} from './assets/manifest.js';
 import {prepareOfflineGame} from './assets/offline.js';
 import {createLoadingScreen} from './ui/loading-screen.js';
+import {createBattleTransition} from './ui/battle-transition.js';
 import {showStartupIntro} from './ui/startup-intro.js';
 import {installMetalMaterials} from './ui/metal-material.js';
 import {bettingLoad,bettingSave} from './betting/storage.js';
@@ -34,7 +35,8 @@ const musicOffsets=new Map();
 async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,enterFight=false,loading=null}){
  if(!textures){
    loading?.update('Загружаем текстуры пациентов и арены…',{done:0,total:6});
-   textures=await preloadTextures({keys:sceneTextureKeys(Boolean(tower))});
+   textures=await preloadTextures({keys:sceneTextureKeys(Boolean(tower)),onProgress:(done,total)=>
+     loading?.update('Загружаем текстуры пациентов и арены…',{done:total?done/total:0,total:6})});
  }
  if(cancelled)return;
  loading?.update('Создаём пациентов…',{done:1,total:6});
@@ -61,18 +63,9 @@ async function prepare({textures,session,entry='auto',arenaId='ward',tower=null,
  initializeModalFocus();
  initializeGameNavigation();
  initializeTutorial();
- launchButton.onclick=()=>{
-   // The preloaded demo is reusable only while the opening menu still owns it.
-   if(launchAccepted||ctx.startup.phase!=='demo'||ctx.betting&&ctx.betting.phase!=='running')return ctx.startDemo();
-   // AudioContext.resume() must happen synchronously in this user gesture.
-   audio.unlock();
-   launchAccepted=true;
-   gate.hidden=true;
-   startSpawnSequence();
- };
+ launchButton.onclick=()=>ctx.startDemo(!launchAccepted&&ctx.startup.phase==='demo'
+  &&(!ctx.betting||ctx.betting.phase==='running'));
  installProfiles(ctx.root,refreshMenu);
- if(launchAccepted&&ctx.startup.phase==='demo')startSpawnSequence();
- if(enterFight)startSpawnSequence();
  loading?.update('Арена готова!',{done:6,total:6});
  ctx.platform?.ready();
 }
@@ -102,24 +95,32 @@ async function boot(){
  if(cancelled){loading.close();return;}
  loading.update('Текстуры загружены. Запускаем игру…',{done:0,total:6});
  ctx.BET_STORAGE=SESSION_STORAGE;const session=bettingLoad();
- ctx.switchArena=async arenaId=>{
+ const prepareScene=async(options,loading)=>{
+   launchAccepted=true;ctx.keepArenaRenderer=true;
+   try{await prepare({...options,loading});}
+   finally{ctx.keepArenaRenderer=false;}
+ };
+ ctx.withBattleTransition=async prepareFight=>{
+   if(root.inert)return;
+   // Keep the audio gesture synchronous and block inputs while the arena changes.
+   ctx.audio?.unlock();
+   const cover=createBattleTransition(document);
+   root.inert=true;
+   try{
+     await cover.show();
+     if(cancelled)return;
+     await prepareFight(cover);
+     if(cancelled||ctx.disposed)return;
+     await cover.finish();
+     if(!cancelled&&!ctx.disposed)startSpawnSequence();
+   }finally{cover.close();root.inert=false;}
+ };
+ ctx.switchArena=async(arenaId,progress)=>{
    if(arenaId===ctx.arenaId)return;
    const session=ctx.betting,expanded=ctx.arenaExpanded;
-   session.arenaId=arenaId;bettingSave();root.inert=true;
-   const progress=createLoadingScreen();
-   ctx.keepArenaRenderer=true;
-   let succeeded=false;
-   try{await prepare({session,entry:'betting',arenaId,loading:progress});ctx.setArenaExpanded?.(expanded);succeeded=true;}
-   catch(error){progress.fail('Ошибка загрузки арены. Повторите действие.');throw error;}
-   finally{ctx.keepArenaRenderer=false;root.inert=false;if(succeeded)progress.close();}
- };
- const transition=async options=>{
-   const owned=!options.loading,progress=options.loading??createLoadingScreen();
-   root.inert=true;ctx.audio?.unlock();launchAccepted=true;ctx.keepArenaRenderer=true;
-   let succeeded=false;
-   try{await prepare({...options,loading:progress});succeeded=true;}
-   catch(error){progress.fail('Не удалось подготовить арену.');throw error;}
-   finally{ctx.keepArenaRenderer=false;root.inert=false;if(owned&&succeeded)progress.close();}
+   session.arenaId=arenaId;bettingSave();
+   await prepareScene({session,entry:'betting',arenaId},progress);
+   ctx.setArenaExpanded?.(expanded);
  };
  ctx.openMainMenu=openMenu;
  ctx.startTower=async player=>{
@@ -157,22 +158,34 @@ async function boot(){
    if(shelter?.open&&typeof shelter.close==='function')shelter.close();
    shelter?.remove();root.querySelector('#tower-upgrade-open')?.remove();
    ctx.deferTowerArena=false;
-   // initializeGame changes data-game-mode before its async texture/renderer
-   // work finishes. Cover the old canvas until the new scene is ready.
-   const progress=createLoadingScreen();
-   ctx.towerTransition=(async()=>{
-     let succeeded=false;
-     try{
-       await transition({session:current,entry:'tower',tower:structuredClone(run),
-         arenaId:selectedTowerFloor(run)?.arenaId??ctx.arenaDefinition.id,enterFight:true,loading:progress});
-       succeeded=true;
-     }catch(error){progress.fail('Не удалось подготовить арену.');throw error;}
-     finally{if(succeeded)progress.close();}
-   })();
+   ctx.towerTransition=ctx.withBattleTransition(progress=>
+     prepareScene({session:current,entry:'tower',tower:structuredClone(run),
+       arenaId:selectedTowerFloor(run)?.arenaId??ctx.arenaDefinition.id,enterFight:true},progress));
    return ctx.towerTransition;
  };
- ctx.startTotalizator=()=>{bettingCancel();return transition({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId});};
- ctx.startDemo=()=>transition({session:ctx.betting,entry:'auto',arenaId:ctx.betting?.arenaId??'ward'});
+ ctx.startTotalizator=async()=>{
+   bettingCancel();
+   const loading=createLoadingScreen();
+   root.inert=true;
+   try{
+     await prepareScene({session:ctx.betting,entry:'betting',arenaId:ctx.betting.arenaId},loading);
+     loading.close();
+   }catch(error){loading.fail('Не удалось подготовить арену.');throw error;}
+   finally{root.inert=false;}
+ };
+ ctx.startDemo=async reuse=>{
+   try{
+     await ctx.withBattleTransition(progress=>{
+       if(!reuse)return prepareScene({session:ctx.betting,entry:'auto',arenaId:ctx.betting?.arenaId??'ward'},progress);
+       launchAccepted=true;
+       root.querySelector('#launch-overlay').hidden=true;
+     });
+   }catch(error){
+     console.error('Spectator arena loading:',error);
+     openMenu();
+     root.querySelector('.launch-subtitle').textContent='Не удалось подготовить арену. Повтори попытку.';
+   }
+ };
  await prepare({textures,session,arenaId:session?.arenaId??'ward',loading});
  if(cancelled||ctx.disposed){loading.close();return;}
  root.inert=false;loading.close();

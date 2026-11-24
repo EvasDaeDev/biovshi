@@ -94,7 +94,9 @@ test('real startup waits for the texture check, reuses images for tinting and cr
   for(let i=0;i<10&&ctx.tutorial.active;i++)document.querySelector('[data-tutorial-next]').click();
   assert.equal(ctx.tutorial.active,false);
 
-  launch.click();
+  const demo=launch.onclick();
+  assert.ok(document.querySelector('#battle-transition'));
+  await demo;
   assert.equal(root.querySelector('#launch-overlay').hidden,true);
   assert.equal(ctx.startup.phase,'spawning');
   ctx.root.__disposeTag();dom.window.close();

@@ -19,7 +19,7 @@ const {ctx}=await import('../src/game/state.js');
 const {advanceStartup}=await import('../src/game/session.js');
 const {bettingLoad}=await import('../src/betting/storage.js');
 const {holdFloorBake}=await import('../src/render/floor-history.js');
-async function until(fn){for(let i=0;i<100;i++){if(fn())return;await new Promise(resolve=>setImmediate(resolve));}assert.ok(fn(),'application transition completed');}
+async function until(fn){for(let i=0;i<150;i++){if(fn())return;await new Promise(resolve=>setTimeout(resolve,10));}assert.ok(fn(),'application transition completed');}
 async function enterTower(){
  const oldRobots=ctx.robots;
  await ctx.startTower(0);
@@ -37,13 +37,23 @@ async function launchTower(){
  assert.ok(artifacts.closest('#tower-upgrade-artifacts-page'),
    'the collection starts inside the Shelter, not the preparation sheet');
  assert.equal(artifacts.hidden,false);
+ let release;
+ ctx.towerFloorBake=new Promise(resolve=>{release=resolve;});
  document.querySelector('#tower-fight').click();
  assert.equal(sheet.hidden,true,'preparation is hidden synchronously, before the world loads');
  assert.equal(artifacts.hidden,true,'returning artifacts to their parking place cannot display the old screen');
- assert.ok(document.querySelector('#texture-loading'),
-   'a full-screen loading cover hides the previous world during asynchronous initialization');
+ const cover=document.querySelector('#battle-transition');
+ assert.ok(cover,'the backdrop appears immediately');
+ assert.equal(cover.querySelector('img').src,document.querySelector('#menu-background img').src);
+ assert.equal(document.querySelector('#texture-loading'),null);
+ const shade=cover.querySelector('.battle-transition-shade');
+ await until(()=>Number(shade.style.opacity)>0);
+ assert.ok(Number(shade.style.opacity)<1,'still waiting for arena work');
+ assert.notEqual(ctx.startup.phase,'spawning');
+ ctx.towerFloorBake=null;release();
  await ctx.towerTransition;
- assert.equal(document.querySelector('#texture-loading'),null,'loading cover is cleared after arena is ready');
+ assert.equal(shade.style.opacity,'1','the backdrop reaches black before advancing');
+ assert.equal(cover.isConnected,false,'the ready arena replaces the backdrop');
  assert.equal(ctx.mode,'tower');
  assert.equal(ctx.startup.phase,'spawning');
  assert.equal(document.querySelector('#tower-preparation').hidden,true);
@@ -68,7 +78,9 @@ test('boot menu starts spectator fights after mode changes and restarts a saved 
   assert.equal(document.querySelector('#launch-overlay').hidden,false);assert.equal(ctx.betting.players[0].name,'Общий игрок');assert.equal(document.querySelector('#launch-setup').classList.contains('is-new-game'),true);
   await enterTower();document.querySelector('#game-nav-back').click();
   assert.equal(ctx.startup.phase,'menu');assert.equal(ctx.paused,true);
-  await document.querySelector('#launch-game').onclick();
+  const watchFight=document.querySelector('#launch-game').onclick();
+  assert.ok(document.querySelector('#battle-transition'));
+  await watchFight;
   assert.equal(ctx.startup.phase,'spawning','the first spectator launch after Tower preparation must build a new arena');
   advanceStartup(10);assert.equal(ctx.startup.phase,'running');assert.equal(ctx.paused,false);assert.equal(ctx.button.disabled,false);
   assert.equal(ctx.root.querySelector('.arena-pause-label').hidden,true);
@@ -111,7 +123,13 @@ test('boot menu starts spectator fights after mode changes and restarts a saved 
   assert.equal(bettingLoad().players[0].balance,2100);
   profiles.querySelector('[data-paper-dismiss]').click();
   assert.equal(profiles.open,false);await document.querySelector('#launch-totalizator').onclick();
-  document.querySelector('#bet-fight').click();advanceStartup(10);
+  document.querySelector('[data-arena="ring"]').click();
+  document.querySelector('#bet-fight').click();
+  assert.ok(document.querySelector('#battle-transition'));
+  assert.equal(document.querySelector('#texture-loading'),null);
+  await until(()=>!document.querySelector('#battle-transition'));
+  assert.equal(ctx.arenaId,'ring');
+  advanceStartup(10);
   assert.equal(ctx.startup.phase,'running');assert.equal(ctx.paused,false);
   ctx.combat.finished=true;ctx.resultsPanel.hidden=false;
   let finishBake;
@@ -120,6 +138,7 @@ test('boot menu starts spectator fights after mode changes and restarts a saved 
   ctx.openMainMenu();await document.querySelector('#launch-totalizator').onclick();
   document.querySelector('#bet-fight').click();
   finishBake();await oldRound;
+  await until(()=>!document.querySelector('#battle-transition'));
   assert.equal(ctx.startup.phase,'spawning','the retired round must not reopen stakes over a new fight');
   assert.equal(ctx.betOverlay.hidden,true);
   advanceStartup(10);assert.equal(ctx.startup.phase,'running');assert.equal(ctx.paused,false);assert.equal(ctx.button.disabled,false);

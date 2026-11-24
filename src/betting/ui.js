@@ -201,25 +201,28 @@ export function bettingOpen() {
     const draft=bettingReadDraft();
     e.currentTarget.disabled=true;
     const balancesBefore=ctx.betting.players.map(p=>p.balance);
-    try {
+    const prepareFight=async progress=>{
       const arenaId=ctx.selectedArenaId??ctx.arenaId??'ward';
-      if(arenaId!==ctx.arenaId){if(!ctx.switchArena)throw Error('Подготовка арены недоступна.');await ctx.switchArena(arenaId);}
-      betCommit(ctx.betting, draft);ctx.betDraft=null;
-    } catch (err) {
-      ctx.betContent.querySelector('#bet-error').textContent = err.message;
+      if(arenaId!==ctx.arenaId){
+        if(!ctx.switchArena)throw Error('Подготовка арены недоступна.');
+        await ctx.switchArena(arenaId,progress);
+      }
+      betCommit(ctx.betting,draft);ctx.betDraft=null;
+      bettingSave({animateBalances:false});
+      bettingHud();
+      ctx.betOverlay.hidden=true;
+      ctx.betNotice='';
+      replayPlayerBalanceChanges(ctx.betting,ctx.betting.players.flatMap((p,i)=>
+        p.balance<balancesBefore[i]?[{id:p.id,from:balancesBefore[i],to:p.balance}]:[]),ctx.root,'#bet-hud');
+      if(!ctx.withBattleTransition)startSpawnSequence();
+    };
+    try{
+      if(ctx.withBattleTransition)await ctx.withBattleTransition(prepareFight);
+      else await prepareFight();
+    }catch(error){
+      ctx.betContent.querySelector('#bet-error').textContent=error.message;
       ctx.betContent.querySelector('#bet-fight').disabled=false;
-      return;
     }
-    bettingSave({animateBalances:false});
-    bettingHud();
-    ctx.betOverlay.hidden = true;
-    ctx.betNotice = '';
-    // The arena HUD is actually visible now; no floating delay-based receipt.
-    // If another dialog is still covering it, the shared animator queues the
-    // debit until this specific balance view opens.
-    replayPlayerBalanceChanges(ctx.betting,ctx.betting.players.flatMap((p,i)=>
-      p.balance<balancesBefore[i]?[{id:p.id,from:balancesBefore[i],to:p.balance}]:[]),ctx.root,'#bet-hud');
-    startSpawnSequence();
   };
   if(ctx.betDraft?.session===ctx.betting&&ctx.betDraft.round===ctx.betting.round){
     for(const draft of ctx.betDraft.bets){const row=ctx.betContent.querySelector(`[data-bet-player="${draft.player}"]`);if(row){row.querySelector('input').value=Number.isNaN(draft.amount)?'':draft.amount;row.querySelector('select').value=draft.robot;row.querySelector('select').style.color=ROBOT_COLORS[draft.robot];}}

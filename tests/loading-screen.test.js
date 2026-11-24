@@ -91,7 +91,7 @@ test('loading status uses measured phases',()=>{
  const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  assert.match(main,/createLoadingScreen\(/);
  assert.match(main,/loading\?\.update\('Настраиваем графику арены/);
- assert.match(main,/progress\.close\(\)/);
+ assert.match(main,/loading\.close\(\)/);
  const css=fs.readFileSync(new URL('../styles/interface.css',import.meta.url),'utf8');
  assert.match(css,/loading-streamer/);
 });
