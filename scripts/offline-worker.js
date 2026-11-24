@@ -60,6 +60,9 @@ self.addEventListener('install',event=>event.waitUntil((async()=>{
 })()));
 self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
+    const ready=(client,update)=>{
+      if(client.url.startsWith(scope))client.postMessage({type:'biovshi-offline-ready',scope,update});
+    };
     const older=(await caches.keys()).filter(name=>name.startsWith(cachePrefix)&&name!==cacheName&&name!==clientCacheName);
     if(older.length){
       // The previously active release is the last installed cache before ours.
@@ -77,8 +80,11 @@ self.addEventListener('activate',event=>{
       }
       for(const request of await pins.keys())if(!live.has(request.url))await pins.delete(request);
       for(const name of older)if(!retained.has(name))await caches.delete(name);
+      for(const client of clients)ready(client,true);
     }else{
       await self.clients.claim();
+      const clients=await self.clients.matchAll({type:'window'});
+      for(const client of clients)ready(client,false);
     }
   })());
 });

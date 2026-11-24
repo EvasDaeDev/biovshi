@@ -20,7 +20,7 @@ export function markResource(key,available){
  if(!available)missing.add(key);
  if(changed)notify();
 }
-export function trackResource(key,operation){
+export function trackResource(key,operation,{ignoreFailure}={}){
  key=resourceKey(key);
  pending.set(key,(pending.get(key)??0)+1);
  notify();
@@ -29,7 +29,7 @@ export function trackResource(key,operation){
   if(count===1)pending.delete(key);
   else pending.set(key,count-1);
   if(available)missing.delete(key);
-  else missing.add(key);
+  else if(!ignoreFailure?.())missing.add(key);
   notify();
  }
  return new Promise(resolve=>resolve(operation())).then(value=>{

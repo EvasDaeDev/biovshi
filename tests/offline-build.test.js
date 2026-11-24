@@ -28,7 +28,7 @@ async function workerFixture({release=assets,stores=new Map(),openTabs=[]}={}){
   }));
   await writeOfflineWorker(directory,Object.keys(release));
   const code=await fs.readFile(path.join(directory,'offline-worker.js'),'utf8');
-  const listeners=new Map(),requested=[],progress=[];
+  const listeners=new Map(),requested=[],progress=[],ready=[];
   let network=true,corrupt=null,claimed=false,skippedWaiting=false;
   const caches={
    async keys(){return [...stores.keys()];},
@@ -58,12 +58,12 @@ async function workerFixture({release=assets,stores=new Map(),openTabs=[]}={}){
     registration:{scope},
     addEventListener:(name,fn)=>listeners.set(name,fn),
     skipWaiting:async()=>{skippedWaiting=true;},
-    clients:{matchAll:async options=>options.includeUncontrolled?[{url:scope,postMessage:data=>progress.push(data)}]:openTabs,
+    clients:{matchAll:async options=>options.includeUncontrolled?[{url:scope,postMessage:data=>progress.push(data)}]:openTabs.map(client=>({url:scope,postMessage:data=>ready.push(data),...client})),
      claim:async()=>{claimed=true;}},
    },
   });
   return {
-   caches,requested,progress,get claimed(){return claimed;},get skippedWaiting(){return skippedWaiting;},
+   caches,requested,progress,ready,get claimed(){return claimed;},get skippedWaiting(){return skippedWaiting;},
    disconnect(){network=false;},corrupt(file){corrupt=file;},
    lifecycle(type){let result;listeners.get(type)({waitUntil(promise){result=promise;}});return result;},
    request(file,mode='same-origin',clientId=''){
@@ -123,7 +123,11 @@ test('regular reloads use the new release while already open tabs keep their own
  const next=await workerFixture({release:secondRelease,stores,openTabs:[{id:'old-tab'}]});
  await next.lifecycle('install');
  assert.equal(next.skippedWaiting,true,'activation does not require the last tab to close');
+ assert.deepEqual(next.ready,[],'cache completion alone does not announce an update');
  await next.lifecycle('activate');
+ assert.equal(next.ready.length,1);
+ assert.equal(next.ready[0].type,'biovshi-offline-ready');
+ assert.equal(next.ready[0].update,true);
  next.disconnect();
  assert.equal(await (await next.request('', 'navigate')).text(),secondRelease['index.html']);
  assert.equal(await (await next.request('index.html','navigate')).text(),secondRelease['index.html']);

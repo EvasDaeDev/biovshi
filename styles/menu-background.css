@@ -93,3 +93,7 @@ body:not(:has(> #texture-loading)):has(> #robot-tag-hops-v22[data-intro-dismisse
 }
 #resource-status[hidden],
 body:has(> #texture-loading,> #battle-transition) > #resource-status {display:none}
+#resource-status.resource-reload-recommended {
+  border-color:#b36356;
+  color:#ff9688;
+}

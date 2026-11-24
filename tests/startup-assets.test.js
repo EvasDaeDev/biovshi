@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {ctx} from '../src/game/state.js';
 import {ASSETS,sceneTextureKeys} from '../src/assets/manifest.js';
+import {installResourceStatus} from '../src/ui/resource-status.js';
+import {trackResource} from '../src/assets/resource-status.js';
 import {showStartupIntro} from '../src/ui/startup-intro.js';
 
 test('real startup waits for the texture check, reuses images for tinting and creates no redundant models',async()=>{
@@ -146,4 +148,40 @@ test('only a press and click on the lore backdrop dismisses it',()=>{
     assert.equal(root.hasAttribute('data-intro-dismissed'),true);
     root.__disposeTag();
   }finally{dom.window.close();}
+});
+
+test('resource banner recommends a reload only after update activation or successful resource recovery',async()=>{
+ const dom=new JSDOM('<body></body>',{url:'https://game.test/'});
+ const {window:win}=dom;
+ const sw=new win.EventTarget();
+ Object.defineProperty(win.navigator,'serviceWorker',{value:sw});
+ const dispose=installResourceStatus(win.document);
+ const banner=win.document.getElementById('resource-status');
+ const send=data=>sw.dispatchEvent(new win.MessageEvent('message',{data:{scope:'https://game.test/',...data}}));
+ try{
+  send({type:'biovshi-offline-ready',update:false});
+  assert.equal(banner.hidden,true);
+  send({type:'biovshi-offline-progress',done:3,total:3});
+  assert.equal(banner.hidden,true);
+  send({type:'biovshi-offline-ready',update:true,scope:'https://game.test/test/'});
+  assert.equal(banner.hidden,true);
+  send({type:'biovshi-offline-ready',update:true});
+  assert.equal(banner.hidden,false);
+  assert.equal(banner.textContent,'Обновление загружено, рекомендуется перезагрузить игру');
+  assert.ok(banner.classList.contains('resource-reload-recommended'));
+
+  dispose();
+  const disposeAfterReload=installResourceStatus(win.document);
+  try{
+   const fresh=win.document.getElementById('resource-status');
+   assert.equal(fresh.hidden,true);
+   await assert.rejects(trackResource('test-atlas.png',()=>{throw Error('Unavailable');}));
+   assert.equal(fresh.textContent,'Часть ресурсов не загрузилась');
+   await assert.rejects(trackResource('test-atlas.png',()=>{throw Error('Aborted');},{ignoreFailure:()=>true}));
+   assert.equal(fresh.textContent,'Часть ресурсов не загрузилась');
+   await trackResource('test-atlas.png',()=>true);
+   assert.equal(fresh.textContent,'Обновление загружено, рекомендуется перезагрузить игру');
+   assert.ok(fresh.classList.contains('resource-reload-recommended'));
+  }finally{disposeAfterReload();}
+ }finally{dispose();win.close();}
 });

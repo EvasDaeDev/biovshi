@@ -1,4 +1,4 @@
-import {markResource,subscribeResources,trackResource} from '../assets/resource-status.js';
+import {markResource,resourceStatus,subscribeResources,trackResource} from '../assets/resource-status.js';
 
 export function installResourceStatus(doc){
  const win=doc.defaultView;
@@ -7,24 +7,34 @@ export function installResourceStatus(doc){
  banner.setAttribute('role','status');
  banner.hidden=true;
  doc.body.append(banner);
- let delay;
- const unsubscribe=subscribeResources(({pending,missing})=>{
+ let delay,showLoading=false,reloadRecommended=false,previousMissing=[];
+ const loadingText='…идёт загрузка ресурсов';
+ const reloadText='Обновление загружено, рекомендуется перезагрузить игру';
+ const render=({pending,missing}=resourceStatus())=>{
+  if(previousMissing.some(key=>key!=='offline-copy'&&!missing.includes(key)))reloadRecommended=true;
+  previousMissing=missing;
   if(pending){
-   if(delay===undefined&&banner.textContent!=='…идёт загрузка ресурсов'){
+   if(!showLoading&&delay===undefined){
     delay=win.setTimeout(()=>{
      delay=undefined;
-     banner.textContent='…идёт загрузка ресурсов';
-     banner.hidden=false;
+     showLoading=true;
+     render();
     },180);
    }
-   return;
+   if(!showLoading)return;
+  }else{
+   win.clearTimeout(delay);
+   delay=undefined;
+   showLoading=false;
   }
-  win.clearTimeout(delay);
-  delay=undefined;
-  banner.textContent=missing.length?(missing.every(key=>key==='offline-copy')
+  const recommend=!pending&&reloadRecommended;
+  const text=pending?loadingText:recommend?reloadText:missing.length?(missing.every(key=>key==='offline-copy')
    ?'Автономная копия загружена не полностью':'Часть ресурсов не загрузилась'):'';
-  banner.hidden=!missing.length;
- });
+  banner.classList.toggle('resource-reload-recommended',recommend);
+  if(banner.textContent!==text)banner.textContent=text;
+  banner.hidden=!text;
+ };
+ const unsubscribe=subscribeResources(render);
 
  const checked=new Map();
  const inspect=image=>{
@@ -38,13 +48,10 @@ export function installResourceStatus(doc){
   }
   if(checked.has(url))return;
   checked.set(url,false);
-  trackResource(url,()=>image.decode()).then(()=>{
+  // Replacing or detaching the element can reject a decode for a valid file.
+  trackResource(url,()=>image.decode(),{ignoreFailure:()=>!image.isConnected||image.src!==url}).then(()=>{
    checked.set(url,true);
-  },()=>{
-   // A replaced or detached element can reject a decode even for a good URL.
-   checked.delete(url);
-   if(!image.isConnected||image.src!==url)markResource(url,true);
-  });
+  },()=>checked.delete(url));
  };
  const visit=node=>{
   if(node.namespaceURI!=='http://www.w3.org/1999/xhtml')return;
@@ -89,7 +96,13 @@ export function installResourceStatus(doc){
  const serviceWorker=win.navigator.serviceWorker;
  const scope=new URL('./',doc.baseURI).href;
  const progress=({data})=>{
-  if(data?.type!=='biovshi-offline-progress'||data.scope!==scope)return;
+  if(data?.scope!==scope)return;
+  if(data.type==='biovshi-offline-ready'){
+   if(data.update||resourceStatus().missing.some(key=>key!=='offline-copy'))reloadRecommended=true;
+   render();
+   return;
+  }
+  if(data.type!=='biovshi-offline-progress')return;
   if(data.done>=data.total||data.failed){offlineUpdated?.();offlineUpdated=undefined;}
   else if(!offlineUpdated)trackResource('offline-update',()=>new Promise(resolve=>{offlineUpdated=resolve;}));
  };
