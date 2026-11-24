@@ -17,14 +17,16 @@
     "profile:ui": "node scripts/profile-ui.mjs",
     "experiment:trauma": "node scripts/experiment-trauma.mjs",
     "build:lan": "npm run build -- --mode test",
-    "lan": "node scripts/lan-launcher.mjs",
-    "lan:serve": "node scripts/lan-server.mjs",
+    "lan": "node server/lan-launcher.mjs",
+    "lan:serve": "node server/lan-serve.mjs",
     "profile:lan": "node scripts/profile-lan.mjs"
   },
   "engines": {
     "node": ">=22.12.0"
   },
   "devDependencies": {
+    "esbuild": "0.28.2",
+    "fflate": "0.8.2",
     "jsdom": "^31.0.0",
     "sharp": "^0.34.5",
     "vite": "^7.3.7"

@@ -44,8 +44,13 @@ export default defineConfig(({mode,command})=>{
       const missing=[...report.missing,...report.missingLocations];
       if(missing.length)throw Error('Missing runtime source files: '+missing.join(', '));
       const files=[...Object.keys(bundle),...report.files];
-      await writeOfflineWorker(output,[...gameBundleFiles(bundle),...report.files]);
+      const gameFiles=[...gameBundleFiles(bundle),...report.files];
+      await writeOfflineWorker(output,gameFiles);
       await verifyRuntimeAssets(output,[...files,'offline-worker.js']);
+      if(testBuild&&output===path.join(root,'dist')){
+        const {packageLan}=await import('./scripts/package-lan.mjs');
+        await packageLan(root,output,[...gameFiles,'offline-worker.js']);
+      }
       console.log('Curated runtime assets:',report.copied,'files,',report.bytes,'bytes');
     },
   }],

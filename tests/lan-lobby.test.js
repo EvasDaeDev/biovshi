@@ -4,7 +4,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import WebSocket from 'ws';
-import {startLanServer} from '../scripts/lan-server.mjs';
+import {startLanServer} from '../server/lan-server.mjs';
 import {lanMessage} from '../src/lan/protocol.js';
 import {createLanRoster, lanTowerCopy} from '../src/lan/characters.js';
 import {createFloorCache, LAN_FLOOR_BATCH, queueFloorPatch} from '../src/lan/floor-sync.js';

@@ -1,6 +1,7 @@
 import {execFile, spawn} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
 import {createServer} from 'node:http';
+import {isIPv4} from 'node:net';
 import {networkInterfaces} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
@@ -10,6 +11,7 @@ import {startLanServer} from './lan-server.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const DEFAULT_DIST = fileURLToPath(new URL('../.lan-dist/', import.meta.url));
+const PREBUILT_GAME = fileURLToPath(new URL('../game/', import.meta.url));
 const LOOPBACK = '127.0.0.1';
 const PANEL = new Map([
   ['/lan/', ['index.html', 'text/html; charset=utf-8']],
@@ -80,6 +82,7 @@ function respond(res, status, payload) {
 
 export async function startLanLauncher({
   port = 8081, dist, autoStart = false, runBuild = buildGame,
+  host = 'auto', gamePort = 8080,
   getInterfaces = listInterfaces, startGame = startLanServer,
 } = {}) {
   const assets = new Map(await Promise.all([...PANEL].map(async ([route, [file, type]]) =>
@@ -93,14 +96,15 @@ export async function startLanLauncher({
   let job = null;
   let closing = null;
   let state = {phase: 'idle', gameUrl: null, error: null, log: null};
-  const status = () => ({...state, interfaces: interfaces()});
+  const defaultHost = () => host === 'auto' ? automaticHost(interfaces()) : host;
+  const status = () => ({...state, interfaces: interfaces(), defaults: {host: defaultHost(), port: gamePort}});
 
   function start(settings, allowAlternatePort = false) {
-    state = {phase: 'building', gameUrl: null, error: null, log: null};
+    state = {phase: runBuild ? 'building' : 'starting', gameUrl: null, error: null, log: null};
     const buildDir = dist ?? path.join(DEFAULT_DIST, new URL(origin).port || '80');
     job = (async () => {
       try {
-        await runBuild(buildDir, lifetime.signal);
+        if (runBuild) await runBuild(buildDir, lifetime.signal);
         if (lifetime.signal.aborted) return;
         state.phase = 'starting';
         try {
@@ -194,8 +198,8 @@ export async function startLanLauncher({
     });
   });
   if (autoStart) {
-    const host = automaticHost(interfaces());
-    start({host, port: host === LOOPBACK && port === 8080 ? 0 : 8080}, true);
+    const automaticAddress = defaultHost();
+    start({host: automaticAddress, port: gamePort}, true);
   }
   return {
     origin,
@@ -215,9 +219,17 @@ export async function startLanLauncher({
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const {values} = parseArgs({options: {
-      port: {type: 'string'}, start: {type: 'boolean'}, open: {type: 'boolean'},
+      port: {type: 'string'}, start: {type: 'boolean'}, open: {type: 'boolean'}, prebuilt: {type: 'boolean'},
     }});
-    const panel = await startLanLauncher({port: Number(values.port ?? 8081), autoStart: values.start});
+    const {panelPort, gamePort, host} = JSON.parse(await readFile(new URL('./settings.json', import.meta.url), 'utf8'));
+    if (![panelPort, gamePort].every(port => Number.isInteger(port) && port >= 1 && port <= 65535) ||
+        (host !== 'auto' && (!isIPv4(host) || host === '0.0.0.0'))) {
+      throw Error('Проверьте IP и порты в server/settings.json.');
+    }
+    const panel = await startLanLauncher({
+      port: Number(values.port ?? panelPort), gamePort, host, autoStart: values.start,
+      ...(values.prebuilt && {dist: PREBUILT_GAME, runBuild: null}),
+    });
     const panelUrl = panel.origin + '/lan/';
     console.log('Панель запуска LAN: ' + panelUrl);
     if (values.open && process.platform === 'win32') openWindowsBrowser(panelUrl);

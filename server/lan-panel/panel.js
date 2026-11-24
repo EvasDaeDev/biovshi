@@ -45,7 +45,9 @@ function render() {
   if (signature !== networkOptions) {
     const previous = network.value;
     network.replaceChildren(...state.interfaces.map(({address, name}) => new Option(name + ' · ' + address, address)));
-    if (state.interfaces.some(entry => entry.address === previous)) network.value = previous;
+    const selection = previous || state.defaults.host;
+    if (state.interfaces.some(entry => entry.address === selection)) network.value = selection;
+    if (!networkOptions) port.value = state.defaults.port;
     networkOptions = signature;
   }
   const invite = state.phase === 'running' ? state.gameUrl : null;
@@ -86,7 +88,7 @@ async function refresh() {
       }
     } catch {
       if (!busy && revision === commandRevision) {
-        connectionError = 'Нет связи с панелью запуска. Проверьте, что npm run lan работает.';
+        connectionError = 'Нет связи с панелью запуска. Проверьте, открыто ли окно сервера.';
         render();
       }
     }

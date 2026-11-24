@@ -7,7 +7,7 @@ import {setImmediate as yieldIo, setTimeout as delay} from 'node:timers/promises
 import {parseArgs} from 'node:util';
 import {JSDOM} from 'jsdom';
 import WebSocket from 'ws';
-import {startLanServer} from './lan-server.mjs';
+import {startLanServer} from '../server/lan-server.mjs';
 import {initializeGame} from '../src/game/initialize.js';
 import {step} from '../src/game/loop.js';
 import {advanceStartup} from '../src/game/session.js';

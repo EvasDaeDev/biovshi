@@ -7,7 +7,7 @@ where node.exe >nul 2>&1 || goto :install_node
 where npm.cmd >nul 2>&1 || goto :install_node
 node -e "const [major, minor] = process.versions.node.split('.').map(Number); process.exit(major > 22 || major === 22 && minor >= 12 ? 0 : 1)" || goto :install_node
 if not exist "package-lock.json" goto :wrong_folder
-if not exist "scripts\lan-launcher.mjs" goto :wrong_folder
+if not exist "server\lan-launcher.mjs" goto :wrong_folder
 
 if not exist "node_modules\vite\bin\vite.js" goto :dependencies
 if not exist "node_modules\ws\package.json" goto :dependencies

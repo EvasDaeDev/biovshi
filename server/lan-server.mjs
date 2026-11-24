@@ -3,10 +3,8 @@ import {createReadStream} from 'node:fs';
 import {readFile, realpath, stat} from 'node:fs/promises';
 import {createServer} from 'node:http';
 import {isIPv4} from 'node:net';
-import {networkInterfaces} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
-import {parseArgs} from 'node:util';
 import QRCode from 'qrcode';
 import {WebSocketServer} from 'ws';
 import {loadLocations} from '../src/game/arenas.js';
@@ -22,15 +20,6 @@ const MIME = new Map(Object.entries({
   '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg',
 }));
 
-function localAddresses() {
-  try {
-    return Object.values(networkInterfaces()).flat()
-      .filter(item => item?.family === 'IPv4' && !item.internal).map(item => item.address);
-  } catch {
-    return [];
-  }
-}
-
 export async function startLanServer({host = '127.0.0.1', port = 8080, dist = DIST, reconnectMs,
   countdownMs, loadingMs, hostHeartbeatMs, compression = true} = {}) {
   if (!isIPv4(host) || host === '0.0.0.0' || !Number.isInteger(port) || port < 0 || port > 65535)
@@ -44,7 +33,7 @@ export async function startLanServer({host = '127.0.0.1', port = 8080, dist = DI
       readFile(path.join(root, 'build-info.json'), 'utf8').then(JSON.parse),
     ]);
   } catch (error) {
-    throw Error('Не удалось открыть сборку dist. Выполните npm run build:lan.', {cause: error});
+    throw Error('Не удалось открыть файлы игры. Проверьте, полностью ли распакован LAN-архив.', {cause: error});
   }
   const gamePage = index.replace('<head>', '<head><meta name="biovshi-lan" content="1">');
   const locationBase = pathToFileURL(path.join(root, 'locations') + path.sep);
@@ -162,23 +151,4 @@ export async function startLanServer({host = '127.0.0.1', port = 8080, dist = DI
       await new Promise(resolve => server.close(resolve));
     },
   };
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  try {
-    const {values} = parseArgs({options: {host: {type: 'string'}, port: {type: 'string'}}});
-    const host = values.host ?? '127.0.0.1';
-    const server = await startLanServer({host, port: Number(values.port ?? 8080)});
-    console.log('ЭКЦЕПРИ · LAN · ' + server.origin);
-    if (host === '127.0.0.1') {
-      const addresses = localAddresses();
-      if (addresses.length)
-        console.log('Для игры по сети укажите IP нужного интерфейса через --host. Доступны: ' + addresses.join(', '));
-    } else {
-      console.log(await QRCode.toString(server.origin, {type: 'terminal', small: true}));
-    }
-  } catch (error) {
-    console.error(error.message);
-    process.exitCode = 1;
-  }
 }

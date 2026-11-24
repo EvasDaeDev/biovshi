@@ -36,6 +36,8 @@ export function checkPagesPreview(directory){
   const lan=fs.readFileSync(path.join(preview,info.lanPage,'index.html'),'utf8');
   assert.match(lan,/<title>ЭКЦЕПРИ · Игра по локальной сети/);
   assert.match(lan,/href="http:\/\/127\.0\.0\.1:8081\/lan\/"/);
+  assert.match(lan,/href="\.\/ECCEPRY-LAN\.zip"/);
+  assert.ok(fs.statSync(path.join(preview,info.lanPage,'ECCEPRY-LAN.zip')).isFile());
   pages.push([lan,new URL(info.lanPage,base)]);
  }
  for(const [page,pageUrl] of pages){

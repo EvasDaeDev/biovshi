@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
   <title>ЭКЦЕПРИ · Игра по локальной сети</title>
-  <link rel="stylesheet" href="../scripts/lan-panel/panel.css">
+  <link rel="stylesheet" href="../server/lan-panel/panel.css">
 </head>
 <body>
   <main>
@@ -20,11 +20,11 @@
     <details>
       <summary>Первый запуск на компьютере хозяина</summary>
       <ol>
-        <li>Установите Node.js 22.12 или новее и <a href="https://github.com/EvasDaeDev/biovshi/archive/refs/heads/test/lan-multiplayer.zip">скачайте ZIP с лаунчером</a>.</li>
+        <li>Установите Node.js 22.12 или новее и <a href="./ECCEPRY-LAN.zip" download>скачайте LAN-сервер с готовой игрой</a>.</li>
         <li>Распакуйте архив целиком. В Windows откройте <code>Start-LAN.bat</code> двойным щелчком.</li>
-        <li>Лаунчер сам соберёт игру, запустит сервер и откроет панель с адресом и QR-кодом. Оставьте его окно открытым на время игры.</li>
+        <li>Лаунчер запустит сервер и откроет панель с адресом и QR-кодом. Оставьте его окно открытым на время игры.</li>
       </ol>
-      <p>На других системах откройте терминал в папке проекта и выполните <code>npm ci</code>, затем <code>npm run lan</code>.</p>
+      <p>На других системах в папке архива выполните <code>node server/lan-launcher.mjs --prebuilt --start</code>.</p>
     </details>
 
     <p><a href="../">Назад в тестовую игру</a></p>

@@ -26,7 +26,9 @@ jobs:
       - run: npm ci
       - name: Build the Windows LAN server's game bundle
         run: |
-          $output = Join-Path $PWD '.lan-dist/8081'
+          $output = Join-Path $PWD 'dist'
           npm run build:lan -- --outDir "$output" --emptyOutDir
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (!(Test-Path (Join-Path $output 'index.html'))) { throw 'LAN build is missing index.html' }
+      - name: Check the extracted LAN distribution
+        run: node scripts/check-lan-package.mjs

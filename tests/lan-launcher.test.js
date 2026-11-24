@@ -6,8 +6,8 @@ import path from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import test from 'node:test';
 import WebSocket from 'ws';
-import {startLanLauncher} from '../scripts/lan-launcher.mjs';
-import {startLanServer} from '../scripts/lan-server.mjs';
+import {startLanLauncher} from '../server/lan-launcher.mjs';
+import {startLanServer} from '../server/lan-server.mjs';
 
 async function waitFor(status, phase) {
   const deadline = Date.now() + 3000;

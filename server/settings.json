@@ -1,0 +1,5 @@
+{
+  "host": "auto",
+  "gamePort": 8080,
+  "panelPort": 8081
+}
