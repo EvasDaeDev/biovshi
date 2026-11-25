@@ -102,9 +102,15 @@ test('boot menu starts spectator fights after mode changes and restarts a saved 
   assert.equal(profiles.open,true);
   const cards=profiles.querySelector('.profile-cards');
   assert.equal(cards.children[0].open,false);
-  cards.children[0].querySelector('summary').click();
+  const firstSummary=cards.children[0].querySelector('summary');
+  const firstBalance=firstSummary.querySelector('.profile-balance');
+  assert.match(firstBalance.textContent,/2\s100/);
+  assert.ok(firstBalance.querySelector('.chip-icon'));
+  firstSummary.click();
   assert.equal(cards.children[0].open,true);
-  assert.equal(cards.children[0].querySelectorAll('dd')[2].textContent,'1');
+  assert.equal(firstSummary.querySelector('.profile-balance'),firstBalance);
+  assert.equal(cards.children[0].querySelector('.profile-stats').children.length,4);
+  assert.equal(cards.children[0].querySelectorAll('dd')[1].textContent,'1');
   const add=profiles.querySelector('.profile-add');
   add.elements.name.value='Второй игрок';
   add.dispatchEvent(new Event('submit',{cancelable:true}));
@@ -112,7 +118,8 @@ test('boot menu starts spectator fights after mode changes and restarts a saved 
   const edit=cards.children[1].querySelector('form');
   edit.elements.name.value='Новое имя';
   edit.dispatchEvent(new Event('submit',{cancelable:true}));
-  assert.equal(cards.children[1].querySelector('summary').textContent,'Новое имя');
+  assert.equal(cards.children[1].querySelector('summary .profile-name').textContent,'Новое имя');
+  assert.match(cards.children[1].querySelector('summary .profile-balance').textContent,/2\s000/);
   assert.equal(bettingLoad().players[1].name,'Новое имя');
   cards.children[1].querySelector('.profile-delete').click();
   document.querySelector('.game-action-confirm-close').click();

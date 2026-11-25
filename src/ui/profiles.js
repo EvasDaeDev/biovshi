@@ -60,17 +60,16 @@ export function installProfiles(root,refreshMenu){
    const card=doc.createElement('details');
    card.className='profile-card';
    card.open=player.id===expandedId;
-   card.innerHTML=`<summary></summary><div class="profile-card-body">
+   card.innerHTML=`<summary><span class="profile-name"></span><span class="profile-balance">${formatChips(player.balance)}</span></summary><div class="profile-card-body">
     <dl class="profile-stats"></dl>
     <form class="profile-edit">
      <label>Имя<input name="name" type="text" maxlength="32" required autocomplete="off"></label>
      <button type="submit">СОХРАНИТЬ ИМЯ</button>
      <button type="button" class="profile-delete">УДАЛИТЬ</button>
     </form></div>`;
-   const summary=card.querySelector('summary');
-   summary.textContent=player.name;
+   const nameLabel=card.querySelector('.profile-name');
+   nameLabel.textContent=player.name;
    const stats=[
-    ['Баланс',formatChips(player.balance)],
     ['Боёв в Башне',player.towerBattles??0],
     ['Вырублено пациентов',player.towerKnockouts??0],
     ['Текущий этаж',towerFloorLabel(tower?.level??1)],
@@ -80,8 +79,7 @@ export function installProfiles(root,refreshMenu){
    for(const [label,value] of stats){
     const stat=doc.createElement('div'),term=doc.createElement('dt'),amount=doc.createElement('dd');
     term.textContent=label;
-    if(label==='Баланс')amount.innerHTML=value;
-    else amount.textContent=value;
+    amount.textContent=value;
     stat.append(term,amount);statsList.append(stat);
    }
    const edit=card.querySelector('form'),name=edit.elements.name;
@@ -90,7 +88,7 @@ export function installProfiles(root,refreshMenu){
     event.preventDefault();
     try{
      player.name=profileName(name.value);
-     name.value=summary.textContent=player.name;
+     name.value=nameLabel.textContent=player.name;
      save();
      status.textContent='Имя изменено.';
     }catch(error){report(error);}
